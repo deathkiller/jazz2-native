@@ -22,14 +22,14 @@ namespace nCine::Backends
 
 		Ps3JoystickState();
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
-		void resetJoystickState(int joyId);
-		void simulateButtonEvent(int buttonId, bool pressed);
-		void simulateHatEvent(unsigned char state);
-		void simulateAxisEvent(int axisId, float value);
+		void ResetJoystickState(int joyId);
+		void SimulateButtonEvent(int buttonId, bool pressed);
+		void SimulateHatEvent(unsigned char state);
+		void SimulateAxisEvent(int axisId, float value);
 
 	private:
 		int _joyId;
@@ -43,7 +43,7 @@ namespace nCine::Backends
 	/**
 		@brief The `IInputManager` implementation for the PlayStation 3 (PSL1GHT libio)
 
-		Gamepad-only: @ref updateJoystickStates() is polled once per frame from
+		Gamepad-only: @ref UpdateJoystickStates() is polled once per frame from
 		`MainApplication::ProcessStep()` and diffs each port's `padData` into engine joystick events (the same
 		poll-and-dispatch pattern as the Dc/Ogc/Ps2 backends).
 
@@ -64,7 +64,7 @@ namespace nCine::Backends
 		and the digital bits drive the axes instead, so both kinds of pad behave.
 
 		The XMB's own events (quit requested, the in-game menu opening) are not pad input, but they arrive on
-		the same once-per-frame poll: @ref updateJoystickStates() drains the sysutil callback queue, because
+		the same once-per-frame poll: @ref UpdateJoystickStates() drains the sysutil callback queue, because
 		that is the one place in the frame where dispatching them is safe.
 	*/
 	class Ps3InputManager : public IInputManager
@@ -76,23 +76,23 @@ namespace nCine::Backends
 		Ps3InputManager(const Ps3InputManager&) = delete;
 		Ps3InputManager& operator=(const Ps3InputManager&) = delete;
 
-		const MouseState& mouseState() const override;
-		const KeyboardState& keyboardState() const override;
+		const MouseState& GetMouseState() const override;
+		const KeyboardState& GetKeyboardState() const override;
 
-		bool isJoyPresent(int joyId) const override;
-		const char* joyName(int joyId) const override;
-		const JoystickGuid joyGuid(int joyId) const override;
-		int joyNumButtons(int joyId) const override;
-		int joyNumHats(int joyId) const override;
-		int joyNumAxes(int joyId) const override;
-		const JoystickState& joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
-		bool joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
+		bool IsJoyPresent(int joyId) const override;
+		const char* GetJoyName(int joyId) const override;
+		const JoystickGuid GetJoyGuid(int joyId) const override;
+		int GetJoyButtonCount(int joyId) const override;
+		int GetJoyHatCount(int joyId) const override;
+		int GetJoyAxisCount(int joyId) const override;
+		const JoystickState& GetJoystickState(int joyId) const override;
+		bool JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
+		bool JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
 
 		/** @brief Polls the pad ports, drains the XMB event queue and dispatches the resulting events (once per frame) */
-		static void updateJoystickStates();
+		static void UpdateJoystickStates();
 
-		/** @brief Returns `true` once the XMB has asked the title to exit (read by `Ps3GfxDevice::update()`) */
+		/** @brief Returns `true` once the XMB has asked the title to exit (read by `Ps3GfxDevice::Update()`) */
 		static bool HasExitRequested();
 
 	private:
@@ -110,7 +110,7 @@ namespace nCine::Backends
 
 		static PadInfo _pads[MaxJoysticks];
 
-		static void handleConnection(std::int32_t joyId, bool connected);
+		static void HandleConnection(std::int32_t joyId, bool connected);
 
 		// The per-pad state objects dispatch through the protected shared _joyMapping/_inputEventHandler
 		friend class Ps3JoystickState;

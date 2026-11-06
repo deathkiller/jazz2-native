@@ -25,7 +25,7 @@ namespace nCine
 		: BaseSprite(parent, texture, xx, yy), _vertices(16), _vertexDataPointer(nullptr), _bytesPerVertex(0),
 			_numVertices(0), _indices(16), _indexDataPointer(nullptr), _numIndices(0)
 	{
-		init();
+		Init();
 	}
 
 	MeshSprite::MeshSprite(SceneNode* parent, Texture* texture, Vector2f position)
@@ -46,7 +46,7 @@ namespace nCine
 	/**
 	 * @note If used directly, it requires a custom shader that understands the specified data format.
 	 */
-	void MeshSprite::copyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
+	void MeshSprite::CopyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
 		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));
 		_vertices.resize(numVertices * floatsPerVertex);
@@ -60,21 +60,21 @@ namespace nCine
 		_renderCommand.GetGeometry().SetHostVertexPointer(_vertexDataPointer);
 	}
 
-	void MeshSprite::copyVertices(std::uint32_t numVertices, const Vertex* vertices)
+	void MeshSprite::CopyVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
 		DEATH_ASSERT(_texture != nullptr);
-		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const float*>(vertices));
+		CopyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const float*>(vertices));
 	}
 
-	void MeshSprite::copyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
+	void MeshSprite::CopyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
 		DEATH_ASSERT(_texture == nullptr);
-		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const float*>(vertices));
+		CopyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const float*>(vertices));
 	}
 
-	void MeshSprite::copyVertices(const MeshSprite& meshSprite)
+	void MeshSprite::CopyVertices(const MeshSprite& meshSprite)
 	{
-		copyVertices(meshSprite._numVertices, meshSprite._bytesPerVertex, meshSprite._vertexDataPointer);
+		CopyVertices(meshSprite._numVertices, meshSprite._bytesPerVertex, meshSprite._vertexDataPointer);
 		_width = meshSprite._width;
 		_height = meshSprite._height;
 		_texRect = meshSprite._texRect;
@@ -87,7 +87,7 @@ namespace nCine
 	/**
 	 * @note If used directly, it requires a custom shader that understands the specified data format.
 	 */
-	void MeshSprite::setVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
+	void MeshSprite::SetVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
 		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));
 		_vertices.clear();
@@ -100,21 +100,21 @@ namespace nCine
 		_renderCommand.GetGeometry().SetHostVertexPointer(_vertexDataPointer);
 	}
 
-	void MeshSprite::setVertices(std::uint32_t numVertices, const Vertex* vertices)
+	void MeshSprite::SetVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
 		DEATH_ASSERT(_texture != nullptr);
-		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const void*>(vertices));
+		CopyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const void*>(vertices));
 	}
 
-	void MeshSprite::setVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
+	void MeshSprite::SetVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
 		DEATH_ASSERT(_texture == nullptr);
-		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const void*>(vertices));
+		CopyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const void*>(vertices));
 	}
 
-	void MeshSprite::setVertices(const MeshSprite& meshSprite)
+	void MeshSprite::SetVertices(const MeshSprite& meshSprite)
 	{
-		setVertices(meshSprite._numVertices, meshSprite._bytesPerVertex, meshSprite._vertexDataPointer);
+		SetVertices(meshSprite._numVertices, meshSprite._bytesPerVertex, meshSprite._vertexDataPointer);
 		_width = meshSprite._width;
 		_height = meshSprite._height;
 
@@ -122,7 +122,7 @@ namespace nCine
 		_dirtyBits.set(DirtyBitPositions::AabbBit);
 	}
 
-	float* MeshSprite::emplaceVertices(std::uint32_t numElements, std::uint32_t bytesPerVertex)
+	float* MeshSprite::EmplaceVertices(std::uint32_t numElements, std::uint32_t bytesPerVertex)
 	{
 		if (numElements == 0 || bytesPerVertex == 0) {
 			return nullptr;
@@ -143,13 +143,13 @@ namespace nCine
 		return _vertices.data();
 	}
 
-	float* MeshSprite::emplaceVertices(std::uint32_t numElements)
+	float* MeshSprite::EmplaceVertices(std::uint32_t numElements)
 	{
 		const std::uint32_t bytesPerVertex = (_texture != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
-		return emplaceVertices(numElements, bytesPerVertex);
+		return EmplaceVertices(numElements, bytesPerVertex);
 	}
 
-	void MeshSprite::createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points, TextureCutMode cutMode)
+	void MeshSprite::CreateVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points, TextureCutMode cutMode)
 	{
 		FATAL_ASSERT(numVertices >= 3);
 
@@ -208,12 +208,12 @@ namespace nCine
 		_dirtyBits.set(DirtyBitPositions::AabbBit);
 	}
 
-	void MeshSprite::createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points)
+	void MeshSprite::CreateVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points)
 	{
-		createVerticesFromTexels(numVertices, points, TextureCutMode::Resize);
+		CreateVerticesFromTexels(numVertices, points, TextureCutMode::Resize);
 	}
 
-	void MeshSprite::copyIndices(std::uint32_t numIndices, const std::uint16_t* indices)
+	void MeshSprite::CopyIndices(std::uint32_t numIndices, const std::uint16_t* indices)
 	{
 		_indices.reserve(numIndices);
 		std::memcpy(_indices.data(), indices, numIndices * sizeof(std::uint16_t));
@@ -224,12 +224,12 @@ namespace nCine
 		_renderCommand.GetGeometry().SetHostIndexPointer(_indexDataPointer);
 	}
 
-	void MeshSprite::copyIndices(const MeshSprite& meshSprite)
+	void MeshSprite::CopyIndices(const MeshSprite& meshSprite)
 	{
-		copyIndices(meshSprite._numIndices, meshSprite._indexDataPointer);
+		CopyIndices(meshSprite._numIndices, meshSprite._indexDataPointer);
 	}
 
-	void MeshSprite::setIndices(std::uint32_t numIndices, const std::uint16_t* indices)
+	void MeshSprite::SetIndices(std::uint32_t numIndices, const std::uint16_t* indices)
 	{
 		_indices.clear();
 
@@ -239,12 +239,12 @@ namespace nCine
 		_renderCommand.GetGeometry().SetHostIndexPointer(_indexDataPointer);
 	}
 
-	void MeshSprite::setIndices(const MeshSprite& meshSprite)
+	void MeshSprite::SetIndices(const MeshSprite& meshSprite)
 	{
-		setIndices(meshSprite._numIndices, meshSprite._indexDataPointer);
+		SetIndices(meshSprite._numIndices, meshSprite._indexDataPointer);
 	}
 
-	unsigned short* MeshSprite::emplaceIndices(std::uint32_t numIndices)
+	unsigned short* MeshSprite::EmplaceIndices(std::uint32_t numIndices)
 	{
 		if (numIndices == 0) {
 			return nullptr;
@@ -264,13 +264,13 @@ namespace nCine
 	MeshSprite::MeshSprite(const MeshSprite& other)
 		: BaseSprite(other)
 	{
-		init();
-		setTexRect(other._texRect);
-		copyVertices(other._numVertices, other._bytesPerVertex, other._vertices.data());
-		copyIndices(other._numIndices, other._indices.data());
+		Init();
+		SetTexRect(other._texRect);
+		CopyVertices(other._numVertices, other._bytesPerVertex, other._vertices.data());
+		CopyIndices(other._numIndices, other._indices.data());
 	}
 
-	void MeshSprite::init()
+	void MeshSprite::Init()
 	{
 		// TODO
 		/*if (_texture != nullptr && _texture->name() != nullptr) {
@@ -284,29 +284,29 @@ namespace nCine
 		const Material::ShaderProgramType shaderProgramType = (_texture != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
 		_renderCommand.GetMaterial().SetShaderProgramType(shaderProgramType);
 
-		shaderHasChanged();
+		ShaderHasChanged();
 		_renderCommand.GetGeometry().SetPrimitiveType(PrimitiveType::TriangleStrip);
 		_renderCommand.GetGeometry().SetElementsPerVertex(_texture ? VertexFloats : VertexNoTextureFloats);
 		_renderCommand.GetGeometry().SetHostVertexPointer(_vertexDataPointer);
 
 		if (_texture != nullptr) {
-			setTexRect(Recti(0, 0, _texture->GetWidth(), _texture->GetHeight()));
+			SetTexRect(Recti(0, 0, _texture->GetWidth(), _texture->GetHeight()));
 		}
 	}
 
-	void MeshSprite::shaderHasChanged()
+	void MeshSprite::ShaderHasChanged()
 	{
-		BaseSprite::shaderHasChanged();
+		BaseSprite::ShaderHasChanged();
 		_renderCommand.GetMaterial().SetDefaultAttributesParameters();
 	}
 
-	void MeshSprite::textureHasChanged(Texture* newTexture)
+	void MeshSprite::TextureHasChanged(Texture* newTexture)
 	{
 		if (_renderCommand.GetMaterial().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
 			const Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
 			const bool hasChanged = _renderCommand.GetMaterial().SetShaderProgramType(shaderProgramType);
 			if (hasChanged) {
-				shaderHasChanged();
+				ShaderHasChanged();
 			}
 			_renderCommand.GetGeometry().SetElementsPerVertex(newTexture ? VertexFloats : VertexNoTextureFloats);
 		}
@@ -317,10 +317,10 @@ namespace nCine
 			texRect.Y = (texRect.Y * newTexture->GetHeight() / _texture->GetHeight());
 			texRect.W = (texRect.W * newTexture->GetWidth() / _texture->GetWidth());
 			texRect.H = (texRect.H * newTexture->GetHeight() / _texture->GetHeight());
-			setTexRect(texRect); // it also sets _width and _height
+			SetTexRect(texRect); // it also sets _width and _height
 		} else if (_texture == nullptr && newTexture != nullptr) {
 			// Assigning a texture when there wasn't any
-			setTexRect(Recti(0, 0, newTexture->GetWidth(), newTexture->GetHeight()));
+			SetTexRect(Recti(0, 0, newTexture->GetWidth(), newTexture->GetHeight()));
 		}
 	}
 }

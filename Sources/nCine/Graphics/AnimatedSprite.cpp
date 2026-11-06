@@ -39,66 +39,66 @@ namespace nCine
 	{
 	}
 
-	bool AnimatedSprite::isPaused() const
+	bool AnimatedSprite::IsPaused() const
 	{
 		bool isPaused = true;
 		if (!_anims.empty()) {
-			isPaused = _anims[_currentAnimIndex].isPaused();
+			isPaused = _anims[_currentAnimIndex].IsPaused();
 		}
 		return isPaused;
 	}
 
-	void AnimatedSprite::setPaused(bool isPaused)
+	void AnimatedSprite::SetPaused(bool isPaused)
 	{
 		if (!_anims.empty()) {
-			_anims[_currentAnimIndex].setPaused(isPaused);
+			_anims[_currentAnimIndex].SetPaused(isPaused);
 		}
 	}
 
 	void AnimatedSprite::OnUpdate(float timeMult)
 	{
 		if (!_anims.empty()) {
-			const unsigned int previousFrame = _anims[_currentAnimIndex].frame();
-			_anims[_currentAnimIndex].updateFrame(timeMult);
+			const unsigned int previousFrame = _anims[_currentAnimIndex].GetFrame();
+			_anims[_currentAnimIndex].UpdateFrame(timeMult);
 
 			// Updating sprite texture rectangle only on change
-			if (previousFrame != _anims[_currentAnimIndex].frame()) {
-				setTexRect(_anims[_currentAnimIndex].rect());
+			if (previousFrame != _anims[_currentAnimIndex].GetFrame()) {
+				SetTexRect(_anims[_currentAnimIndex].GetRect());
 			}
 		}
 
 		Sprite::OnUpdate(timeMult);
 	}
 
-	void AnimatedSprite::addAnimation(const RectAnimation& anim)
+	void AnimatedSprite::AddAnimation(const RectAnimation& anim)
 	{
 		_anims.push_back(anim);
 		_currentAnimIndex = (unsigned int)_anims.size() - 1;
-		setTexRect(_anims[_currentAnimIndex].rect());
+		SetTexRect(_anims[_currentAnimIndex].GetRect());
 	}
 
-	void AnimatedSprite::addAnimation(RectAnimation&& anim)
+	void AnimatedSprite::AddAnimation(RectAnimation&& anim)
 	{
 		_anims.push_back(Death::move(anim));
 		_currentAnimIndex = (unsigned int)_anims.size() - 1;
-		setTexRect(_anims[_currentAnimIndex].rect());
+		SetTexRect(_anims[_currentAnimIndex].GetRect());
 	}
 
-	void AnimatedSprite::clearAnimations()
+	void AnimatedSprite::ClearAnimations()
 	{
 		_anims.clear();
 	}
 
-	void AnimatedSprite::setAnimationIndex(std::uint32_t animIndex)
+	void AnimatedSprite::SetAnimationIndex(std::uint32_t animIndex)
 	{
 		if (!_anims.empty()) {
 			DEATH_ASSERT(animIndex < _anims.size());
 			_currentAnimIndex = animIndex;
-			setTexRect(_anims[_currentAnimIndex].rect());
+			SetTexRect(_anims[_currentAnimIndex].GetRect());
 		}
 	}
 
-	RectAnimation* AnimatedSprite::currentAnimation()
+	RectAnimation* AnimatedSprite::GetCurrentAnimation()
 	{
 		RectAnimation* currentAnim = nullptr;
 		if (!_anims.empty()) {
@@ -107,7 +107,7 @@ namespace nCine
 		return currentAnim;
 	}
 
-	const RectAnimation* AnimatedSprite::currentAnimation() const
+	const RectAnimation* AnimatedSprite::GetCurrentAnimation() const
 	{
 		const RectAnimation* currentAnim = nullptr;
 		if (!_anims.empty()) {
@@ -116,20 +116,20 @@ namespace nCine
 		return currentAnim;
 	}
 
-	std::uint32_t AnimatedSprite::frame() const
+	std::uint32_t AnimatedSprite::GetFrame() const
 	{
 		unsigned int frame = 0;
 		if (!_anims.empty()) {
-			frame = _anims[_currentAnimIndex].frame();
+			frame = _anims[_currentAnimIndex].GetFrame();
 		}
 		return frame;
 	}
 
-	void AnimatedSprite::setFrame(std::uint32_t frameNum)
+	void AnimatedSprite::SetFrame(std::uint32_t frameNum)
 	{
 		if (!_anims.empty()) {
-			_anims[_currentAnimIndex].setFrame(frameNum);
-			setTexRect(_anims[_currentAnimIndex].rect());
+			_anims[_currentAnimIndex].SetFrame(frameNum);
+			SetTexRect(_anims[_currentAnimIndex].GetRect());
 		}
 	}
 
@@ -137,6 +137,6 @@ namespace nCine
 		: Sprite(other), _anims(other._anims), _currentAnimIndex(other._currentAnimIndex)
 	{
 		_type = ObjectType::AnimatedSprite;
-		setFrame(other.frame());
+		SetFrame(other.GetFrame());
 	}
 }

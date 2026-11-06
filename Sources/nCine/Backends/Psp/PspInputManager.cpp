@@ -59,22 +59,22 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	bool PspJoystickState::isButtonPressed(int buttonId) const
+	bool PspJoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
-	unsigned char PspJoystickState::hatState(int hatId) const
+	unsigned char PspJoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
-	float PspJoystickState::axisValue(int axisId) const
+	float PspJoystickState::GetAxisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
-	void PspJoystickState::resetJoystickState(int joyId)
+	void PspJoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		_hatState = HatState::Centered;
@@ -82,48 +82,48 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	void PspJoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void PspJoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
-			_joyButtonEvent.joyId = _joyId;
-			_joyButtonEvent.buttonId = buttonId;
+		if (IInputManager::GetHandler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.JoyId = _joyId;
+			_joyButtonEvent.ButtonId = buttonId;
 			if (pressed) {
 				PspInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
 				PspInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
 		_buttonsState[buttonId] = pressed;
 	}
 
-	void PspJoystickState::simulateHatEvent(unsigned char state)
+	void PspJoystickState::SimulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && _hatState != state) {
-			_joyHatEvent.joyId = _joyId;
-			_joyHatEvent.hatId = 0;
-			_joyHatEvent.hatState = state;
+		if (IInputManager::GetHandler() != nullptr && _hatState != state) {
+			_joyHatEvent.JoyId = _joyId;
+			_joyHatEvent.HatId = 0;
+			_joyHatEvent.HatState = state;
 			PspInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+			IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 		}
 		_hatState = state;
 	}
 
-	void PspJoystickState::simulateAxisEvent(int axisId, float value)
+	void PspJoystickState::SimulateAxisEvent(int axisId, float value)
 	{
 		if (axisId < 0 || axisId >= MaxNumAxes) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
-			_joyAxisEvent.joyId = _joyId;
-			_joyAxisEvent.axisId = axisId;
-			_joyAxisEvent.value = value;
+		if (IInputManager::GetHandler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
+			_joyAxisEvent.JoyId = _joyId;
+			_joyAxisEvent.AxisId = axisId;
+			_joyAxisEvent.Value = value;
 			PspInputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
-			IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
+			IInputManager::GetHandler()->OnJoyAxisMoved(_joyAxisEvent);
 		}
 		_axesValuesState[axisId] = value;
 	}
@@ -132,76 +132,76 @@ namespace nCine::Backends
 	{
 		_joyMapping.Init(this);
 
-		_state.resetJoystickState(0);
+		_state.ResetJoystickState(0);
 
 		// The analog stick is only sampled into SceCtrlData when the controller service runs in analog mode
 		sceCtrlSetSamplingCycle(0);
 		sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 
 		// Poll once so the built-in pad connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	PspInputManager::~PspInputManager() = default;
 
-	const MouseState& PspInputManager::mouseState() const
+	const MouseState& PspInputManager::GetMouseState() const
 	{
 		static NullInputManager::NullMouseState nullMouseState;
 		return nullMouseState;
 	}
 
-	const KeyboardState& PspInputManager::keyboardState() const
+	const KeyboardState& PspInputManager::GetKeyboardState() const
 	{
 		static NullInputManager::NullKeyboardState nullKeyboardState;
 		return nullKeyboardState;
 	}
 
-	bool PspInputManager::isJoyPresent(int joyId) const
+	bool PspInputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId == 0 && _connected);
 	}
 
-	const char* PspInputManager::joyName(int joyId) const
+	const char* PspInputManager::GetJoyName(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return "PlayStation Portable Controller";
 	}
 
-	const JoystickGuid PspInputManager::joyGuid(int joyId) const
+	const JoystickGuid PspInputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The state publishes the XInput-shaped layout, so the built-in default mapping applies
 		return JoystickGuidType::Xinput;
 	}
 
-	int PspInputManager::joyNumButtons(int joyId) const
+	int PspInputManager::GetJoyButtonCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return PspJoystickState::MaxNumButtons;
 	}
 
-	int PspInputManager::joyNumHats(int joyId) const
+	int PspInputManager::GetJoyHatCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return PspJoystickState::MaxNumHats;
 	}
 
-	int PspInputManager::joyNumAxes(int joyId) const
+	int PspInputManager::GetJoyAxisCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return PspJoystickState::MaxNumAxes;
 	}
 
-	const JoystickState& PspInputManager::joystickState(int joyId) const
+	const JoystickState& PspInputManager::GetJoystickState(int joyId) const
 	{
 		static PspJoystickState nullJoystickState;
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _state;
 		}
 		return nullJoystickState;
 	}
 
-	bool PspInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool PspInputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// The PSP has no rumble hardware at all (which is why NCINE_HAS_GAMEPAD_RUMBLE is not defined for it)
 		static_cast<void>(joyId);
@@ -211,7 +211,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	bool PspInputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool PspInputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		static_cast<void>(joyId);
 		static_cast<void>(left);
@@ -220,7 +220,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void PspInputManager::updateJoystickStates()
+	void PspInputManager::UpdateJoystickStates()
 	{
 		SceCtrlData pad;
 		if (sceCtrlPeekBufferPositive(&pad, 1) < 1) {
@@ -242,7 +242,7 @@ namespace nCine::Backends
 
 		if (!_connected) {
 			_connected = true;
-			_joyConnectionEvent.joyId = 0;
+			_joyConnectionEvent.JoyId = 0;
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
@@ -252,34 +252,34 @@ namespace nCine::Backends
 		// The PSP face buttons sit where a DualShock's do, so they map onto the XInput names the same way
 		// the engine's PlayStation gamepad handling already assumes: Cross = A, Circle = B, Square = X,
 		// Triangle = Y
-		_state.simulateButtonEvent(ButtonA, (pad.Buttons & PSP_CTRL_CROSS) != 0);
-		_state.simulateButtonEvent(ButtonB, (pad.Buttons & PSP_CTRL_CIRCLE) != 0);
-		_state.simulateButtonEvent(ButtonX, (pad.Buttons & PSP_CTRL_SQUARE) != 0);
-		_state.simulateButtonEvent(ButtonY, (pad.Buttons & PSP_CTRL_TRIANGLE) != 0);
-		_state.simulateButtonEvent(ButtonLShoulder, (pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
-		_state.simulateButtonEvent(ButtonRShoulder, (pad.Buttons & PSP_CTRL_RTRIGGER) != 0);
-		_state.simulateButtonEvent(ButtonBack, (pad.Buttons & PSP_CTRL_SELECT) != 0);
-		_state.simulateButtonEvent(ButtonStart, (pad.Buttons & PSP_CTRL_START) != 0);
+		_state.SimulateButtonEvent(ButtonA, (pad.Buttons & PSP_CTRL_CROSS) != 0);
+		_state.SimulateButtonEvent(ButtonB, (pad.Buttons & PSP_CTRL_CIRCLE) != 0);
+		_state.SimulateButtonEvent(ButtonX, (pad.Buttons & PSP_CTRL_SQUARE) != 0);
+		_state.SimulateButtonEvent(ButtonY, (pad.Buttons & PSP_CTRL_TRIANGLE) != 0);
+		_state.SimulateButtonEvent(ButtonLShoulder, (pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
+		_state.SimulateButtonEvent(ButtonRShoulder, (pad.Buttons & PSP_CTRL_RTRIGGER) != 0);
+		_state.SimulateButtonEvent(ButtonBack, (pad.Buttons & PSP_CTRL_SELECT) != 0);
+		_state.SimulateButtonEvent(ButtonStart, (pad.Buttons & PSP_CTRL_START) != 0);
 		// Nothing on the console clicks a stick, and the Home button belongs to the firmware's exit dialog
-		_state.simulateButtonEvent(ButtonLStick, false);
-		_state.simulateButtonEvent(ButtonRStick, false);
-		_state.simulateButtonEvent(ButtonGuide, false);
+		_state.SimulateButtonEvent(ButtonLStick, false);
+		_state.SimulateButtonEvent(ButtonRStick, false);
+		_state.SimulateButtonEvent(ButtonGuide, false);
 
 		unsigned char hat = HatState::Centered;
 		if (pad.Buttons & PSP_CTRL_UP) hat |= HatState::Up;
 		if (pad.Buttons & PSP_CTRL_RIGHT) hat |= HatState::Right;
 		if (pad.Buttons & PSP_CTRL_DOWN) hat |= HatState::Down;
 		if (pad.Buttons & PSP_CTRL_LEFT) hat |= HatState::Left;
-		_state.simulateHatEvent(hat);
+		_state.SimulateHatEvent(hat);
 
-		_state.simulateAxisEvent(0, NormalizeStick(pad.Lx));
-		_state.simulateAxisEvent(1, NormalizeStick(pad.Ly));
+		_state.SimulateAxisEvent(0, NormalizeStick(pad.Lx));
+		_state.SimulateAxisEvent(1, NormalizeStick(pad.Ly));
 		// No right stick and no analog triggers: the shoulder buttons are digital, so their axes stay at the
 		// released end of the [-1, 1] range the trigger mapping expects
-		_state.simulateAxisEvent(2, 0.0f);
-		_state.simulateAxisEvent(3, 0.0f);
-		_state.simulateAxisEvent(4, -1.0f);
-		_state.simulateAxisEvent(5, -1.0f);
+		_state.SimulateAxisEvent(2, 0.0f);
+		_state.SimulateAxisEvent(3, 0.0f);
+		_state.SimulateAxisEvent(4, -1.0f);
+		_state.SimulateAxisEvent(5, -1.0f);
 	}
 }
 

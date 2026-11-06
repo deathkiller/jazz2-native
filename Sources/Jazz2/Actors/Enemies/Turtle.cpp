@@ -219,7 +219,7 @@ namespace Jazz2::Actors::Enemies
 			writer.SetUint8(8, _theme);
 			ActorActivationDetails details(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()),
 				shellParams
 			);
 			// The shell is a regular event object, so it can be spawned again from a level state snapshot
@@ -227,7 +227,7 @@ namespace Jazz2::Actors::Enemies
 			shell->OnActivated(details);
 			_levelHandler->AddActor(shell);
 
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

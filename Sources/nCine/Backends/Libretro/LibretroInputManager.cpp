@@ -33,16 +33,16 @@ namespace nCine::Backends
 		_joyMapping.AddMappingsFromString(RetroPadMapping);
 	}
 
-	const JoystickGuid LibretroInputManager::joyGuid(int joyId) const
+	const JoystickGuid LibretroInputManager::GetJoyGuid(int joyId) const
 	{
 		return JoystickGuid(StringView(RetroPadGuid));
 	}
 
-	void LibretroInputManager::connectJoystick()
+	void LibretroInputManager::ConnectJoystick()
 	{
 		for (std::int32_t joyId = 0; joyId < NumPads; joyId++) {
 			JoyConnectionEvent event;
-			event.joyId = joyId;
+			event.JoyId = joyId;
 			_joyMapping.OnJoyConnected(event);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(event);
@@ -50,7 +50,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void LibretroInputManager::processFrame()
+	void LibretroInputManager::ProcessFrame()
 	{
 		LibretroApplication::InputPollCallback();
 
@@ -62,8 +62,8 @@ namespace nCine::Backends
 				if (pressed != joyState.buttons[id]) {
 					joyState.buttons[id] = pressed;
 					JoyButtonEvent event;
-					event.joyId = port;
-					event.buttonId = id;
+					event.JoyId = port;
+					event.ButtonId = id;
 					if (pressed) {
 						_joyMapping.OnJoyButtonPressed(event);
 						if (_inputEventHandler != nullptr) _inputEventHandler->OnJoyButtonPressed(event);
@@ -88,9 +88,9 @@ namespace nCine::Backends
 				if (value != joyState.axes[id]) {
 					joyState.axes[id] = value;
 					JoyAxisEvent event;
-					event.joyId = port;
-					event.axisId = id;
-					event.value = value;
+					event.JoyId = port;
+					event.AxisId = id;
+					event.Value = value;
 					_joyMapping.OnJoyAxisMoved(event);
 					if (_inputEventHandler != nullptr) _inputEventHandler->OnJoyAxisMoved(event);
 				}

@@ -108,8 +108,8 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(filename);
-		if (!texLoader->hasLoaded()) {
+		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::CreateFromFile(filename);
+		if (!texLoader->HasLoaded()) {
 			return false;
 		}
 
@@ -291,24 +291,24 @@ namespace nCine
 		// still exceed it, and their texture types split such an image into pages that the draw path
 		// selects between. So it degrades - a primitive sampling across a page boundary loses its
 		// overhang - instead of aborting before the first frame.
-		if (texLoader.width() > maxTextureSize || texLoader.height() > maxTextureSize) {
+		if (texLoader.GetWidth() > maxTextureSize || texLoader.GetHeight() > maxTextureSize) {
 			LOGW("Texture {}x{} is bigger than the device maximum {} and will be split into pages",
-				texLoader.width(), texLoader.height(), maxTextureSize);
+				texLoader.GetWidth(), texLoader.GetHeight(), maxTextureSize);
 		}
 #else
-		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.width(), maxTextureSize);
-		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.height(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.GetWidth() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.GetWidth(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.GetHeight() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.GetHeight(), maxTextureSize);
 #endif
 
-		const TextureFormat& texFormat = texLoader.texFormat();
-		const PixelFormat pixelFormat = texFormat.pixelFormat();
-		const bool bgr = texFormat.isBgr();
-		std::uint32_t dataSize = texLoader.dataSize();
+		const TextureFormat& texFormat = texLoader.GetTexFormat();
+		const PixelFormat pixelFormat = texFormat.GetPixelFormat();
+		const bool bgr = texFormat.IsBgr();
+		std::uint32_t dataSize = texLoader.GetDataSize();
 
 		const bool withTexStorage = RHI::Texture::SupportsImmutableStorage();
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
-		if (_dataSize == 0 || (_width != texLoader.width() || _height != texLoader.height() || _format != pixelFormat)) {
+		if (_dataSize == 0 || (_width != texLoader.GetWidth() || _height != texLoader.GetHeight() || _format != pixelFormat)) {
 			if (withTexStorage) {
 				if (_dataSize > 0) {
 					// The texture needs to be recreated as its storage is immutable
@@ -317,13 +317,13 @@ namespace nCine
 				}
 
 				if (_dataSize == 0) {
-					_rhiTexture->TexStorage2D(texLoader.mipMapCount(), pixelFormat, texLoader.width(), texLoader.height());
+					_rhiTexture->TexStorage2D(texLoader.GetMipMapCount(), pixelFormat, texLoader.GetWidth(), texLoader.GetHeight());
 				}
-			} else if (!texFormat.isCompressed()) {
-				std::int32_t levelWidth = texLoader.width();
-				std::int32_t levelHeight = texLoader.height();
+			} else if (!texFormat.IsCompressed()) {
+				std::int32_t levelWidth = texLoader.GetWidth();
+				std::int32_t levelHeight = texLoader.GetHeight();
 
-				for (std::int32_t i = 0; i < texLoader.mipMapCount(); i++) {
+				for (std::int32_t i = 0; i < texLoader.GetMipMapCount(); i++) {
 					_rhiTexture->TexImage2D(i, pixelFormat, bgr, levelWidth, levelHeight, nullptr);
 					levelWidth /= 2;
 					levelHeight /= 2;
@@ -331,10 +331,10 @@ namespace nCine
 			}
 		}
 
-		_width = texLoader.width();
-		_height = texLoader.height();
-		_mipMapLevels = texLoader.mipMapCount();
-		_isCompressed = texFormat.isCompressed();
+		_width = texLoader.GetWidth();
+		_height = texLoader.GetHeight();
+		_mipMapLevels = texLoader.GetMipMapCount();
+		_isCompressed = texFormat.IsCompressed();
 		_format = pixelFormat;
 		_dataSize = dataSize;
 
@@ -360,20 +360,20 @@ namespace nCine
 	{
 		const bool withTexStorage = RHI::Texture::SupportsImmutableStorage();
 
-		const TextureFormat& texFormat = texLoader.texFormat();
-		const PixelFormat pixelFormat = texFormat.pixelFormat();
-		const bool bgr = texFormat.isBgr();
+		const TextureFormat& texFormat = texLoader.GetTexFormat();
+		const PixelFormat pixelFormat = texFormat.GetPixelFormat();
+		const bool bgr = texFormat.IsBgr();
 		std::int32_t levelWidth = _width;
 		std::int32_t levelHeight = _height;
 
-		for (std::int32_t mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
-			const std::uint8_t* data = texLoader.pixels(mipIdx);
+		for (std::int32_t mipIdx = 0; mipIdx < texLoader.GetMipMapCount(); mipIdx++) {
+			const std::uint8_t* data = texLoader.GetPixels(mipIdx);
 
-			if (texFormat.isCompressed()) {
+			if (texFormat.IsCompressed()) {
 				if (withTexStorage) {
-					_rhiTexture->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					_rhiTexture->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, texLoader.GetDataSize(mipIdx), texLoader.GetPixels(mipIdx));
 				} else {
-					_rhiTexture->CompressedTexImage2D(mipIdx, pixelFormat, levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					_rhiTexture->CompressedTexImage2D(mipIdx, pixelFormat, levelWidth, levelHeight, texLoader.GetDataSize(mipIdx), texLoader.GetPixels(mipIdx));
 				}
 			} else {
 				// Storage has already been created at this point

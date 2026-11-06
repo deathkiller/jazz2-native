@@ -168,7 +168,7 @@ namespace Jazz2::UI
 	}
 
 	LoadingHandler::LoadingHandler(IRootController* root, bool darkMode)
-		: _root(root), _startTime(TimeStamp::now()), _time(0.0f), _transition(0.0f), _progress(-1.0f), _progressTransition(0.0f),
+		: _root(root), _startTime(TimeStamp::Now()), _time(0.0f), _transition(0.0f), _progress(-1.0f), _progressTransition(0.0f),
 			_darkness(darkMode ? 1.0f : 0.0f), _aura(0.0f)
 	{
 		_canvasBackground = std::make_unique<BackgroundCanvas>(this);
@@ -187,7 +187,7 @@ namespace Jazz2::UI
 
 	LoadingHandler::~LoadingHandler()
 	{
-		_canvasBackground->setParent(nullptr);
+		_canvasBackground->SetParent(nullptr);
 	}
 
 	Vector2i LoadingHandler::GetViewSize() const
@@ -207,7 +207,7 @@ namespace Jazz2::UI
 			_transition = std::min(_transition + timeMult * 0.04f, 1.0f);
 		}
 
-		_time = _startTime.secondsSince();
+		_time = _startTime.GetSecondsSince();
 		float longWait = _time - LongWaitDelay;
 		if (longWait > 0.0f) {
 			// The dark theme simply stays dark
@@ -249,7 +249,7 @@ namespace Jazz2::UI
 		// Viewports must be registered in reverse order
 		_upscalePass.Register();
 
-		_canvasBackground->setParent(_upscalePass.GetNode());
+		_canvasBackground->SetParent(_upscalePass.GetNode());
 	}
 
 	bool LoadingHandler::BackgroundCanvas::OnDraw(RenderQueue& renderQueue)

@@ -129,10 +129,10 @@ namespace Jazz2::UI::Windows
 			return;
 		}
 		TextInputEvent event;
-		std::size_t length = std::min(text.size(), sizeof(event.text) - 1);
-		std::memcpy(event.text, text.data(), length);
-		event.text[length] = '\0';
-		event.length = std::int32_t(length);
+		std::size_t length = std::min(text.size(), sizeof(event.Text) - 1);
+		std::memcpy(event.Text, text.data(), length);
+		event.Text[length] = '\0';
+		event.Length = std::int32_t(length);
 		surface->OnTextInput(event);
 		// A capital letter, then the small ones again
 		if (_shift) {
@@ -145,8 +145,8 @@ namespace Jazz2::UI::Windows
 	{
 		if (Surface* surface = GetSurface()) {
 			KeyboardEvent event;
-			event.sym = key;
-			event.mod = 0;
+			event.Sym = key;
+			event.Mod = 0;
 			surface->OnKeyPressed(event);
 		}
 	}

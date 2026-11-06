@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Environment
 
 		ApplyOrientation();
 		SetState(ActorState::ApplyGravitation, applyGravitation);
-		_renderer.setLayer(_renderer.layer() - 8);
+		_renderer.SetLayer(_renderer.GetLayer() - 8);
 		UpdateStrength();
 
 		if (GetState(ActorState::ApplyGravitation)) {
@@ -248,8 +248,8 @@ namespace Jazz2::Actors::Environment
 			_launchTime += timeMult;
 		}
 		if (_state == State::Heated) {
-			// Cannot be directly in `Spring::OnHandleCollision()` due to bug in `BaseSprite::updateRenderCommand()`,
-			// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+			// Cannot be directly in `Spring::OnHandleCollision()` due to bug in `BaseSprite::UpdateRenderCommand()`,
+			// it would be called before `BaseSprite::UpdateRenderCommand()` but after `SceneNode::Transform()`
 			_renderer.Initialize(ActorRendererType::Default);
 			_state = State::Default;
 		}

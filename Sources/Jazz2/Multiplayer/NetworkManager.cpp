@@ -1236,7 +1236,7 @@ namespace Jazz2::Multiplayer
 			std::unique_lock<Spinlock> l(_lock);
 			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
 			peerDesc->second->RemotePeer = peer;
-			peerDesc->second->ConnectedSince = TimeStamp::now();
+			peerDesc->second->ConnectedSince = TimeStamp::Now();
 		}
 
 		return result;
@@ -1274,7 +1274,7 @@ namespace Jazz2::Multiplayer
 				// Drop any retained descriptors that have outlived the reconnect window
 				SmallVector<String, 0> expired;
 				for (auto& [uuid, desc] : _disconnectedPeers) {
-					if (desc->DisconnectedSince.secondsSince() > reconnectWindowSecs) {
+					if (desc->DisconnectedSince.GetSecondsSince() > reconnectWindowSecs) {
 						expired.push_back(uuid);
 					}
 				}
@@ -1291,7 +1291,7 @@ namespace Jazz2::Multiplayer
 						// resuming where the kick left off
 						LOGI("Progression of \"{}\" [{}] discarded: {}", peerDesc->PlayerName, peer, ReasonToString(reason));
 					} else {
-						peerDesc->DisconnectedSince = TimeStamp::now();
+						peerDesc->DisconnectedSince = TimeStamp::Now();
 						_disconnectedPeers[UuidToString(peerDesc->UniquePlayerID)] = Death::move(peerDesc);
 					}
 				}
@@ -1315,7 +1315,7 @@ namespace Jazz2::Multiplayer
 		std::shared_ptr<PeerDescriptor> peerDesc = it->second;
 		_disconnectedPeers.erase(it);
 		std::int32_t reconnectWindowSecs = (_serverConfig != nullptr ? _serverConfig->ReconnectWindowSecs : 0);
-		if (reconnectWindowSecs <= 0 || peerDesc->DisconnectedSince.secondsSince() > reconnectWindowSecs) {
+		if (reconnectWindowSecs <= 0 || peerDesc->DisconnectedSince.GetSecondsSince() > reconnectWindowSecs) {
 			return nullptr;
 		}
 		return peerDesc;

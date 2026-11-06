@@ -27,24 +27,24 @@ namespace Jazz2::Editor
 		// The fingers on the screen now, those that stay keep where they started
 		SmallVector<Finger, 4> next;
 		std::int32_t releasedId = -1;
-		if (event.type == TouchEventType::PointerUp && event.actionIndex >= 0 && event.actionIndex < std::int32_t(event.count)) {
-			releasedId = event.pointers[event.actionIndex].id;
+		if (event.Type == TouchEventType::PointerUp && event.ActionIndex >= 0 && event.ActionIndex < std::int32_t(event.Count)) {
+			releasedId = event.Pointers[event.ActionIndex].Id;
 		}
-		if (event.type != TouchEventType::Up) {
-			for (std::uint32_t i = 0; i < event.count && i < TouchEvent::MaxPointers; i++) {
-				const TouchEvent::Pointer& pointer = event.pointers[i];
-				if (pointer.id == releasedId) {
+		if (event.Type != TouchEventType::Up) {
+			for (std::uint32_t i = 0; i < event.Count && i < TouchEvent::MaxPointers; i++) {
+				const TouchEvent::Pointer& pointer = event.Pointers[i];
+				if (pointer.Id == releasedId) {
 					continue;
 				}
-				Vector2f position(pointer.x * screenSize.X, pointer.y * screenSize.Y);
+				Vector2f position(pointer.X * screenSize.X, pointer.Y * screenSize.Y);
 				Vector2f start = position;
 				for (const Finger& finger : _fingers) {
-					if (finger.Id == pointer.id) {
+					if (finger.Id == pointer.Id) {
 						start = finger.Start;
 						break;
 					}
 				}
-				next.push_back(Finger{ pointer.id, start, position });
+				next.push_back(Finger{ pointer.Id, start, position });
 			}
 		}
 		Vector2f lastPosition = (!_fingers.empty() ? _fingers[0].Position : Vector2f());
@@ -135,7 +135,7 @@ namespace Jazz2::Editor
 					}
 					Vector2f center = GetCenter();
 					float spread = GetSpread(center);
-					if (event.type == TouchEventType::PointerDown || event.type == TouchEventType::PointerUp) {
+					if (event.Type == TouchEventType::PointerDown || event.Type == TouchEventType::PointerUp) {
 						// Another finger came or went, the view doesn't jump
 						_lastCenter = center;
 						_lastSpread = spread;

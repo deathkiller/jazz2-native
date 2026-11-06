@@ -29,7 +29,7 @@ namespace Jazz2::Rendering
 		BlurRenderPass(PlayerViewport* owner)
 			: _owner(owner)
 		{
-			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
 		/**

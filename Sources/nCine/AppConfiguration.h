@@ -27,28 +27,28 @@ namespace nCine
 
 		// User configurable compile-time variables
 		/** @brief The screen resolution */
-		Vector2i resolution;
+		Vector2i Resolution;
 
 		/** @brief Window position coordinates in the virtual screen made of all the connected monitors */
-		Vector2i windowPosition;
+		Vector2i WindowPosition;
 		
 		/** @brief Maximum number of frames to render per second or 0 for no limit */
-		std::uint32_t frameLimit;
+		std::uint32_t FrameLimit;
 
 		/** @brief Interval for frame timer accumulation average and log */
-		float frameTimerLogInterval;
+		float FrameTimerLogInterval;
 
 		/** @brief Whether the screen is going to be in fullscreen mode */
-		bool fullscreen;
+		bool Fullscreen;
 		/** @brief Whether the window is going to be resizable */
-		bool resizable;
+		bool Resizable;
 		/** @brief Whether the window size is automatically scaled by the display factor */
-		bool windowScaling;
+		bool WindowScaling;
 
 		/** @brief Whether mapping is used to update OpenGL buffers */
-		bool useBufferMapping;
+		bool UseBufferMapping;
 		/** @brief Whether persistently mapped buffer storage is used for streaming buffers, if the device supports it */
-		bool useBufferStorage;
+		bool UseBufferStorage;
 		/**
 			@brief Fixed size of render commands to be collected for batching, overriding what the device asks for
 
@@ -56,69 +56,69 @@ namespace nCine
 			`IRhiCapabilities::IntValues::MaxBatchSize` it publishes when the budget is not what limits it.
 			Set this only to override that from the build (`WITH_FIXED_BATCH_SIZE`) or as a driver workaround.
 		*/
-		std::uint32_t fixedBatchSize;
+		std::uint32_t FixedBatchSize;
 		/** @brief Path for the binary shaders cache (or empty to disable binary shader cache) */
-		String shaderCachePath;
+		String ShaderCachePath;
 
 		/** @brief Window title */
-		String windowTitle;
+		String WindowTitle;
 		/** @brief Window icon filename */
-		String windowIconFilename;
+		String WindowIconFilename;
 
 		/** @brief Maximum size in bytes for each VBO collecting geometry data */
-		std::uint32_t vboSize;
+		std::uint32_t VboSize;
 		/** @brief Maximum size in bytes for each IBO collecting index data */
-		std::uint32_t iboSize;
+		std::uint32_t IboSize;
 		/** @brief Maximum size for the pool of VAOs */
-		std::uint32_t vaoPoolSize;
+		std::uint32_t VaoPoolSize;
 		/** @brief Initial size for the pool of render commands */
-		std::uint32_t renderCommandPoolSize;
+		std::uint32_t RenderCommandPoolSize;
 
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Whether the debug overlay is enabled */
-		bool withDebugOverlay;
+		bool WithDebugOverlay;
 #endif
 		/** @brief Whether the audio subsystem is enabled */
-		bool withAudio;
+		bool WithAudio;
 		/** @brief Whether the graphics subsystem is enabled */
-		bool withGraphics;
+		bool WithGraphics;
 		/** @brief Whether the threading subsystem is enabled */
-		bool withThreads;
+		bool WithThreads;
 		/** @brief Whether the scenegraph based rendering is enabled */
-		bool withScenegraph;
+		bool WithScenegraph;
 		/** @brief Whether the vertical synchronization is enabled */
-		bool withVSync;
+		bool WithVSync;
 		/** @brief Whether the OpenGL debug context is enabled */
-		bool withGlDebugContext;
+		bool WithGlDebugContext;
 
 		/** @brief Returns path for the application to load data from */
-		const String& dataPath() const;
+		const String& GetDataPath() const;
 		/** @overload */
-		String& dataPath();
+		String& GetDataPath();
 
 		/** @brief Returns `true` if the OpenGL profile is going to be core */
-		inline bool glCoreProfile() const {
+		inline bool IsGlCoreProfile() const {
 			return _glCoreProfile;
 		}
 		/** @brief Returns `true` if the OpenGL context is going to be forward compatible */
-		inline bool glForwardCompatible() const {
+		inline bool IsGlForwardCompatible() const {
 			return _glForwardCompatible;
 		}
 		/** @brief Returns major version number of the OpenGL context */
-		inline std::uint32_t glMajorVersion() const {
+		inline std::uint32_t GetGlMajorVersion() const {
 			return _glMajorVersion;
 		}
 		/** @brief Returns minor version number of the OpenGL context */
-		inline std::uint32_t glMinorVersion() const {
+		inline std::uint32_t GetGlMinorVersion() const {
 			return _glMinorVersion;
 		}
 
 		/** @brief Returns number of arguments passed on the command-line */
-		inline std::size_t argc() const {
+		inline std::size_t GetArgc() const {
 			return _argv.size();
 		}
 		/** @brief Returns selected argument from the ones passed on the command-line */
-		const StringView argv(std::size_t index) const;
+		const StringView GetArgv(std::size_t index) const;
 
 	private:
 		// Pre-configured compile-time variables

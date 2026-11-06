@@ -32,7 +32,7 @@ namespace nCine::Backends
 #endif
 		  _sizeChanged(2)
 	{
-		updateMonitors();
+		UpdateMonitors();
 		Initialize();
 	}
 
@@ -62,7 +62,7 @@ namespace nCine::Backends
 
 		// The CoreWindow is passed as its raw ABI (IUnknown-compatible) pointer; CreateSwapChainForCoreWindow
 		// keeps its own reference, and `_window` owns the CoreWindow for the device's lifetime.
-		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, _displayMode.hasVSync());
+		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, _displayMode.HasVSync());
 		FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and CoreWindow swap chain");
 #elif defined(RHI_GL_PROFILE_ES)
 #	if defined(WITH_ANGLE)
@@ -244,12 +244,12 @@ namespace nCine::Backends
 		EGLBoolean result = eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext);
 		FATAL_ASSERT_MSG(result != EGL_FALSE, "eglMakeCurrent() failed");
 
-		const int interval = (_displayMode.hasVSync() ? 1 : 0);
+		const int interval = (_displayMode.HasVSync() ? 1 : 0);
 		eglSwapInterval(_eglDisplay, interval);
 #endif
 	}
 
-	void UwpGfxDevice::update()
+	void UwpGfxDevice::Update()
 	{
 #if defined(WITH_RHI_D3D11)
 		// Present the frame just rendered, then reconcile any pending CoreWindow resize so the swap chain and
@@ -315,7 +315,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void UwpGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void UwpGfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		//UwpApplication::GetDispatcher().RunIdleAsync([fullscreen, width, height](auto args) {
 			if (fullscreen) {
@@ -335,7 +335,7 @@ namespace nCine::Backends
 		_sizeChanged = 10;
 	}
 
-	void UwpGfxDevice::setWindowSize(int width, int height)
+	void UwpGfxDevice::SetWindowSize(int width, int height)
 	{
 		// This method is usually called from main thread, but it's required on UI thread
 		//UwpApplication::GetDispatcher().RunIdleAsync([width, height](auto args) {
@@ -344,7 +344,7 @@ namespace nCine::Backends
 		//});
 	}
 
-	void UwpGfxDevice::setWindowTitle(StringView windowTitle)
+	void UwpGfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		// TODO: Disabled for now for Windows RT, because it appends application name
 		// This method is usually called from main thread, but it's required on UI thread
@@ -354,22 +354,22 @@ namespace nCine::Backends
 		//});
 	}
 
-	void UwpGfxDevice::updateMonitors()
+	void UwpGfxDevice::UpdateMonitors()
 	{
 		auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
 
 		_numMonitors = 1;
 		auto& monitor = _monitors[0];
-		monitor.name = nullptr;
-		monitor.position = Vector2i::Zero;
+		monitor.Name = nullptr;
+		monitor.Position = Vector2i::Zero;
 
 		float dpi = displayInfo.LogicalDpi();
-		monitor.scale.X = dpi / DefaultDPI;
-		monitor.scale.Y = dpi / DefaultDPI;
+		monitor.Scale.X = dpi / DefaultDPI;
+		monitor.Scale.Y = dpi / DefaultDPI;
 
-		monitor.numVideoModes = 1;
-		auto& videoMode = monitor.videoModes[0];
-		videoMode.width = displayInfo.ScreenWidthInRawPixels();
-		videoMode.height = displayInfo.ScreenHeightInRawPixels();
+		monitor.VideoModeCount = 1;
+		auto& videoMode = monitor.VideoModes[0];
+		videoMode.Width = displayInfo.ScreenWidthInRawPixels();
+		videoMode.Height = displayInfo.ScreenHeightInRawPixels();
 	}
 }

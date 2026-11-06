@@ -223,7 +223,7 @@ namespace Jazz2::UI::Windows
 
 	bool Button::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if ((event.sym == Keys::Return || event.sym == Keys::NumPadEnter || event.sym == Keys::Space) && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+		if ((event.Sym == Keys::Return || event.Sym == Keys::NumPadEnter || event.Sym == Keys::Space) && (event.Mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
 			if (IsUsable() && OnClick) {
 				// Nothing of the button is touched after, as after a click
 				OnClick();
@@ -413,7 +413,7 @@ namespace Jazz2::UI::Windows
 
 	bool CheckBox::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if (event.sym == Keys::Space && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+		if (event.Sym == Keys::Space && (event.Mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
 			if (IsUsable() && Setter) {
 				Setter(!(Getter && Getter()));
 			}
@@ -1215,8 +1215,8 @@ namespace Jazz2::UI::Windows
 		}
 
 		ClampCaret();
-		bool shift = (event.mod & KeyMod::Shift) != 0;
-		bool ctrl = (event.mod & KeyMod::Ctrl) != 0;
+		bool shift = (event.Mod & KeyMod::Shift) != 0;
+		bool ctrl = (event.Mod & KeyMod::Ctrl) != 0;
 #if defined(DEATH_TARGET_APPLE)
 		// Cmd is what Ctrl is elsewhere
 		ctrl = ctrl || (event.mod & KeyMod::Super) != 0;
@@ -1232,7 +1232,7 @@ namespace Jazz2::UI::Windows
 			_lastEdit = EditKind::None;
 		};
 
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Left:
 				if (ctrl) {
 					moveCaret(FindWordBoundary(_caret, false));
@@ -1255,7 +1255,7 @@ namespace Jazz2::UI::Windows
 			case Keys::Y:
 				if (ctrl) {
 					// Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, the level isn't touched while typing
-					bool redo = (event.sym == Keys::Y || shift);
+					bool redo = (event.Sym == Keys::Y || shift);
 					if (redo ? Redo() : Undo()) {
 						NotifyChanged();
 					}
@@ -1271,7 +1271,7 @@ namespace Jazz2::UI::Windows
 				SmallVector<std::int32_t, 8> starts;
 				GetLineStarts(Text, starts);
 				std::int32_t line = GetLineOf(starts, _caret);
-				std::int32_t target = line + (event.sym == Keys::Up ? -1 : 1);
+				std::int32_t target = line + (event.Sym == Keys::Up ? -1 : 1);
 				if (target < 0) {
 					moveCaret(0);
 				} else if (target >= std::int32_t(starts.size())) {
@@ -1287,7 +1287,7 @@ namespace Jazz2::UI::Windows
 				SmallVector<std::int32_t, 8> starts;
 				GetLineStarts(Text, starts);
 				std::int32_t line = GetLineOf(starts, _caret);
-				if (event.sym == Keys::Home) {
+				if (event.Sym == Keys::Home) {
 					moveCaret(ctrl ? 0 : starts[line]);
 				} else {
 					moveCaret(ctrl ? std::int32_t(Text.size()) : GetLineEnd(starts, line));
@@ -1347,8 +1347,8 @@ namespace Jazz2::UI::Windows
 			case Keys::X:
 				if (ctrl && _selectionStart != _caret) {
 					std::int32_t from = std::min(_selectionStart, _caret), to = std::max(_selectionStart, _caret);
-					theApplication().GetInputManager().setClipboardText(Text.slice(std::size_t(from), std::size_t(to)));
-					if (event.sym == Keys::X) {
+					theApplication().GetInputManager().SetClipboardText(Text.slice(std::size_t(from), std::size_t(to)));
+					if (event.Sym == Keys::X) {
 						RecordUndo(EditKind::Other);
 						DeleteSelection();
 						NotifyChanged();
@@ -1359,7 +1359,7 @@ namespace Jazz2::UI::Windows
 			case Keys::V:
 				if (ctrl) {
 					// A single line takes only the first line of it, Insert() leaves out the rest
-					String clipboard = theApplication().GetInputManager().getClipboardText();
+					String clipboard = theApplication().GetInputManager().GetClipboardText();
 					RecordUndo(EditKind::Other);
 					DeleteSelection();
 					Insert(clipboard);
@@ -1373,7 +1373,7 @@ namespace Jazz2::UI::Windows
 
 		// Everything else typed goes here too, so it doesn't trigger hotkeys, except Tab, which moves the focus, and what
 		// the surface leaves to the shortcuts, such as showing the help
-		if (event.sym == Keys::Tab) {
+		if (event.Sym == Keys::Tab) {
 			return false;
 		}
 		Surface* surface = GetSurface();
@@ -1387,7 +1387,7 @@ namespace Jazz2::UI::Windows
 		}
 		ClampCaret();
 		// Letters typed in a row are one step of undo, a space starts the next one
-		StringView typed(event.text, std::size_t(event.length));
+		StringView typed(event.Text, std::size_t(event.Length));
 		bool space = (typed.size() == 1 && typed[0] == ' ');
 		RecordUndo(space || _selectionStart != _caret ? EditKind::Other : EditKind::Typing);
 		DeleteSelection();
@@ -1656,9 +1656,9 @@ namespace Jazz2::UI::Windows
 
 	bool NumberBox::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if (_focused && (event.sym == Keys::Up || event.sym == Keys::Down)) {
+		if (_focused && (event.Sym == Keys::Up || event.Sym == Keys::Down)) {
 			// Confirms what was typed, steps the value, and goes on typing with the new one
-			float steps = (event.sym == Keys::Up ? 1.0f : -1.0f) * ((event.mod & KeyMod::Shift) != 0 ? 10.0f : 1.0f);
+			float steps = (event.Sym == Keys::Up ? 1.0f : -1.0f) * ((event.Mod & KeyMod::Shift) != 0 ? 10.0f : 1.0f);
 			if (Surface* surface = GetSurface()) {
 				surface->SetFocus(nullptr);
 				// What was typed may have rebuilt the part of the interface the box is in, a box taken out of it is left

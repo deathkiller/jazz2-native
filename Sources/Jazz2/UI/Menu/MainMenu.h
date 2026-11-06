@@ -142,7 +142,7 @@ namespace Jazz2::UI::Menu
 		public:
 			TexturedBackgroundPass(MainMenu* owner) : _owner(owner), _alreadyRendered(false)
 			{
-				setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+				SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 			}
 
 			void Initialize();

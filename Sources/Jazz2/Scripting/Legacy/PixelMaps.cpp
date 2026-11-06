@@ -607,20 +607,20 @@ namespace Jazz2::Scripting
 			if (IsScriptFileNameSafe(filename)) {
 				auto stream = OpenScriptFile(filename);
 				if (stream != nullptr && stream->IsValid()) {
-					loader = ITextureLoader::createFromStream(Death::move(stream), filename);
+					loader = ITextureLoader::CreateFromStream(Death::move(stream), filename);
 				}
 			}
-			if (loader == nullptr || !loader->hasLoaded() || loader->pixels() == nullptr) {
+			if (loader == nullptr || !loader->HasLoaded() || loader->GetPixels() == nullptr) {
 				return Create(1, 1);
 			}
 
-			const std::uint32_t channels = loader->texFormat().numChannels();
-			const bool bgr = loader->texFormat().isBgr();
-			jjCOLORMAP* map = Create(std::uint32_t(loader->width()), std::uint32_t(loader->height()));
+			const std::uint32_t channels = loader->GetTexFormat().GetChannelCount();
+			const bool bgr = loader->GetTexFormat().IsBgr();
+			jjCOLORMAP* map = Create(std::uint32_t(loader->GetWidth()), std::uint32_t(loader->GetHeight()));
 			if (map == nullptr || channels < 1 || channels > 4) {
 				return map;
 			}
-			const std::uint8_t* src = loader->pixels();
+			const std::uint8_t* src = loader->GetPixels();
 			std::size_t count = std::size_t(map->width) * map->height;
 			for (std::size_t i = 0; i < count; i++, src += channels) {
 				jjPALCOLOR& color = map->_pixels[i];

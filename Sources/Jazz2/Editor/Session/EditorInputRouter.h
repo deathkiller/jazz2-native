@@ -165,7 +165,7 @@ namespace Jazz2::Editor
 
 		// What the editor was used with last, and the state of the gamepad
 		InputModality _inputModality = InputModality::KeyboardMouse;
-		// Mouse buttons pressed and not released yet, bits as of IGfxDevice::globalMouseButtons(), and for how many frames
+		// Mouse buttons pressed and not released yet, bits as of IGfxDevice::GetGlobalMouseButtons(), and for how many frames
 		// the system has some of them released without a release told
 		std::uint32_t _heldButtons = 0;
 		std::int32_t _missedReleaseFrames = 0;

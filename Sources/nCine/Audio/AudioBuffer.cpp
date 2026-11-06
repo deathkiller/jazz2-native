@@ -88,7 +88,7 @@ namespace nCine
 			// Iterating backwards because a stopped player unregisters itself
 			for (std::uint32_t i = device.GetPlayerCount(); i > 0; i--) {
 				IAudioPlayer* player = device.GetPlayer(i - 1);
-				if (player != nullptr && player->type() == AudioBufferPlayer::sType()) {
+				if (player != nullptr && player->GetType() == AudioBufferPlayer::sType()) {
 					AudioBufferPlayer* bufferPlayer = static_cast<AudioBufferPlayer*>(player);
 					if (bufferPlayer->GetAudioBuffer() == this) {
 						bufferPlayer->SetAudioBuffer(nullptr);

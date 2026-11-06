@@ -25,7 +25,7 @@ namespace nCine
 
 	void RenderBatcher::GetBatchSizeLimits(std::uint32_t& minBatchSize, std::uint32_t& maxBatchSize)
 	{
-		std::uint32_t fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
+		std::uint32_t fixedBatchSize = theApplication().GetAppConfiguration().FixedBatchSize;
 		if (fixedBatchSize == 0) {
 			// A backend that publishes a hard ceiling (IntValues::MaxBatchSize) is one whose shaders were
 			// compiled for exactly that count, so the ceiling below comes from the device rather than from
@@ -52,8 +52,8 @@ namespace nCine
 			maxBatchSize = fixedBatchSize;
 		} else {
 			auto& renderingSettings = theApplication().GetRenderingSettings();
-			minBatchSize = renderingSettings.minBatchSize;
-			maxBatchSize = renderingSettings.maxBatchSize;
+			minBatchSize = renderingSettings.MinBatchSize;
+			maxBatchSize = renderingSettings.MaxBatchSize;
 		}
 
 		DEATH_ASSERT(minBatchSize > 1);
@@ -79,7 +79,7 @@ namespace nCine
 				continue;
 			}
 
-			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.GetUniformBlock()->GetName());
 			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				size += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
@@ -97,10 +97,10 @@ namespace nCine
 				continue;
 			}
 
-			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.GetUniformBlock()->GetName());
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			DEATH_ASSERT(dataCopied);
-			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
+			batchBlock->SetUsedSize(uniformBlockCache.GetUsedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
@@ -243,7 +243,7 @@ namespace nCine
 	bool RenderBatcher::BeginDirectBatch(RenderCommand& refCommand, std::uint32_t maxInstances, DirectBatch& batch, RenderCommand* batchCommand)
 	{
 		batch = DirectBatch();
-		if (maxInstances == 0 || !theApplication().GetRenderingSettings().batchingEnabled) {
+		if (maxInstances == 0 || !theApplication().GetRenderingSettings().BatchingEnabled) {
 			return false;
 		}
 
@@ -387,7 +387,7 @@ namespace nCine
 		const std::uint32_t nonInstanceUniformsSize = GetNonInstanceUniformsSize(batchCommand, refCommand, singleInstanceBlock);
 
 		// Set to true if at least one command in the batch has indices or forced by a rendering settings
-		bool batchingWithIndices = theApplication().GetRenderingSettings().batchingWithIndices;
+		bool batchingWithIndices = theApplication().GetRenderingSettings().BatchingWithIndices;
 		// Sum the amount of UBO memory required by the batch and determine if indices are needed
 		SmallVectorImpl<RenderCommand*>::const_iterator it = start;
 		while (it != end) {

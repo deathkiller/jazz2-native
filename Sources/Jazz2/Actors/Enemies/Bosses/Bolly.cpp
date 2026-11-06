@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Bosses
 		std::uint8_t bottomParams[1] = { std::uint8_t(BottomAnimation) };
 		_bottom->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2),
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2),
 			bottomParams
 		));
 		_levelHandler->AddActor(_bottom);
@@ -90,7 +90,7 @@ namespace Jazz2::Actors::Bosses
 			std::uint8_t chainParams[1] = { std::uint8_t(IsChainBall(i) ? ChainBallAnimation : ChainPieceAnimation) };
 			_chain[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - (IsChainBall(i) ? 2 : 4)),
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - (IsChainBall(i) ? 2 : 4)),
 				chainParams
 			));
 			_levelHandler->AddActor(_chain[i]);
@@ -230,7 +230,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.layer() + 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.GetLayer() + 2), Explosion::Type::Large);
 
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -322,9 +322,9 @@ namespace Jazz2::Actors::Bosses
 			std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
 			rocket->OnActivated(ActorActivationDetails(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 10 : -10), (std::int32_t)_pos.Y + 10, _renderer.layer() - 4)
+				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 10 : -10), (std::int32_t)_pos.Y + 10, _renderer.GetLayer() - 4)
 			));
-			rocket->_renderer.setRotation(atan2Approx(diff.Y, diff.X));
+			rocket->_renderer.SetRotation(atan2Approx(diff.Y, diff.X));
 			_levelHandler->AddActor(rocket);
 		}
 	}
@@ -387,7 +387,7 @@ namespace Jazz2::Actors::Bosses
 		// and the two pieces that are cut with it go the same way; EnemyBase::OnPerish() adds a score and
 		// nothing visible, which is why every part of this boss that wants to be seen going draws its own.
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y,
-			_renderer.layer() + 2), Explosion::Type::Small);
+			_renderer.GetLayer() + 2), Explosion::Type::Small);
 		CreateParticleDebrisOnPerish(collider);
 
 		return EnemyBase::OnPerish(collider);
@@ -410,7 +410,7 @@ namespace Jazz2::Actors::Bosses
 
 	void Bolly::Rocket::OnUpdate(float timeMult)
 	{
-		float angle = _renderer.rotation();
+		float angle = _renderer.GetRotation();
 		float sinAngle, cosAngle;
 		sincosApprox(angle, sinAngle, cosAngle);
 		_speed.X += cosAngle * 0.14f * timeMult;
@@ -451,7 +451,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::Rocket::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}

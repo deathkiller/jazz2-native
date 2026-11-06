@@ -86,7 +86,7 @@ namespace nCine
 			}
 
 			_shader = shader;
-			_node->shaderHasChanged();
+			_node->ShaderHasChanged();
 			shaderHasChanged = true;
 		}
 
@@ -99,7 +99,7 @@ namespace nCine
 		if (_shader != nullptr && _shader->IsLinked() && _node) {
 			Material& material = _node->_renderCommand.GetMaterial();
 			material.SetShaderProgram(_shader->_glShaderProgram.get());
-			_node->shaderHasChanged();
+			_node->ShaderHasChanged();
 			return true;
 		}
 		return false;

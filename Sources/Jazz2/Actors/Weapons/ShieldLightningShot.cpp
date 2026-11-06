@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
+		_renderer.SetBlendingPreset(DrawableNode::BlendingPreset::Additive);
 
 		async_return true;
 	}
@@ -65,8 +65,8 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y = sinAngle * baseSpeed;
 
-		_renderer.setRotation(angle);
-		_renderer.setDrawEnabled(false);
+		_renderer.SetRotation(angle);
+		_renderer.SetDrawEnabled(false);
 
 #if defined(WITH_AUDIO)
 		_noise = PlaySfx("Fire"_s, 0.5f, 6.0f);
@@ -95,7 +95,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 
 #if defined(WITH_AUDIO)
@@ -124,7 +124,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool ShieldLightningShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
 
 		return ShotBase::OnPerish(collider);
 	}

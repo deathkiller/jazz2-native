@@ -62,33 +62,33 @@ namespace nCine
 				// plain uniforms per draw, so CPU sprite batching (which aggregates instances into a single
 				// InstancesBlock UBO indexed by gl_VertexID) is disabled and every sprite draws individually
 				// through its single-instance ESSL 100 program (corner attribute + loose uniforms).
-				: batchingEnabled(false),
+				: BatchingEnabled(false),
 #else
-				: batchingEnabled(true),
+				: BatchingEnabled(true),
 #endif
-				  batchingWithIndices(false), cullingEnabled(true), minBatchSize(4),
+				  BatchingWithIndices(false), CullingEnabled(true), MinBatchSize(4),
 #if defined(WITH_RHI_RSX)
 				  // The PlayStation 3's batched shaders reach their instance array through the RSX's constant
 				  // registers rather than a uniform buffer, so the batch is bounded by what fits there and by
 				  // what the backend's batched corner stream covers - a far smaller number than the 585 a
 				  // 64 KB UBO holds, and one the microcode has baked in (see RsxDevice::MaxBatchSize). A
 				  // larger batch would draw its later sprites with instance data the shader cannot address.
-				  maxBatchSize(32)
+				  MaxBatchSize(32)
 #else
-				  maxBatchSize(585)
+				  MaxBatchSize(585)
 #endif
 				  {}
 
 			/** @brief Whether batching is enabled */
-			bool batchingEnabled;
+			bool BatchingEnabled;
 			/** @brief Whether using indices for vertex batching */
-			bool batchingWithIndices;
+			bool BatchingWithIndices;
 			/** @brief Whether node culling is enabled */
-			bool cullingEnabled;
+			bool CullingEnabled;
 			/** @brief Minimum size for a batch to be collected */
-			std::uint32_t minBatchSize;
+			std::uint32_t MinBatchSize;
 			/** @brief Maximum size for a batch before a forced split */
-			std::uint32_t maxBatchSize;
+			std::uint32_t MaxBatchSize;
 		};
 
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -98,14 +98,14 @@ namespace nCine
 			GuiSettings();
 
 			/** @brief ImGui drawable node layer */
-			std::uint16_t imguiLayer;
+			std::uint16_t ImguiLayer;
 
 			/**
 			 * @brief ImGui viewport
 			 *
 			 * The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen.
 			 */
-			Viewport* imguiViewport;
+			Viewport* ImguiViewport;
 		};
 #endif
 
@@ -174,11 +174,11 @@ namespace nCine
 		const FrameTimer& GetFrameTimer() const;
 
 		/** @brief Returns the drawable screen width as an integer number */
-		inline std::int32_t GetWidth() const { return _gfxDevice->drawableWidth(); }
+		inline std::int32_t GetWidth() const { return _gfxDevice->GetDrawableWidth(); }
 		/** @brief Returns the drawable screen height as an integer number */
-		inline std::int32_t GetHeight() const { return _gfxDevice->drawableHeight(); }
+		inline std::int32_t GetHeight() const { return _gfxDevice->GetDrawableHeight(); }
 		/** @brief Returns the drawable screen resolution as a `Vector2i` object */
-		inline Vector2i GetResolution() const { return _gfxDevice->drawableResolution(); }
+		inline Vector2i GetResolution() const { return _gfxDevice->GetDrawableResolution(); }
 
 		/** @brief Resizes the screen viewport, if exists */
 		void ResizeScreenViewport(std::int32_t width, std::int32_t height);
@@ -210,7 +210,7 @@ namespace nCine
 
 		/** @brief Returns the path for the application to load data from */
 		inline const String& GetDataPath() const {
-			return _appCfg.dataPath();
+			return _appCfg.GetDataPath();
 		}
 
 		/** @brief Switches PS4 and PS5 controllers to use extended protocol which enables rumble and other features */

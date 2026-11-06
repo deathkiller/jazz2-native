@@ -315,11 +315,11 @@ namespace Jazz2::UI::Menu
 
 	void ScoreboardSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down: {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex != -1) {
-					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+					_touchStart = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, event.Pointers[pointerIndex].Y * viewSize.Y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 					_touchSpeed = 0.0f;
@@ -332,9 +332,9 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 					if (pointerIndex != -1) {
-						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+						Vector2f touchMove = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, event.Pointers[pointerIndex].Y * viewSize.Y);
 						if (_scrollable) {
 							float delta = touchMove.Y - _touchLast.Y;
 							if (delta != 0.0f) {

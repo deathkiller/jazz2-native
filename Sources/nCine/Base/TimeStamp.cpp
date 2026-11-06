@@ -47,48 +47,48 @@ namespace nCine
 		return TimeStamp(_counter - other._counter);
 	}
 
-	TimeStamp TimeStamp::timeSince() const
+	TimeStamp TimeStamp::GetTimeSince() const
 	{
-		return TimeStamp(clock().now() - _counter);
+		return TimeStamp(clock().Now() - _counter);
 	}
 
-	float TimeStamp::secondsSince() const
+	float TimeStamp::GetSecondsSince() const
 	{
-		return TimeStamp(clock().now() - _counter).seconds();
+		return TimeStamp(clock().Now() - _counter).GetSeconds();
 	}
 
-	float TimeStamp::millisecondsSince() const
+	float TimeStamp::GetMillisecondsSince() const
 	{
-		return TimeStamp(clock().now() - _counter).milliseconds();
+		return TimeStamp(clock().Now() - _counter).GetMilliseconds();
 	}
 
-	float TimeStamp::microsecondsSince() const
+	float TimeStamp::GetMicrosecondsSince() const
 	{
-		return TimeStamp(clock().now() - _counter).microseconds();
+		return TimeStamp(clock().Now() - _counter).GetMicroseconds();
 	}
 
-	float TimeStamp::nanosecondsSince() const
+	float TimeStamp::GetNanosecondsSince() const
 	{
-		return TimeStamp(clock().now() - _counter).nanoseconds();
+		return TimeStamp(clock().Now() - _counter).GetNanoseconds();
 	}
 
-	float TimeStamp::seconds() const
+	float TimeStamp::GetSeconds() const
 	{
-		return static_cast<float>(_counter) / clock().frequency();
+		return static_cast<float>(_counter) / clock().GetFrequency();
 	}
 
-	float TimeStamp::milliseconds() const
+	float TimeStamp::GetMilliseconds() const
 	{
-		return (static_cast<float>(_counter) / clock().frequency()) * 1000.0f;
+		return (static_cast<float>(_counter) / clock().GetFrequency()) * 1000.0f;
 	}
 
-	float TimeStamp::microseconds() const
+	float TimeStamp::GetMicroseconds() const
 	{
-		return (static_cast<float>(_counter) / clock().frequency()) * 1000000.0f;
+		return (static_cast<float>(_counter) / clock().GetFrequency()) * 1000000.0f;
 	}
 
-	float TimeStamp::nanoseconds() const
+	float TimeStamp::GetNanoseconds() const
 	{
-		return (static_cast<float>(_counter) / clock().frequency()) * 1000000000.0f;
+		return (static_cast<float>(_counter) / clock().GetFrequency()) * 1000000000.0f;
 	}
 }

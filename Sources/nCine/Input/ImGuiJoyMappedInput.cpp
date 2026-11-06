@@ -7,17 +7,17 @@
 
 namespace nCine
 {
-	bool imGuiJoyMappedInput()
+	bool ImGuiJoyMappedInput()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
-		if (theApplication().GetInputManager().isJoyMapped(0)) {
-			const JoyMappedState& state = theApplication().GetInputManager().joyMappedState(0);
+		if (theApplication().GetInputManager().IsJoyMapped(0)) {
+			const JoyMappedState& state = theApplication().GetInputManager().GetJoyMappedState(0);
 
 			// clang-format off
 			#define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
-			#define MAP_BUTTON(KEY_NO, BUTTON_NO)       { io.AddKeyEvent(KEY_NO, state.isButtonPressed(BUTTON_NO)); }
-			#define MAP_ANALOG(KEY_NO, AXIS_NO, V0, V1) { float vn = static_cast<float>(state.axisValue(AXIS_NO) - V0) / static_cast<float>(V1 - V0);\
+			#define MAP_BUTTON(KEY_NO, BUTTON_NO)       { io.AddKeyEvent(KEY_NO, state.IsButtonPressed(BUTTON_NO)); }
+			#define MAP_ANALOG(KEY_NO, AXIS_NO, V0, V1) { float vn = static_cast<float>(state.GetAxisValue(AXIS_NO) - V0) / static_cast<float>(V1 - V0);\
 		                                                    vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn); }
 
 			constexpr int thumbDeadZone = 8000; // SDL_gamecontroller.h suggests using this value.

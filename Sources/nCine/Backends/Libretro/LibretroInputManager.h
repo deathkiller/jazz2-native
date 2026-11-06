@@ -25,49 +25,49 @@ namespace nCine::Backends
 		LibretroInputManager();
 
 		/** @brief Reports every port as a connected gamepad */
-		void connectJoystick();
+		void ConnectJoystick();
 		/** @brief Polls the frontend and turns the changes into engine input events */
-		void processFrame();
+		void ProcessFrame();
 
-		const MouseState& mouseState() const override {
+		const MouseState& GetMouseState() const override {
 			return _mouseState;
 		}
-		const KeyboardState& keyboardState() const override {
+		const KeyboardState& GetKeyboardState() const override {
 			return _keyState;
 		}
 
-		bool isJoyPresent(int joyId) const override {
+		bool IsJoyPresent(int joyId) const override {
 			return (joyId >= 0 && joyId < NumPads);
 		}
-		const char* joyName(int joyId) const override {
+		const char* GetJoyName(int joyId) const override {
 			return "RetroPad";
 		}
-		const JoystickGuid joyGuid(int joyId) const override;
-		int joyNumButtons(int joyId) const override {
+		const JoystickGuid GetJoyGuid(int joyId) const override;
+		int GetJoyButtonCount(int joyId) const override {
 			return NumButtons;
 		}
-		int joyNumHats(int joyId) const override {
+		int GetJoyHatCount(int joyId) const override {
 			return 0;
 		}
-		int joyNumAxes(int joyId) const override {
+		int GetJoyAxisCount(int joyId) const override {
 			return NumAxes;
 		}
-		const JoystickState& joystickState(int joyId) const override {
+		const JoystickState& GetJoystickState(int joyId) const override {
 			return _joyStates[(joyId >= 0 && joyId < NumPads) ? joyId : 0];
 		}
-		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override {
+		bool JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override {
 			return false;
 		}
-		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override {
+		bool JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override {
 			return false;
 		}
-		void setCursor(Cursor cursor) override {}
+		void SetCursor(Cursor cursor) override {}
 
 	private:
 		class RetroMouseState : public MouseState
 		{
 		public:
-			bool isButtonDown(MouseButton button) const override {
+			bool IsButtonDown(MouseButton button) const override {
 				return false;
 			}
 		};
@@ -75,7 +75,7 @@ namespace nCine::Backends
 		class RetroKeyboardState : public KeyboardState
 		{
 		public:
-			bool isKeyDown(Keys key) const override {
+			bool IsKeyDown(Keys key) const override {
 				return false;
 			}
 		};
@@ -86,13 +86,13 @@ namespace nCine::Backends
 			bool buttons[NumButtons] = {};
 			float axes[NumAxes] = {};
 
-			bool isButtonPressed(int buttonId) const override {
+			bool IsButtonPressed(int buttonId) const override {
 				return (buttonId >= 0 && buttonId < NumButtons && buttons[buttonId]);
 			}
-			unsigned char hatState(int hatId) const override {
+			unsigned char GetHatState(int hatId) const override {
 				return 0;
 			}
-			float axisValue(int axisId) const override {
+			float GetAxisValue(int axisId) const override {
 				return (axisId >= 0 && axisId < NumAxes ? axes[axisId] : 0.0f);
 			}
 		};

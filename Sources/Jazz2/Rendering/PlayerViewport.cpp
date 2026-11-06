@@ -151,7 +151,7 @@ namespace Jazz2::Rendering
 
 		if (notInitialized) {
 			_combineRenderer = std::make_unique<CombineRenderer>(this);
-			_combineRenderer->setParent(outputNode);
+			_combineRenderer->SetParent(outputNode);
 		}
 
 		_combineRenderer->Initialize(bounds.X, bounds.Y, bounds.W, bounds.H);

@@ -10,14 +10,14 @@ namespace nCine
 #endif
 
 	FrameTimer::FrameTimer(float logInterval, float avgInterval)
-		: _averageInterval(avgInterval), _loggingInterval(logInterval), _frameDuration(0.0f), _lastAvgUpdate(TimeStamp::now()),
+		: _averageInterval(avgInterval), _loggingInterval(logInterval), _frameDuration(0.0f), _lastAvgUpdate(TimeStamp::Now()),
 			_totNumFrames(0L), _avgNumFrames(0L), _logNumFrames(0L), _avgFps(0.0f), _timeMults{1.0f, 1.0f, 1.0f}
 	{
 	}
 
 	void FrameTimer::AddFrame()
 	{
-		_frameDuration = _frameStart.secondsSince();
+		_frameDuration = _frameStart.GetSecondsSince();
 #if defined(WITH_LIBRETRO)
 		// libretro: the frontend paces retro_run at exactly one frame of its announced rate, so use
 		// a fixed timestep — wall-clock jitter would otherwise leak into game speed and cause
@@ -26,7 +26,7 @@ namespace nCine
 #endif
 
 		// Start counting for the next frame interval
-		_frameStart = TimeStamp::now();
+		_frameStart = TimeStamp::Now();
 
 		_totNumFrames++;
 		_avgNumFrames++;
@@ -45,7 +45,7 @@ namespace nCine
 			_lastLogUpdate = _frameStart;
 		}
 
-		const float secsSinceLastAvgUpdate = (_frameStart - _lastAvgUpdate).seconds();
+		const float secsSinceLastAvgUpdate = (_frameStart - _lastAvgUpdate).GetSeconds();
 		if (_averageInterval > 0.0f && secsSinceLastAvgUpdate > _averageInterval) {
 			_avgFps = static_cast<float>(_avgNumFrames) / secsSinceLastAvgUpdate;
 
@@ -53,7 +53,7 @@ namespace nCine
 			_lastAvgUpdate = _frameStart;
 		}
 
-		const float secsSinceLastLogUpdate = (_frameStart - _lastLogUpdate).seconds();
+		const float secsSinceLastLogUpdate = (_frameStart - _lastLogUpdate).GetSeconds();
 		// Log number of frames and FPS every `_loggingInterval` seconds
 		if (_loggingInterval > 0.0f && _avgNumFrames != 0 && secsSinceLastLogUpdate > _loggingInterval) {
 			_avgFps = static_cast<float>(_logNumFrames) / _loggingInterval;
@@ -68,12 +68,12 @@ namespace nCine
 
 	void FrameTimer::Suspend()
 	{
-		_suspensionStart = TimeStamp::now();
+		_suspensionStart = TimeStamp::Now();
 	}
 
 	TimeStamp FrameTimer::Resume()
 	{
-		const TimeStamp suspensionDuration = _suspensionStart.timeSince();
+		const TimeStamp suspensionDuration = _suspensionStart.GetTimeSince();
 		_frameStart += suspensionDuration;
 		_lastAvgUpdate += suspensionDuration;
 		_lastLogUpdate += suspensionDuration;

@@ -254,7 +254,7 @@ namespace Jazz2::UI::Windows
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS)
 		// A window of its own would be behind the main window in fullscreen, or on another display that is left out of it
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		return (AllowDetaching && !TouchInput && !gfxDevice.isFullscreen() && gfxDevice.supportsAuxiliaryWindows());
+		return (AllowDetaching && !TouchInput && !gfxDevice.IsFullscreen() && gfxDevice.SupportsAuxiliaryWindows());
 #else
 		return false;
 #endif
@@ -268,7 +268,7 @@ namespace Jazz2::UI::Windows
 	float Surface::GetDesktopScale() const
 	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		return (gfxDevice.drawableWidth() > 0 ? float(gfxDevice.width()) / float(gfxDevice.drawableWidth()) : 1.0f);
+		return (gfxDevice.GetDrawableWidth() > 0 ? float(gfxDevice.GetWidth()) / float(gfxDevice.GetDrawableWidth()) : 1.0f);
 	}
 
 	Rectf Surface::GetWantedBounds(const Overlay& overlay)
@@ -320,7 +320,7 @@ namespace Jazz2::UI::Windows
 		Vector2f screen = GetScreenSize();
 		bool outside = (force || wanted.X < 0.0f || wanted.Y < 0.0f || wanted.X + wanted.W > screen.X || wanted.Y + wanted.H > screen.Y);
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		Vector2i mainPos = gfxDevice.windowPosition();
+		Vector2i mainPos = gfxDevice.GetWindowPosition();
 		float toDesktop = GetDesktopScale();
 
 		if (detachment.Window == nullptr) {
@@ -423,7 +423,7 @@ namespace Jazz2::UI::Windows
 				return detachable.Detached.Window->ToDesktop(point);
 			}
 		}
-		Vector2i mainPos = theApplication().GetGfxDevice().windowPosition();
+		Vector2i mainPos = theApplication().GetGfxDevice().GetWindowPosition();
 		float toDesktop = GetDesktopScale();
 		return Vector2i(mainPos.X + std::int32_t(std::round(point.X * toDesktop)), mainPos.Y + std::int32_t(std::round(point.Y * toDesktop)));
 	}
@@ -433,7 +433,7 @@ namespace Jazz2::UI::Windows
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS)
 		// The display its top is on, or the nearest one
 		Recti area;
-		if (!theApplication().GetGfxDevice().desktopWorkArea(Vector2i(position.X + size.X / 2, position.Y), area)) {
+		if (!theApplication().GetGfxDevice().GetDesktopWorkArea(Vector2i(position.X + size.X / 2, position.Y), area)) {
 			return position;
 		}
 		if (whole) {
@@ -673,7 +673,7 @@ namespace Jazz2::UI::Windows
 	Vector2f Surface::GetScreenSize() const
 	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		return Vector2f(float(gfxDevice.drawableWidth()), float(gfxDevice.drawableHeight()));
+		return Vector2f(float(gfxDevice.GetDrawableWidth()), float(gfxDevice.GetDrawableHeight()));
 	}
 
 	Rectf Surface::GetSafeBounds() const
@@ -1017,14 +1017,14 @@ namespace Jazz2::UI::Windows
 		if (focus != nullptr && focus->OnKeyPressed(event)) {
 			return true;
 		}
-		bool alt = (event.mod & KeyMod::Alt) != 0;
-		bool ctrl = (event.mod & KeyMod::Ctrl) != 0;
-		if (event.sym == Keys::Tab && !alt && !ctrl) {
-			if (MoveFocus((event.mod & KeyMod::Shift) != 0)) {
+		bool alt = (event.Mod & KeyMod::Alt) != 0;
+		bool ctrl = (event.Mod & KeyMod::Ctrl) != 0;
+		if (event.Sym == Keys::Tab && !alt && !ctrl) {
+			if (MoveFocus((event.Mod & KeyMod::Shift) != 0)) {
 				return true;
 			}
 		}
-		if (event.sym == Keys::Escape) {
+		if (event.Sym == Keys::Escape) {
 			if (focus != nullptr && _focus != focus) {
 				// Typing was cancelled by it, which is all it does, unless the box is in a dialog, which is cancelled by the
 				// same key --- an edit shown over a dialog closed itself, the dialog stays
@@ -1078,9 +1078,9 @@ namespace Jazz2::UI::Windows
 			return true;
 		}
 		// Alt with a letter opens a menu of the menu bar, by the letter it has underlined
-		if (alt && !ctrl && event.sym >= Keys::A && event.sym <= Keys::Z) {
+		if (alt && !ctrl && event.Sym >= Keys::A && event.Sym <= Keys::Z) {
 			if (MenuBar* menuBar = FindMenuBar(_root.get())) {
-				if (menuBar->OpenByMnemonic(char('a' + (std::int32_t(event.sym) - std::int32_t(Keys::A))))) {
+				if (menuBar->OpenByMnemonic(char('a' + (std::int32_t(event.Sym) - std::int32_t(Keys::A))))) {
 					return true;
 				}
 			}
@@ -1494,13 +1494,13 @@ namespace Jazz2::UI::Windows
 		}
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
 		Vector2i global;
-		if (!gfxDevice.globalMousePosition(global)) {
+		if (!gfxDevice.GetGlobalMousePosition(global)) {
 			return;
 		}
 		Recti bounds;
 		if (_pointerWindow == 0) {
-			Vector2i pos = gfxDevice.windowPosition();
-			bounds = Recti(pos.X, pos.Y, gfxDevice.width(), gfxDevice.height());
+			Vector2i pos = gfxDevice.GetWindowPosition();
+			bounds = Recti(pos.X, pos.Y, gfxDevice.GetWidth(), gfxDevice.GetHeight());
 		} else if (AuxiliaryWindow* window = AuxiliaryWindow::FindById(_pointerWindow)) {
 			bounds = window->GetBounds();
 		}
@@ -1924,7 +1924,7 @@ namespace Jazz2::UI::Windows
 		if (IsKeyLeftByText) {
 			return IsKeyLeftByText(event);
 		}
-		return (event.sym == Keys::F1 || event.sym == Keys::F5);
+		return (event.Sym == Keys::F1 || event.Sym == Keys::F5);
 	}
 
 	StringView Surface::GetTooltipText() const
@@ -2030,7 +2030,7 @@ namespace Jazz2::UI::Windows
 			return;
 		}
 
-		Vector2i mainPos = theApplication().GetGfxDevice().windowPosition();
+		Vector2i mainPos = theApplication().GetGfxDevice().GetWindowPosition();
 		float toDesktop = GetDesktopScale();
 		Vector2i desktopPos = parent->ToDesktop(Vector2f(rect.X, rect.Y));
 		desktopPos = KeepOnDesktop(desktopPos, Vector2i(std::int32_t(std::round(rect.W * toDesktop)), std::int32_t(std::round(rect.H * toDesktop))), true);

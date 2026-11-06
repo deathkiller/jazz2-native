@@ -66,22 +66,22 @@ namespace nCine::Backends
 			_safeToWrite(true), _doubleBuffered(false), _pixelFormat(0), _pixelFormatLogged(false)
 	{
 		const AmigaPlatform::PerformanceClass performanceClass = AmigaPlatform::GetPerformanceClass();
-		FATAL_ASSERT_MSG(openDisplay(windowMode.width, windowMode.height),
+		FATAL_ASSERT_MSG(OpenDisplay(windowMode.Width, windowMode.Height),
 			"Cannot open an RTG screen (a CyberGraphX/Picasso96 16-bit screen mode is required)");
 
 		_drawableWidth = _width;
 		_drawableHeight = _height;
 		_isFullscreen = true;
 
-		_currentVideoMode.width = std::uint32_t(_width);
-		_currentVideoMode.height = std::uint32_t(_height);
-		_currentVideoMode.refreshRate = 60.0f;
-		_currentVideoMode.redBits = 5;
-		_currentVideoMode.greenBits = 6;
-		_currentVideoMode.blueBits = 5;
+		_currentVideoMode.Width = std::uint32_t(_width);
+		_currentVideoMode.Height = std::uint32_t(_height);
+		_currentVideoMode.RefreshRate = 60.0f;
+		_currentVideoMode.RedBits = 5;
+		_currentVideoMode.GreenBits = 6;
+		_currentVideoMode.BlueBits = 5;
 
-		updateMonitors();
-		initDeviceViewport();
+		UpdateMonitors();
+		InitDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} 16-bit RTG ({} preset)", _width, _height,
 			performanceClass == AmigaPlatform::PerformanceClass::Ultra ? "Ultra"
@@ -91,10 +91,10 @@ namespace nCine::Backends
 
 	AmigaGfxDevice::~AmigaGfxDevice()
 	{
-		closeDisplay();
+		CloseDisplay();
 	}
 
-	bool AmigaGfxDevice::openDisplay(std::int32_t requestedWidth, std::int32_t requestedHeight)
+	bool AmigaGfxDevice::OpenDisplay(std::int32_t requestedWidth, std::int32_t requestedHeight)
 	{
 		// Walk the display database for RTG modes at 2 bytes per pixel and pick by logical fidelity
 		// within the preset's budget; the requested size (usually unset on this platform) only raises
@@ -232,7 +232,7 @@ namespace nCine::Backends
 		return true;
 	}
 
-	void AmigaGfxDevice::closeDisplay()
+	void AmigaGfxDevice::CloseDisplay()
 	{
 		AmigaPlatform::GameWindow = nullptr;
 		AmigaPlatform::GameScreen = nullptr;
@@ -268,16 +268,16 @@ namespace nCine::Backends
 		}
 	}
 
-	void AmigaGfxDevice::update()
+	void AmigaGfxDevice::Update()
 	{
 		// Render any draws the tile renderer deferred this frame into the screen buffer before reading it,
 		// and drop unconsumed lighting entries - the same sequence as the SDL software present
 		RHI::Device::FlushSoftwareRenderer();
 		RHI::Device::EndFrame();
-		presentFramebuffer();
+		PresentFramebuffer();
 	}
 
-	void AmigaGfxDevice::presentFramebuffer()
+	void AmigaGfxDevice::PresentFramebuffer()
 	{
 		const auto fb = RHI::Device::GetScreenFramebuffer();
 		if (fb.pixels == nullptr || fb.width <= 0 || fb.height <= 0) {
@@ -397,32 +397,32 @@ namespace nCine::Backends
 		}
 	}
 
-	void AmigaGfxDevice::setSwapInterval(int interval)
+	void AmigaGfxDevice::SetSwapInterval(int interval)
 	{
 		// The screen-buffer flip paces to the display's vertical blank by itself
 		static_cast<void>(interval);
 	}
 
-	void AmigaGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void AmigaGfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		static_cast<void>(fullscreen);
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void AmigaGfxDevice::setWindowPosition(int x, int y)
+	void AmigaGfxDevice::SetWindowPosition(int x, int y)
 	{
 		static_cast<void>(x);
 		static_cast<void>(y);
 	}
 
-	void AmigaGfxDevice::setWindowSize(int width, int height)
+	void AmigaGfxDevice::SetWindowSize(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void AmigaGfxDevice::setWindowTitle(StringView windowTitle)
+	void AmigaGfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		// The screen is opened with SA_ShowTitle FALSE, so this is not drawn anywhere - but it is what
 		// screen-listing tools and the Workbench screen menu show, so it is worth keeping accurate.
@@ -437,31 +437,31 @@ namespace nCine::Backends
 		}
 	}
 
-	void AmigaGfxDevice::setWindowIcon(StringView windowIconFilename)
+	void AmigaGfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 		static_cast<void>(windowIconFilename);
 	}
 
-	const IGfxDevice::VideoMode& AmigaGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& AmigaGfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
 		return _currentVideoMode;
 	}
 
-	void AmigaGfxDevice::setResolutionInternal(int width, int height)
+	void AmigaGfxDevice::SetResolutionInternal(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void AmigaGfxDevice::updateMonitors()
+	void AmigaGfxDevice::UpdateMonitors()
 	{
 		_numMonitors = 1;
-		_monitors[0].name = "RTG";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "RTG";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 	}
 }
 

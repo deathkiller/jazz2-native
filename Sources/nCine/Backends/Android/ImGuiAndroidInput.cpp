@@ -20,12 +20,12 @@ namespace nCine::Backends
 		static const int MaxClipboardLength = 256;
 		static char clipboard[MaxClipboardLength];
 
-		const char* clipboardText(void* userData)
+		const char* GetClipboardText(void* userData)
 		{
 			return clipboard;
 		}
 
-		void setClipboardText(void* userData, const char* text)
+		void SetClipboardText(void* userData, const char* text)
 		{
 			strncpy(clipboard, text, MaxClipboardLength);
 		}
@@ -145,7 +145,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiAndroidInput::init(ANativeWindow* window)
+	void ImGuiAndroidInput::Init(ANativeWindow* window)
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -155,12 +155,12 @@ namespace nCine::Backends
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendPlatformName = "nCine_Android";
 
-		io.SetClipboardTextFn = setClipboardText;
-		io.GetClipboardTextFn = clipboardText;
+		io.SetClipboardTextFn = SetClipboardText;
+		io.GetClipboardTextFn = GetClipboardText;
 		io.ClipboardUserData = nullptr;
 	}
 
-	void ImGuiAndroidInput::shutdown()
+	void ImGuiAndroidInput::Shutdown()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendPlatformName = nullptr;
@@ -168,7 +168,7 @@ namespace nCine::Backends
 		ImGui::DestroyContext();
 	}
 
-	void ImGuiAndroidInput::newFrame()
+	void ImGuiAndroidInput::NewFrame()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! Missing call to ImGuiDrawing::buildFonts() function?");
@@ -189,11 +189,11 @@ namespace nCine::Backends
 
 		// Update game controllers (if enabled and available)
 		if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) {
-			imGuiJoyMappedInput();
+			ImGuiJoyMappedInput();
 		}
 	}
 
-	bool ImGuiAndroidInput::processEvent(const AInputEvent* event)
+	bool ImGuiAndroidInput::ProcessEvent(const AInputEvent* event)
 	{
 		if (!_inputEnabled) {
 			return false;
@@ -237,8 +237,8 @@ namespace nCine::Backends
 
 				if (eventAction == AKEY_EVENT_ACTION_DOWN && (eventMetaState & AMETA_CTRL_ON) == 0) {
 					AndroidJniClass_KeyEvent keyEvent(eventType, eventKeyCode);
-					if (keyEvent.isPrintingKey()) {
-						const int unicodeKey = keyEvent.getUnicodeChar(eventMetaState);
+					if (keyEvent.IsPrintingKey()) {
+						const int unicodeKey = keyEvent.GetUnicodeChar(eventMetaState);
 						io.AddInputCharacter(unicodeKey);
 					}
 				}

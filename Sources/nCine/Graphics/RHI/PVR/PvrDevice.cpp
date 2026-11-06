@@ -651,9 +651,9 @@ namespace nCine::RHI::PVR
 				pvr_wait_ready();
 				return;
 			}
-			const TimeStamp start = TimeStamp::now();
+			const TimeStamp start = TimeStamp::Now();
 			pvr_wait_ready();
-			FrameStatistics::AddCounter("PVR wait", start.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("PVR wait", start.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 
 		void ReportPvrStatistics()

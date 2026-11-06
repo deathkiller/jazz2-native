@@ -16,22 +16,22 @@ namespace nCine
 		Timer();
 
 		/** @brief Starts the timer */
-		void start();
+		void Start();
 		/** @brief Stops the timer and adds the elapsed interval to the accumulated time */
-		void stop();
+		void Stop();
 		/** @brief Resets the accumulated time to zero */
-		inline void reset() {
+		inline void Reset() {
 			_accumulatedTime = 0ULL;
 		}
 		/** @brief Returns `true` if the timer is currently running */
-		inline bool isRunning() const {
+		inline bool IsRunning() const {
 			return _isRunning;
 		}
 
 		/** @brief Returns the time in seconds elapsed since the last call to @ref start() */
-		float interval() const;
+		float GetInterval() const;
 		/** @brief Returns the total accumulated time in seconds across all intervals */
-		float total() const;
+		float GetTotal() const;
 
 	private:
 		bool _isRunning;

@@ -42,35 +42,35 @@ namespace nCine
 			_hasVSync(vsMode == VSync::Enabled) {}
 
 		/** @brief Returns the number of bits for the red channel */
-		inline std::uint8_t redBits() const {
+		inline std::uint8_t GetRedBits() const {
 			return _redBits;
 		}
 		/** @brief Returns the number of bits for the green channel */
-		inline std::uint8_t greenBits() const {
+		inline std::uint8_t GetGreenBits() const {
 			return _greenBits;
 		}
 		/** @brief Returns the number of bits for the blue channel */
-		inline std::uint8_t blueBits() const {
+		inline std::uint8_t GetBlueBits() const {
 			return _blueBits;
 		}
 		/** @brief Returns the number of bits for the alpha channel */
-		inline std::uint8_t alphaBits() const {
+		inline std::uint8_t GetAlphaBits() const {
 			return _alphaBits;
 		}
 		/** @brief Returns the number of bits for the depth buffer */
-		inline std::uint8_t depthBits() const {
+		inline std::uint8_t GetDepthBits() const {
 			return _depthBits;
 		}
 		/** @brief Returns the number of bits for the stencil buffer */
-		inline std::uint8_t stencilBits() const {
+		inline std::uint8_t GetStencilBits() const {
 			return _stencilBits;
 		}
 		/** @brief Returns whether the display is double buffered */
-		inline bool isDoubleBuffered() const {
+		inline bool IsDoubleBuffered() const {
 			return _isDoubleBuffered;
 		}
 		/** @brief Returns whether the display has vertical sync enabled */
-		inline bool hasVSync() const {
+		inline bool HasVSync() const {
 			return _hasVSync;
 		}
 

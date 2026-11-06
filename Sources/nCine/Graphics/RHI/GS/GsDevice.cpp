@@ -1347,7 +1347,7 @@ namespace nCine::RHI::GS
 			DisplayWidth, DisplayHeight, _frame.psm, 0, 0);
 		// `graph_initialize` picks NTSC or PAL from the console's region, interlaced with a blank per field
 		_vsyncPeriodMs = (graph_get_region() == GRAPH_MODE_PAL ? 20.0f : 1000.0f / 59.94f);
-		_lastVsync = TimeStamp::now();
+		_lastVsync = TimeStamp::Now();
 
 		// PS2SDK's primitive helpers bake the ABE bit of the PRIM register they emit from a LIBRARY-WIDE
 		// flag that starts out clear, so every `draw_rect_textured()` and `draw_rect_filled()` asks the
@@ -1401,10 +1401,10 @@ namespace nCine::RHI::GS
 		FlushPackets();
 		// The GS has drawn every packet as it was transferred, so the wait is only what it still had left
 		const bool timed = FrameStatistics::IsEnabled();
-		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 		draw_wait_finish();
 		if (timed) {
-			FrameStatistics::AddCounter("GS wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("GS wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 
 		// What is left of the field before the vertical blank does the background work this console has no
@@ -1416,14 +1416,14 @@ namespace nCine::RHI::GS
 		graph_start_vsync();
 		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 		while (!graph_check_vsync()) {
-			const float sinceBlank = std::fmod(_lastVsync.millisecondsSince(), _vsyncPeriodMs);
+			const float sinceBlank = std::fmod(_lastVsync.GetMillisecondsSince(), _vsyncPeriodMs);
 			if (!audioDevice.RunIdleWork(_vsyncPeriodMs - sinceBlank - VsyncMarginMs)) {
 				while (!graph_check_vsync()) {
 				}
 				break;
 			}
 		}
-		_lastVsync = TimeStamp::now();
+		_lastVsync = TimeStamp::Now();
 
 		// The flip. The buffer just finished goes to the read circuits and the rasterizer moves to the other
 		// one, so nothing is ever drawn into memory the CRT is scanning (see InitializeGs for what that cost

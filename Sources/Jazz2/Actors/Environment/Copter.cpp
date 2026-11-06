@@ -47,7 +47,7 @@ namespace Jazz2::Actors::Environment
 				ActorBase::OnUpdate(timeMult);
 
 				_speed.Y = _levelHandler->GetGravity() * -0.5f;
-				_renderer.setAlphaF(_renderer.alpha() - (0.004f * timeMult));
+				_renderer.SetAlphaF(_renderer.GetAlpha() - (0.004f * timeMult));
 				_phase -= timeMult;
 				if (_phase <= 0.0f) {
 					DecreaseHealth(INT32_MAX);
@@ -104,7 +104,7 @@ namespace Jazz2::Actors::Environment
 			if (auto* player = runtime_cast<Player>(other)) {
 				if (player->GetModifier() == Player::Modifier::None && player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
 					_state = State::Mounted;
-					_renderer.setAlphaF(1.0f);
+					_renderer.SetAlphaF(1.0f);
 
 					PlaySfx("CopterPre"_s);
 					return true;

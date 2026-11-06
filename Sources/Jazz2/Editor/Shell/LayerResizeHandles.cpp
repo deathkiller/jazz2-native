@@ -46,17 +46,17 @@ namespace Jazz2::Editor
 		// The modifier keys held now, for what a handle only pointed at would do; on Apple platforms Cmd is Ctrl, as for shortcuts
 		std::int32_t GetHeldModifiers()
 		{
-			const KeyboardState& keyboard = theApplication().GetInputManager().keyboardState();
+			const KeyboardState& keyboard = theApplication().GetInputManager().GetKeyboardState();
 			std::int32_t modifiers = 0;
-			if (keyboard.isKeyDown(Keys::LCtrl) || keyboard.isKeyDown(Keys::RCtrl)) {
+			if (keyboard.IsKeyDown(Keys::LCtrl) || keyboard.IsKeyDown(Keys::RCtrl)) {
 				modifiers |= KeyMod::Ctrl;
 			}
 	#if defined(DEATH_TARGET_APPLE)
-			if (keyboard.isKeyDown(Keys::LSuper) || keyboard.isKeyDown(Keys::RSuper)) {
+			if (keyboard.IsKeyDown(Keys::LSuper) || keyboard.IsKeyDown(Keys::RSuper)) {
 				modifiers |= KeyMod::Ctrl;
 			}
 	#endif
-			if (keyboard.isKeyDown(Keys::LShift) || keyboard.isKeyDown(Keys::RShift)) {
+			if (keyboard.IsKeyDown(Keys::LShift) || keyboard.IsKeyDown(Keys::RShift)) {
 				modifiers |= KeyMod::Shift;
 			}
 			return modifiers;
@@ -304,7 +304,7 @@ namespace Jazz2::Editor
 
 	bool LayerResizeHandles::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if (_dragging && event.sym == Keys::Escape) {
+		if (_dragging && event.Sym == Keys::Escape) {
 			if (_moving) {
 				// Back where it was, within the same step
 				SetLayerOffset(_startLayerOffset);

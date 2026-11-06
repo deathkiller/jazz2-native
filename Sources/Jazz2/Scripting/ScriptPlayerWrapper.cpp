@@ -151,13 +151,13 @@ namespace Jazz2::Scripting
 
 	std::uint16_t ScriptPlayerWrapper::asGetLayer() const
 	{
-		return (_player != nullptr ? _player->_renderer.layer() : 0);
+		return (_player != nullptr ? _player->_renderer.GetLayer() : 0);
 	}
 
 	void ScriptPlayerWrapper::asSetLayer(std::uint16_t value)
 	{
 		if (_player != nullptr) {
-			_player->_renderer.setLayer(value);
+			_player->_renderer.SetLayer(value);
 		}
 	}
 

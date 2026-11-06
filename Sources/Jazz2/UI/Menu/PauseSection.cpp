@@ -166,21 +166,21 @@ namespace Jazz2::UI::Menu
 
 	void PauseSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down: {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex != -1) {
 					// X is kept normalized (for the centered-column hit test), Y in view pixels (for swipe distance)
-					_touchStart = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y * (float)viewSize.Y);
+					_touchStart = Vector2f(event.Pointers[pointerIndex].X, event.Pointers[pointerIndex].Y * (float)viewSize.Y);
 					_touchLast = _touchStart;
 				}
 				break;
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 					if (pointerIndex != -1) {
-						_touchLast = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y * (float)viewSize.Y);
+						_touchLast = Vector2f(event.Pointers[pointerIndex].X, event.Pointers[pointerIndex].Y * (float)viewSize.Y);
 					}
 				}
 				break;

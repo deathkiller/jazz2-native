@@ -407,7 +407,7 @@ namespace nCine::RHI::Metal
 			for (const MetalAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
 					MetalVertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
-					attr.setVbo(vbo);
+					attr.SetVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}

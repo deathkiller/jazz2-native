@@ -398,16 +398,16 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	// Allow `/extract-pak` and `/server` only on PC platforms
 	bool isServer = false;
-	for (std::int32_t i = 0; i < config.argc(); i++) {
-		auto arg = config.argv(i);
-		if (arg == "/extract-pak"_s && i + 2 < config.argc()) {
+	for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+		auto arg = config.GetArgv(i);
+		if (arg == "/extract-pak"_s && i + 2 < config.GetArgc()) {
 #	if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS)
 			// Always attach to console in this case
 			theApplication().AttachTraceTarget(Application::ConsoleTarget);
 #	endif
-			auto pakFile = config.argv(i + 1);
+			auto pakFile = config.GetArgv(i + 1);
 			if (fs::FileExists(pakFile)) {
-				ExtractPakFile(pakFile, config.argv(i + 2));
+				ExtractPakFile(pakFile, config.GetArgv(i + 2));
 			} else {
 				LOGE("\"{}\" not found", pakFile);
 			}
@@ -440,21 +440,21 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	}
 #endif
 
-	config.windowTitle = NCINE_APP_NAME;
+	config.WindowTitle = NCINE_APP_NAME;
 	if (isServer) {
-		config.withGraphics = false;
-		config.withAudio = false;
-		config.withVSync = false;
-		config.frameLimit = (std::uint32_t)FrameTimer::FramesPerSecond;
+		config.WithGraphics = false;
+		config.WithAudio = false;
+		config.WithVSync = false;
+		config.FrameLimit = (std::uint32_t)FrameTimer::FramesPerSecond;
 
 		auto& resolver = ContentResolver::Get();
 		resolver.SetHeadless(true);
 	} else {
 		if (PreferencesCache::MaxFps == PreferencesCache::UseVsync) {
-			config.withVSync = true;
+			config.WithVSync = true;
 		} else {
-			config.withVSync = false;
-			config.frameLimit = PreferencesCache::MaxFps;
+			config.WithVSync = false;
+			config.FrameLimit = PreferencesCache::MaxFps;
 			if (PreferencesCache::MaxFps > 0) {
 				LOGI("Frame limit set to {} FPS", PreferencesCache::MaxFps);
 			}
@@ -463,12 +463,12 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
 		// aspect-fits the logical view into it, so no explicit override is wanted there (the Amiga backend
 		// also picks its own screen mode, from the performance preset)
-		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+		config.Resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		auto& resolver = ContentResolver::Get();
-		config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
+		config.ShaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
 
 		if (PreferencesCache::PlayStationExtendedSupport) {
@@ -476,7 +476,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 		}
 
 #if defined(WITH_IMGUI)
-		config.withDebugOverlay = true;
+		config.WithDebugOverlay = true;
 #endif
 	}
 }
@@ -524,18 +524,18 @@ void GameEventHandler::OnInitialize()
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	StringView configPath;
 #	if defined(WITH_LEVEL_PACKS)
-	for (std::int32_t i = 0; i < config.argc(); i++) {
+	for (std::int32_t i = 0; i < config.GetArgc(); i++) {
 		bool takesValue;
-		if (IsLevelPackSwitch(config.argv(i), takesValue)) {
+		if (IsLevelPackSwitch(config.GetArgv(i), takesValue)) {
 			i += (takesValue ? 1 : 0);
 			continue;
 		}
-		configPath = config.argv(i);
+		configPath = config.GetArgv(i);
 		break;
 	}
 #	else
-	if (config.argc() > 0) {
-		configPath = config.argv(0);
+	if (config.GetArgc() > 0) {
+		configPath = config.GetArgv(0);
 	}
 #	endif
 	RunDedicatedServer(configPath);
@@ -544,11 +544,11 @@ void GameEventHandler::OnInitialize()
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 #		if defined(WITH_EDITOR)
 	// Checked first, because a level file given to it would otherwise be played
-	for (std::int32_t i = 0; i < config.argc(); i++) {
-		if (config.argv(i) == "/edit"_s) {
+	for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+		if (config.GetArgv(i) == "/edit"_s) {
 			Editor::EditorInitialization editorInit;
-			if (i + 1 < config.argc()) {
-				StringView target = config.argv(i + 1);
+			if (i + 1 < config.GetArgc()) {
+				StringView target = config.GetArgv(i + 1);
 				String ext = (target.size() > 4 ? String(target.suffix(target.end() - 4)) : String());
 				StringUtils::lowercaseInPlace(ext);
 				if (ext == ".j2l"_s) {
@@ -569,8 +569,8 @@ void GameEventHandler::OnInitialize()
 		}
 	}
 #		endif
-	for (std::int32_t i = 0; i < config.argc(); i++) {
-		auto arg = config.argv(i);
+	for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+		auto arg = config.GetArgv(i);
 		if (arg.size() > 4) {
 			String ext = arg.suffix(arg.end() - 4);
 			StringUtils::lowercaseInPlace(ext);
@@ -590,8 +590,8 @@ void GameEventHandler::OnInitialize()
 			}
 		}
 #		if defined(DEATH_DEBUG)
-		if (arg == "/level"_s && i + 1 < config.argc()) {
-			String levelName = config.argv(i + 1);
+		if (arg == "/level"_s && i + 1 < config.GetArgc()) {
+			String levelName = config.GetArgv(i + 1);
 			StringUtils::lowercaseInPlace(levelName);
 			if (!levelName.contains('/')) {
 				levelName = "unknown/"_s + levelName;
@@ -609,7 +609,7 @@ void GameEventHandler::OnInitialize()
 		if (arg == "/editor-selftest"_s) {
 			WaitForVerify();
 			// With "--unit" only the tests that need no game data, otherwise the levels of a directory too
-			StringView option = (i + 1 < config.argc() ? config.argv(i + 1) : StringView());
+			StringView option = (i + 1 < config.GetArgc() ? config.GetArgv(i + 1) : StringView());
 			bool success = (option == "--unit"_s ? Editor::EditorSelfTest::RunUnit() : Editor::EditorSelfTest::Run(option));
 			LOGI("Editor self-test {}", success ? "succeeded" : "FAILED");
 			theApplication().Quit();
@@ -618,20 +618,20 @@ void GameEventHandler::OnInitialize()
 #			endif
 #		endif
 #		if defined(WITH_MULTIPLAYER)
-		if ((arg == "/connect"_s || arg == "--connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
-			auto endpoint = config.argv(i + 1);
+		if ((arg == "/connect"_s || arg == "--connect"_s || arg == "-c"_s) && i + 1 < config.GetArgc()) {
+			auto endpoint = config.GetArgv(i + 1);
 			if (!endpoint.empty()) {
 				WaitForVerify();
 				SetStateHandler(std::make_shared<LoadingHandler>(this, true));
-				ConnectToServer(endpoint, NetworkManagerBase::DefaultPort, (i + 2 < config.argc() ? config.argv(i + 2) : ""_s));
+				ConnectToServer(endpoint, NetworkManagerBase::DefaultPort, (i + 2 < config.GetArgc() ? config.GetArgv(i + 2) : ""_s));
 				return;
 			}
 		}
 #			if (!defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		else if (arg == "/server"_s || arg == "--server"_s) {
 			StringView configPath;
-			if (i + 1 < config.argc()) {
-				configPath = config.argv(i + 1);
+			if (i + 1 < config.GetArgc()) {
+				configPath = config.GetArgv(i + 1);
 			}
 			RunDedicatedServer(configPath);
 			return;
@@ -749,7 +749,7 @@ void GameEventHandler::OnPostUpdate()
 		_backInvokedTimeLeft--;
 		if (_backInvokedTimeLeft <= 0) {
 			KeyboardEvent event{};
-			event.sym = Keys::Back;
+			event.Sym = Keys::Back;
 			_currentHandler->OnKeyReleased(event);
 		}
 	}
@@ -767,7 +767,7 @@ void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 	}
 
 #if defined(NCINE_HAS_WINDOWS)
-	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().isFullscreen();
+	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().IsFullscreen();
 #endif
 
 	LOGI("Rendering resolution: {}x{} ({}x{})", width, height, viewSize.X, viewSize.Y);
@@ -824,7 +824,7 @@ void GameEventHandler::OnSuspend()
 void GameEventHandler::OnResume()
 {
 #if defined(DEATH_TARGET_ANDROID)
-	if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+	if (Backends::AndroidJniWrap_Activity::HasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermissionOnResume;
 	} else {
 		_flags &= ~Flags::HasExternalStoragePermissionOnResume;
@@ -844,7 +844,7 @@ void GameEventHandler::OnBackInvoked()
 		_backInvokedTimeLeft = 2;
 
 		KeyboardEvent event{};
-		event.sym = Keys::Back;
+		event.Sym = Keys::Back;
 		_currentHandler->OnKeyPressed(event);
 	}
 }
@@ -860,7 +860,7 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 #if defined(NCINE_HAS_WINDOWS)
 	// Allow F11 and Alt+Enter to switch fullscreen
 	// TODO: Don't override F11 in web browser with newer version of `contrib.glfw3`
-	if (event.sym == Keys::F11 || (event.sym == Keys::Return && (event.mod & KeyMod::Mask) == KeyMod::LAlt)) {
+	if (event.Sym == Keys::F11 || (event.Sym == Keys::Return && (event.Mod & KeyMod::Mask) == KeyMod::LAlt)) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
 		if (Environment::CurrentDeviceType == DeviceType::Xbox) {
@@ -868,7 +868,7 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 		}
 #	endif
 		PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
-		theApplication().GetGfxDevice().setResolution(PreferencesCache::EnableFullscreen);
+		theApplication().GetGfxDevice().SetResolution(PreferencesCache::EnableFullscreen);
 		ApplyCursorPolicy();
 		return;
 	}
@@ -950,7 +950,7 @@ void GameEventHandler::ApplyCursorPolicy()
 		visible = false;
 	}
 #	endif
-	theApplication().GetInputManager().setCursor(visible ? IInputManager::Cursor::Arrow : IInputManager::Cursor::Hidden);
+	theApplication().GetInputManager().SetCursor(visible ? IInputManager::Cursor::Arrow : IInputManager::Cursor::Hidden);
 #endif
 }
 
@@ -1387,12 +1387,12 @@ void GameEventHandler::ApplyActivityIcon()
 	// These calls will kill the app in a second, so it should be called only on exit
 	if (PreferencesCache::EnableReforgedMainMenu) {
 		LOGI("Changed activity icon to \"Reforged\"");
-		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, true);
-		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, false);
+		Backends::AndroidJniWrap_Activity::SetActivityEnabled(".MainActivityReforged"_s, true);
+		Backends::AndroidJniWrap_Activity::SetActivityEnabled(".MainActivityLegacy"_s, false);
 	} else {
 		LOGI("Changed activity icon to \"Legacy\"");
-		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityLegacy"_s, true);
-		Backends::AndroidJniWrap_Activity::setActivityEnabled(".MainActivityReforged"_s, false);
+		Backends::AndroidJniWrap_Activity::SetActivityEnabled(".MainActivityLegacy"_s, true);
+		Backends::AndroidJniWrap_Activity::SetActivityEnabled(".MainActivityReforged"_s, false);
 	}
 }
 #endif
@@ -1639,7 +1639,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
 
 #	if defined(DEATH_TARGET_ANDROID)
-		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
+		auto androidId = Backends::AndroidJniWrap_Secure::GetAndroidId();
 		std::size_t androidIdLength = std::min(androidId.size(), (std::size_t)UINT8_MAX);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)androidIdLength);
 		packet.Write(androidId.data(), (std::uint32_t)androidIdLength);
@@ -1957,7 +1957,7 @@ Retry:
 void GameEventHandler::OnBeginInitialize()
 {
 #if defined(WITH_IMGUI)
-	theApplication().GetDebugOverlaySettings().showInterface = true;
+	theApplication().GetDebugOverlaySettings().ShowInterface = true;
 #endif
 
 	_flags |= Flags::IsInitialized;
@@ -1985,27 +1985,27 @@ void GameEventHandler::OnBeginInitialize()
 #if defined(DEATH_TARGET_ANDROID)
 	theApplication().SetAutoSuspension(true);
 
-	if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+	if (Backends::AndroidJniWrap_Activity::HasExternalStoragePermission()) {
 		_flags |= Flags::HasExternalStoragePermission;
 	}
 
 	// Try to load gamepad mappings from parent directory of `Source` on Android
 	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
+		theApplication().GetInputManager().AddJoyMappingsFromFile(mappingsPath);
 	}
 #elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// Try to load gamepad mappings from `Content` directory
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
-		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
+		theApplication().GetInputManager().AddJoyMappingsFromFile(mappingsPath);
 	}
 	// Loaded after the shipped ones, so the user's mappings replace them
 	StringView userContentPath = resolver.GetUserContentPath();
 	if (!userContentPath.empty()) {
 		String userMappingsPath = fs::CombinePath(userContentPath, "gamecontrollerdb.txt"_s);
 		if (fs::IsReadableFile(userMappingsPath)) {
-			theApplication().GetInputManager().addJoyMappingsFromFile(userMappingsPath);
+			theApplication().GetInputManager().AddJoyMappingsFromFile(userMappingsPath);
 		}
 	}
 #endif
@@ -2016,7 +2016,7 @@ void GameEventHandler::OnBeginInitialize()
 	if (!configDir.empty()) {
 		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
 		if (fs::IsReadableFile(mappingsPath2)) {
-			theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath2);
+			theApplication().GetInputManager().AddJoyMappingsFromFile(mappingsPath2);
 		}
 	}
 #endif
@@ -2028,7 +2028,7 @@ void GameEventHandler::OnBeginInitialize()
 #	else
 	if (PreferencesCache::EnableFullscreen) {
 #	endif
-		theApplication().GetGfxDevice().setResolution(true);
+		theApplication().GetGfxDevice().SetResolution(true);
 	}
 	ApplyCursorPolicy();
 #endif
@@ -2644,8 +2644,8 @@ bool GameEventHandler::RunLevelPackCommands(const AppConfiguration& config, bool
 	bool success = true;
 	auto& library = LevelPacks::LevelPackLibrary::Get();
 
-	for (std::int32_t i = 0; i < config.argc(); i++) {
-		StringView arg = config.argv(i);
+	for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+		StringView arg = config.GetArgv(i);
 		bool takesValue;
 		if (!IsLevelPackSwitch(arg, takesValue)) {
 			continue;
@@ -2657,14 +2657,14 @@ bool GameEventHandler::RunLevelPackCommands(const AppConfiguration& config, bool
 #	endif
 			library.CleanUp();
 		}
-		if (takesValue && i + 1 >= config.argc()) {
+		if (takesValue && i + 1 >= config.GetArgc()) {
 			LOGE("\"{}\" needs a value", arg);
 			success = false;
 			continue;
 		}
 
 		if (arg == "--install-pack"_s || arg == "/install-pack"_s) {
-			StringView source = config.argv(++i);
+			StringView source = config.GetArgv(++i);
 			if (!fs::IsReadableFile(source)) {
 				// Only local files until the level database can be reached
 				LOGE("Level pack \"{}\" cannot be found, downloading it isn't supported yet", source);
@@ -2698,7 +2698,7 @@ bool GameEventHandler::RunLevelPackCommands(const AppConfiguration& config, bool
 				success = false;
 			}
 		} else if (arg == "--remove-pack"_s || arg == "/remove-pack"_s) {
-			StringView id = config.argv(++i);
+			StringView id = config.GetArgv(++i);
 			if (id.hasPrefix('+')) {
 				id = LevelPacks::LevelPackLibrary::GetPackId(id);
 			}

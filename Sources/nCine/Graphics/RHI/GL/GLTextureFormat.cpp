@@ -164,7 +164,7 @@ namespace nCine::RHI::GL
 				break;
 		}
 
-		// Convert the external format to the corresponding BGR/BGRA one, matching the former `TextureFormat::bgrFormat()`
+		// Convert the external format to the corresponding BGR/BGRA one, matching the former `TextureFormat::BgrFormat()`
 		if (bgr) {
 			if (externalFormat == GL_RGBA) {
 #if defined(DEATH_TARGET_VITA)

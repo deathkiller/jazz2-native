@@ -27,7 +27,7 @@
 //		}
 //	}
 //
-//	unsigned int ITextureSaver::dataSize(const Properties& properties)
+//	unsigned int ITextureSaver::GetDataSize(const Properties& properties)
 //	{
 //		return (properties.width * properties.height * bpp(properties.format));
 //	}

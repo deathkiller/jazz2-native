@@ -675,11 +675,11 @@ namespace nCine
 			return false;
 		}
 
-		const TimeStamp start = TimeStamp::now();
+		const TimeStamp start = TimeStamp::Now();
 		if (_idleDecodes[0].Request->ExecuteSlice(IdleDecodeSliceBytes)) {
 			_idleDecodes.erase(&_idleDecodes[0]);
 		}
-		const float elapsed = start.millisecondsSince();
+		const float elapsed = start.GetMillisecondsSince();
 		_idleSliceMs = (elapsed > _idleSliceMs * 0.98f ? elapsed : _idleSliceMs * 0.98f);
 		return !_idleDecodes.empty();
 	}

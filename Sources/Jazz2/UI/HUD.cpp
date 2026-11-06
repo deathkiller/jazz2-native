@@ -356,11 +356,11 @@ namespace Jazz2::UI
 			| (1 << (std::int32_t)PlayerAction::Down)
 			| (1 << (std::int32_t)PlayerAction::Buttstomp);
 
-		if (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown) {
-			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down || event.Type == TouchEventType::PointerDown) {
+			int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
-				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
+				float x = event.Pointers[pointerIndex].X * (float)ViewSize.X;
+				float y = event.Pointers[pointerIndex].Y * (float)ViewSize.Y;
 
 				if (PreferencesCache::EnableTouchJoystick && _joystickPointerId == -1) {
 					// Floating joystick: activate anywhere in the left portion / D-pad zone
@@ -368,7 +368,7 @@ namespace Jazz2::UI
 						_joystickActive = true;
 						_joystickOrigin = Vector2f(x, y);
 						_joystickCurrent = Vector2f(x, y);
-						_joystickPointerId = event.actionIndex;
+						_joystickPointerId = event.ActionIndex;
 					}
 				}
 
@@ -379,7 +379,7 @@ namespace Jazz2::UI
 					} 
 					if (button.Action != PlayerAction::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
-							button.CurrentPointerId = event.actionIndex;
+							button.CurrentPointerId = event.ActionIndex;
 							overrideActions |= (1 << (std::int32_t)button.Action);
 							if (button.Action == PlayerAction::Down) {
 								overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
@@ -393,13 +393,13 @@ namespace Jazz2::UI
 					}
 				}
 			}
-		} else if (event.type == TouchEventType::Move) {
+		} else if (event.Type == TouchEventType::Move) {
 			if (PreferencesCache::EnableTouchJoystick && _joystickActive) {
-				std::int32_t pointerIndex = event.findPointerIndex(_joystickPointerId);
+				std::int32_t pointerIndex = event.FindPointerIndex(_joystickPointerId);
 				if (pointerIndex != -1) {
 					_joystickCurrent = Vector2f(
-						event.pointers[pointerIndex].x * (float)ViewSize.X,
-						event.pointers[pointerIndex].y * (float)ViewSize.Y);
+						event.Pointers[pointerIndex].X * (float)ViewSize.X,
+						event.Pointers[pointerIndex].Y * (float)ViewSize.Y);
 
 					Vector2f diff = _joystickCurrent - _joystickOrigin;
 					float dist = diff.Length();
@@ -431,10 +431,10 @@ namespace Jazz2::UI
 				if (button.Action != PlayerAction::None) {
 					if (button.CurrentPointerId != -1) {
 						bool isPressed = false;
-						std::int32_t pointerIndex = event.findPointerIndex(button.CurrentPointerId);
+						std::int32_t pointerIndex = event.FindPointerIndex(button.CurrentPointerId);
 						if (pointerIndex != -1) {
-							float x = event.pointers[pointerIndex].x * (float)ViewSize.X;
-							float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
+							float x = event.Pointers[pointerIndex].X * (float)ViewSize.X;
+							float y = event.Pointers[pointerIndex].Y * (float)ViewSize.Y;
 							isPressed = IsOnButton(button, x, y);
 						}
 
@@ -450,11 +450,11 @@ namespace Jazz2::UI
 						bool canPlayerMoveVertically = (!players.empty() && players[0]->CanMoveVertically());
 						if ((button.Align & AllowRollover) != AllowRollover && !canPlayerMoveVertically) continue;
 
-						for (std::uint32_t j = 0; j < event.count; j++) {
-							float x = event.pointers[j].x * (float)ViewSize.X;
-							float y = event.pointers[j].y * (float)ViewSize.Y;
+						for (std::uint32_t j = 0; j < event.Count; j++) {
+							float x = event.Pointers[j].X * (float)ViewSize.X;
+							float y = event.Pointers[j].Y * (float)ViewSize.Y;
 							if (IsOnButton(button, x, y)) {
-								button.CurrentPointerId = event.pointers[j].id;
+								button.CurrentPointerId = event.Pointers[j].Id;
 								overrideActions |= (1 << (std::int32_t)button.Action);
 								if (button.Action == PlayerAction::Down) {
 									overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
@@ -465,7 +465,7 @@ namespace Jazz2::UI
 					}
 				}
 			}
-		} else if (event.type == TouchEventType::Up) {
+		} else if (event.Type == TouchEventType::Up) {
 			if (PreferencesCache::EnableTouchJoystick && _joystickActive) {
 				_joystickActive = false;
 				_joystickPointerId = -1;
@@ -487,8 +487,8 @@ namespace Jazz2::UI
 				}
 			}
 
-		} else if (event.type == TouchEventType::PointerUp) {
-			if (PreferencesCache::EnableTouchJoystick && _joystickActive && event.actionIndex == _joystickPointerId) {
+		} else if (event.Type == TouchEventType::PointerUp) {
+			if (PreferencesCache::EnableTouchJoystick && _joystickActive && event.ActionIndex == _joystickPointerId) {
 				_joystickActive = false;
 				_joystickPointerId = -1;
 				overrideMovement = Vector2f(0.0f, 0.0f);
@@ -500,7 +500,7 @@ namespace Jazz2::UI
 				if (PreferencesCache::EnableTouchJoystick && i <= 4) {
 					continue;
 				}
-				if (button.CurrentPointerId == event.actionIndex) {
+				if (button.CurrentPointerId == event.ActionIndex) {
 					button.CurrentPointerId = -1;
 					overrideActions &= ~(1 << (std::int32_t)button.Action);
 					if (button.Action == PlayerAction::Down) {

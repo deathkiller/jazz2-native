@@ -53,22 +53,22 @@ namespace Jazz2::Actors::Environment
 			if (tileMap != nullptr) {
 				if (tileMap->IsTileEmpty(tile.X - 1, tile.Y)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.GetLayer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 				if (tileMap->IsTileEmpty(tile.X + 1, tile.Y)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X + 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X + 24, (std::int32_t)_pos.Y - 16 + Random().Fast(0, 32), _renderer.GetLayer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 				if (tileMap->IsTileEmpty(tile.X, tile.Y + 1)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (std::int32_t)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (std::int32_t)_pos.Y + 24, _renderer.GetLayer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 			}
 
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 90), Explosion::Type::SmokeWhite);
 
 			_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 		}

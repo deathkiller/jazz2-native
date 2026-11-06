@@ -66,70 +66,70 @@ namespace nCine
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 		/** @brief Returns the width of the node area */
-		inline virtual float width() const {
+		inline virtual float GetWidth() const {
 			return _width * _scaleFactor.X;
 		}
 		/** @brief Returns the height of the node area */
-		inline virtual float height() const {
+		inline virtual float GetHeight() const {
 			return _height * _scaleFactor.Y;
 		}
 		/** @brief Returns the size of the node area */
-		inline Vector2f size() const {
-			return Vector2f(width(), height());
+		inline Vector2f GetSize() const {
+			return Vector2f(GetWidth(), GetHeight());
 		}
 
 		/** @brief Returns the absolute width of the node area */
-		inline virtual float absWidth() const {
+		inline virtual float GetAbsWidth() const {
 			return _width * _absScaleFactor.X;
 		}
 		/** @brief Returns the absolute height of the node area */
-		inline virtual float absHeight() const {
+		inline virtual float GetAbsHeight() const {
 			return _height * _absScaleFactor.Y;
 		}
 		/** @brief Returns the absolute size of the node area */
-		inline Vector2f absSize() const {
-			return Vector2f(absWidth(), absHeight());
+		inline Vector2f GetAbsSize() const {
+			return Vector2f(GetAbsWidth(), GetAbsHeight());
 		}
 
 		/** @brief Returns the transformation anchor point */
-		inline Vector2f anchorPoint() const {
-			return (_anchorPoint / size()) + 0.5f;
+		inline Vector2f GetAnchorPoint() const {
+			return (_anchorPoint / GetSize()) + 0.5f;
 		}
 		/** @brief Sets the transformation anchor point */
-		void setAnchorPoint(float xx, float yy);
+		void SetAnchorPoint(float xx, float yy);
 		/** @brief Sets the transformation anchor point from a `Vector2f` */
-		inline void setAnchorPoint(Vector2f point) {
-			setAnchorPoint(point.X, point.Y);
+		inline void SetAnchorPoint(Vector2f point) {
+			SetAnchorPoint(point.X, point.Y);
 		}
 
 		/** @brief Returns whether the node renders with blending enabled */
-		bool isBlendingEnabled() const;
+		bool IsBlendingEnabled() const;
 		/** @brief Sets the blending state for node rendering */
-		void setBlendingEnabled(bool blendingEnabled);
+		void SetBlendingEnabled(bool blendingEnabled);
 
 		/** @brief Returns the source blending factor */
-		BlendingFactor srcBlendingFactor() const;
+		BlendingFactor GetSrcBlendingFactor() const;
 		/** @brief Returns the destination blending factor */
-		BlendingFactor destBlendingFactor() const;
+		BlendingFactor GetDestBlendingFactor() const;
 
 		/**
 		 * @brief Returns the preset matching the current source and destination blending factors
 		 *
-		 * Factors that don't correspond to any preset (set with @ref setBlendingFactors()) are reported as
+		 * Factors that don't correspond to any preset (set with @ref SetBlendingFactors()) are reported as
 		 * @relativeref{BlendingPreset,Alpha}.
 		 */
-		BlendingPreset blendingPreset() const;
+		BlendingPreset GetBlendingPreset() const;
 		/** @brief Sets source and destination blending factors from a preset */
-		void setBlendingPreset(BlendingPreset blendingPreset);
+		void SetBlendingPreset(BlendingPreset blendingPreset);
 		/** @brief Sets specific source and destination blending factors */
-		void setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor);
+		void SetBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor);
 
 		/** @brief Returns the last frame in which any viewport rendered this node (i.e. it was not culled) */
-		inline std::uint32_t lastFrameRendered() const {
+		inline std::uint32_t GetLastFrameRendered() const {
 			return _lastFrameRendered;
 		}
 		/** @brief Returns the axis-aligned bounding box of the node area in the last frame */
-		inline Rectf aabb() const {
+		inline Rectf GetAabb() const {
 			return _aabb;
 		}
 
@@ -147,18 +147,18 @@ namespace nCine
 		/** @brief Axis-aligned bounding box of the node area */
 		Rectf _aabb;
 		/** @brief Recalculates the axis-aligned bounding box */
-		virtual void updateAabb();
+		virtual void UpdateAabb();
 		/** @brief Called by each viewport update to refresh this node's culling state */
-		void updateCulling();
+		void UpdateCulling();
 
 		/** @brief Protected copy constructor used to clone objects */
 		DrawableNode(const DrawableNode& other);
 
 		/** @brief Performs the required tasks upon a change to the shader */
-		virtual void shaderHasChanged() = 0;
+		virtual void ShaderHasChanged() = 0;
 
 		/** @brief Updates the render command before the node is drawn */
-		virtual void updateRenderCommand() = 0;
+		virtual void UpdateRenderCommand() = 0;
 	};
 
 }

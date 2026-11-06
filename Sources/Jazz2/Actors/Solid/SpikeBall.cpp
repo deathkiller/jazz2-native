@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Solid
 		_shade = params.GetBool(4);
 
 		_originPos = _pos;
-		_originLayer = _renderer.layer() - 12;
+		_originLayer = _renderer.GetLayer() - 12;
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
@@ -77,10 +77,10 @@ namespace Jazz2::Actors::Solid
 
 		_canHurtPlayer = (std::abs(1.0f - scale) < 0.06f);
 
-		_renderer.setScale(scale);
-		_renderer.setLayer(_originLayer + (std::uint16_t)(scale * 20));
+		_renderer.SetScale(scale);
+		_renderer.SetLayer(_originLayer + (std::uint16_t)(scale * 20));
 		if (_shade) {
-			_renderer.setColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
+			_renderer.SetColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
 		}
 	}
 
@@ -113,7 +113,7 @@ namespace Jazz2::Actors::Solid
 			_pieces[i].Pos = GetPhasePosition(i, &_pieces[i].Scale);
 		}
 		if (_shade) {
-			_renderer.setColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
+			_renderer.SetColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
 		}
 	}
 

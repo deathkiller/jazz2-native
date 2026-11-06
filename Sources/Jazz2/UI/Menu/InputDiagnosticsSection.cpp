@@ -47,9 +47,9 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t jc = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[jc] = &input.joyMappedState(i);
-				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ExitButton)) {
+			if (input.IsJoyMapped(i)) {
+				joyStates[jc] = &input.GetJoyMappedState(i);
+				if (joyStates[jc]->IsButtonPressed(ButtonName::Start) && joyStates[jc]->IsButtonPressed(ExitButton)) {
 					shouldExit = true;
 				}
 
@@ -92,7 +92,7 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t jc = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyPresent(i)) {
+			if (input.IsJoyPresent(i)) {
 				jc++;
 			}
 		}
@@ -112,12 +112,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow(">", charOffset, center.X * 1.8f, center.Y * 1.2f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, _itemCount > 1 ? 0.5f : 0.36f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		const JoystickState& rawState = input.joystickState(_selectedIndex);
-		const JoyMappedState& mappedState = input.joyMappedState(_selectedIndex);
-		const char* joyName = input.joyName(_selectedIndex);
-		std::int32_t numAxes = input.joyNumAxes(_selectedIndex);
-		std::int32_t numButtons = input.joyNumButtons(_selectedIndex);
-		std::int32_t numHats = input.joyNumHats(_selectedIndex);
+		const JoystickState& rawState = input.GetJoystickState(_selectedIndex);
+		const JoyMappedState& mappedState = input.GetJoyMappedState(_selectedIndex);
+		const char* joyName = input.GetJoyName(_selectedIndex);
+		std::int32_t numAxes = input.GetJoyAxisCount(_selectedIndex);
+		std::int32_t numButtons = input.GetJoyButtonCount(_selectedIndex);
+		std::int32_t numHats = input.GetJoyHatCount(_selectedIndex);
 
 		char buffer[128];
 		std::size_t length = formatInto(buffer, "{} ({} axes, {} buttons, {} hats)", joyName, numAxes, numButtons, numHats);
@@ -134,7 +134,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow({ buffer, length }, charOffset, x, topLine + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::RandomColor, size, 0.4f, 0.6f, 0.6f, 0.6f, 0.88f);
 
-		JoystickGuid joyGuid = input.joyGuid(_selectedIndex);
+		JoystickGuid joyGuid = input.GetJoyGuid(_selectedIndex);
 		if (joyGuid == JoystickGuidType::Default) {
 			length = copyStringFirst(buffer, "GUID: default");
 		} else if (joyGuid == JoystickGuidType::Hidapi) {
@@ -146,7 +146,7 @@ namespace Jazz2::UI::Menu
 			length = formatInto(buffer, "GUID: {:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{}",
 				g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7],
 				g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
-				input.hasMappingByGuid(joyGuid) ? ""_s : (input.hasMappingByName(joyName) ? " (similar mapping)"_s : " (no mapping)"_s));
+				input.HasMappingByGuid(joyGuid) ? ""_s : (input.HasMappingByName(joyName) ? " (similar mapping)"_s : " (no mapping)"_s));
 		}
 
 		_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f, topLine + 40.0f, IMenuContainer::FontLayer,
@@ -155,36 +155,36 @@ namespace Jazz2::UI::Menu
 		_root->DrawStringShadow("Mapped State"_s, charOffset, center.X * 0.4f, topLine + 60.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		PrintAxisValue("LX"_s, mappedState.axisValue(AxisName::LeftX), center.X * 0.4f, topLine + 75.0f);
-		PrintAxisValue("LY"_s, mappedState.axisValue(AxisName::LeftY), center.X * 0.4f + 110.0f, topLine + 75.0f);
-		PrintAxisValue("RX"_s, mappedState.axisValue(AxisName::RightX), center.X * 0.4f + 220.0f, topLine + 75.0f);
-		PrintAxisValue("RY"_s, mappedState.axisValue(AxisName::RightY), center.X * 0.4f + 330.0f, topLine + 75.0f);
-		PrintAxisValue("LT"_s, mappedState.axisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
-		PrintAxisValue("RT"_s, mappedState.axisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
+		PrintAxisValue("LX"_s, mappedState.GetAxisValue(AxisName::LeftX), center.X * 0.4f, topLine + 75.0f);
+		PrintAxisValue("LY"_s, mappedState.GetAxisValue(AxisName::LeftY), center.X * 0.4f + 110.0f, topLine + 75.0f);
+		PrintAxisValue("RX"_s, mappedState.GetAxisValue(AxisName::RightX), center.X * 0.4f + 220.0f, topLine + 75.0f);
+		PrintAxisValue("RY"_s, mappedState.GetAxisValue(AxisName::RightY), center.X * 0.4f + 330.0f, topLine + 75.0f);
+		PrintAxisValue("LT"_s, mappedState.GetAxisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
+		PrintAxisValue("RT"_s, mappedState.GetAxisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
 
 		MutableStringView bufferView = { buffer, sizeof(buffer) };
 		std::size_t buttonsLength = 0;
-		if (mappedState.isButtonPressed(ButtonName::A)) AppendPressedButton(bufferView, buttonsLength, "A"_s);
-		if (mappedState.isButtonPressed(ButtonName::B)) AppendPressedButton(bufferView, buttonsLength, "B"_s);
-		if (mappedState.isButtonPressed(ButtonName::X)) AppendPressedButton(bufferView, buttonsLength, "X"_s);
-		if (mappedState.isButtonPressed(ButtonName::Y)) AppendPressedButton(bufferView, buttonsLength, "Y"_s);
-		if (mappedState.isButtonPressed(ButtonName::LeftBumper)) AppendPressedButton(bufferView, buttonsLength, "LB"_s);
-		if (mappedState.isButtonPressed(ButtonName::RightBumper)) AppendPressedButton(bufferView, buttonsLength, "RB"_s);
-		if (mappedState.isButtonPressed(ButtonName::LeftStick)) AppendPressedButton(bufferView, buttonsLength, "LS"_s);
-		if (mappedState.isButtonPressed(ButtonName::RightStick)) AppendPressedButton(bufferView, buttonsLength, "RS"_s);
-		if (mappedState.isButtonPressed(ButtonName::Back)) AppendPressedButton(bufferView, buttonsLength, "Back"_s);
-		if (mappedState.isButtonPressed(ButtonName::Guide)) AppendPressedButton(bufferView, buttonsLength, "Guide"_s);
-		if (mappedState.isButtonPressed(ButtonName::Start)) AppendPressedButton(bufferView, buttonsLength, "Start"_s);
-		if (mappedState.isButtonPressed(ButtonName::Up)) AppendPressedButton(bufferView, buttonsLength, "Up"_s);
-		if (mappedState.isButtonPressed(ButtonName::Down)) AppendPressedButton(bufferView, buttonsLength, "Down"_s);
-		if (mappedState.isButtonPressed(ButtonName::Left)) AppendPressedButton(bufferView, buttonsLength, "Left"_s);
-		if (mappedState.isButtonPressed(ButtonName::Right)) AppendPressedButton(bufferView, buttonsLength, "Right"_s);
-		if (mappedState.isButtonPressed(ButtonName::Misc1)) AppendPressedButton(bufferView, buttonsLength, "Misc1"_s);
-		if (mappedState.isButtonPressed(ButtonName::Paddle1)) AppendPressedButton(bufferView, buttonsLength, "Paddle1"_s);
-		if (mappedState.isButtonPressed(ButtonName::Paddle2)) AppendPressedButton(bufferView, buttonsLength, "Paddle2"_s);
-		if (mappedState.isButtonPressed(ButtonName::Paddle3)) AppendPressedButton(bufferView, buttonsLength, "Paddle3"_s);
-		if (mappedState.isButtonPressed(ButtonName::Paddle4)) AppendPressedButton(bufferView, buttonsLength, "Paddle4"_s);
-		if (mappedState.isButtonPressed(ButtonName::Touchpad)) AppendPressedButton(bufferView, buttonsLength, "Touchpad"_s);
+		if (mappedState.IsButtonPressed(ButtonName::A)) AppendPressedButton(bufferView, buttonsLength, "A"_s);
+		if (mappedState.IsButtonPressed(ButtonName::B)) AppendPressedButton(bufferView, buttonsLength, "B"_s);
+		if (mappedState.IsButtonPressed(ButtonName::X)) AppendPressedButton(bufferView, buttonsLength, "X"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Y)) AppendPressedButton(bufferView, buttonsLength, "Y"_s);
+		if (mappedState.IsButtonPressed(ButtonName::LeftBumper)) AppendPressedButton(bufferView, buttonsLength, "LB"_s);
+		if (mappedState.IsButtonPressed(ButtonName::RightBumper)) AppendPressedButton(bufferView, buttonsLength, "RB"_s);
+		if (mappedState.IsButtonPressed(ButtonName::LeftStick)) AppendPressedButton(bufferView, buttonsLength, "LS"_s);
+		if (mappedState.IsButtonPressed(ButtonName::RightStick)) AppendPressedButton(bufferView, buttonsLength, "RS"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Back)) AppendPressedButton(bufferView, buttonsLength, "Back"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Guide)) AppendPressedButton(bufferView, buttonsLength, "Guide"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Start)) AppendPressedButton(bufferView, buttonsLength, "Start"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Up)) AppendPressedButton(bufferView, buttonsLength, "Up"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Down)) AppendPressedButton(bufferView, buttonsLength, "Down"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Left)) AppendPressedButton(bufferView, buttonsLength, "Left"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Right)) AppendPressedButton(bufferView, buttonsLength, "Right"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Misc1)) AppendPressedButton(bufferView, buttonsLength, "Misc1"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Paddle1)) AppendPressedButton(bufferView, buttonsLength, "Paddle1"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Paddle2)) AppendPressedButton(bufferView, buttonsLength, "Paddle2"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Paddle3)) AppendPressedButton(bufferView, buttonsLength, "Paddle3"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Paddle4)) AppendPressedButton(bufferView, buttonsLength, "Paddle4"_s);
+		if (mappedState.IsButtonPressed(ButtonName::Touchpad)) AppendPressedButton(bufferView, buttonsLength, "Touchpad"_s);
 
 		_root->DrawStringShadow({ buffer, buttonsLength }, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
@@ -196,7 +196,7 @@ namespace Jazz2::UI::Menu
 		float sx = 0, sy = 0;
 		for (std::int32_t i = 0; i < numAxes; i++) {
 			length = formatInto(buffer, "a{}", i);
-			PrintAxisValue({ buffer, length }, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
+			PrintAxisValue({ buffer, length }, rawState.GetAxisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
 			sx += 110.0f;
 			if (sx >= 340.0f) {
 				sx = 0.0f;
@@ -210,7 +210,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numButtons; i++) {
-			length = formatInto(buffer, "b{}: {}", i, rawState.isButtonPressed(i) ? 1 : 0);
+			length = formatInto(buffer, "b{}: {}", i, rawState.IsButtonPressed(i) ? 1 : 0);
 			_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
@@ -226,7 +226,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numHats; i++) {
-			length = formatInto(buffer, "h{}: {}", i, rawState.hatState(i));
+			length = formatInto(buffer, "h{}: {}", i, rawState.GetHatState(i));
 			_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
@@ -295,11 +295,11 @@ namespace Jazz2::UI::Menu
 
 	void InputDiagnosticsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				if (y < 80.0f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();

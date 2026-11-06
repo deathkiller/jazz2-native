@@ -131,7 +131,7 @@ namespace Jazz2::Scripting
 				_renderer.AnimTime = 0.0f;
 				_renderer.Hotspot.X = (float)base->Hotspot.X;
 				_renderer.Hotspot.Y = (float)base->Hotspot.Y;
-				_renderer.setTexture(base->TextureDiffuse.get());
+				_renderer.SetTexture(base->TextureDiffuse.get());
 				_renderer.SetIndexed((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed, 0);
 				_renderer.UpdateAnchor();
 				_renderer.Initialize(Actors::ActorRendererType::Default);

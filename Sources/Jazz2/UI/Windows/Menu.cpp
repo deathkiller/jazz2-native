@@ -252,7 +252,7 @@ namespace Jazz2::UI::Windows
 			}
 			return from;
 		};
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Down:
 				SetHighlight(step(_highlight < 0 ? -1 : _highlight, 1), true);
 				return true;
@@ -278,14 +278,14 @@ namespace Jazz2::UI::Windows
 				return true;
 			case Keys::Left:
 			case Keys::Right:
-				if (event.sym == Keys::Right && _highlight >= 0 && _highlight < count && rows[_highlight]->Entry.Submenu &&
+				if (event.Sym == Keys::Right && _highlight >= 0 && _highlight < count && rows[_highlight]->Entry.Submenu &&
 					rows[_highlight]->IsEntryEnabled()) {
 					OpenSubmenu(rows[_highlight], true);
 					return true;
 				}
 				if (OnSwitchMenu) {
 					// Closes this menu, which is destroyed only in the next frame
-					OnSwitchMenu(event.sym == Keys::Left ? -1 : 1);
+					OnSwitchMenu(event.Sym == Keys::Left ? -1 : 1);
 					return true;
 				}
 				return false;
@@ -297,7 +297,7 @@ namespace Jazz2::UI::Windows
 	bool PopupMenu::OnTextInput(const TextInputEvent& event)
 	{
 		// A letter goes to the next item that starts with it
-		char letter = FirstLetter(StringView(event.text, std::size_t(event.length)));
+		char letter = FirstLetter(StringView(event.Text, std::size_t(event.Length)));
 		if (letter == '\0') {
 			return false;
 		}
@@ -482,8 +482,8 @@ namespace Jazz2::UI::Windows
 		if (!IsUsable()) {
 			return false;
 		}
-		bool alt = (event.mod & KeyMod::Alt) != 0;
-		switch (event.sym) {
+		bool alt = (event.Mod & KeyMod::Alt) != 0;
+		switch (event.Sym) {
 			case Keys::Return:
 			case Keys::NumPadEnter:
 			case Keys::Space:
@@ -494,7 +494,7 @@ namespace Jazz2::UI::Windows
 			case Keys::Down: {
 				// The next choice or the one before, as the list would choose it, without opening it, the list is opened
 				// only if none is shown checked
-				if (alt || !StepChoice(event.sym == Keys::Down ? 1 : -1)) {
+				if (alt || !StepChoice(event.Sym == Keys::Down ? 1 : -1)) {
 					Open(true);
 				}
 				return true;
@@ -650,8 +650,8 @@ namespace Jazz2::UI::Windows
 
 		// While Alt is held, the letter that opens the menu with it is underlined
 		if (_mnemonic >= 0 && std::size_t(_mnemonic) < Label.size()) {
-			const auto& keyboard = theApplication().GetInputManager().keyboardState();
-			if (keyboard.isKeyDown(Keys::LAlt) || keyboard.isKeyDown(Keys::RAlt)) {
+			const auto& keyboard = theApplication().GetInputManager().GetKeyboardState();
+			if (keyboard.IsKeyDown(Keys::LAlt) || keyboard.IsKeyDown(Keys::RAlt)) {
 				float textWidth = painter.MeasureText(Label);
 				float left = std::round(Bounds.X + (Bounds.W - textWidth) * 0.5f);
 				float before = painter.MeasureText(Label.prefix(std::size_t(_mnemonic)));

@@ -505,7 +505,7 @@ namespace Jazz2
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		// If `MANAGE_EXTERNAL_STORAGE` permission is granted, try to use also alternative paths
-		if (Backends::AndroidJniWrap_Activity::hasExternalStoragePermission()) {
+		if (Backends::AndroidJniWrap_Activity::HasExternalStoragePermission()) {
 			constexpr StringView ExternalPaths[] = {
 				"Games/Jazz² Resurrection/"_s,
 				"Games/Jazz2 Resurrection/"_s,
@@ -526,8 +526,8 @@ namespace Jazz2
 			}
 
 			if (!found) {
-				String deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
-				String deviceModel = Backends::AndroidJniClass_Version::deviceModel();
+				String deviceBrand = Backends::AndroidJniClass_Version::GetDeviceBrand();
+				String deviceModel = Backends::AndroidJniClass_Version::GetDeviceModel();
 				if (deviceBrand == "Windows"_s && deviceModel == "Subsystem for Android(TM)"_s) {
 					// Set special paths if Windows Subsystem for Android™ is used
 					String externalStorageWindows = fs::CombinePath(externalStorage, "Windows/Saved Games/"_s);
@@ -1782,16 +1782,16 @@ namespace Jazz2
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
 			String fullPath = fs::CombinePath("Animations"_s, pathNormalized);
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromStream(OpenContentFile(fullPath), fullPath);
-			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().pixelFormat();
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::CreateFromStream(OpenContentFile(fullPath), fullPath);
+			if (texLoader->HasLoaded()) {
+				auto texFormat = texLoader->GetTexFormat().GetPixelFormat();
 				if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
 					return nullptr;
 				}
 
-				std::int32_t w = texLoader->width();
-				std::int32_t h = texLoader->height();
-				std::uint8_t* pixels = (std::uint8_t*)texLoader->pixels();
+				std::int32_t w = texLoader->GetWidth();
+				std::int32_t h = texLoader->GetHeight();
+				std::uint8_t* pixels = (std::uint8_t*)texLoader->GetPixels();
 				const std::uint32_t* palette = _palettes + paletteOffset;
 				bool linearSampling = false;
 				bool needsMask = true;
@@ -4039,8 +4039,8 @@ namespace Jazz2
 		std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		bool batchSizeComputed = false;
 		if (introspection == Shader::Introspection::NoUniformsInBlocks) {
-			if (appCfg.fixedBatchSize > 0) {
-				batchSize = appCfg.fixedBatchSize;
+			if (appCfg.FixedBatchSize > 0) {
+				batchSize = appCfg.FixedBatchSize;
 				batchSizeComputed = true;
 			} else if (maxUniformBlockSize < 64 * 1024) {
 				// The UBO is smaller than the 64 KB the in-shader BATCH_SIZE fallbacks assume, so the batch size is
@@ -4844,15 +4844,15 @@ namespace Jazz2
 		Json::Value doc; std::string errors;
 		if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
-			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().pixelFormat();
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::CreateFromFile(fullPath);
+			if (texLoader->HasLoaded()) {
+				auto texFormat = texLoader->GetTexFormat().GetPixelFormat();
 				if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
 					return;
 				}
 
-				std::int32_t w = texLoader->width();
-				std::int32_t h = texLoader->height();
+				std::int32_t w = texLoader->GetWidth();
+				std::int32_t h = texLoader->GetHeight();
 				const std::uint32_t* palette = _palettes;
 				bool needsMask = true;
 
@@ -4932,7 +4932,7 @@ namespace Jazz2
 					so->WriteValue<std::uint16_t>(UINT16_MAX);
 				}
 
-				Compatibility::JJ2Anims::WriteImageContent(*so, texLoader->pixels(), w, h, 4);
+				Compatibility::JJ2Anims::WriteImageContent(*so, texLoader->GetPixels(), w, h, 4);
 			}
 		}
 	}

@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemoteActor::ApplyBlendingPreset()
 	{
-		_renderer.setBlendingPreset(_blendingPreset);
+		_renderer.SetBlendingPreset(_blendingPreset);
 	}
 
 	Task<bool> RemoteActor::OnActivatedAsync(const ActorActivationDetails& details)
@@ -150,7 +150,7 @@ namespace Jazz2::Actors::Multiplayer
 				_sugarRushStarsTime -= timeMult;
 				if (_sugarRushStarsTime <= 0.0f) {
 					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
-					Player::SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.layer());
+					Player::SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.GetLayer());
 				}
 			}
 		}
@@ -167,7 +167,7 @@ namespace Jazz2::Actors::Multiplayer
 		AnimState drawnState = (_currentTransition != nullptr ? _currentTransition->State
 			: (_currentAnimation != nullptr ? _currentAnimation->State : _lastAnim));
 		if ((drawnState & AnimState::RevUp) == AnimState::RevUp && _metadata != nullptr) {
-			float speedUp = Player::UpdateRemoteRevUp(_levelHandler, _metadata, _pos, _renderer.layer(),
+			float speedUp = Player::UpdateRemoteRevUp(_levelHandler, _metadata, _pos, _renderer.GetLayer(),
 				IsFacingLeft(), timeMult, _revUpTime, _revUpSparkCooldown);
 			// Only over the looping pose. The start animation is a transition with a length of its own, and
 			// writing the duration while one is playing is what once left the owner's own wind-up frozen on
@@ -189,7 +189,7 @@ namespace Jazz2::Actors::Multiplayer
 		// identical. Skipped for non-player remote actors, which never receive a shield (and lack the shield anims).
 		if (_activeShield != ShieldType::None && _metadata != nullptr) {
 			Player::DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata,
-				_levelHandler->GetElapsedFrames(), _pos, _renderer.layer(), _shieldRenderCommands);
+				_levelHandler->GetElapsedFrames(), _pos, _renderer.GetLayer(), _shieldRenderCommands);
 		}
 
 		return ActorBase::OnDraw(renderQueue);
@@ -238,7 +238,7 @@ namespace Jazz2::Actors::Multiplayer
 		_blendingPreset = blendingPreset;
 
 		_renderer.Initialize(rendererType);
-		_renderer.setRotation(rotation);
+		_renderer.SetRotation(rotation);
 
 		// Applies the blending preset too, so it has to come after Initialize()
 		RefreshColorPalette();
@@ -290,7 +290,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		// A permanently hidden sprite must not collapse the buffer when the actor's visuals are replayed by
 		// a subclass, otherwise its position would freeze between received packets. A teleport always does.
-		bool interpolate = ((_alwaysInterpolate || _renderer.isDrawEnabled()) && !_stateBuffer.IsTeleport(pos));
+		bool interpolate = ((_alwaysInterpolate || _renderer.IsDrawEnabled()) && !_stateBuffer.IsTeleport(pos));
 		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), interpolate);
 	}
 
@@ -301,8 +301,8 @@ namespace Jazz2::Actors::Multiplayer
 			SetAnimation(anim);
 		}
 
-		_renderer.setRotation(rotation);
-		_renderer.setScale(scaleX, scaleY);
+		_renderer.SetRotation(rotation);
+		_renderer.SetScale(scaleX, scaleY);
 		_renderer.Initialize(rendererType);
 
 		ApplyBlendingPreset();
@@ -310,10 +310,10 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemoteActor::SyncMiscWithServer(std::uint8_t flags)
 	{
-		_renderer.setDrawEnabled((flags & 0x04) != 0);
+		_renderer.SetDrawEnabled((flags & 0x04) != 0);
 		_renderer.AnimPaused = (flags & 0x08) != 0;
 		SetFacingLeft((flags & 0x10) != 0);
-		_renderer.setFlippedY((flags & 0x20) != 0);
+		_renderer.SetFlippedY((flags & 0x20) != 0);
 
 		bool justWarped = (flags & 0x40) != 0;
 		if (justWarped) {

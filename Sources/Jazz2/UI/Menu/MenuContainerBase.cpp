@@ -192,8 +192,8 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[joyStatesCount++] = &input.joyMappedState(i);
+			if (input.IsJoyMapped(i)) {
+				joyStates[joyStatesCount++] = &input.GetJoyMappedState(i);
 			}
 		}
 

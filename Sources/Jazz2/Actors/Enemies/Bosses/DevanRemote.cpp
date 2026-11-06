@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Bosses
 
 				PlaySfx("WarpOut"_s);
 				SetTransition(AnimState::TransitionWarpOut, false, [this]() {
-					_renderer.setDrawEnabled(false);
+					_renderer.SetDrawEnabled(false);
 					DecreaseHealth(INT32_MAX);
 				});
 			} else {

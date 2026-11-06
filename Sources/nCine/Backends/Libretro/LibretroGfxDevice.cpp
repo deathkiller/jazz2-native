@@ -38,21 +38,21 @@ namespace nCine::Backends
 		_drawableHeight = _height;
 
 		_numMonitors = 1;
-		_monitors[0].name = "libretro";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_currentVideoMode.width = _width;
-		_currentVideoMode.height = _height;
-		_currentVideoMode.refreshRate = (float)_targetFps;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "libretro";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_currentVideoMode.Width = _width;
+		_currentVideoMode.Height = _height;
+		_currentVideoMode.RefreshRate = (float)_targetFps;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 
 #if defined(WITH_RHI_SOFTWARE)
-		// Same init as SdlGfxDevice::initSoftwarePresent(): give the render pipeline a valid
+		// Same init as SdlGfxDevice::InitSoftwarePresent(): give the render pipeline a valid
 		// CPU screen buffer before the first frame
 		RHI::Device::ResizeScreenFramebuffer(_drawableWidth, _drawableHeight);
 #endif
-		initDeviceViewport();
+		InitDeviceViewport();
 	}
 
 	void LibretroGfxDevice::FillSystemAvInfo(retro_system_av_info& info, std::int32_t width, std::int32_t height)
@@ -105,7 +105,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void LibretroGfxDevice::beginFrame()
+	void LibretroGfxDevice::BeginFrame()
 	{
 #if defined(WITH_RHI_GL)
 		// The frontend renders its own UI with the same GL context between two frames: repoint the
@@ -118,7 +118,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void LibretroGfxDevice::update()
+	void LibretroGfxDevice::Update()
 	{
 #if defined(WITH_RHI_GL)
 		// Hardware rendering: the frame was drawn straight into the frontend's FBO
@@ -129,7 +129,7 @@ namespace nCine::Backends
 			LibretroApplication::VideoRefreshCallback(RETRO_HW_FRAME_BUFFER_VALID, (unsigned)_drawableWidth, (unsigned)_drawableHeight, 0);
 		}
 #else
-		// Same presentation sequence as SdlGfxDevice::presentSoftware()
+		// Same presentation sequence as SdlGfxDevice::PresentSoftware()
 		RHI::Device::FlushSoftwareRenderer();
 		RHI::Device::EndFrame();
 		if (!LibretroApplication::IsInsideFrame) {

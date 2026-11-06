@@ -11,7 +11,7 @@ namespace Jazz2::UI
 	Canvas::Canvas()
 		: AnimTime(0.0f), _renderCommandsCount(0), _nextVisitOrder(0), _currentRenderQueue(nullptr)
 	{
-		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+		SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 
 	void Canvas::OnUpdate(float timeMult)
@@ -205,7 +205,7 @@ namespace Jazz2::UI
 			record.PaletteOffsetOffset = (instanceUniforms->PaletteOffset != nullptr
 				? std::int32_t(instanceUniforms->PaletteOffset->GetDataPointer() - base) : -1);
 			const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
-			record.Depth = RenderCommand::CalculateDepth(layer, projection.nearClip, projection.farClip);
+			record.Depth = RenderCommand::CalculateDepth(layer, projection.NearClip, projection.FarClip);
 		} else {
 			// A run after something else drawn on the layer is drawn after that
 			record.StandIn->SetVisitOrder(TakeVisitOrder());
@@ -555,7 +555,7 @@ namespace Jazz2::UI
 					? std::int32_t(instanceUniforms->PaletteOffset->GetDataPointer() - base) : -1);
 				// What RenderCommand::CommitNodeTransformation() puts in the z translation of a command on this layer
 				const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
-				glyphBatch.Depth = RenderCommand::CalculateDepth(layer, projection.nearClip, projection.farClip);
+				glyphBatch.Depth = RenderCommand::CalculateDepth(layer, projection.NearClip, projection.FarClip);
 				glyphBatch.Direct = true;
 			}
 		}

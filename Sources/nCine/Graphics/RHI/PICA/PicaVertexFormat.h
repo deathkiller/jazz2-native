@@ -94,7 +94,7 @@ namespace nCine::RHI::PICA
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const PicaBuffer* vbo) {
+			inline void SetVbo(const PicaBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

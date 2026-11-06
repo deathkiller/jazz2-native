@@ -23,7 +23,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		// Mirrors Thunderbolt::OnFire(): the beam extends a fixed distance from the muzzle along the synced
 		// rotation, backwards when facing left
-		float rotation = _renderer.rotation();
+		float rotation = _renderer.GetRotation();
 		float distance = (IsFacingLeft() ? -Weapons::Thunderbolt::BeamDistance : Weapons::Thunderbolt::BeamDistance);
 		float sinRot, cosRot;
 		sincosApprox(rotation, sinRot, cosRot);
@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Multiplayer
 		// The lifetime progress advances locally at the same rate as on the server, so the sparks and the
 		// muzzle flash play out the same way for every observer
 		if (_lightProgress < fPi) {
-			Weapons::Thunderbolt::CreateSparks(_levelHandler, _metadata, _pos, GetFarPoint(), _renderer.layer(), timeMult);
+			Weapons::Thunderbolt::CreateSparks(_levelHandler, _metadata, _pos, GetFarPoint(), _renderer.GetLayer(), timeMult);
 		}
 
 		_lightProgress += timeMult * Weapons::Thunderbolt::LightProgressSpeed;

@@ -4,7 +4,7 @@
 
 namespace nCine::Backends
 {
-	Keys Qt5Keys::keySymValueToEnum(int keysym)
+	Keys Qt5Keys::KeySymValueToEnum(int keysym)
 	{
 		// clang-format off
 		switch (keysym) {
@@ -136,7 +136,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int Qt5Keys::keyModMaskToEnumMask(Qt::KeyboardModifiers keymod)
+	int Qt5Keys::KeyModMaskToEnumMask(Qt::KeyboardModifiers keymod)
 	{
 		int result = 0;
 
@@ -159,7 +159,7 @@ namespace nCine::Backends
 
 	/*
 
-	int SdlKeys::enumToKeysValue(Keys keysym)
+	int SdlKeys::EnumToKeysValue(Keys keysym)
 	{
 		// clang-format off
 		switch (keysym)
@@ -308,7 +308,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int SdlKeys::enumToScancode(Keys keysym)
+	int SdlKeys::EnumToScancode(Keys keysym)
 	{
 		// clang-format off
 		switch (keysym)

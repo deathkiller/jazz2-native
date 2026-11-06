@@ -207,7 +207,7 @@ namespace nCine::Backends
 		}
 #endif
 
-		void setClipboardText(ImGuiContext* ctx, const char* text)
+		void SetClipboardText(ImGuiContext* ctx, const char* text)
 		{
 			SDL_SetClipboardText(text);
 		}
@@ -396,7 +396,7 @@ namespace nCine::Backends
 	ImGuiSdlInput::GamepadMode ImGuiSdlInput::_gamepadMode = ImGuiSdlInput::GamepadMode::AutoFirst;
 	bool ImGuiSdlInput::_wantUpdateGamepadsList = false;
 
-	void ImGuiSdlInput::init(SDL_Window* window, SDL_GLContext glContextHandle)
+	void ImGuiSdlInput::Init(SDL_Window* window, SDL_GLContext glContextHandle)
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -429,14 +429,14 @@ namespace nCine::Backends
 
 		_window = window;
 
-		pio.Platform_SetClipboardTextFn = setClipboardText;
-		pio.Platform_GetClipboardTextFn = clipboardText;
+		pio.Platform_SetClipboardTextFn = SetClipboardText;
+		pio.Platform_GetClipboardTextFn = GetClipboardText;
 		pio.Platform_ClipboardUserData = nullptr;
 		pio.Platform_SetImeDataFn = setPlatformImeData;
 
 #if defined(IMGUI_HAS_DOCK)
 		// Update monitor a first time during init
-		updateMonitors();
+		UpdateMonitors();
 #endif
 
 		// Gamepad handling
@@ -503,22 +503,22 @@ namespace nCine::Backends
 			io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 
 			// Register platform interface (will be coupled with a renderer interface)
-			pio.Platform_CreateWindow = onCreateWindow;
-			pio.Platform_DestroyWindow = onDestroyWindow;
-			pio.Platform_ShowWindow = onShowWindow;
-			pio.Platform_SetWindowPos = onSetWindowPos;
-			pio.Platform_GetWindowPos = onGetWindowPos;
-			pio.Platform_SetWindowSize = onSetWindowSize;
-			pio.Platform_GetWindowSize = onGetWindowSize;
-			pio.Platform_GetWindowFramebufferScale = onGetWindowFramebufferScale;
-			pio.Platform_SetWindowFocus = onSetWindowFocus;
-			pio.Platform_GetWindowFocus = onGetWindowFocus;
-			pio.Platform_GetWindowMinimized = onGetWindowMinimized;
-			pio.Platform_SetWindowTitle = onSetWindowTitle;
-			pio.Platform_RenderWindow = onRenderWindow;
-			pio.Platform_SwapBuffers = onSwapBuffers;
+			pio.Platform_CreateWindow = OnCreateWindow;
+			pio.Platform_DestroyWindow = OnDestroyWindow;
+			pio.Platform_ShowWindow = OnShowWindow;
+			pio.Platform_SetWindowPos = OnSetWindowPos;
+			pio.Platform_GetWindowPos = OnGetWindowPos;
+			pio.Platform_SetWindowSize = OnSetWindowSize;
+			pio.Platform_GetWindowSize = OnGetWindowSize;
+			pio.Platform_GetWindowFramebufferScale = OnGetWindowFramebufferScale;
+			pio.Platform_SetWindowFocus = OnSetWindowFocus;
+			pio.Platform_GetWindowFocus = OnGetWindowFocus;
+			pio.Platform_GetWindowMinimized = OnGetWindowMinimized;
+			pio.Platform_SetWindowTitle = OnSetWindowTitle;
+			pio.Platform_RenderWindow = OnRenderWindow;
+			pio.Platform_SwapBuffers = OnSwapBuffers;
 #	if SDL_HAS_WINDOW_ALPHA
-			pio.Platform_SetWindowAlpha = onSetWindowAlpha;
+			pio.Platform_SetWindowAlpha = OnSetWindowAlpha;
 #	endif
 #	if SDL_HAS_VULKAN
 			//pio.Platform_CreateVkSurface = onCreateVkSurface;
@@ -544,7 +544,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiSdlInput::shutdown()
+	void ImGuiSdlInput::Shutdown()
 	{
 #if defined(IMGUI_HAS_VIEWPORT)
 		ImGui::DestroyPlatformWindows();
@@ -560,7 +560,7 @@ namespace nCine::Backends
 		// Destroy SDL mouse cursors
 		for (ImGuiMouseCursor i = 0; i < ImGuiMouseCursor_COUNT; i++)
 			SDL_FreeCursor(_mouseCursors[i]);
-		closeGamepads();
+		CloseGamepads();
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendPlatformName = nullptr;
@@ -569,19 +569,19 @@ namespace nCine::Backends
 		ImGui::DestroyContext();
 	}
 
-	void ImGuiSdlInput::newFrame()
+	void ImGuiSdlInput::NewFrame()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Setup main viewport size (every frame to accommodate for window resizing)
-		getWindowSizeAndFramebufferScale(_window, nullptr, &io.DisplaySize, &io.DisplayFramebufferScale);
+		GetWindowSizeAndFramebufferScale(_window, nullptr, &io.DisplaySize, &io.DisplayFramebufferScale);
 
 #if defined(IMGUI_HAS_DOCK)
 #	if !defined(DEATH_TARGET_WINDOWS)
 		// Keep polling under Windows to handle changes of work area when resizing taskbar
 		if (_wantUpdateMonitors)
 #	endif
-			updateMonitors();
+			UpdateMonitors();
 #endif
 
 		// Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
@@ -599,14 +599,14 @@ namespace nCine::Backends
 			io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 		}
 
-		updateMouseData();
-		updateMouseCursor();
+		UpdateMouseData();
+		UpdateMouseCursor();
 
 		// Update game controllers (if enabled and available)
-		updateGamepads();
+		UpdateGamepads();
 	}
 
-	void ImGuiSdlInput::endFrame()
+	void ImGuiSdlInput::EndFrame()
 	{
 #if defined(IMGUI_HAS_VIEWPORT)
 		// Update and render additional Platform Windows
@@ -632,7 +632,7 @@ namespace nCine::Backends
 	// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 	// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 	// If you have multiple SDL events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
-	bool ImGuiSdlInput::processEvent(const SDL_Event* event)
+	bool ImGuiSdlInput::ProcessEvent(const SDL_Event* event)
 	{
 		if (!_inputEnabled)
 			return false;
@@ -818,7 +818,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	const char* ImGuiSdlInput::clipboardText(ImGuiContext* ctx)
+	const char* ImGuiSdlInput::GetClipboardText(ImGuiContext* ctx)
 	{
 		if (_clipboardTextData != nullptr) {
 			SDL_free(_clipboardTextData);
@@ -827,7 +827,7 @@ namespace nCine::Backends
 		return _clipboardTextData;
 	}
 
-	void ImGuiSdlInput::updateMouseData()
+	void ImGuiSdlInput::UpdateMouseData()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -923,7 +923,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiSdlInput::updateMouseCursor()
+	void ImGuiSdlInput::UpdateMouseCursor()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) {
@@ -956,16 +956,16 @@ namespace nCine::Backends
 	// - On Windows the process needs to be marked DPI-aware!! SDL2 doesn't do it by default. You can call ::SetProcessDPIAware() or call ImGui_ImplWin32_EnableDpiAwareness() from Win32 backend.
 	// - Apple platforms use FramebufferScale so we always return 1.0f.
 	// - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
-	float ImGuiSdlInput::getContentScaleForWindow(SDL_Window* window)
+	float ImGuiSdlInput::GetContentScaleForWindow(SDL_Window* window)
 	{
 #if defined(WITH_SDL3)
-		return getContentScaleForDisplay(static_cast<int>(SDL_GetDisplayForWindow(window)));
+		return GetContentScaleForDisplay(static_cast<int>(SDL_GetDisplayForWindow(window)));
 #else
-		return getContentScaleForDisplay(SDL_GetWindowDisplayIndex(window));
+		return GetContentScaleForDisplay(SDL_GetWindowDisplayIndex(window));
 #endif
 	}
 
-	float ImGuiSdlInput::getContentScaleForDisplay(int displayIndex)
+	float ImGuiSdlInput::GetContentScaleForDisplay(int displayIndex)
 	{
 #if defined(WITH_SDL3)
 		// SDL3: SDL_GetDisplayDPI was replaced by a single content-scale factor keyed by SDL_DisplayID
@@ -985,7 +985,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiSdlInput::closeGamepads()
+	void ImGuiSdlInput::CloseGamepads()
 	{
 		if (_gamepadMode != GamepadMode::Manual) {
 			for (SDL_GameController* gamepad : _gamepads) {
@@ -995,9 +995,9 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiSdlInput::setGamepadMode(GamepadMode mode, SDL_GameController** manualGamepadsArray, unsigned int manualGamepadsCount)
+	void ImGuiSdlInput::SetGamepadMode(GamepadMode mode, SDL_GameController** manualGamepadsArray, unsigned int manualGamepadsCount)
 	{
-		closeGamepads();
+		CloseGamepads();
 		if (mode == GamepadMode::Manual) {
 			IM_ASSERT(manualGamepadsArray != nullptr && manualGamepadsCount > 0);
 			for (unsigned int n = 0; n < manualGamepadsCount; n++) {
@@ -1010,13 +1010,13 @@ namespace nCine::Backends
 		_gamepadMode = mode;
 	}
 
-	void ImGuiSdlInput::updateGamepads()
+	void ImGuiSdlInput::UpdateGamepads()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Update list of controller(s) to use
 		if (_wantUpdateGamepadsList && _gamepadMode != GamepadMode::Manual) {
-			closeGamepads();
+			CloseGamepads();
 #if defined(WITH_SDL3)
 			// SDL3 enumerates already-gamepad-capable devices directly (as instance IDs), so no SDL_IsGamepad check
 			int gamepadCount = 0;
@@ -1052,7 +1052,7 @@ namespace nCine::Backends
 			return;
 		io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
-		// No need to call `imGuiJoyMappedInput()` as the backend is using `SDL_GameController`
+		// No need to call `ImGuiJoyMappedInput()` as the backend is using `SDL_GameController`
 
 		// Update gamepad inputs
 		// clang-format off
@@ -1084,7 +1084,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	void ImGuiSdlInput::getWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* outSize, ImVec2* outFramebufferScale)
+	void ImGuiSdlInput::GetWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* outSize, ImVec2* outFramebufferScale)
 	{
 		int w, h;
 		int displayW, displayH;
@@ -1115,7 +1115,7 @@ namespace nCine::Backends
 	}
 
 #if defined(IMGUI_HAS_DOCK)
-	void ImGuiSdlInput::updateMonitors()
+	void ImGuiSdlInput::UpdateMonitors()
 	{
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 		pio.Monitors.resize(0);
@@ -1135,7 +1135,7 @@ namespace nCine::Backends
 				monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
 				monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 			}
-			float dpi_scale = getContentScaleForDisplay((int)displayId);
+			float dpi_scale = GetContentScaleForDisplay((int)displayId);
 			if (dpi_scale <= 0.0f)
 				continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
 			monitor.DpiScale = dpi_scale;
@@ -1158,7 +1158,7 @@ namespace nCine::Backends
 				monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 			}
 #		endif
-			float dpi_scale = getContentScaleForDisplay(n);
+			float dpi_scale = GetContentScaleForDisplay(n);
 			if (dpi_scale <= 0.0f)
 				continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
 			monitor.DpiScale = dpi_scale;
@@ -1170,13 +1170,13 @@ namespace nCine::Backends
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
-	void* ImGuiSdlInput::getPlatformWindowHandle(ImGuiViewport* viewport)
+	void* ImGuiSdlInput::GetPlatformWindowHandle(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (viewport != nullptr ? (ViewportData*)viewport->PlatformUserData : nullptr);
 		return (vd != nullptr ? vd->Window : nullptr);
 	}
 
-	void ImGuiSdlInput::onCreateWindow(ImGuiViewport* viewport)
+	void ImGuiSdlInput::OnCreateWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = new ViewportData();
 		viewport->PlatformUserData = vd;
@@ -1268,7 +1268,7 @@ namespace nCine::Backends
 #	endif
 	}
 
-	void ImGuiSdlInput::onDestroyWindow(ImGuiViewport* viewport)
+	void ImGuiSdlInput::OnDestroyWindow(ImGuiViewport* viewport)
 	{
 		if (ViewportData* vd = (ViewportData*)viewport->PlatformUserData) {
 			if (vd->GLContext && vd->WindowOwned) {
@@ -1285,7 +1285,7 @@ namespace nCine::Backends
 		viewport->PlatformHandle = nullptr;
 	}
 
-	void ImGuiSdlInput::onShowWindow(ImGuiViewport* viewport)
+	void ImGuiSdlInput::OnShowWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 
@@ -1315,7 +1315,7 @@ namespace nCine::Backends
 		SDL_ShowWindow(vd->Window);
 	}
 
-	ImVec2 ImGuiSdlInput::onGetWindowPos(ImGuiViewport* viewport)
+	ImVec2 ImGuiSdlInput::OnGetWindowPos(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int x = 0, y = 0;
@@ -1323,13 +1323,13 @@ namespace nCine::Backends
 		return ImVec2((float)x, (float)y);
 	}
 
-	void ImGuiSdlInput::onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
+	void ImGuiSdlInput::OnSetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		SDL_SetWindowPosition(vd->Window, (int)pos.x, (int)pos.y);
 	}
 
-	ImVec2 ImGuiSdlInput::onGetWindowSize(ImGuiViewport* viewport)
+	ImVec2 ImGuiSdlInput::OnGetWindowSize(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int w = 0, h = 0;
@@ -1337,45 +1337,45 @@ namespace nCine::Backends
 		return ImVec2((float)w, (float)h);
 	}
 
-	ImVec2 ImGuiSdlInput::onGetWindowFramebufferScale(ImGuiViewport* viewport)
+	ImVec2 ImGuiSdlInput::OnGetWindowFramebufferScale(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		ImVec2 framebufferScale;
-		getWindowSizeAndFramebufferScale(vd->Window, nullptr, nullptr, &framebufferScale);
+		GetWindowSizeAndFramebufferScale(vd->Window, nullptr, nullptr, &framebufferScale);
 		return framebufferScale;
 	}
 
-	void ImGuiSdlInput::onSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+	void ImGuiSdlInput::OnSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		SDL_SetWindowSize(vd->Window, (int)size.x, (int)size.y);
 	}
 
-	void ImGuiSdlInput::onSetWindowTitle(ImGuiViewport* viewport, const char* title)
+	void ImGuiSdlInput::OnSetWindowTitle(ImGuiViewport* viewport, const char* title)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		SDL_SetWindowTitle(vd->Window, title);
 	}
 
-	void ImGuiSdlInput::onSetWindowFocus(ImGuiViewport* viewport)
+	void ImGuiSdlInput::OnSetWindowFocus(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		SDL_RaiseWindow(vd->Window);
 	}
 
-	bool ImGuiSdlInput::onGetWindowFocus(ImGuiViewport* viewport)
+	bool ImGuiSdlInput::OnGetWindowFocus(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		return (SDL_GetWindowFlags(vd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 	}
 
-	bool ImGuiSdlInput::onGetWindowMinimized(ImGuiViewport* viewport)
+	bool ImGuiSdlInput::OnGetWindowMinimized(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		return (SDL_GetWindowFlags(vd->Window) & SDL_WINDOW_MINIMIZED) != 0;
 	}
 
-	void ImGuiSdlInput::onSetWindowAlpha(ImGuiViewport* viewport, float alpha)
+	void ImGuiSdlInput::OnSetWindowAlpha(ImGuiViewport* viewport, float alpha)
 	{
 #	if SDL_HAS_WINDOW_ALPHA
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
@@ -1383,7 +1383,7 @@ namespace nCine::Backends
 #	endif
 	}
 
-	void ImGuiSdlInput::onRenderWindow(ImGuiViewport* viewport, void*)
+	void ImGuiSdlInput::OnRenderWindow(ImGuiViewport* viewport, void*)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		if (vd->GLContext) {
@@ -1391,7 +1391,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiSdlInput::onSwapBuffers(ImGuiViewport* viewport, void*)
+	void ImGuiSdlInput::OnSwapBuffers(ImGuiViewport* viewport, void*)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		if (vd->GLContext) {

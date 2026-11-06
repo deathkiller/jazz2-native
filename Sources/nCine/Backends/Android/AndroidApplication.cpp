@@ -124,7 +124,7 @@ namespace nCine
 		state->onAppCmd = AndroidApplication::ProcessCommand;
 
 		state->onInputEvent = [](struct android_app* state, AInputEvent* event) -> std::int32_t {
-			return static_cast<std::int32_t>(AndroidInputManager::parseEvent(event));
+			return static_cast<std::int32_t>(AndroidInputManager::ParseEvent(event));
 		};
 
 		state->activity->callbacks->onContentRectChanged = [](ANativeActivity* act, const ARect* rect) {
@@ -143,7 +143,7 @@ namespace nCine
 					source->process(state, source);
 				}
 				if (ident == LOOPER_ID_USER) {
-					AndroidInputManager::parseAccelerometerEvent();
+					AndroidInputManager::ParseAccelerometerEvent();
 				}
 				if (state->destroyRequested) {
 					LOGD("android_app->destroyRequested not equal to zero");
@@ -164,12 +164,12 @@ namespace nCine
 			}
 
 			if (app.IsInitialized() && !app.ShouldSuspend()) {
-				AndroidInputManager::updateJoystickConnections();
+				AndroidInputManager::UpdateJoystickConnections();
 				app.Step();
 			}
 		}
 
-		AndroidJniWrap_Activity::finishAndRemoveTask();
+		AndroidJniWrap_Activity::FinishAndRemoveTask();
 		app.Shutdown();
 		exit(0);
 	}
@@ -194,20 +194,20 @@ namespace nCine
 						eglGfxDevice = &static_cast<EglGfxDevice&>(app.GetGfxDevice());
 						app.Step();
 					} else {
-						eglGfxDevice->createSurface();
-						eglGfxDevice->bindContext();
+						eglGfxDevice->CreateSurface();
+						eglGfxDevice->BindContext();
 					}
 				}
 				break;
 			}
 			case APP_CMD_TERM_WINDOW: {
 				LOGI("APP_CMD_TERM_WINDOW event received");
-				eglGfxDevice->unbindContext();
+				eglGfxDevice->UnbindContext();
 				break;
 			}
 			case APP_CMD_WINDOW_RESIZED: {
 				LOGI("APP_CMD_WINDOW_RESIZED event received");
-				Vector2i size = eglGfxDevice->querySurfaceSize();
+				Vector2i size = eglGfxDevice->QuerySurfaceSize();
 				theAndroidApplication().ResizeScreenViewport(size.X, size.Y);
 				break;
 			}
@@ -225,7 +225,7 @@ namespace nCine
 			}
 			case APP_CMD_GAINED_FOCUS: {
 				LOGI("APP_CMD_GAINED_FOCUS event received");
-				AndroidInputManager::enableAccelerometerSensor();
+				AndroidInputManager::EnableAccelerometerSensor();
 				AndroidApplication& app = theAndroidApplication();
 				app.SetFocus(true);
 				if (isSuspended && !app.ShouldSuspend()) {
@@ -236,7 +236,7 @@ namespace nCine
 			}
 			case APP_CMD_LOST_FOCUS: {
 				LOGI("APP_CMD_LOST_FOCUS event received");
-				AndroidInputManager::disableAccelerometerSensor();
+				AndroidInputManager::DisableAccelerometerSensor();
 				AndroidApplication& app = theAndroidApplication();
 				app.SetFocus(false);
 				if (!isSuspended && app.ShouldSuspend()) {
@@ -250,7 +250,7 @@ namespace nCine
 				LOGI("APP_CMD_CONFIG_CHANGED event received");
 				// Attaching a physical keyboard can disable the input methods providing a software one
 				AndroidApplication& app = theAndroidApplication();
-				app._canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::isSoftInputAvailable();
+				app._canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::IsSoftInputAvailable();
 				break;
 			}
 			case APP_CMD_LOW_MEMORY: {
@@ -305,7 +305,7 @@ namespace nCine
 	
 	bool AndroidApplication::OpenUrl(StringView url)
 	{
-		return AndroidJniWrap_Activity::openUrl(url);
+		return AndroidJniWrap_Activity::OpenUrl(url);
 	}
 
 	void AndroidApplication::HandleBackInvoked()
@@ -352,9 +352,9 @@ namespace nCine
 
 		for (const auto& event : events) {
 			if (event.KeyCode != 0) {
-				AndroidInputManager::injectKeyEvent(event.Pressed, event.KeyCode);
+				AndroidInputManager::InjectKeyEvent(event.Pressed, event.KeyCode);
 			} else {
-				AndroidInputManager::injectTextInput(event.CodePoint);
+				AndroidInputManager::InjectTextInput(event.CodePoint);
 			}
 		}
 	}
@@ -366,20 +366,20 @@ namespace nCine
 
 	bool AndroidApplication::IsScreenKeyboardVisible()
 	{
-		return _isInitialized && AndroidJniWrap_InputMethodManager::isSoftInputVisible();
+		return _isInitialized && AndroidJniWrap_InputMethodManager::IsSoftInputVisible();
 	}
 
 	std::int32_t AndroidApplication::GetScreenKeyboardInset()
 	{
-		if (!_isInitialized || _gfxDevice == nullptr || !AndroidJniWrap_InputMethodManager::isSoftInputVisible()) {
+		if (!_isInitialized || _gfxDevice == nullptr || !AndroidJniWrap_InputMethodManager::IsSoftInputVisible()) {
 			return 0;
 		}
-		Recti bounds = AndroidJniWrap_Activity::getVisibleBounds();
+		Recti bounds = AndroidJniWrap_Activity::GetVisibleBounds();
 		if (bounds.H <= 0) {
 			return 0;
 		}
 		// The window is drawn edge-to-edge and its surface isn't resized, so it's as high as the drawable
-		const std::int32_t height = _gfxDevice->drawableHeight();
+		const std::int32_t height = _gfxDevice->GetDrawableHeight();
 		return std::clamp<std::int32_t>(height - (bounds.Y + bounds.H), 0, height);
 	}
 
@@ -394,44 +394,44 @@ namespace nCine
 
 	bool AndroidApplication::ShowScreenKeyboard(Containers::StringView initialText, Containers::Function<void(Containers::StringView)>&& onCompleted)
 	{
-		return CanShowScreenKeyboard() && AndroidJniWrap_InputMethodManager::showSoftInput();
+		return CanShowScreenKeyboard() && AndroidJniWrap_InputMethodManager::ShowSoftInput();
 	}
 
 	bool AndroidApplication::HideScreenKeyboard()
 	{
-		return _isInitialized && AndroidJniWrap_InputMethodManager::hideSoftInput();
+		return _isInitialized && AndroidJniWrap_InputMethodManager::HideSoftInput();
 	}
 
 	void AndroidApplication::Vibrate(std::int32_t milliseconds)
 	{
 		if (_isInitialized) {
-			AndroidJniWrap_Activity::vibrate(milliseconds);
+			AndroidJniWrap_Activity::Vibrate(milliseconds);
 		}
 	}
 
 	void AndroidApplication::ShowStatusBar()
 	{
 		if (_isInitialized) {
-			AndroidJniWrap_Activity::showStatusBar();
+			AndroidJniWrap_Activity::ShowStatusBar();
 		}
 	}
 
 	void AndroidApplication::HideStatusBar()
 	{
 		if (_isInitialized) {
-			AndroidJniWrap_Activity::hideStatusBar();
+			AndroidJniWrap_Activity::HideStatusBar();
 		}
 	}
 
 	void AndroidApplication::PreInit()
 	{
-		_profileStartTime = TimeStamp::now();
+		_profileStartTime = TimeStamp::Now();
 
 		AndroidJniHelper::AttachJVM(_state);
 		AndroidAssetStream::InitializeAssetManager(_state);
 
-		_isScreenRound = AndroidJniWrap_Activity::isScreenRound();
-		_canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::isSoftInputAvailable();
+		_isScreenRound = AndroidJniWrap_Activity::IsScreenRound();
+		_canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::IsSoftInputAvailable();
 
 		PreInitCommon(_createAppEventHandler());
 
@@ -445,18 +445,18 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ARM)
 #	if defined(DEATH_TARGET_32BIT)
-		LOGI("Running on {} {} ({}) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+		LOGI("Running on {} {} ({}) as armeabi-v7a application", AndroidJniClass_Version::GetDeviceBrand(), AndroidJniClass_Version::GetDeviceModel(), AndroidJniClass_Version::GetDeviceManufacturer());
 #	else
-		LOGI("Running on {} {} ({}) as arm64-v8a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+		LOGI("Running on {} {} ({}) as arm64-v8a application", AndroidJniClass_Version::GetDeviceBrand(), AndroidJniClass_Version::GetDeviceModel(), AndroidJniClass_Version::GetDeviceManufacturer());
 #	endif
 #elif defined(DEATH_TARGET_X86)
 #	if defined(DEATH_TARGET_32BIT)
-		LOGI("Running on {} {} ({}) as x86 application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+		LOGI("Running on {} {} ({}) as x86 application", AndroidJniClass_Version::GetDeviceBrand(), AndroidJniClass_Version::GetDeviceModel(), AndroidJniClass_Version::GetDeviceManufacturer());
 #	else
-		LOGI("Running on {} {} ({}) as x64 application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+		LOGI("Running on {} {} ({}) as x64 application", AndroidJniClass_Version::GetDeviceBrand(), AndroidJniClass_Version::GetDeviceModel(), AndroidJniClass_Version::GetDeviceManufacturer());
 #	endif
 #else
-		LOGI("Running on {} {} ({})", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+		LOGI("Running on {} {} ({})", AndroidJniClass_Version::GetDeviceBrand(), AndroidJniClass_Version::GetDeviceModel(), AndroidJniClass_Version::GetDeviceManufacturer());
 #endif
 		LOGI("Android API version - NDK: {}, JNI: {}", __ANDROID_API__, AndroidJniHelper::SdkVersion());
 
@@ -476,9 +476,9 @@ namespace nCine
 		const DisplayMode displayMode16(5, 6, 5, 0, 16, 0, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
 		IGfxDevice::ContextInfo contextInfo(_appCfg);
 
-		if (EglGfxDevice::isModeSupported(_state, contextInfo, displayMode32)) {
+		if (EglGfxDevice::IsModeSupported(_state, contextInfo, displayMode32)) {
 			_gfxDevice = std::make_unique<EglGfxDevice>(_state, contextInfo, displayMode32);
-		} else if (EglGfxDevice::isModeSupported(_state, contextInfo, displayMode16)) {
+		} else if (EglGfxDevice::IsModeSupported(_state, contextInfo, displayMode16)) {
 			_gfxDevice = std::make_unique<EglGfxDevice>(_state, contextInfo, displayMode16);
 		} else {
 			LOGF("Cannot find a suitable EGL configuration, graphics device not created");
@@ -488,7 +488,7 @@ namespace nCine
 		_inputManager = std::make_unique<AndroidInputManager>(_state);
 
 #if defined(NCINE_PROFILING)
-		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.secondsSince();
+		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.GetSecondsSince();
 #endif
 
 		Application::InitCommon();

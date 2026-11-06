@@ -175,7 +175,7 @@ namespace nCine::Backends
 	{
 	}
 
-	bool SdlMouseState::isButtonDown(MouseButton button) const
+	bool SdlMouseState::IsButtonDown(MouseButton button) const
 	{
 		const int sdlButtonMask = ncineToSdlMouseButtonMask(button);
 		return (_buttons & sdlButtonMask) != 0;
@@ -238,19 +238,19 @@ namespace nCine::Backends
 		_joyMapping.Init(this);
 
 #if defined(WITH_IMGUI)
-		ImGuiSdlInput::init(SdlGfxDevice::windowHandle(), SdlGfxDevice::glContextHandle());
+		ImGuiSdlInput::Init(SdlGfxDevice::GetWindowHandle(), SdlGfxDevice::GetGlContextHandle());
 #endif
 	}
 
 	SdlInputManager::~SdlInputManager()
 	{
 #if defined(WITH_IMGUI)
-		ImGuiSdlInput::shutdown();
+		ImGuiSdlInput::Shutdown();
 #endif
 
 		// Close a joystick if opened
 		for (std::int32_t i = 0; i < MaxNumJoysticks; i++) {
-			if (isJoyPresent(i)) {
+			if (IsJoyPresent(i)) {
 				SDL_JoystickClose(_sdlJoysticks[i]);
 				_sdlJoysticks[i] = nullptr;
 			}
@@ -259,24 +259,24 @@ namespace nCine::Backends
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
 
-	bool SdlJoystickState::isButtonPressed(int buttonId) const
+	bool SdlJoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (_sdlJoystick != nullptr && SDL_JoystickGetButton(_sdlJoystick, buttonId) != 0);
 	}
 
-	unsigned char SdlJoystickState::hatState(int hatId) const
+	unsigned char SdlJoystickState::GetHatState(int hatId) const
 	{
 		return (_sdlJoystick != nullptr ? SDL_JoystickGetHat(_sdlJoystick, hatId) : 0);
 	}
 
-	float SdlJoystickState::axisValue(int axisId) const
+	float SdlJoystickState::GetAxisValue(int axisId) const
 	{
 		// If the joystick is not present the returned value is zero
 		short int rawValue = (_sdlJoystick != nullptr ? SDL_JoystickGetAxis(_sdlJoystick, axisId) : 0);
 		return rawValue / float(MaxAxisValue);
 	}
 
-	bool SdlInputManager::shouldQuitOnRequest()
+	bool SdlInputManager::ShouldQuitOnRequest()
 	{
 		// Only an installed handler can veto a quit; without one there is nobody to object, so the request stands.
 		// Requiring a handler would make the window impossible to close whenever something else has temporarily
@@ -285,17 +285,17 @@ namespace nCine::Backends
 		return (_inputEventHandler == nullptr || _inputEventHandler->OnQuitRequest());
 	}
 
-	void SdlInputManager::parseEvent(const SDL_Event& event)
+	void SdlInputManager::ParseEvent(const SDL_Event& event)
 	{
 #if defined(WITH_IMGUI)
-		ImGuiSdlInput::processEvent(&event);
+		ImGuiSdlInput::ProcessEvent(&event);
 #endif
 
 		if (_inputEventHandler == nullptr) {
 			return;
 		}
 		if (event.type == SDL_JOYDEVICEADDED || event.type == SDL_JOYDEVICEREMOVED) {
-			handleJoyDeviceEvent(event);
+			HandleJoyDeviceEvent(event);
 			return;
 		}
 
@@ -304,87 +304,87 @@ namespace nCine::Backends
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 				// Keys typed into an auxiliary window of the application are the application's as well
-				if (!SdlGfxDevice::isOwnWindow(event.key.windowID)) {
+				if (!SdlGfxDevice::IsOwnWindow(event.key.windowID)) {
 					return;
 				}
 #if defined(WITH_SDL3)
 				// SDL3 removed the nested SDL_Keysym; scancode/keycode/modifiers are now fields of the event
-				_keyboardEvent.scancode = event.key.scancode;
-				_keyboardEvent.sym = SdlKeys::keySymValueToEnum(event.key.key);
-				_keyboardEvent.mod = SdlKeys::keyModMaskToEnumMask(event.key.mod);
+				_keyboardEvent.Scancode = event.key.scancode;
+				_keyboardEvent.Sym = SdlKeys::KeySymValueToEnum(event.key.key);
+				_keyboardEvent.Mod = SdlKeys::KeyModMaskToEnumMask(event.key.mod);
 #else
-				_keyboardEvent.scancode = event.key.keysym.scancode;
-				_keyboardEvent.sym = SdlKeys::keySymValueToEnum(event.key.keysym.sym);
-				_keyboardEvent.mod = SdlKeys::keyModMaskToEnumMask(event.key.keysym.mod);
+				_keyboardEvent.Scancode = event.key.keysym.scancode;
+				_keyboardEvent.Sym = SdlKeys::KeySymValueToEnum(event.key.keysym.sym);
+				_keyboardEvent.Mod = SdlKeys::KeyModMaskToEnumMask(event.key.keysym.mod);
 #endif
 				break;
 			case SDL_TEXTINPUT: {
-				if (!SdlGfxDevice::isOwnWindow(event.text.windowID)) {
+				if (!SdlGfxDevice::IsOwnWindow(event.text.windowID)) {
 					return;
 				}
-				_textInputEvent.length = copyStringFirst(_textInputEvent.text, event.text.text, 4);
+				_textInputEvent.Length = copyStringFirst(_textInputEvent.Text, event.text.text, 4);
 				break;
 			}
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-				if (!SdlGfxDevice::isOwnWindow(event.button.windowID) || IsMouseEventFromTouch(event.button.which)) {
+				if (!SdlGfxDevice::IsOwnWindow(event.button.windowID) || IsMouseEventFromTouch(event.button.which)) {
 					return;
 				}
 				{
 					// SDL3 reports mouse coordinates as float; the engine's event structures store integers. Over an auxiliary
 					// window, the position is made relative to the main window.
-					Vector2i position = SdlGfxDevice::toMainWindowPosition(event.button.windowID,
+					Vector2i position = SdlGfxDevice::ToMainWindowPosition(event.button.windowID,
 						Vector2i(static_cast<int>(event.button.x), static_cast<int>(event.button.y)));
-					_mouseEvent.x = position.X;
-					_mouseEvent.y = position.Y;
-					_mouseEvent.windowId = (SdlGfxDevice::isMainWindow(event.button.windowID) ? 0 : event.button.windowID);
+					_mouseEvent.X = position.X;
+					_mouseEvent.Y = position.Y;
+					_mouseEvent.WindowId = (SdlGfxDevice::IsMainWindow(event.button.windowID) ? 0 : event.button.windowID);
 				}
-				_mouseEvent.button = sdlToNcineMouseButton(event.button.button);
+				_mouseEvent.Button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!SdlGfxDevice::isOwnWindow(event.motion.windowID) || IsMouseEventFromTouch(event.motion.which)) {
+				if (!SdlGfxDevice::IsOwnWindow(event.motion.windowID) || IsMouseEventFromTouch(event.motion.which)) {
 					return;
 				}
-				_mouseState.windowId = (SdlGfxDevice::isMainWindow(event.motion.windowID) ? 0 : event.motion.windowID);
+				_mouseState.WindowId = (SdlGfxDevice::IsMainWindow(event.motion.windowID) ? 0 : event.motion.windowID);
 				if (_cursor != Cursor::HiddenLocked) {
-					Vector2i position = SdlGfxDevice::toMainWindowPosition(event.motion.windowID,
+					Vector2i position = SdlGfxDevice::ToMainWindowPosition(event.motion.windowID,
 						Vector2i(static_cast<int>(event.motion.x), static_cast<int>(event.motion.y)));
-					_mouseState.x = position.X;
-					_mouseState.y = position.Y;
+					_mouseState.X = position.X;
+					_mouseState.Y = position.Y;
 				} else {
-					_mouseState.x += static_cast<int>(event.motion.xrel);
-					_mouseState.y -= static_cast<int>(event.motion.yrel);
+					_mouseState.X += static_cast<int>(event.motion.xrel);
+					_mouseState.Y -= static_cast<int>(event.motion.yrel);
 				}
 				_mouseState._buttons = event.motion.state;
 				break;
 			case SDL_MOUSEWHEEL:
-				if (!SdlGfxDevice::isOwnWindow(event.wheel.windowID) || IsMouseEventFromTouch(event.wheel.which)) {
+				if (!SdlGfxDevice::IsOwnWindow(event.wheel.windowID) || IsMouseEventFromTouch(event.wheel.which)) {
 					return;
 				}
-				_scrollEvent.windowId = (SdlGfxDevice::isMainWindow(event.wheel.windowID) ? 0 : event.wheel.windowID);
+				_scrollEvent.WindowId = (SdlGfxDevice::IsMainWindow(event.wheel.windowID) ? 0 : event.wheel.windowID);
 #if !defined(WITH_SDL3) && SDL_VERSION_ATLEAST(2, 0, 18)
 				// The fractional amounts of a touchpad scroll, SDL3 reports them in the plain fields
-				_scrollEvent.x = event.wheel.preciseX;
-				_scrollEvent.y = event.wheel.preciseY;
+				_scrollEvent.X = event.wheel.preciseX;
+				_scrollEvent.Y = event.wheel.preciseY;
 #else
-				_scrollEvent.x = static_cast<float>(event.wheel.x);
-				_scrollEvent.y = static_cast<float>(event.wheel.y);
+				_scrollEvent.X = static_cast<float>(event.wheel.x);
+				_scrollEvent.Y = static_cast<float>(event.wheel.y);
 #endif
 				break;
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
-				_joyButtonEvent.joyId = joyInstanceIdToDeviceIndex(event.jbutton.which);
-				_joyButtonEvent.buttonId = event.jbutton.button;
+				_joyButtonEvent.JoyId = JoyInstanceIdToDeviceIndex(event.jbutton.which);
+				_joyButtonEvent.ButtonId = event.jbutton.button;
 				break;
 			case SDL_JOYAXISMOTION:
-				_joyAxisEvent.joyId = joyInstanceIdToDeviceIndex(event.jaxis.which);
-				_joyAxisEvent.axisId = event.jaxis.axis;
-				_joyAxisEvent.value = event.jaxis.value / float(SdlJoystickState::MaxAxisValue);
+				_joyAxisEvent.JoyId = JoyInstanceIdToDeviceIndex(event.jaxis.which);
+				_joyAxisEvent.AxisId = event.jaxis.axis;
+				_joyAxisEvent.Value = event.jaxis.value / float(SdlJoystickState::MaxAxisValue);
 				break;
 			case SDL_JOYHATMOTION:
-				_joyHatEvent.joyId = joyInstanceIdToDeviceIndex(event.jhat.which);
-				_joyHatEvent.hatId = event.jhat.hat;
-				_joyHatEvent.hatState = event.jhat.value;
+				_joyHatEvent.JoyId = JoyInstanceIdToDeviceIndex(event.jhat.which);
+				_joyHatEvent.HatId = event.jhat.hat;
+				_joyHatEvent.HatState = event.jhat.value;
 				break;
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 			// Where the macro is not defined the platform has a touch device the game doesn't use (the PS Vita's
@@ -393,7 +393,7 @@ namespace nCine::Backends
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
-				if (!SdlGfxDevice::isMainWindow(event.tfinger.windowID)) {
+				if (!SdlGfxDevice::IsMainWindow(event.tfinger.windowID)) {
 					return;
 				}
 
@@ -402,30 +402,30 @@ namespace nCine::Backends
 				int fingerCount = 0;
 				// SDL3 renamed the SDL_TouchFingerEvent members touchId/fingerId to touchID/fingerID
 				SDL_Finger** fingers = SDL_GetTouchFingers(event.tfinger.touchID, &fingerCount);
-				_touchEvent.count = fingerCount;
-				_touchEvent.actionIndex = (std::int32_t)event.tfinger.fingerID;
+				_touchEvent.Count = fingerCount;
+				_touchEvent.ActionIndex = (std::int32_t)event.tfinger.fingerID;
 #else
-				_touchEvent.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
-				_touchEvent.actionIndex = (std::int32_t)event.tfinger.fingerId;
+				_touchEvent.Count = SDL_GetNumTouchFingers(event.tfinger.touchId);
+				_touchEvent.ActionIndex = (std::int32_t)event.tfinger.fingerId;
 #endif
 
 				switch (event.type) {
-					case SDL_FINGERDOWN: _touchEvent.type = (_touchEvent.count == 1 ? TouchEventType::Down : TouchEventType::PointerDown); break;
-					case SDL_FINGERMOTION: _touchEvent.type = TouchEventType::Move; break;
-					case SDL_FINGERUP: _touchEvent.type = (_touchEvent.count == 0 ? TouchEventType::Up : TouchEventType::PointerUp); break;
+					case SDL_FINGERDOWN: _touchEvent.Type = (_touchEvent.Count == 1 ? TouchEventType::Down : TouchEventType::PointerDown); break;
+					case SDL_FINGERMOTION: _touchEvent.Type = TouchEventType::Move; break;
+					case SDL_FINGERUP: _touchEvent.Type = (_touchEvent.Count == 0 ? TouchEventType::Up : TouchEventType::PointerUp); break;
 				}
 
-				for (unsigned int i = 0; i < _touchEvent.count; i++) {
+				for (unsigned int i = 0; i < _touchEvent.Count; i++) {
 #if defined(WITH_SDL3)
 					SDL_Finger* finger = fingers[i];
 #else
 					SDL_Finger* finger = SDL_GetTouchFinger(event.tfinger.touchId, i);
 #endif
-					TouchEvent::Pointer& pointer = _touchEvent.pointers[i];
-					pointer.id = static_cast<std::int32_t>(finger->id);
-					pointer.x = finger->x;
-					pointer.y = finger->y;
-					pointer.pressure = finger->pressure;
+					TouchEvent::Pointer& pointer = _touchEvent.Pointers[i];
+					pointer.Id = static_cast<std::int32_t>(finger->id);
+					pointer.X = finger->x;
+					pointer.Y = finger->y;
+					pointer.Pressure = finger->pressure;
 				}
 #if defined(WITH_SDL3)
 				SDL_free(fingers);
@@ -485,7 +485,7 @@ namespace nCine::Backends
 		}
 	}
 
-	String SdlInputManager::getClipboardText() const
+	String SdlInputManager::GetClipboardText() const
 	{
 		char* clipboardText = SDL_GetClipboardText();
 		String result(clipboardText);
@@ -493,7 +493,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	bool SdlInputManager::setClipboardText(StringView text)
+	bool SdlInputManager::SetClipboardText(StringView text)
 	{
 #if defined(WITH_SDL3)
 		// SDL3: SDL_SetClipboardText returns a bool (true on success) instead of SDL2's int (0 on success)
@@ -503,31 +503,31 @@ namespace nCine::Backends
 #endif
 	}
 
-	StringView SdlInputManager::getKeyName(Keys key) const
+	StringView SdlInputManager::GetKeyName(Keys key) const
 	{
 		// TODO
-		//return SDL_GetKeyName(SdlKeys::enumToKeysValue(key));
-		return IInputManager::getKeyName(key);
+		//return SDL_GetKeyName(SdlKeys::EnumToKeysValue(key));
+		return IInputManager::GetKeyName(key);
 	}
 
-	bool SdlInputManager::isJoyPresent(int joyId) const
+	bool SdlInputManager::IsJoyPresent(int joyId) const
 	{
 		DEATH_ASSERT(joyId >= 0);
 		return (joyId < MaxNumJoysticks && _sdlJoysticks[joyId] && SDL_JoystickGetAttached(_sdlJoysticks[joyId]));
 	}
 
-	const char* SdlInputManager::joyName(int joyId) const
+	const char* SdlInputManager::GetJoyName(int joyId) const
 	{
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return SDL_JoystickName(_sdlJoysticks[joyId]);
 		} else {
 			return nullptr;
 		}
 	}
 
-	const JoystickGuid SdlInputManager::joyGuid(int joyId) const
+	const JoystickGuid SdlInputManager::GetJoyGuid(int joyId) const
 	{
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			return JoystickGuidType::Default;
 #else
@@ -540,49 +540,49 @@ namespace nCine::Backends
 		}
 	}
 
-	int SdlInputManager::joyNumButtons(int joyId) const
+	int SdlInputManager::GetJoyButtonCount(int joyId) const
 	{
 		int numButtons = -1;
 
-		if (isJoyPresent(joyId))
+		if (IsJoyPresent(joyId))
 			numButtons = SDL_JoystickNumButtons(_sdlJoysticks[joyId]);
 
 		return numButtons;
 	}
 
-	int SdlInputManager::joyNumHats(int joyId) const
+	int SdlInputManager::GetJoyHatCount(int joyId) const
 	{
 		int numHats = -1;
 
-		if (isJoyPresent(joyId))
+		if (IsJoyPresent(joyId))
 			numHats = SDL_JoystickNumHats(_sdlJoysticks[joyId]);
 
 		return numHats;
 	}
 
-	int SdlInputManager::joyNumAxes(int joyId) const
+	int SdlInputManager::GetJoyAxisCount(int joyId) const
 	{
 		int numAxes = -1;
 
-		if (isJoyPresent(joyId))
+		if (IsJoyPresent(joyId))
 			numAxes = SDL_JoystickNumAxes(_sdlJoysticks[joyId]);
 
 		return numAxes;
 	}
 
-	const JoystickState& SdlInputManager::joystickState(int joyId) const
+	const JoystickState& SdlInputManager::GetJoystickState(int joyId) const
 	{
 		_joystickStates[joyId]._sdlJoystick = nullptr;
 
-		if (isJoyPresent(joyId))
+		if (IsJoyPresent(joyId))
 			_joystickStates[joyId]._sdlJoystick = _sdlJoysticks[joyId];
 
 		return _joystickStates[joyId];
 	}
 
-	bool SdlInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
+	bool SdlInputManager::JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
-		if (!isJoyPresent(joyId))
+		if (!IsJoyPresent(joyId))
 			return false;
 
 #if defined(WITH_SDL3)
@@ -599,10 +599,10 @@ namespace nCine::Backends
 #endif
 	}
 
-	bool SdlInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
+	bool SdlInputManager::JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
 #if defined(WITH_SDL3)
-		if (!isJoyPresent(joyId))
+		if (!IsJoyPresent(joyId))
 			return false;
 
 		// SDL3: SDL_JoystickRumbleTriggers -> SDL_RumbleJoystickTriggers, reporting success directly as a bool
@@ -611,7 +611,7 @@ namespace nCine::Backends
 			(std::uint16_t)(std::clamp(right, 0.0f, 1.0f) * UINT16_MAX),
 			durationMs);
 #elif SDL_VERSION_ATLEAST(2, 0, 14)
-		if (!isJoyPresent(joyId))
+		if (!IsJoyPresent(joyId))
 			return false;
 
 		return SDL_JoystickRumbleTriggers(_sdlJoysticks[joyId],
@@ -623,14 +623,14 @@ namespace nCine::Backends
 #endif
 	}
 
-	void SdlInputManager::setCursor(Cursor cursor)
+	void SdlInputManager::SetCursor(Cursor cursor)
 	{
 		if (cursor != _cursor) {
 			bool isChanged = true;
 #if defined(WITH_SDL3)
 			// SDL3: SDL_ShowCursor(SDL_ENABLE/DISABLE) -> SDL_ShowCursor()/SDL_HideCursor(); relative mouse mode
 			// is now per-window via SDL_SetWindowRelativeMouseMode (returns bool)
-			SDL_Window* window = SdlGfxDevice::windowHandle();
+			SDL_Window* window = SdlGfxDevice::GetWindowHandle();
 			switch (cursor) {
 				case Cursor::Arrow:
 					SDL_ShowCursor();
@@ -663,13 +663,13 @@ namespace nCine::Backends
 
 			if (isChanged) {
 				// Handling ImGui cursor changes
-				IInputManager::setCursor(cursor);
+				IInputManager::SetCursor(cursor);
 				_cursor = cursor;
 			}
 		}
 	}
 
-	void SdlInputManager::handleJoyDeviceEvent(const SDL_Event& event)
+	void SdlInputManager::HandleJoyDeviceEvent(const SDL_Event& event)
 	{
 		if (event.type == SDL_JOYDEVICEADDED) {
 #if defined(WITH_SDL3)
@@ -685,7 +685,7 @@ namespace nCine::Backends
 			if (deviceIndex < 0) {
 				return;
 			}
-			_joyConnectionEvent.joyId = deviceIndex;
+			_joyConnectionEvent.JoyId = deviceIndex;
 			_sdlJoysticks[deviceIndex] = SDL_OpenJoystick(event.jdevice.which);
 
 #	if defined(DEATH_TRACE)
@@ -699,7 +699,7 @@ namespace nCine::Backends
 #	endif
 #else
 			const std::int32_t deviceIndex = event.jdevice.which;
-			_joyConnectionEvent.joyId = deviceIndex;
+			_joyConnectionEvent.JoyId = deviceIndex;
 
 			auto* prevInstance = _sdlJoysticks[deviceIndex];
 			_sdlJoysticks[deviceIndex] = SDL_JoystickOpen(deviceIndex);
@@ -721,12 +721,12 @@ namespace nCine::Backends
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 		} else if (event.type == SDL_JOYDEVICEREMOVED) {
-			const std::int32_t deviceIndex = joyInstanceIdToDeviceIndex(event.jdevice.which);
+			const std::int32_t deviceIndex = JoyInstanceIdToDeviceIndex(event.jdevice.which);
 			if (deviceIndex == -1) {
 				return;
 			}
 
-			_joyConnectionEvent.joyId = deviceIndex;
+			_joyConnectionEvent.JoyId = deviceIndex;
 			SDL_JoystickClose(_sdlJoysticks[deviceIndex]);
 			_sdlJoysticks[deviceIndex] = nullptr;
 
@@ -742,7 +742,7 @@ namespace nCine::Backends
 		}
 	}
 
-	int SdlInputManager::joyInstanceIdToDeviceIndex(SDL_JoystickID instanceId)
+	int SdlInputManager::JoyInstanceIdToDeviceIndex(SDL_JoystickID instanceId)
 	{
 		std::int32_t deviceIndex = -1;
 		for (std::int32_t i = 0; i < MaxNumJoysticks; i++) {

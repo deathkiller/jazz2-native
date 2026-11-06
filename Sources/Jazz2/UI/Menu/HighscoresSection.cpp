@@ -40,7 +40,7 @@ namespace Jazz2::UI::Menu
 		FillDefaultsIfEmpty();
 
 #if defined(DEATH_TARGET_ANDROID)
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 		_initialVisibleSize.X = _currentVisibleBounds.W;
 		_initialVisibleSize.Y = _currentVisibleBounds.H;
 #endif
@@ -106,7 +106,7 @@ namespace Jazz2::UI::Menu
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 				_recalcVisibleBoundsTimeLeft = 60.0f;
-				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 			}
 #endif
 			std::int32_t row = GetSelectedRow();
@@ -248,7 +248,7 @@ namespace Jazz2::UI::Menu
 		}
 		auto& playerName = _series[_selectedSeries].Items[row].PlayerName;
 
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Escape: {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				FinishNameEntry();
@@ -308,11 +308,11 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 		auto& playerName = _series[_selectedSeries].Items[row].PlayerName;
-		if (playerName.size() + event.length <= MaxPlayerNameLength) {
+		if (playerName.size() + event.Length <= MaxPlayerNameLength) {
 			playerName = playerName.prefix(_textCursor)
-				+ StringView(event.text, event.length)
+				+ StringView(event.Text, event.Length)
 				+ playerName.exceptPrefix(_textCursor);
-			_textCursor += event.length;
+			_textCursor += event.Length;
 			_carretAnim = 0.0f;
 		}
 	}
@@ -421,11 +421,11 @@ namespace Jazz2::UI::Menu
 	{
 		if (_waitForInput) {
 			// While entering a name, only the on-screen keyboard button and the top bar (which commits) respond
-			if (event.type == TouchEventType::Down) {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (event.Type == TouchEventType::Down) {
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex != -1) {
-					float x = event.pointers[pointerIndex].x;
-					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					float x = event.Pointers[pointerIndex].X;
+					float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 					if (x < 0.2f && y < 80.0f && theApplication().CanShowScreenKeyboard()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						ShowScreenKeyboardForPlayerName();
@@ -441,11 +441,11 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				if (y >= 80.0f) {
 					Recti contentBounds = _root->GetContentBounds();
 					float topLine = contentBounds.Y + TopLine;
@@ -709,7 +709,7 @@ namespace Jazz2::UI::Menu
 	void HighscoresSection::RecalcLayoutForScreenKeyboard()
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
 			_recalcVisibleBoundsTimeLeft = 30.0f;

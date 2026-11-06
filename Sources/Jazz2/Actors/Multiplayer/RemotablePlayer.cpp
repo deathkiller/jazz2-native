@@ -95,13 +95,13 @@ namespace Jazz2::Actors::Multiplayer
 		_warpPending = true;
 
 		// For warping from the water
-		_renderer.setRotation(0.0f);
+		_renderer.SetRotation(0.0f);
 
 		PlayPlayerSfx("WarpIn"_s);
 
 		SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpInFreefall : AnimState::TransitionWarpIn, false, true, SpecialMoveType::None, [this]() {
 			if (_warpPending) {
-				_renderer.setDrawEnabled(false);
+				_renderer.SetDrawEnabled(false);
 			}
 		});
 	}
@@ -120,7 +120,7 @@ namespace Jazz2::Actors::Multiplayer
 
 			_levelHandler->HandlePlayerWarped(this, posPrev, WarpFlags::Default);
 
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 			_isFreefall |= CanFreefall();
 			SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this]() {
 				SetState(ActorState::IsInvulnerable, false);

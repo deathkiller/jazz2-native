@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Collectibles
 		SetAnimation((AnimState)_gemType);
 		SetFacingDirection(isFlipped);
 
-		_renderer.setAlphaF(0.7f);
+		_renderer.SetAlphaF(0.7f);
 
 		async_return true;
 	}

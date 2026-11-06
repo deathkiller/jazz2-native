@@ -54,7 +54,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Screen Resolution"),
 			[this]() -> StringView {
-				Vector2i res = theApplication().GetGfxDevice().drawableResolution();
+				Vector2i res = theApplication().GetGfxDevice().GetDrawableResolution();
 				_resolutionValue = format("{}x{}", res.X, res.Y);
 				return _resolutionValue;
 			},
@@ -124,7 +124,7 @@ namespace Jazz2::UI::Menu
 				[]() -> StringView { return (PreferencesCache::EnableFullscreen ? _("Enabled") : _("Disabled")); },
 				[this](std::int32_t) {
 					PreferencesCache::EnableFullscreen = !PreferencesCache::EnableFullscreen;
-					theApplication().GetGfxDevice().setResolution(PreferencesCache::EnableFullscreen);
+					theApplication().GetGfxDevice().SetResolution(PreferencesCache::EnableFullscreen);
 					// The cursor follows the policy of the state handler, as when it's toggled by a key (see Main.cpp)
 					_root->ApplyCursorPolicy();
 					_isDirty = true;

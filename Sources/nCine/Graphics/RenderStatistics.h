@@ -39,7 +39,7 @@ namespace nCine
 				: vertices(0), commands(0), transparents(0), instances(0), batchSize(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				vertices = 0;
 				commands = 0;
@@ -63,7 +63,7 @@ namespace nCine
 				: count(0), size(0), usedSpace(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				count = 0;
 				size = 0;
@@ -84,7 +84,7 @@ namespace nCine
 				: count(0), dataSize(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				count = 0;
 				dataSize = 0;
@@ -104,7 +104,7 @@ namespace nCine
 				: count(0), dataSize(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				count = 0;
 				dataSize = 0;
@@ -126,7 +126,7 @@ namespace nCine
 				: size(0), capacity(0), reuses(0), bindings(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				size = 0;
 				capacity = 0;
@@ -149,7 +149,7 @@ namespace nCine
 				: usedSize(0), freeSize(0), retrievals(0) {}
 
 		private:
-			void reset()
+			void Reset()
 			{
 				usedSize = 0;
 				freeSize = 0;

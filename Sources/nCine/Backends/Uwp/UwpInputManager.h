@@ -24,7 +24,7 @@ namespace nCine::Backends
 	class UwpMouseState : public MouseState
 	{
 	public:
-		bool isButtonDown(MouseButton button) const override
+		bool IsButtonDown(MouseButton button) const override
 		{
 			// TODO
 			return false;
@@ -41,7 +41,7 @@ namespace nCine::Backends
 			std::memset(_pressedKeys, 0, sizeof(_pressedKeys));
 		}
 
-		inline bool isKeyDown(Keys key) const override {
+		inline bool IsKeyDown(Keys key) const override {
 			return (key >= (Keys)0 && key < Keys::Count ? _pressedKeys[(int)key] : false);
 		}
 
@@ -59,14 +59,14 @@ namespace nCine::Backends
 
 		UwpJoystickState();
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
-		void resetJoystickState(int joyId);
-		void simulateButtonsEvents(winrtWGI::GamepadButtons buttons);
-		void simulateHatsEvents(winrtWGI::GamepadButtons buttons);
-		void simulateAxisEvent(int axisId, float value);
+		void ResetJoystickState(int joyId);
+		void SimulateButtonsEvents(winrtWGI::GamepadButtons buttons);
+		void SimulateHatsEvents(winrtWGI::GamepadButtons buttons);
+		void SimulateAxisEvent(int axisId, float value);
 
 	private:
 		/** @brief Minimum difference between two axis readings in order to trigger an event */
@@ -100,36 +100,36 @@ namespace nCine::Backends
 		~UwpInputManager() override;
 
 		/** @brief Updates joystick state structures and simulates events */
-		static void updateJoystickStates();
+		static void UpdateJoystickStates();
 
-		const MouseState& mouseState() const override { return _mouseState; }
-		inline const KeyboardState& keyboardState() const override { return _keyboardState; }
+		const MouseState& GetMouseState() const override { return _mouseState; }
+		inline const KeyboardState& GetKeyboardState() const override { return _keyboardState; }
 
-		bool isJoyPresent(int joyId) const override
+		bool IsJoyPresent(int joyId) const override
 		{
 			DEATH_ASSERT(joyId >= 0);
 			return (joyId < MaxNumJoysticks && _gamepads[joyId].Connected);
 		}
 		
-		const char* joyName(int joyId) const override { return "Windows.Gaming.Input"; }
-		const JoystickGuid joyGuid(int joyId) const override { return JoystickGuidType::Xinput; }
-		int joyNumButtons(int joyId) const override { return UwpJoystickState::MaxNumButtons; }
-		int joyNumHats(int joyId) const override { return UwpJoystickState::MaxNumHats; }
-		int joyNumAxes(int joyId) const override { return UwpJoystickState::MaxNumAxes; }
+		const char* GetJoyName(int joyId) const override { return "Windows.Gaming.Input"; }
+		const JoystickGuid GetJoyGuid(int joyId) const override { return JoystickGuidType::Xinput; }
+		int GetJoyButtonCount(int joyId) const override { return UwpJoystickState::MaxNumButtons; }
+		int GetJoyHatCount(int joyId) const override { return UwpJoystickState::MaxNumHats; }
+		int GetJoyAxisCount(int joyId) const override { return UwpJoystickState::MaxNumAxes; }
 		
-		const JoystickState& joystickState(int joyId) const override
+		const JoystickState& GetJoystickState(int joyId) const override
 		{
-			if (isJoyPresent(joyId)) {
+			if (IsJoyPresent(joyId)) {
 				return _gamepads[joyId].State;
 			} else {
 				return _nullJoystickState;
 			}
 		}
 		
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
-		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
+		bool JoystickRumble(int joyId, float lowFrequency, float highFrequency, uint32_t durationMs) override;
+		bool JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
-		void setCursor(Cursor cursor) override;
+		void SetCursor(Cursor cursor) override;
 
 	private:
 		static const int MaxNumJoysticks = 8;
@@ -165,7 +165,7 @@ namespace nCine::Backends
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];
 		static ReadWriteLock _gamepadsSync;
 
-		static Keys keySymValueToEnum(winrtWS::VirtualKey virtualKey);
+		static Keys KeySymValueToEnum(winrtWS::VirtualKey virtualKey);
 
 		void OnKey(const winrtWUC::CoreWindow& sender, const winrtWUC::KeyEventArgs& args);
 		void OnCharacterReceived(const winrtWUC::CoreWindow& sender, const winrtWUC::CharacterReceivedEventArgs& args);

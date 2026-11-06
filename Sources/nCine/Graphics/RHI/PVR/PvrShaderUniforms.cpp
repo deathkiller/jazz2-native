@@ -189,14 +189,14 @@ namespace nCine::RHI::PVR
 		std::int32_t offset = 0;
 		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
-			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
+			offset += cache.GetUniformBlock()->GetSize() - cache.GetUniformBlock()->GetAlignAmount();
 		}
 	}
 
 	bool PvrShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
 		for (const PvrUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
 		}
@@ -206,7 +206,7 @@ namespace nCine::RHI::PVR
 	PvrUniformBlockCache* PvrShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
 		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
 		}
@@ -235,7 +235,7 @@ namespace nCine::RHI::PVR
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
 			const std::uint8_t* data = cache.GetDataPointer();
 			if (data != nullptr) {
-				PvrDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.usedSize()));
+				PvrDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.GetUsedSize()));
 			}
 		}
 	}

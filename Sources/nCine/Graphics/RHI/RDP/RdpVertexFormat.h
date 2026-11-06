@@ -94,7 +94,7 @@ namespace nCine::RHI::RDP
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const RdpBuffer* vbo) {
+			inline void SetVbo(const RdpBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

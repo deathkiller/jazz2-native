@@ -492,6 +492,9 @@
     <ClInclude Include="nCine\Graphics\RHI\RhiFwd.h">
       <Filter>Header Files\nCine\Graphics\RHI</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\RhiAuxiliarySwapchain.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\RhiTypes.h">
       <Filter>Header Files\nCine\Graphics\RHI</Filter>
     </ClInclude>

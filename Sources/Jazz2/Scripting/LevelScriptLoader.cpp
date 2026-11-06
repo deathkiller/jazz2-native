@@ -683,7 +683,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			std::any_of(std::begin(_onDrawLayer), std::end(_onDrawLayer), [](asIScriptFunction* f) { return f != nullptr; })) {
 			_layerCanvas = std::make_unique<Legacy::ScriptLayerCanvas>(this);
 			_layerCanvas->OrderedDraws = true;
-			_layerCanvas->setParent(_levelHandler->_rootNode.get());
+			_layerCanvas->SetParent(_levelHandler->_rootNode.get());
 		}
 
 		switch (GetContextType()) {

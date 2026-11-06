@@ -133,7 +133,7 @@ namespace Jazz2::Actors::Enemies
 								bananaParams[2] = (distance >> 8) & 0xff;
 								banana->OnActivated(ActorActivationDetails(
 									_levelHandler,
-									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8 : 8), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
+									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8 : 8), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 2),
 									bananaParams
 								));
 								_levelHandler->AddActor(banana);
@@ -159,7 +159,7 @@ namespace Jazz2::Actors::Enemies
 							bananaParams[2] = (distance >> 8) & 0xff;
 							banana->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 8, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 2),
 								bananaParams
 							));
 							_levelHandler->AddActor(banana);

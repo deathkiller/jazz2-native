@@ -1,11 +1,14 @@
 #pragma once
 
 #include "../RhiTypes.h"
+#include "../RhiAuxiliarySwapchain.h"
 #include "../../../Primitives/Rect.h"
 #include "../../../Primitives/Colorf.h"
 
 namespace nCine::RHI::GL
 {
+	class GLTexture;
+
 	/**
 		@brief Pipeline-state and draw-call facade of the OpenGL backend
 
@@ -190,6 +193,31 @@ namespace nCine::RHI::GL
 		}
 		/** @brief No-op (the window backend performs the buffer swap) */
 		static inline void PresentFrame() {}
+
+		/**
+			@brief Creates the presentation of a texture into a window besides the main one
+
+			The window has a GL context of its own that shares the objects of the main one, made current and swapped
+			through the functions in @p desc, which must all be set. Its contents are copied in that context, so the
+			state caches of the main context never see them.
+
+			@param desc    Context functions of the window, its @ref AuxiliarySwapchainDesc::WindowHandle is unused
+			@param width   Width of the window in pixels
+			@param height  Height of the window in pixels
+			@returns An opaque handle to pass to the other `*Auxiliary*` functions, or `nullptr` on OpenGL|ES, which
+				can't be relied on to share objects with the context of another window
+		*/
+		static void* CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height);
+		/** @brief Releases what @ref CreateAuxiliarySwapchain() made */
+		static void DestroyAuxiliarySwapchain(void* handle);
+		/** @brief Sets the size of the window in pixels (its default framebuffer follows the window by itself) */
+		static void ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height);
+		/**
+		 * @brief Copies a texture into the window and shows it right away
+		 *
+		 * The part the texture doesn't cover is black, the part out of the window is left out.
+		 */
+		static void PresentAuxiliaryTexture(void* handle, const GLTexture* source);
 
 		/**
 		 * @brief Starts timing the GPU work of the frame

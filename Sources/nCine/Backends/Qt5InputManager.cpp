@@ -69,7 +69,7 @@ namespace nCine::Backends
 	const float Qt5JoystickState::AxisEventTolerance = 0.001f;
 #endif
 
-	bool Qt5MouseState::isButtonDown(MouseButton button) const
+	bool Qt5MouseState::IsButtonDown(MouseButton button) const
 	{
 		return _buttons.testFlag(ncineToQtMouseButton(button));
 	}
@@ -104,7 +104,7 @@ namespace nCine::Backends
 		_name[0] = '\0';
 	}
 
-	bool Qt5JoystickState::isButtonPressed(int buttonId) const
+	bool Qt5JoystickState::IsButtonPressed(int buttonId) const
 	{
 		// The order of the buttons is a contract with the mapping assigned in JoyMapping::OnJoyConnected()
 		switch (buttonId) {
@@ -124,7 +124,7 @@ namespace nCine::Backends
 		}
 	}
 
-	unsigned char Qt5JoystickState::hatState(int hatId) const
+	unsigned char Qt5JoystickState::GetHatState(int hatId) const
 	{
 		unsigned char state = HatState::Centered;
 
@@ -145,7 +145,7 @@ namespace nCine::Backends
 		return state;
 	}
 
-	float Qt5JoystickState::axisValue(int axisId) const
+	float Qt5JoystickState::GetAxisValue(int axisId) const
 	{
 		switch (axisId) {
 			case 0: return static_cast<float>(_gamepad->axisLeftX());
@@ -159,7 +159,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void Qt5InputManager::updateJoystickStates()
+	void Qt5InputManager::UpdateJoystickStates()
 	{
 		// Compacting the array of Qt5 connected gamepads
 		std::int32_t notConnectedIndex = 0;
@@ -184,7 +184,7 @@ namespace nCine::Backends
 					!_joystickStates[i]._gamepad->isConnected()) {
 					_joystickStates[i]._gamepad->setDeviceId(-1);
 					_joystickStates[i]._name[0] = '\0';
-					_joyConnectionEvent.joyId = i;
+					_joyConnectionEvent.JoyId = i;
 					_joyMapping.OnJoyDisconnected(_joyConnectionEvent);
 					_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 				}
@@ -204,7 +204,7 @@ namespace nCine::Backends
 				std::memcpy(_joystickStates[index]._name, name.constData(), nameLength);
 				_joystickStates[index]._name[nameLength] = '\0';
 
-				_joyConnectionEvent.joyId = index;
+				_joyConnectionEvent.JoyId = index;
 				_joyMapping.OnJoyConnected(_joyConnectionEvent);
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
@@ -222,12 +222,12 @@ namespace nCine::Backends
 			}
 
 			for (std::int32_t buttonId = 0; buttonId < Qt5JoystickState::NumButtons; buttonId++) {
-				const bool newButtonState = state.isButtonPressed(buttonId);
+				const bool newButtonState = state.IsButtonPressed(buttonId);
 				if (state._buttonState[buttonId] != newButtonState) {
 					state._buttonState[buttonId] = newButtonState;
 					if (_inputEventHandler != nullptr) {
-						_joyButtonEvent.joyId = joyId;
-						_joyButtonEvent.buttonId = buttonId;
+						_joyButtonEvent.JoyId = joyId;
+						_joyButtonEvent.ButtonId = buttonId;
 						if (newButtonState) {
 							_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
 							_inputEventHandler->OnJoyButtonPressed(_joyButtonEvent);
@@ -239,26 +239,26 @@ namespace nCine::Backends
 				}
 			}
 
-			const unsigned char newHatState = state.hatState(0);
+			const unsigned char newHatState = state.GetHatState(0);
 			if (state._hatState != newHatState) {
 				state._hatState = newHatState;
 				if (_inputEventHandler != nullptr) {
-					_joyHatEvent.joyId = joyId;
-					_joyHatEvent.hatId = 0;
-					_joyHatEvent.hatState = newHatState;
+					_joyHatEvent.JoyId = joyId;
+					_joyHatEvent.HatId = 0;
+					_joyHatEvent.HatState = newHatState;
 					_joyMapping.OnJoyHatMoved(_joyHatEvent);
 					_inputEventHandler->OnJoyHatMoved(_joyHatEvent);
 				}
 			}
 
 			for (std::int32_t axisId = 0; axisId < Qt5JoystickState::NumAxes; axisId++) {
-				const float newAxisValue = state.axisValue(axisId);
+				const float newAxisValue = state.GetAxisValue(axisId);
 				if (std::abs(state._axesValuesState[axisId] - newAxisValue) > Qt5JoystickState::AxisEventTolerance) {
 					state._axesValuesState[axisId] = newAxisValue;
 					if (_inputEventHandler != nullptr) {
-						_joyAxisEvent.joyId = joyId;
-						_joyAxisEvent.axisId = axisId;
-						_joyAxisEvent.value = newAxisValue;
+						_joyAxisEvent.JoyId = joyId;
+						_joyAxisEvent.AxisId = axisId;
+						_joyAxisEvent.Value = newAxisValue;
 						_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
 						_inputEventHandler->OnJoyAxisMoved(_joyAxisEvent);
 					}
@@ -268,7 +268,7 @@ namespace nCine::Backends
 	}
 #endif
 
-	bool Qt5InputManager::shouldQuitOnRequest()
+	bool Qt5InputManager::ShouldQuitOnRequest()
 	{
 		return (_inputEventHandler == nullptr || _inputEventHandler->OnQuitRequest());
 	}
@@ -314,20 +314,20 @@ namespace nCine::Backends
 			return;
 		}
 
-		_keyboardEvent.scancode = static_cast<std::int32_t>(event->nativeScanCode());
-		_keyboardEvent.sym = Qt5Keys::keySymValueToEnum(event->key());
-		_keyboardEvent.mod = Qt5Keys::keyModMaskToEnumMask(event->modifiers());
-		if (_keyboardEvent.sym != Keys::Unknown) {
-			_keyboardState._keys[static_cast<std::int32_t>(_keyboardEvent.sym)] = 1;
+		_keyboardEvent.Scancode = static_cast<std::int32_t>(event->nativeScanCode());
+		_keyboardEvent.Sym = Qt5Keys::KeySymValueToEnum(event->key());
+		_keyboardEvent.Mod = Qt5Keys::KeyModMaskToEnumMask(event->modifiers());
+		if (_keyboardEvent.Sym != Keys::Unknown) {
+			_keyboardState._keys[static_cast<std::int32_t>(_keyboardEvent.Sym)] = 1;
 		}
 		_inputEventHandler->OnKeyPressed(_keyboardEvent);
 
 		const QByteArray text = event->text().toUtf8();
 		if (!text.isEmpty()) {
 			// The event carries one code point at a time, which is what the four bytes are sized for
-			const std::int32_t length = std::min<std::int32_t>(text.size(), std::int32_t(sizeof(_textInputEvent.text)));
-			std::memcpy(_textInputEvent.text, text.constData(), length);
-			_textInputEvent.length = length;
+			const std::int32_t length = std::min<std::int32_t>(text.size(), std::int32_t(sizeof(_textInputEvent.Text)));
+			std::memcpy(_textInputEvent.Text, text.constData(), length);
+			_textInputEvent.Length = length;
 			_inputEventHandler->OnTextInput(_textInputEvent);
 		}
 	}
@@ -338,11 +338,11 @@ namespace nCine::Backends
 			return;
 		}
 
-		_keyboardEvent.scancode = static_cast<std::int32_t>(event->nativeScanCode());
-		_keyboardEvent.sym = Qt5Keys::keySymValueToEnum(event->key());
-		_keyboardEvent.mod = Qt5Keys::keyModMaskToEnumMask(event->modifiers());
-		if (_keyboardEvent.sym != Keys::Unknown) {
-			_keyboardState._keys[static_cast<std::int32_t>(_keyboardEvent.sym)] = 0;
+		_keyboardEvent.Scancode = static_cast<std::int32_t>(event->nativeScanCode());
+		_keyboardEvent.Sym = Qt5Keys::KeySymValueToEnum(event->key());
+		_keyboardEvent.Mod = Qt5Keys::KeyModMaskToEnumMask(event->modifiers());
+		if (_keyboardEvent.Sym != Keys::Unknown) {
+			_keyboardState._keys[static_cast<std::int32_t>(_keyboardEvent.Sym)] = 0;
 		}
 		_inputEventHandler->OnKeyReleased(_keyboardEvent);
 	}
@@ -354,11 +354,11 @@ namespace nCine::Backends
 		}
 
 		// Pointer coordinates are top-down, as in every other backend
-		_mouseEvent.x = event->pos().x();
-		_mouseEvent.y = event->pos().y();
-		_mouseEvent.button = qtToNcineMouseButton(event->button());
-		_mouseState.x = _mouseEvent.x;
-		_mouseState.y = _mouseEvent.y;
+		_mouseEvent.X = event->pos().x();
+		_mouseEvent.Y = event->pos().y();
+		_mouseEvent.Button = qtToNcineMouseButton(event->button());
+		_mouseState.X = _mouseEvent.X;
+		_mouseState.Y = _mouseEvent.Y;
 		_mouseState._buttons = event->buttons();
 		_inputEventHandler->OnMouseDown(_mouseEvent);
 	}
@@ -369,11 +369,11 @@ namespace nCine::Backends
 			return;
 		}
 
-		_mouseEvent.x = event->pos().x();
-		_mouseEvent.y = event->pos().y();
-		_mouseEvent.button = qtToNcineMouseButton(event->button());
-		_mouseState.x = _mouseEvent.x;
-		_mouseState.y = _mouseEvent.y;
+		_mouseEvent.X = event->pos().x();
+		_mouseEvent.Y = event->pos().y();
+		_mouseEvent.Button = qtToNcineMouseButton(event->button());
+		_mouseState.X = _mouseEvent.X;
+		_mouseState.Y = _mouseEvent.Y;
 		_mouseState._buttons = event->buttons();
 		_inputEventHandler->OnMouseUp(_mouseEvent);
 	}
@@ -384,8 +384,8 @@ namespace nCine::Backends
 			return;
 		}
 
-		_mouseState.x = event->pos().x();
-		_mouseState.y = event->pos().y();
+		_mouseState.X = event->pos().x();
+		_mouseState.Y = event->pos().y();
 		_mouseState._buttons = event->buttons();
 		_inputEventHandler->OnMouseMove(_mouseState);
 	}
@@ -396,7 +396,7 @@ namespace nCine::Backends
 			return;
 		}
 
-		updateTouchEvent(event, TouchEventType::Down);
+		UpdateTouchEvent(event, TouchEventType::Down);
 		_inputEventHandler->OnTouchEvent(_touchEvent);
 	}
 
@@ -408,13 +408,13 @@ namespace nCine::Backends
 
 		// Qt5 has one update event for every change within a sequence, so the pointer count decides
 		// which of the three engine event types it is
-		const std::uint32_t previousCount = _touchEvent.count;
+		const std::uint32_t previousCount = _touchEvent.Count;
 		const std::uint32_t newCount = static_cast<std::uint32_t>(event->touchPoints().size());
 		const TouchEventType type = (previousCount < newCount
 			? TouchEventType::PointerDown
 			: (previousCount > newCount ? TouchEventType::PointerUp : TouchEventType::Move));
 
-		updateTouchEvent(event, type);
+		UpdateTouchEvent(event, type);
 		_inputEventHandler->OnTouchEvent(_touchEvent);
 	}
 
@@ -424,7 +424,7 @@ namespace nCine::Backends
 			return;
 		}
 
-		updateTouchEvent(event, TouchEventType::Up);
+		UpdateTouchEvent(event, TouchEventType::Up);
 		_inputEventHandler->OnTouchEvent(_touchEvent);
 	}
 
@@ -435,29 +435,29 @@ namespace nCine::Backends
 		}
 
 		// Qt reports the horizontal angle positive to the left, the opposite of the other backends
-		_scrollEvent.x = event->angleDelta().x() / -60.0f;
-		_scrollEvent.y = event->angleDelta().y() / 60.0f;
+		_scrollEvent.X = event->angleDelta().x() / -60.0f;
+		_scrollEvent.Y = event->angleDelta().y() / 60.0f;
 		_inputEventHandler->OnMouseWheel(_scrollEvent);
 	}
 
 #if defined(WITH_QT5GAMEPAD)
-	bool Qt5InputManager::isJoyPresent(int joyId) const
+	bool Qt5InputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxNumJoysticks && _joystickStates[joyId]._gamepad->isConnected());
 	}
 
-	const char* Qt5InputManager::joyName(int joyId) const
+	const char* Qt5InputManager::GetJoyName(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? _joystickStates[joyId]._name : nullptr);
+		return (IsJoyPresent(joyId) ? _joystickStates[joyId]._name : nullptr);
 	}
 
-	const JoystickState& Qt5InputManager::joystickState(int joyId) const
+	const JoystickState& Qt5InputManager::GetJoystickState(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? static_cast<const JoystickState&>(_joystickStates[joyId]) : _nullJoystickState);
+		return (IsJoyPresent(joyId) ? static_cast<const JoystickState&>(_joystickStates[joyId]) : _nullJoystickState);
 	}
 #endif
 
-	void Qt5InputManager::setCursor(Cursor cursor)
+	void Qt5InputManager::SetCursor(Cursor cursor)
 	{
 		if (cursor != _cursor) {
 			switch (cursor) {
@@ -475,31 +475,31 @@ namespace nCine::Backends
 			}
 
 			// Handling ImGui cursor changes
-			IInputManager::setCursor(cursor);
+			IInputManager::SetCursor(cursor);
 
 			_cursor = cursor;
 		}
 	}
 
-	void Qt5InputManager::updateTouchEvent(const QTouchEvent* event, TouchEventType type)
+	void Qt5InputManager::UpdateTouchEvent(const QTouchEvent* event, TouchEventType type)
 	{
 		const QList<QTouchEvent::TouchPoint>& touchPoints = event->touchPoints();
 
-		_touchEvent.type = type;
-		_touchEvent.count = std::min<std::uint32_t>(static_cast<std::uint32_t>(touchPoints.size()), TouchEvent::MaxPointers);
-		_touchEvent.actionIndex = -1;
+		_touchEvent.Type = type;
+		_touchEvent.Count = std::min<std::uint32_t>(static_cast<std::uint32_t>(touchPoints.size()), TouchEvent::MaxPointers);
+		_touchEvent.ActionIndex = -1;
 
-		for (std::uint32_t i = 0; i < _touchEvent.count; i++) {
-			TouchEvent::Pointer& pointer = _touchEvent.pointers[i];
+		for (std::uint32_t i = 0; i < _touchEvent.Count; i++) {
+			TouchEvent::Pointer& pointer = _touchEvent.Pointers[i];
 			const QTouchEvent::TouchPoint& touchPoint = touchPoints.at(i);
 
-			pointer.id = touchPoint.id();
-			pointer.x = touchPoint.pos().x();
-			pointer.y = touchPoint.pos().y();
-			pointer.pressure = touchPoint.pressure();
+			pointer.Id = touchPoint.id();
+			pointer.X = touchPoint.pos().x();
+			pointer.Y = touchPoint.pos().y();
+			pointer.Pressure = touchPoint.pressure();
 
 			// The pointer that triggered the event is the one Qt5 reports as changed
-			if (_touchEvent.actionIndex < 0) {
+			if (_touchEvent.ActionIndex < 0) {
 				const Qt::TouchPointStates state = touchPoint.state();
 				const bool isAction = ((type == TouchEventType::Down || type == TouchEventType::PointerDown)
 					? state.testFlag(Qt::TouchPointPressed)
@@ -507,7 +507,7 @@ namespace nCine::Backends
 						? state.testFlag(Qt::TouchPointReleased)
 						: state.testFlag(Qt::TouchPointMoved)));
 				if (isAction) {
-					_touchEvent.actionIndex = static_cast<std::int32_t>(i);
+					_touchEvent.ActionIndex = static_cast<std::int32_t>(i);
 				}
 			}
 		}

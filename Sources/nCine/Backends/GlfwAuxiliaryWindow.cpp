@@ -69,7 +69,7 @@ namespace nCine::Backends
 	GlfwAuxiliaryWindow::GlfwAuxiliaryWindow(const AuxiliaryWindowDesc& desc)
 		: _popup(desc.Popup)
 	{
-		GLFWwindow* mainWindow = GlfwGfxDevice::windowHandle();
+		GLFWwindow* mainWindow = GlfwGfxDevice::GetWindowHandle();
 		// The hints of the context stay as the main window was made with, it shares its objects
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 		glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
@@ -80,7 +80,7 @@ namespace nCine::Backends
 		// On Windows the window is made to let the pointer through by SetupAuxiliaryWindowWin32()
 		glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, desc.PassThrough ? GLFW_TRUE : GLFW_FALSE);
 #endif
-		std::int32_t width = std::max(desc.Bounds.W, 1), height = std::max(desc.Bounds.H, 1);
+		std::int32_t width = std::max<std::int32_t>(desc.Bounds.W, 1), height = std::max<std::int32_t>(desc.Bounds.H, 1);
 		_window = glfwCreateWindow(width, height, "", nullptr, mainWindow);
 #if !defined(DEATH_TARGET_WINDOWS) && defined(GLFW_MOUSE_PASSTHROUGH)
 		glfwWindowHint(GLFW_MOUSE_PASSTHROUGH, GLFW_FALSE);
@@ -103,14 +103,14 @@ namespace nCine::Backends
 #endif
 
 		// Input over it goes where input over the main window goes
-		GlfwInputManager::attachAuxiliaryWindow(_window);
+		GlfwInputManager::AttachAuxiliaryWindow(_window);
 
 		// Its context doesn't wait for the display, the main window does already
 		glfwMakeContextCurrent(_window);
 		glfwSwapInterval(0);
 		glfwMakeContextCurrent(mainWindow);
 
-		AuxiliaryWindowNative native;
+		RHI::AuxiliarySwapchainDesc native;
 		GLFWwindow* window = _window;
 		native.MakeCurrent = [window]() {
 			glfwMakeContextCurrent(window);
@@ -120,7 +120,7 @@ namespace nCine::Backends
 			glfwSwapBuffers(window);
 		};
 		native.RestoreMain = []() {
-			glfwMakeContextCurrent(GlfwGfxDevice::windowHandle());
+			glfwMakeContextCurrent(GlfwGfxDevice::GetWindowHandle());
 		};
 		_presenter = AuxiliaryWindowPresenter::Create(Death::move(native), GetPixelSize());
 	}
@@ -131,13 +131,13 @@ namespace nCine::Backends
 		_presenter = nullptr;
 		if (_window != nullptr) {
 			glfwDestroyWindow(_window);
-			glfwMakeContextCurrent(GlfwGfxDevice::windowHandle());
+			glfwMakeContextCurrent(GlfwGfxDevice::GetWindowHandle());
 		}
 	}
 
 	void GlfwAuxiliaryWindow::SetBounds(const Recti& bounds)
 	{
-		std::int32_t width = std::max(bounds.W, 1), height = std::max(bounds.H, 1);
+		std::int32_t width = std::max<std::int32_t>(bounds.W, 1), height = std::max<std::int32_t>(bounds.H, 1);
 		Vector2i position;
 		glfwGetWindowPos(_window, &position.X, &position.Y);
 		if (position.X != bounds.X || position.Y != bounds.Y) {

@@ -39,10 +39,10 @@ namespace nCine::Backends
 	class SdlKeys
 	{
 	public:
-		static Keys keySymValueToEnum(int keysym);
-		static int keyModMaskToEnumMask(int keymod);
-		static int enumToKeysValue(Keys keysym);
-		static int enumToScancode(Keys keysym);
+		static Keys KeySymValueToEnum(int keysym);
+		static int KeyModMaskToEnumMask(int keymod);
+		static int EnumToKeysValue(Keys keysym);
+		static int EnumToScancode(Keys keysym);
 	};
 
 	/**
@@ -53,7 +53,7 @@ namespace nCine::Backends
 	public:
 		SdlMouseState();
 
-		bool isButtonDown(MouseButton button) const override;
+		bool IsButtonDown(MouseButton button) const override;
 
 	private:
 		unsigned int _buttons;
@@ -83,9 +83,9 @@ namespace nCine::Backends
 			_keyState = SDL_GetKeyboardState(nullptr);
 		}
 
-		inline bool isKeyDown(Keys key) const override
+		inline bool IsKeyDown(Keys key) const override
 		{
-			const std::int32_t sdlKey = SdlKeys::enumToScancode(key);
+			const std::int32_t sdlKey = SdlKeys::EnumToScancode(key);
 			if (sdlKey == SDL_SCANCODE_UNKNOWN) {
 				return false;
 			} else {
@@ -116,9 +116,9 @@ namespace nCine::Backends
 		/** @brief Maximum absolute value reported by a joystick axis */
 		static constexpr short int MaxAxisValue = 32767;
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
 	private:
 		SDL_Joystick *_sdlJoystick;
@@ -140,45 +140,45 @@ namespace nCine::Backends
 		~SdlInputManager();
 
 		/** @brief Returns `true` if the application should quit in response to a quit request */
-		static bool shouldQuitOnRequest();
+		static bool ShouldQuitOnRequest();
 		/**
 		 * @brief Parses a single SDL2 event and dispatches it to the registered input handler
 		 *
 		 * @param event		SDL2 event to process
 		 */
-		static void parseEvent(const SDL_Event &event);
+		static void ParseEvent(const SDL_Event &event);
 
-		inline const MouseState& mouseState() const override
+		inline const MouseState& GetMouseState() const override
 		{
 #if defined(WITH_SDL3)
 			// SDL3: SDL_GetMouseState reports the cursor position as float
 			float mouseX = 0.0f, mouseY = 0.0f;
 			_mouseState._buttons = SDL_GetMouseState(&mouseX, &mouseY);
-			_mouseState.x = static_cast<int>(mouseX);
-			_mouseState.y = static_cast<int>(mouseY);
+			_mouseState.X = static_cast<int>(mouseX);
+			_mouseState.Y = static_cast<int>(mouseY);
 #else
-			_mouseState._buttons = SDL_GetMouseState(&_mouseState.x, &_mouseState.y);
+			_mouseState._buttons = SDL_GetMouseState(&_mouseState.X, &_mouseState.Y);
 #endif
 			return _mouseState;
 		}
 
-		inline const KeyboardState& keyboardState() const override { return _keyboardState; }
+		inline const KeyboardState& GetKeyboardState() const override { return _keyboardState; }
 
-		String getClipboardText() const override;
-		bool setClipboardText(StringView text) override;
-		StringView getKeyName(Keys key) const override;
+		String GetClipboardText() const override;
+		bool SetClipboardText(StringView text) override;
+		StringView GetKeyName(Keys key) const override;
 
-		bool isJoyPresent(int joyId) const override;
-		const char *joyName(int joyId) const override;
-		const JoystickGuid joyGuid(int joyId) const override;
-		int joyNumButtons(int joyId) const override;
-		int joyNumHats(int joyId) const override;
-		int joyNumAxes(int joyId) const override;
-		const JoystickState &joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override;
-		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
+		bool IsJoyPresent(int joyId) const override;
+		const char *GetJoyName(int joyId) const override;
+		const JoystickGuid GetJoyGuid(int joyId) const override;
+		int GetJoyButtonCount(int joyId) const override;
+		int GetJoyHatCount(int joyId) const override;
+		int GetJoyAxisCount(int joyId) const override;
+		const JoystickState &GetJoystickState(int joyId) const override;
+		bool JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override;
+		bool JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
-		void setCursor(Cursor cursor) override;
+		void SetCursor(Cursor cursor) override;
 
 	private:
 		static constexpr int MaxNumJoysticks = 16;
@@ -205,8 +205,8 @@ namespace nCine::Backends
 		/** @brief Deleted assignment operator */
 		SdlInputManager &operator=(const SdlInputManager &) = delete;
 
-		static void handleJoyDeviceEvent(const SDL_Event &event);
-		static int joyInstanceIdToDeviceIndex(SDL_JoystickID instanceId);
+		static void HandleJoyDeviceEvent(const SDL_Event &event);
+		static int JoyInstanceIdToDeviceIndex(SDL_JoystickID instanceId);
 	};
 }
 

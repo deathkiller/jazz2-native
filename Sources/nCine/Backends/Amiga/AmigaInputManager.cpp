@@ -133,7 +133,7 @@ namespace nCine::Backends
 	AmigaMouseState AmigaInputManager::_mouseState;
 	AmigaKeyboardState AmigaInputManager::_keyboardState;
 
-	bool AmigaMouseState::isButtonDown(MouseButton button) const
+	bool AmigaMouseState::IsButtonDown(MouseButton button) const
 	{
 		return (_buttons & (1u << std::uint32_t(button))) != 0;
 	}
@@ -144,56 +144,56 @@ namespace nCine::Backends
 		std::memset(_buttonsState, 0, sizeof(_buttonsState));
 	}
 
-	bool AmigaJoystickState::isButtonPressed(int buttonId) const
+	bool AmigaJoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
-	unsigned char AmigaJoystickState::hatState(int hatId) const
+	unsigned char AmigaJoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
-	float AmigaJoystickState::axisValue(int axisId) const
+	float AmigaJoystickState::GetAxisValue(int axisId) const
 	{
 		static_cast<void>(axisId);
 		return 0.0f;
 	}
 
-	void AmigaJoystickState::resetJoystickState(int joyId)
+	void AmigaJoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		_hatState = HatState::Centered;
 		std::memset(_buttonsState, 0, sizeof(_buttonsState));
 	}
 
-	void AmigaJoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void AmigaJoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
-			_joyButtonEvent.joyId = _joyId;
-			_joyButtonEvent.buttonId = buttonId;
+		if (IInputManager::GetHandler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.JoyId = _joyId;
+			_joyButtonEvent.ButtonId = buttonId;
 			if (pressed) {
 				AmigaInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
 				AmigaInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
 		_buttonsState[buttonId] = pressed;
 	}
 
-	void AmigaJoystickState::simulateHatEvent(unsigned char state)
+	void AmigaJoystickState::SimulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && _hatState != state) {
-			_joyHatEvent.joyId = _joyId;
-			_joyHatEvent.hatId = 0;
-			_joyHatEvent.hatState = state;
+		if (IInputManager::GetHandler() != nullptr && _hatState != state) {
+			_joyHatEvent.JoyId = _joyId;
+			_joyHatEvent.HatId = 0;
+			_joyHatEvent.HatState = state;
 			AmigaInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+			IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 		}
 		_hatState = state;
 	}
@@ -203,10 +203,10 @@ namespace nCine::Backends
 		_joyMapping.Init(this);
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			_pads[i].State.resetJoystickState(i);
+			_pads[i].State.ResetJoystickState(i);
 		}
 		// Poll once so an already-plugged pad connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	AmigaInputManager::~AmigaInputManager()
@@ -217,22 +217,22 @@ namespace nCine::Backends
 		}
 	}
 
-	const MouseState& AmigaInputManager::mouseState() const
+	const MouseState& AmigaInputManager::GetMouseState() const
 	{
 		return _mouseState;
 	}
 
-	const KeyboardState& AmigaInputManager::keyboardState() const
+	const KeyboardState& AmigaInputManager::GetKeyboardState() const
 	{
 		return _keyboardState;
 	}
 
-	bool AmigaInputManager::isJoyPresent(int joyId) const
+	bool AmigaInputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
-	const char* AmigaInputManager::joyName(int joyId) const
+	const char* AmigaInputManager::GetJoyName(int joyId) const
 	{
 		if (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].IsGameController) {
 			return "CD32 Game Pad";
@@ -240,41 +240,41 @@ namespace nCine::Backends
 		return "Amiga Joystick";
 	}
 
-	const JoystickGuid AmigaInputManager::joyGuid(int joyId) const
+	const JoystickGuid AmigaInputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The state publishes the XInput-shaped layout, so the built-in default mapping applies
 		return JoystickGuidType::Xinput;
 	}
 
-	int AmigaInputManager::joyNumButtons(int joyId) const
+	int AmigaInputManager::GetJoyButtonCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return AmigaJoystickState::MaxNumButtons;
 	}
 
-	int AmigaInputManager::joyNumHats(int joyId) const
+	int AmigaInputManager::GetJoyHatCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return AmigaJoystickState::MaxNumHats;
 	}
 
-	int AmigaInputManager::joyNumAxes(int joyId) const
+	int AmigaInputManager::GetJoyAxisCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return AmigaJoystickState::MaxNumAxes;
 	}
 
-	const JoystickState& AmigaInputManager::joystickState(int joyId) const
+	const JoystickState& AmigaInputManager::GetJoystickState(int joyId) const
 	{
 		static AmigaJoystickState nullJoystickState;
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _pads[joyId].State;
 		}
 		return nullJoystickState;
 	}
 
-	bool AmigaInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool AmigaInputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// No Amiga controller has a motor
 		static_cast<void>(joyId);
@@ -284,7 +284,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	bool AmigaInputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool AmigaInputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		static_cast<void>(joyId);
 		static_cast<void>(left);
@@ -293,7 +293,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void AmigaInputManager::setCursor(Cursor cursor)
+	void AmigaInputManager::SetCursor(Cursor cursor)
 	{
 		struct Window* window = AmigaPlatform::GameWindow;
 		if (window == nullptr) {
@@ -310,23 +310,23 @@ namespace nCine::Backends
 				SetPointer(window, _blankPointer, 1, 16, 0, 0);
 			}
 		}
-		IInputManager::setCursor(cursor);
+		IInputManager::SetCursor(cursor);
 	}
 
-	void AmigaInputManager::handleConnection(std::int32_t joyId, bool connected)
+	void AmigaInputManager::HandleConnection(std::int32_t joyId, bool connected)
 	{
 		if (_pads[joyId].Connected == connected) {
 			return;
 		}
 		_pads[joyId].Connected = connected;
-		_joyConnectionEvent.joyId = joyId;
+		_joyConnectionEvent.JoyId = joyId;
 		if (connected) {
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
-			_pads[joyId].State.resetJoystickState(joyId);
+			_pads[joyId].State.ResetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
@@ -334,7 +334,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void AmigaInputManager::processIdcmpMessages()
+	void AmigaInputManager::ProcessIdcmpMessages()
 	{
 		struct Window* window = AmigaPlatform::GameWindow;
 		if (window == nullptr || window->UserPort == nullptr) {
@@ -365,8 +365,8 @@ namespace nCine::Backends
 					// NewMouse wheel events arrive as rawkey codes above the keyboard matrix
 					if (rawKey == 0x7A || rawKey == 0x7B) {
 						if (!released && _inputEventHandler != nullptr) {
-							_scrollEvent.x = 0.0f;
-							_scrollEvent.y = (rawKey == 0x7A ? 1.0f : -1.0f);
+							_scrollEvent.X = 0.0f;
+							_scrollEvent.Y = (rawKey == 0x7A ? 1.0f : -1.0f);
 							_inputEventHandler->OnMouseWheel(_scrollEvent);
 						}
 						break;
@@ -383,9 +383,9 @@ namespace nCine::Backends
 					_keyboardState._keys[std::int32_t(sym)] = !released;
 
 					if (_inputEventHandler != nullptr) {
-						_keyboardEvent.scancode = rawKey;
-						_keyboardEvent.sym = sym;
-						_keyboardEvent.mod = KeyModsFromQualifier(qualifier);
+						_keyboardEvent.Scancode = rawKey;
+						_keyboardEvent.Sym = sym;
+						_keyboardEvent.Mod = KeyModsFromQualifier(qualifier);
 						if (released) {
 							_inputEventHandler->OnKeyReleased(_keyboardEvent);
 						} else {
@@ -408,15 +408,15 @@ namespace nCine::Backends
 									const unsigned char character = static_cast<unsigned char>(text[0]);
 									if (character >= 32 && character != 127) {
 										if (character < 128) {
-											_textInputEvent.text[0] = char(character);
-											_textInputEvent.text[1] = '\0';
-											_textInputEvent.length = 1;
+											_textInputEvent.Text[0] = char(character);
+											_textInputEvent.Text[1] = '\0';
+											_textInputEvent.Length = 1;
 										} else {
 											// Latin-1 to UTF-8 for the engine's text fields
-											_textInputEvent.text[0] = char(0xC0 | (character >> 6));
-											_textInputEvent.text[1] = char(0x80 | (character & 0x3F));
-											_textInputEvent.text[2] = '\0';
-											_textInputEvent.length = 2;
+											_textInputEvent.Text[0] = char(0xC0 | (character >> 6));
+											_textInputEvent.Text[1] = char(0x80 | (character & 0x3F));
+											_textInputEvent.Text[2] = '\0';
+											_textInputEvent.Length = 2;
 										}
 										_inputEventHandler->OnTextInput(_textInputEvent);
 									}
@@ -427,8 +427,8 @@ namespace nCine::Backends
 					break;
 				}
 				case IDCMP_MOUSEBUTTONS: {
-					_mouseState.x = mouseX;
-					_mouseState.y = mouseY;
+					_mouseState.X = mouseX;
+					_mouseState.Y = mouseY;
 					MouseButton button;
 					bool pressed;
 					switch (code) {
@@ -446,9 +446,9 @@ namespace nCine::Backends
 						_mouseState._buttons &= ~(1u << std::uint32_t(button));
 					}
 					if (_inputEventHandler != nullptr) {
-						_mouseEvent.x = mouseX;
-						_mouseEvent.y = mouseY;
-						_mouseEvent.button = button;
+						_mouseEvent.X = mouseX;
+						_mouseEvent.Y = mouseY;
+						_mouseEvent.Button = button;
 						if (pressed) {
 							_inputEventHandler->OnMouseDown(_mouseEvent);
 						} else {
@@ -458,8 +458,8 @@ namespace nCine::Backends
 					break;
 				}
 				case IDCMP_MOUSEMOVE:
-					_mouseState.x = mouseX;
-					_mouseState.y = mouseY;
+					_mouseState.X = mouseX;
+					_mouseState.Y = mouseY;
 					if (_inputEventHandler != nullptr) {
 						_inputEventHandler->OnMouseMove(_mouseState);
 					}
@@ -468,7 +468,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void AmigaInputManager::pollJoyPorts()
+	void AmigaInputManager::PollJoyPorts()
 	{
 		if (!AmigaPlatform::HasLowLevel()) {
 			return;
@@ -483,7 +483,7 @@ namespace nCine::Backends
 
 			const bool isPad = (type == JP_TYPE_GAMECTLR);
 			const bool connected = (isPad || type == JP_TYPE_JOYSTK);
-			handleConnection(i, connected);
+			HandleConnection(i, connected);
 			if (!connected) {
 				continue;
 			}
@@ -492,14 +492,14 @@ namespace nCine::Backends
 
 			// The CD32 pad's red button is the primary action (A), blue the secondary (X) - A stays jump/confirm,
 			// X shoot
-			pad.simulateButtonEvent(ButtonA, (state & JPF_BUTTON_RED) != 0);
-			pad.simulateButtonEvent(ButtonX, (state & JPF_BUTTON_BLUE) != 0);
+			pad.SimulateButtonEvent(ButtonA, (state & JPF_BUTTON_RED) != 0);
+			pad.SimulateButtonEvent(ButtonX, (state & JPF_BUTTON_BLUE) != 0);
 			if (isPad) {
-				pad.simulateButtonEvent(ButtonB, (state & JPF_BUTTON_GREEN) != 0);
-				pad.simulateButtonEvent(ButtonY, (state & JPF_BUTTON_YELLOW) != 0);
-				pad.simulateButtonEvent(ButtonStart, (state & JPF_BUTTON_PLAY) != 0);
-				pad.simulateButtonEvent(ButtonLShoulder, (state & JPF_BUTTON_REVERSE) != 0);
-				pad.simulateButtonEvent(ButtonRShoulder, (state & JPF_BUTTON_FORWARD) != 0);
+				pad.SimulateButtonEvent(ButtonB, (state & JPF_BUTTON_GREEN) != 0);
+				pad.SimulateButtonEvent(ButtonY, (state & JPF_BUTTON_YELLOW) != 0);
+				pad.SimulateButtonEvent(ButtonStart, (state & JPF_BUTTON_PLAY) != 0);
+				pad.SimulateButtonEvent(ButtonLShoulder, (state & JPF_BUTTON_REVERSE) != 0);
+				pad.SimulateButtonEvent(ButtonRShoulder, (state & JPF_BUTTON_FORWARD) != 0);
 			}
 
 			unsigned char hat = HatState::Centered;
@@ -507,14 +507,14 @@ namespace nCine::Backends
 			if (state & JPF_JOY_DOWN) hat |= HatState::Down;
 			if (state & JPF_JOY_LEFT) hat |= HatState::Left;
 			if (state & JPF_JOY_RIGHT) hat |= HatState::Right;
-			pad.simulateHatEvent(hat);
+			pad.SimulateHatEvent(hat);
 		}
 	}
 
-	void AmigaInputManager::updateJoystickStates()
+	void AmigaInputManager::UpdateJoystickStates()
 	{
-		processIdcmpMessages();
-		pollJoyPorts();
+		ProcessIdcmpMessages();
+		PollJoyPorts();
 	}
 }
 

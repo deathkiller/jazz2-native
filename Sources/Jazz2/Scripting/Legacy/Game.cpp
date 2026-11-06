@@ -252,29 +252,29 @@ namespace Jazz2::Scripting
 		// Virtual-key codes of Windows, as JJ2+ has them - mouse buttons, either of two sides of a modifier, or a key
 		auto& input = theApplication().GetInputManager();
 		switch (key) {
-			case 0x01: return input.mouseState().isButtonDown(MouseButton::Left);
-			case 0x02: return input.mouseState().isButtonDown(MouseButton::Right);
-			case 0x04: return input.mouseState().isButtonDown(MouseButton::Middle);
-			case 0x05: return input.mouseState().isButtonDown(MouseButton::Fourth);
-			case 0x06: return input.mouseState().isButtonDown(MouseButton::Fifth);
-			case 0x10: return input.keyboardState().isKeyDown(Keys::LShift) || input.keyboardState().isKeyDown(Keys::RShift);
-			case 0x11: return input.keyboardState().isKeyDown(Keys::LCtrl) || input.keyboardState().isKeyDown(Keys::RCtrl);
-			case 0x12: return input.keyboardState().isKeyDown(Keys::LAlt) || input.keyboardState().isKeyDown(Keys::RAlt);
+			case 0x01: return input.GetMouseState().IsButtonDown(MouseButton::Left);
+			case 0x02: return input.GetMouseState().IsButtonDown(MouseButton::Right);
+			case 0x04: return input.GetMouseState().IsButtonDown(MouseButton::Middle);
+			case 0x05: return input.GetMouseState().IsButtonDown(MouseButton::Fourth);
+			case 0x06: return input.GetMouseState().IsButtonDown(MouseButton::Fifth);
+			case 0x10: return input.GetKeyboardState().IsKeyDown(Keys::LShift) || input.GetKeyboardState().IsKeyDown(Keys::RShift);
+			case 0x11: return input.GetKeyboardState().IsKeyDown(Keys::LCtrl) || input.GetKeyboardState().IsKeyDown(Keys::RCtrl);
+			case 0x12: return input.GetKeyboardState().IsKeyDown(Keys::LAlt) || input.GetKeyboardState().IsKeyDown(Keys::RAlt);
 		}
 		Keys mapped = VirtualKeyToKey(key);
-		return (mapped != Keys::Unknown && input.keyboardState().isKeyDown(mapped));
+		return (mapped != Keys::Unknown && input.GetKeyboardState().IsKeyDown(mapped));
 	}
 
 	// The position of the mouse in the view of the game, which the window shows scaled
 	static Vector2i GetCursorInView() {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		auto& mouse = theApplication().GetInputManager().mouseState();
+		auto& mouse = theApplication().GetInputManager().GetMouseState();
 		Vector2i windowSize = theApplication().GetResolution();
 		Vector2i viewSize = owner->GetLevelHandler()->GetViewSize();
 		if (windowSize.X <= 0 || windowSize.Y <= 0 || viewSize.X <= 0 || viewSize.Y <= 0) {
-			return Vector2i(mouse.x, mouse.y);
+			return Vector2i(mouse.X, mouse.Y);
 		}
-		return Vector2i(mouse.x * viewSize.X / windowSize.X, mouse.y * viewSize.Y / windowSize.Y);
+		return Vector2i(mouse.X * viewSize.X / windowSize.X, mouse.Y * viewSize.Y / windowSize.Y);
 	}
 
 	std::int32_t getCursorX() {

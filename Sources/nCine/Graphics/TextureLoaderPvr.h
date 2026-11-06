@@ -77,9 +77,9 @@ namespace nCine
 		static const std::uint64_t FMT_A_8 = 0x0000000800000061ULL;
 
 		/** @brief Reads the PVR3 header and fills the corresponding structure */
-		bool readHeader(Pvr3Header& header);
+		bool ReadHeader(Pvr3Header& header);
 		/** @brief Parses the PVR3 header to determine the texture format */
-		bool parseFormat(const Pvr3Header& header);
+		bool ParseFormat(const Pvr3Header& header);
 	};
 
 }

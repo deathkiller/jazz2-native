@@ -39,7 +39,7 @@ namespace nCine
 		Particle& operator=(Particle&&) = default;
 
 		/** @brief Returns `true` if the particle is still alive */
-		inline bool isAlive() const {
+		inline bool IsAlive() const {
 			return _life > 0.0f;
 		}
 
@@ -49,7 +49,7 @@ namespace nCine
 		 *
 		 * @note This method is protected as it should only be called by a `ParticleSystem`.
 		 */
-		inline Particle clone() const {
+		inline Particle Clone() const {
 			return Particle(*this);
 		}
 
@@ -58,10 +58,10 @@ namespace nCine
 
 	private:
 		/** @brief Initializes a particle with initial life, position, velocity and rotation */
-		void init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace);
+		void Init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace);
 
 		void OnUpdate(float timeMult) override;
-		void transform() override;
+		void Transform() override;
 	};
 
 }

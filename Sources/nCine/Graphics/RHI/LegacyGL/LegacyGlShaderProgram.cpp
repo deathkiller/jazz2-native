@@ -263,7 +263,7 @@ namespace nCine::RHI::LegacyGL
 			for (const LegacyGlAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
 					LegacyGlVertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
-					attr.setVbo(vbo);
+					attr.SetVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}

@@ -69,8 +69,8 @@ namespace Jazz2::Editor
 		if (_heldButtons != 0 && !movedThisFrame && _context.GetEditHandler() != nullptr) {
 			IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
 			Vector2i global;
-			if (gfxDevice.globalMousePosition(global)) {
-				Vector2i mainPos = gfxDevice.windowPosition();
+			if (gfxDevice.GetGlobalMousePosition(global)) {
+				Vector2i mainPos = gfxDevice.GetWindowPosition();
 				Vector2i units = global - mainPos;
 				if (AuxiliaryWindow* window = AuxiliaryWindow::FindById(_pointerWindow)) {
 					// As the backend makes positions over that window relative to the main window
@@ -91,7 +91,7 @@ namespace Jazz2::Editor
 		// button held; told by the system, it's released then, a frame later, in case the event is only late
 		if (_heldButtons != 0) {
 			std::uint32_t buttons;
-			std::uint32_t missed = (theApplication().GetGfxDevice().globalMouseButtons(buttons) ? (_heldButtons & ~buttons) : 0);
+			std::uint32_t missed = (theApplication().GetGfxDevice().GetGlobalMouseButtons(buttons) ? (_heldButtons & ~buttons) : 0);
 			if (missed == 0) {
 				_missedReleaseFrames = 0;
 			} else if (++_missedReleaseFrames >= 2) {
@@ -108,10 +108,10 @@ namespace Jazz2::Editor
 
 		// A key released while the window didn't have the focus isn't told, it's held no more once it's up
 		if (!_heldKeys.empty()) {
-			const KeyboardState& keyboard = theApplication().GetInputManager().keyboardState();
+			const KeyboardState& keyboard = theApplication().GetInputManager().GetKeyboardState();
 			for (std::size_t i = _heldKeys.size(); i > 0; i--) {
 				Keys key = _heldKeys[i - 1];
-				if (!keyboard.isKeyDown(key)) {
+				if (!keyboard.IsKeyDown(key)) {
 					_heldKeys.erase(_heldKeys.begin() + (i - 1));
 					ReleaseHeldActions(key);
 				}
@@ -157,14 +157,14 @@ namespace Jazz2::Editor
 		}
 
 		ActionRegistry& actions = _context.GetActions();
-		_modifiers = event.mod;
+		_modifiers = event.Mod;
 		SetInputModality(InputModality::KeyboardMouse);
 		// A key held is pressed again and again as it repeats, the side buttons of a mouse aren't, nor are they released
 		bool repeat = false;
-		if (event.sym < Keys::Count) {
-			repeat = (std::find(_heldKeys.begin(), _heldKeys.end(), event.sym) != _heldKeys.end());
+		if (event.Sym < Keys::Count) {
+			repeat = (std::find(_heldKeys.begin(), _heldKeys.end(), event.Sym) != _heldKeys.end());
 			if (!repeat) {
-				_heldKeys.push_back(event.sym);
+				_heldKeys.push_back(event.Sym);
 			}
 		}
 		if (_playTest.IsInGame()) {
@@ -175,7 +175,7 @@ namespace Jazz2::Editor
 			bool handled = actions.HandleKey(event, ActionScope::Play);
 			_handlingShortcut = false;
 			// The keys of the side buttons of a mouse are only the editor's, the game knows no key past the last one
-			if (!handled && event.sym < Keys::Count && _playTest.GetPlayTest() != nullptr) {
+			if (!handled && event.Sym < Keys::Count && _playTest.GetPlayTest() != nullptr) {
 				_playTest.GetPlayTest()->GetLevelHandler().OnKeyPressed(event);
 			}
 			return;
@@ -183,7 +183,7 @@ namespace Jazz2::Editor
 		if (_playTest.IsEntering()) {
 			// The key that goes back from the game cancels going into it
 			EditorAction* stop = actions.Find(ActionIds::PlayStop);
-			if (event.sym == Keys::Escape || (stop != nullptr && (stop->Key.Matches(event) || stop->AlternateKey.Matches(event)))) {
+			if (event.Sym == Keys::Escape || (stop != nullptr && (stop->Key.Matches(event) || stop->AlternateKey.Matches(event)))) {
 				_host.StopPlayTest(false);
 			}
 			return;
@@ -193,8 +193,8 @@ namespace Jazz2::Editor
 		}
 
 		ToolManager& tools = _context.GetTools();
-		bool noModifiers = (event.mod & (KeyMod::Ctrl | KeyMod::Alt | KeyMod::Shift)) == 0;
-		switch (event.sym) {
+		bool noModifiers = (event.Mod & (KeyMod::Ctrl | KeyMod::Alt | KeyMod::Shift)) == 0;
+		switch (event.Sym) {
 			case Keys::Space:
 				tools.BeginTemporary(EditorToolType::Hand);
 				return;
@@ -231,7 +231,7 @@ namespace Jazz2::Editor
 		if (noModifiers) {
 			EditorCamera& camera = editHandler->GetCamera();
 			Rectf view = _host.GetViewRect();
-			switch (event.sym) {
+			switch (event.Sym) {
 				case Keys::Left: camera.PanBy(Vector2f(-view.W * KeyboardPanFraction, 0.0f)); return;
 				case Keys::Right: camera.PanBy(Vector2f(view.W * KeyboardPanFraction, 0.0f)); return;
 				case Keys::Up: camera.PanBy(Vector2f(0.0f, -view.H * KeyboardPanFraction)); return;
@@ -244,25 +244,25 @@ namespace Jazz2::Editor
 		EditorAction* ran = nullptr;
 		bool handled = actions.HandleKey(event, ActionScope::Edit, repeat, &ran);
 		_handlingShortcut = false;
-		if (ran != nullptr && ran->Release && event.sym < Keys::Count) {
-			_heldActions.push_back(HeldAction{ event.sym, ran });
+		if (ran != nullptr && ran->Release && event.Sym < Keys::Count) {
+			_heldActions.push_back(HeldAction{ event.Sym, ran });
 		}
 
 		// The number keys choose a layer by their actions, with Shift they hide it, unless an action was given the key
-		if (!handled && (event.mod & KeyMod::Shift) != 0 && (event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0 &&
-			event.sym >= Keys::D1 && event.sym <= Keys::D9) {
-			_context.ToggleLayerFlag(std::int32_t(event.sym) - std::int32_t(Keys::D1), DocumentLayer::EditorHidden);
+		if (!handled && (event.Mod & KeyMod::Shift) != 0 && (event.Mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0 &&
+			event.Sym >= Keys::D1 && event.Sym <= Keys::D9) {
+			_context.ToggleLayerFlag(std::int32_t(event.Sym) - std::int32_t(Keys::D1), DocumentLayer::EditorHidden);
 		}
 	}
 
 	void EditorInputRouter::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_modifiers = event.mod;
-		_heldKeys.erase(std::remove(_heldKeys.begin(), _heldKeys.end(), event.sym), _heldKeys.end());
-		ReleaseHeldActions(event.sym);
+		_modifiers = event.Mod;
+		_heldKeys.erase(std::remove(_heldKeys.begin(), _heldKeys.end(), event.Sym), _heldKeys.end());
+		ReleaseHeldActions(event.Sym);
 		if (_playTest.IsInGame()) {
 			// The game knows no key past the last one, as those of the side buttons of a mouse
-			if (event.sym < Keys::Count && _playTest.GetPlayTest() != nullptr) {
+			if (event.Sym < Keys::Count && _playTest.GetPlayTest() != nullptr) {
 				_playTest.GetPlayTest()->GetLevelHandler().OnKeyReleased(event);
 			}
 			return;
@@ -271,9 +271,9 @@ namespace Jazz2::Editor
 		_toolCallbackDepth++;
 		tools.GetActive()->OnKeyReleased(event);
 		_toolCallbackDepth--;
-		if (event.sym == Keys::Space) {
+		if (event.Sym == Keys::Space) {
 			tools.EndTemporary(EditorToolType::Hand);
-		} else if (event.sym == Keys::LAlt) {
+		} else if (event.Sym == Keys::LAlt) {
 			tools.EndTemporary(EditorToolType::Eyedropper);
 		}
 	}
@@ -338,16 +338,16 @@ namespace Jazz2::Editor
 
 		Vector2f screen = surface->GetScreenSize();
 		auto positionOf = [screen](const TouchEvent::Pointer& pointer) {
-			return Vector2f(pointer.x * screen.X, pointer.y * screen.Y);
+			return Vector2f(pointer.X * screen.X, pointer.Y * screen.Y);
 		};
-		const TouchEvent::Pointer* action = (event.actionIndex >= 0 && event.actionIndex < std::int32_t(event.count) ? &event.pointers[event.actionIndex] : nullptr);
-		bool pressed = (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown);
-		bool released = (event.type == TouchEventType::Up || event.type == TouchEventType::PointerUp);
+		const TouchEvent::Pointer* action = (event.ActionIndex >= 0 && event.ActionIndex < std::int32_t(event.Count) ? &event.Pointers[event.ActionIndex] : nullptr);
+		bool pressed = (event.Type == TouchEventType::Down || event.Type == TouchEventType::PointerDown);
+		bool released = (event.Type == TouchEventType::Up || event.Type == TouchEventType::PointerUp);
 
 		// A finger put on the bar over the level, or on a menu opened from it, is the pointer of the editor, the game
 		// doesn't see it at all
 		if (pressed && action != nullptr && _barTouchId < 0 && surface->IsOverInterface(positionOf(*action))) {
-			_barTouchId = action->id;
+			_barTouchId = action->Id;
 			SetInputModality(InputModality::Touch);
 			Vector2f pos = positionOf(*action);
 			PointerMove(pos);
@@ -355,19 +355,19 @@ namespace Jazz2::Editor
 			return;
 		}
 		if (_barTouchId >= 0) {
-			if (released && action != nullptr && action->id == _barTouchId) {
+			if (released && action != nullptr && action->Id == _barTouchId) {
 				// What it pressed is clicked now, which may end the play-test
 				_barTouchId = -1;
 				PointerUp(positionOf(*action), MouseButton::Left);
 				return;
 			}
-			std::int32_t index = event.findPointerIndex(_barTouchId);
+			std::int32_t index = event.FindPointerIndex(_barTouchId);
 			if (index < 0) {
 				// Gone without being lifted, what it held isn't clicked
 				_barTouchId = -1;
 				surface->CancelPointerCapture();
-			} else if (event.type == TouchEventType::Move) {
-				PointerMove(positionOf(event.pointers[index]));
+			} else if (event.Type == TouchEventType::Move) {
+				PointerMove(positionOf(event.Pointers[index]));
 			}
 		}
 
@@ -383,24 +383,24 @@ namespace Jazz2::Editor
 		// The other fingers go to the game as if the one on the bar wasn't there, the first of them comes and the last of
 		// them goes as the only one
 		TouchEvent gameEvent = event;
-		gameEvent.count = 0;
-		gameEvent.actionIndex = -1;
-		for (std::uint32_t i = 0; i < event.count && i < TouchEvent::MaxPointers; i++) {
-			if (event.pointers[i].id == _barTouchId) {
+		gameEvent.Count = 0;
+		gameEvent.ActionIndex = -1;
+		for (std::uint32_t i = 0; i < event.Count && i < TouchEvent::MaxPointers; i++) {
+			if (event.Pointers[i].Id == _barTouchId) {
 				continue;
 			}
-			if (std::int32_t(i) == event.actionIndex) {
-				gameEvent.actionIndex = std::int32_t(gameEvent.count);
+			if (std::int32_t(i) == event.ActionIndex) {
+				gameEvent.ActionIndex = std::int32_t(gameEvent.Count);
 			}
-			gameEvent.pointers[gameEvent.count++] = event.pointers[i];
+			gameEvent.Pointers[gameEvent.Count++] = event.Pointers[i];
 		}
-		if (gameEvent.count == 0) {
+		if (gameEvent.Count == 0) {
 			return;
 		}
-		if (gameEvent.type == TouchEventType::PointerDown && gameEvent.count == 1) {
-			gameEvent.type = TouchEventType::Down;
-		} else if (gameEvent.type == TouchEventType::PointerUp && gameEvent.count == 1) {
-			gameEvent.type = TouchEventType::Up;
+		if (gameEvent.Type == TouchEventType::PointerDown && gameEvent.Count == 1) {
+			gameEvent.Type = TouchEventType::Down;
+		} else if (gameEvent.Type == TouchEventType::PointerUp && gameEvent.Count == 1) {
+			gameEvent.Type = TouchEventType::Up;
 		}
 		game.OnTouchEvent(gameEvent);
 	}
@@ -474,18 +474,18 @@ namespace Jazz2::Editor
 		}
 		// The side buttons of a mouse have no use of their own, they're pressed as the keys that stand for them, so
 		// actions can be given them
-		Keys key = Shortcut::GetMouseButtonKey(event.button);
+		Keys key = Shortcut::GetMouseButtonKey(event.Button);
 		if (key != Keys::Unknown) {
 			KeyboardEvent keyEvent;
-			keyEvent.sym = key;
-			keyEvent.mod = _modifiers;
+			keyEvent.Sym = key;
+			keyEvent.Mod = _modifiers;
 			OnKeyPressed(keyEvent);
 			return;
 		}
 		SetInputModality(InputModality::KeyboardMouse);
-		_pointerWindow = event.windowId;
-		_heldButtons |= GetButtonBit(event.button);
-		PointerDown(ToDrawable(event.x, event.y), event.button);
+		_pointerWindow = event.WindowId;
+		_heldButtons |= GetButtonBit(event.Button);
+		PointerDown(ToDrawable(event.X, event.Y), event.Button);
 	}
 
 	std::uint32_t EditorInputRouter::GetButtonBit(MouseButton button)
@@ -522,8 +522,8 @@ namespace Jazz2::Editor
 		const JoyMappedState* state = nullptr;
 		std::int32_t joyId = -1;
 		for (std::int32_t i = 0; i < IInputManager::MaxNumJoysticks; i++) {
-			if (input.isJoyMapped(i)) {
-				state = &input.joyMappedState(i);
+			if (input.IsJoyMapped(i)) {
+				state = &input.GetJoyMappedState(i);
 				joyId = i;
 				break;
 			}
@@ -535,7 +535,7 @@ namespace Jazz2::Editor
 
 		std::uint32_t buttons = 0;
 		for (std::int32_t i = 0; i < std::int32_t(ButtonName::Count); i++) {
-			if (state->isButtonPressed(ButtonName(i))) {
+			if (state->IsButtonPressed(ButtonName(i))) {
 				buttons |= (1u << i);
 			}
 		}
@@ -546,11 +546,11 @@ namespace Jazz2::Editor
 		auto wasReleased = [released](ButtonName name) { return (released & (1u << std::int32_t(name))) != 0; };
 		auto isHeld = [buttons](ButtonName name) { return (buttons & (1u << std::int32_t(name))) != 0; };
 
-		Vector2f leftStick(state->axisValue(AxisName::LeftX), state->axisValue(AxisName::LeftY));
-		Vector2f rightStick(state->axisValue(AxisName::RightX), state->axisValue(AxisName::RightY));
-		input.deadZoneNormalize(leftStick, IInputManager::LeftStickDeadZone);
-		input.deadZoneNormalize(rightStick, IInputManager::RightStickDeadZone);
-		float zoom = state->axisValue(AxisName::RightTrigger) - state->axisValue(AxisName::LeftTrigger);
+		Vector2f leftStick(state->GetAxisValue(AxisName::LeftX), state->GetAxisValue(AxisName::LeftY));
+		Vector2f rightStick(state->GetAxisValue(AxisName::RightX), state->GetAxisValue(AxisName::RightY));
+		input.DeadZoneNormalize(leftStick, IInputManager::LeftStickDeadZone);
+		input.DeadZoneNormalize(rightStick, IInputManager::RightStickDeadZone);
+		float zoom = state->GetAxisValue(AxisName::RightTrigger) - state->GetAxisValue(AxisName::LeftTrigger);
 		if (std::abs(zoom) < 0.1f) {
 			zoom = 0.0f;
 		}
@@ -572,7 +572,7 @@ namespace Jazz2::Editor
 
 		// Without a right stick (as on the PSP), the left stick is the right one while B is held, it moves the view or
 		// scrolls a list then - so B is the right button of a mouse only when let go without moving the stick
-		if (!input.joyHasMappedAxis(joyId, AxisName::RightX)) {
+		if (!input.JoyHasMappedAxis(joyId, AxisName::RightX)) {
 			if (wasPressed(ButtonName::B)) {
 				_gamepadStickWithB = !surface.HasOverlays();
 				_gamepadStickWithBMoved = false;
@@ -745,8 +745,8 @@ namespace Jazz2::Editor
 		if (wasPressed(ButtonName::B)) {
 			if (surface.HasOverlays()) {
 				KeyboardEvent escape;
-				escape.sym = Keys::Escape;
-				escape.mod = 0;
+				escape.Sym = Keys::Escape;
+				escape.Mod = 0;
 				surface.OnKeyPressed(escape);
 			} else if (!_gamepadStickWithB) {
 				PointerDown(_gamepadCursor, MouseButton::Right);
@@ -890,10 +890,10 @@ namespace Jazz2::Editor
 		_toolCallbackDepth--;
 		_toolPointerDown = false;
 		// A tool used for a while waits for the release to end, which doesn't come to it anymore
-		if (!theApplication().GetInputManager().keyboardState().isKeyDown(Keys::Space)) {
+		if (!theApplication().GetInputManager().GetKeyboardState().IsKeyDown(Keys::Space)) {
 			tools.EndTemporary(EditorToolType::Hand);
 		}
-		if (!theApplication().GetInputManager().keyboardState().isKeyDown(Keys::LAlt)) {
+		if (!theApplication().GetInputManager().GetKeyboardState().IsKeyDown(Keys::LAlt)) {
 			tools.EndTemporary(EditorToolType::Eyedropper);
 		}
 	}
@@ -922,12 +922,12 @@ namespace Jazz2::Editor
 
 	void EditorInputRouter::OnMouseUp(const MouseEvent& event)
 	{
-		if (_context.GetEditHandler() == nullptr || Shortcut::GetMouseButtonKey(event.button) != Keys::Unknown) {
+		if (_context.GetEditHandler() == nullptr || Shortcut::GetMouseButtonKey(event.Button) != Keys::Unknown) {
 			return;
 		}
-		_pointerWindow = event.windowId;
-		_heldButtons &= ~GetButtonBit(event.button);
-		PointerUp(ToDrawable(event.x, event.y), event.button);
+		_pointerWindow = event.WindowId;
+		_heldButtons &= ~GetButtonBit(event.Button);
+		PointerUp(ToDrawable(event.X, event.Y), event.Button);
 	}
 
 	void EditorInputRouter::PointerUp(Vector2f pos, MouseButton button)
@@ -941,10 +941,10 @@ namespace Jazz2::Editor
 			tools.GetActive()->OnPointerUp(MakeToolPointer(_pointerPos, button));
 			_toolCallbackDepth--;
 			// A tool used for a while that waited for the release is done now
-			if (!theApplication().GetInputManager().keyboardState().isKeyDown(Keys::Space)) {
+			if (!theApplication().GetInputManager().GetKeyboardState().IsKeyDown(Keys::Space)) {
 				tools.EndTemporary(EditorToolType::Hand);
 			}
-			if (!theApplication().GetInputManager().keyboardState().isKeyDown(Keys::LAlt)) {
+			if (!theApplication().GetInputManager().GetKeyboardState().IsKeyDown(Keys::LAlt)) {
 				tools.EndTemporary(EditorToolType::Eyedropper);
 			}
 			return;
@@ -968,10 +968,10 @@ namespace Jazz2::Editor
 		if (_context.GetEditHandler() == nullptr) {
 			return;
 		}
-		Vector2f pos = ToDrawable(state.x, state.y);
+		Vector2f pos = ToDrawable(state.X, state.Y);
 		bool moved = ((pos - _mousePos).Length() >= 4.0f);
 		_mousePos = pos;
-		_pointerWindow = state.windowId;
+		_pointerWindow = state.WindowId;
 		_movedThisFrame = true;
 		if (_inputModality == InputModality::Gamepad && !moved) {
 			// The mouse barely moved, the gamepad is still used
@@ -1020,10 +1020,10 @@ namespace Jazz2::Editor
 			return;
 		}
 
-		_pointerWindow = event.windowId;
+		_pointerWindow = event.WindowId;
 		PointerEvent uiEvent;
 		uiEvent.Pos = _pointerPos;
-		uiEvent.Wheel = Vector2f(event.x, event.y);
+		uiEvent.Wheel = Vector2f(event.X, event.Y);
 		uiEvent.Modifiers = _modifiers;
 		uiEvent.WindowId = _pointerWindow;
 		if (_context.GetSurface()->OnWheel(uiEvent) || !_playTest.IsEditing()) {
@@ -1035,25 +1035,25 @@ namespace Jazz2::Editor
 		bool ctrl = (_modifiers & KeyMod::Ctrl) != 0;
 		bool shift = (_modifiers & KeyMod::Shift) != 0;
 		bool alt = (_modifiers & KeyMod::Alt) != 0;
-		if (event.y != 0.0f && ctrl && shift) {
-			_host.ChangeUiScale(event.y > 0.0f ? 1 : -1);
+		if (event.Y != 0.0f && ctrl && shift) {
+			_host.ChangeUiScale(event.Y > 0.0f ? 1 : -1);
 			return;
 		}
-		if (event.y != 0.0f && alt) {
-			_context.SetCurrentLayer(_context.GetCurrentLayer() + (event.y > 0.0f ? -1 : 1));
+		if (event.Y != 0.0f && alt) {
+			_context.SetCurrentLayer(_context.GetCurrentLayer() + (event.Y > 0.0f ? -1 : 1));
 			return;
 		}
 
 		EditorCamera& camera = editHandler->GetCamera();
 		Rectf view = _host.GetViewRect();
 		float step = std::round(std::min(view.W, view.H) * WheelPanFraction);
-		Vector2f pan(event.x, 0.0f);
+		Vector2f pan(event.X, 0.0f);
 		if (shift) {
-			pan.X -= event.y;
+			pan.X -= event.Y;
 		} else if (ctrl) {
-			pan.Y -= event.y;
-		} else if (event.y != 0.0f) {
-			camera.ZoomSteps(_pointerPos, event.y);
+			pan.Y -= event.Y;
+		} else if (event.Y != 0.0f) {
+			camera.ZoomSteps(_pointerPos, event.Y);
 		}
 		if (pan.X != 0.0f || pan.Y != 0.0f) {
 			camera.PanBy(pan * step);
@@ -1084,8 +1084,8 @@ namespace Jazz2::Editor
 	Vector2f EditorInputRouter::ToDrawable(std::int32_t x, std::int32_t y)
 	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		float scaleX = (gfxDevice.width() > 0 ? float(gfxDevice.drawableWidth()) / float(gfxDevice.width()) : 1.0f);
-		float scaleY = (gfxDevice.height() > 0 ? float(gfxDevice.drawableHeight()) / float(gfxDevice.height()) : 1.0f);
+		float scaleX = (gfxDevice.GetWidth() > 0 ? float(gfxDevice.GetDrawableWidth()) / float(gfxDevice.GetWidth()) : 1.0f);
+		float scaleY = (gfxDevice.GetHeight() > 0 ? float(gfxDevice.GetDrawableHeight()) / float(gfxDevice.GetHeight()) : 1.0f);
 		return Vector2f(x * scaleX, y * scaleY);
 	}
 }

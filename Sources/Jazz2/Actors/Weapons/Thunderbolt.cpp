@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
-		_initialLayer = _renderer.layer();
+		_initialLayer = _renderer.GetLayer();
 		_strength = 2;
 		_health = INT32_MAX;
 		SetState(ActorState::ApplyGravitation, false);
@@ -48,10 +48,10 @@ namespace Jazz2::Actors::Weapons
 		OnUpdateHitbox();
 
 		if (Random().NextBool()) {
-			_renderer.setFlippedY(true);
+			_renderer.SetFlippedY(true);
 		}
 
-		_renderer.setRotation(angle);
+		_renderer.SetRotation(angle);
 
 		if (auto* player = runtime_cast<Player>(owner.get())) {
 			_firedUp = player->_wasUpPressed;
@@ -82,9 +82,9 @@ namespace Jazz2::Actors::Weapons
 				player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
 				float scale = 1.0f - std::abs(gunspotPos.X - _pos.X) / _currentAnimation->Base->FrameDimensions.X;
 				MoveInstantly(gunspotPos, MoveType::Absolute | MoveType::Force);
-				_renderer.setScale(Vector2f(scale, 1.0f));
+				_renderer.SetScale(Vector2f(scale, 1.0f));
 
-				float anglePrev = _renderer.rotation();
+				float anglePrev = _renderer.GetRotation();
 				if (IsFacingLeft()) {
 					angle = atan2Approx(_pos.Y - _farPoint.Y, _pos.X - _farPoint.X);
 				} else {
@@ -92,9 +92,9 @@ namespace Jazz2::Actors::Weapons
 				}
 				angle = lerp(anglePrev, angle, 0.4f * timeMult);
 				if (std::abs(anglePrev - angle) > 0.06f) {
-					_renderer.setRotation(angle);
+					_renderer.SetRotation(angle);
 				} else {
-					angle = _renderer.rotation();
+					angle = _renderer.GetRotation();
 				}
 
 				float distance = (IsFacingLeft() ? -BeamDistance : BeamDistance);
@@ -121,11 +121,11 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_lightProgress += timeMult * LightProgressSpeed;
-		_renderer.setLayer((uint16_t)(_initialLayer - _lightProgress * 10.0f));
+		_renderer.SetLayer((uint16_t)(_initialLayer - _lightProgress * 10.0f));
 
 		// Sparks discharge only while the beam is hot (the same window as its light)
 		if (_lightProgress < fPi) {
-			CreateSparks(_levelHandler, _metadata, _pos, _farPoint, _renderer.layer(), timeMult);
+			CreateSparks(_levelHandler, _metadata, _pos, _farPoint, _renderer.GetLayer(), timeMult);
 		}
 	}
 

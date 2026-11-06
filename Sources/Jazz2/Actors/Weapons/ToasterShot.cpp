@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y += ax * Random().NextFloat(-0.5f, 0.5f);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 	}
 
 	void ToasterShot::OnUpdate(float timeMult)
@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, (_upgrades & 0x1) != 0 ? MoveType::Absolute : (MoveType::Absolute | MoveType::Force));
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 
 		ShotBase::OnUpdate(timeMult);

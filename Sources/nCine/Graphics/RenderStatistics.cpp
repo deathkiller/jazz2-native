@@ -22,20 +22,20 @@ namespace nCine
 		TracyPlot("Render Commands", static_cast<int64_t>(_allCommands.commands));
 
 		for (unsigned int i = 0; i < (unsigned int)RenderCommand::Type::Count; i++) {
-			_typedCommands[i].reset();
+			_typedCommands[i].Reset();
 		}
-		_allCommands.reset();
+		_allCommands.Reset();
 
 		for (unsigned int i = 0; i < (unsigned int)RenderBuffersManager::BufferTypes::Count; i++) {
-			_typedBuffers[i].reset();
+			_typedBuffers[i].Reset();
 		}
 
 		// Ping pong index for last and current frame
 		_index = (_index + 1) % 2;
 		_culledNodes[_index] = 0;
 
-		_vaoPool.reset();
-		_commandPool.reset();
+		_vaoPool.Reset();
+		_commandPool.Reset();
 	}
 
 	void RenderStatistics::GatherStatistics(const RenderCommand& command)

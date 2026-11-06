@@ -24,7 +24,7 @@ namespace nCine::Backends
 
 		setFocusPolicy(Qt::StrongFocus);
 		setMouseTracking(true);
-		QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(autoUpdate()));
+		QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(AutoUpdate()));
 
 		_application._qt5Widget = this;
 		_application.Init(_createAppEventHandler, argc, argv);
@@ -33,7 +33,7 @@ namespace nCine::Backends
 		const Vector2i resolution = _application.GetAppConfiguration().resolution;
 		resize(resolution.X, resolution.Y);
 
-		if (!_application.GetAppConfiguration().resizable) {
+		if (!_application.GetAppConfiguration().Resizable) {
 			setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 			setMinimumSize(resolution.X, resolution.Y);
 			setMaximumSize(resolution.X, resolution.Y);
@@ -42,10 +42,10 @@ namespace nCine::Backends
 
 	Qt5Widget::~Qt5Widget()
 	{
-		shutdown();
+		Shutdown();
 	}
 
-	IAppEventHandler& Qt5Widget::appEventHandler()
+	IAppEventHandler& Qt5Widget::GetAppEventHandler()
 	{
 		return *_application._appEventHandler;
 	}
@@ -72,21 +72,21 @@ namespace nCine::Backends
 			case QEvent::Wheel:
 				if (inputManager != nullptr) {
 					// An event handler may draw (the ImGui overlay does), so the context has to be current
-					if (Qt5InputManager::handler() != nullptr) {
+					if (Qt5InputManager::GetHandler() != nullptr) {
 						makeCurrent();
 					}
 					const bool result = inputManager->event(event);
-					if (Qt5InputManager::handler() != nullptr) {
+					if (Qt5InputManager::GetHandler() != nullptr) {
 						doneCurrent();
 					}
 					return result;
 				}
 				return false;
 			case QEvent::Close: {
-				const bool shouldQuit = (inputManager == nullptr || inputManager->shouldQuitOnRequest());
+				const bool shouldQuit = (inputManager == nullptr || inputManager->ShouldQuitOnRequest());
 				if (shouldQuit) {
 					makeCurrent();
-					shutdown();
+					Shutdown();
 					doneCurrent();
 				} else {
 					static_cast<QCloseEvent*>(event)->ignore();
@@ -103,10 +103,10 @@ namespace nCine::Backends
 		Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*_application._gfxDevice);
 
 #if defined(WITH_GLEW)
-		gfxDevice.initGlew();
+		gfxDevice.InitGlew();
 #endif
 		_application.InitCommon();
-		gfxDevice.adoptWidgetFramebuffer();
+		gfxDevice.AdoptWidgetFramebuffer();
 		_isInitialized = true;
 	}
 
@@ -117,8 +117,8 @@ namespace nCine::Backends
 			// reallocation the resolution change triggers need
 			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*_application._gfxDevice);
 			// The widget allocates a new framebuffer object for the new size
-			gfxDevice.adoptWidgetFramebuffer();
-			gfxDevice.updateResolution(w, h);
+			gfxDevice.AdoptWidgetFramebuffer();
+			gfxDevice.UpdateResolution(w, h);
 		}
 	}
 
@@ -127,10 +127,10 @@ namespace nCine::Backends
 		if (_isInitialized) {
 			if (!_application.ShouldQuit()) {
 				// Qt5 has drawn its own widgets with this context since the last frame
-				static_cast<Qt5GfxDevice&>(*_application._gfxDevice).adoptWidgetFramebuffer();
+				static_cast<Qt5GfxDevice&>(*_application._gfxDevice).AdoptWidgetFramebuffer();
 				_application.Step();
 			} else {
-				shutdown();
+				Shutdown();
 				QCoreApplication::quit();
 			}
 		}
@@ -138,7 +138,7 @@ namespace nCine::Backends
 
 	QSize Qt5Widget::minimumSizeHint() const
 	{
-		if (_application.GetAppConfiguration().resizable) {
+		if (_application.GetAppConfiguration().Resizable) {
 			return QSize(-1, -1);
 		}
 
@@ -155,14 +155,14 @@ namespace nCine::Backends
 		}
 	}
 
-	void Qt5Widget::autoUpdate()
+	void Qt5Widget::AutoUpdate()
 	{
 		if (_shouldUpdate) {
 			update();
 		}
 	}
 
-	void Qt5Widget::shutdown()
+	void Qt5Widget::Shutdown()
 	{
 		if (_isInitialized) {
 			_application.ShutdownCommon();

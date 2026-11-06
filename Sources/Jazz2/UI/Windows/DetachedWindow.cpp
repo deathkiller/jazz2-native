@@ -55,7 +55,7 @@ namespace Jazz2::UI::Windows
 			std::max(std::int32_t(std::round(bounds.H * toDesktop)), 1));
 		desc.Popup = popup;
 		desc.PassThrough = passThrough;
-		std::unique_ptr<AuxiliaryWindow> window = theApplication().GetGfxDevice().createAuxiliaryWindow(desc);
+		std::unique_ptr<AuxiliaryWindow> window = theApplication().GetGfxDevice().CreateAuxiliaryWindow(desc);
 		if (window == nullptr) {
 			return nullptr;
 		}
@@ -96,7 +96,7 @@ namespace Jazz2::UI::Windows
 	{
 		// On a display with another scale than the main window, it's drawn with more or fewer pixels, as large as it would
 		// be in the main window there
-		float mainScale = RoundContentScale(theApplication().GetGfxDevice().windowContentScale());
+		float mainScale = RoundContentScale(theApplication().GetGfxDevice().GetWindowContentScale());
 		float raster = std::clamp(RoundContentScale(_window->GetContentScale()) / mainScale, 0.25f, 4.0f);
 		std::int32_t width = std::max(std::int32_t(bounds.W), 1), height = std::max(std::int32_t(bounds.H), 1);
 		Vector2i target(std::max(std::int32_t(std::round(float(width) * raster)), 1), std::max(std::int32_t(std::round(float(height) * raster)), 1));

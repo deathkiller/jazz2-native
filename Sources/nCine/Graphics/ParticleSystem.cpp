@@ -29,7 +29,7 @@ namespace nCine
 		_children.reserve(_poolSize);
 		for (std::uint32_t i = 0; i < _poolSize; i++) {
 			Particle* particle = new Particle(nullptr, texture);
-			particle->setTexRect(texRect);
+			particle->SetTexRect(texRect);
 			_particlePool.push_back(particle);
 			_particleArray.push_back(particle);
 		}
@@ -53,7 +53,7 @@ namespace nCine
 
 	ParticleSystem& ParticleSystem::operator=(ParticleSystem&&) = default;
 
-	void ParticleSystem::clearAffectors()
+	void ParticleSystem::ClearAffectors()
 	{
 		for (auto& affector : _affectors) {
 			delete affector;
@@ -61,13 +61,13 @@ namespace nCine
 		_affectors.clear();
 	}
 
-	void ParticleSystem::emitParticles(const ParticleInitializer& init)
+	void ParticleSystem::EmitParticles(const ParticleInitializer& init)
 	{
 		if (!_updateEnabled) {
 			return;
 		}
 
-		std::uint32_t amount = std::uint32_t(Random().Next(init.rndAmount.X, init.rndAmount.Y));
+		std::uint32_t amount = std::uint32_t(Random().Next(init.RndAmount.X, init.RndAmount.Y));
 #if defined(WITH_TRACY)
 		// TODO: Tracy
 		//tracyInfoString.format("Count: %d", amount);
@@ -82,110 +82,110 @@ namespace nCine
 				break;
 			}
 
-			const float life = Random().NextFloat(init.rndLife.X, init.rndLife.Y);
-			position.X = Random().NextFloat(init.rndPositionX.X, init.rndPositionX.Y);
-			position.Y = Random().NextFloat(init.rndPositionY.X, init.rndPositionY.Y);
-			velocity.X = Random().NextFloat(init.rndVelocityX.X, init.rndVelocityX.Y);
-			velocity.Y = Random().NextFloat(init.rndVelocityY.X, init.rndVelocityY.Y);
+			const float life = Random().NextFloat(init.RndLife.X, init.RndLife.Y);
+			position.X = Random().NextFloat(init.RndPositionX.X, init.RndPositionX.Y);
+			position.Y = Random().NextFloat(init.RndPositionY.X, init.RndPositionY.Y);
+			velocity.X = Random().NextFloat(init.RndVelocityX.X, init.RndVelocityX.Y);
+			velocity.Y = Random().NextFloat(init.RndVelocityY.X, init.RndVelocityY.Y);
 
 			float rotation = 0.0f;
-			if (init.emitterRotation) {
+			if (init.EmitterRotation) {
 				// Particles are rotated towards the emission vector
 				rotation = (atan2Approx(velocity.Y, velocity.X) - atan2Approx(1.0f, 0.0f)) * 180.0f / fPi;
 				if (rotation < 0.0f) {
 					rotation += 360.0f;
 				}
 			} else {
-				rotation = Random().NextFloat(init.rndRotation.X, init.rndRotation.Y);
+				rotation = Random().NextFloat(init.RndRotation.X, init.RndRotation.Y);
 			}
 
 			if (!_inLocalSpace) {
-				position += absPosition();
+				position += GetAbsPosition();
 			}
 
 			// Acquiring a particle from the pool
-			_particlePool[_poolTop]->init(life, position, velocity, rotation, _inLocalSpace);
-			addChildNode(_particlePool[_poolTop]);
+			_particlePool[_poolTop]->Init(life, position, velocity, rotation, _inLocalSpace);
+			AddChildNode(_particlePool[_poolTop]);
 			_poolTop--;
 		}
 	}
 
-	void ParticleSystem::killParticles()
+	void ParticleSystem::KillParticles()
 	{
 		for (std::int32_t i = std::int32_t(_children.size()) - 1; i >= 0; i--) {
 			Particle* particle = static_cast<Particle*>(_children[i]);
 
-			if (particle->isAlive()) {
+			if (particle->IsAlive()) {
 				particle->_life = 0.0f;
-				particle->setEnabled(false);
+				particle->SetEnabled(false);
 
 				_poolTop++;
 				_particlePool[_poolTop] = particle;
-				removeChildNodeAt(i);
+				RemoveChildNodeAt(i);
 			}
 		}
 	}
 
-	void ParticleSystem::setTexture(Texture* texture)
+	void ParticleSystem::SetTexture(Texture* texture)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setTexture(texture);
+			particle->SetTexture(texture);
 		}
 	}
 
-	void ParticleSystem::setTexRect(const Recti& rect)
+	void ParticleSystem::SetTexRect(const Recti& rect)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setTexRect(rect);
+			particle->SetTexRect(rect);
 		}
 	}
 
-	void ParticleSystem::setAnchorPoint(float xx, float yy)
+	void ParticleSystem::SetAnchorPoint(float xx, float yy)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setAnchorPoint(xx, yy);
+			particle->SetAnchorPoint(xx, yy);
 		}
 	}
 
-	void ParticleSystem::setAnchorPoint(Vector2f point)
+	void ParticleSystem::SetAnchorPoint(Vector2f point)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setAnchorPoint(point);
+			particle->SetAnchorPoint(point);
 		}
 	}
 
-	void ParticleSystem::setFlippedX(bool flippedX)
+	void ParticleSystem::SetFlippedX(bool flippedX)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setFlippedX(flippedX);
+			particle->SetFlippedX(flippedX);
 		}
 	}
 
-	void ParticleSystem::setFlippedY(bool flippedY)
+	void ParticleSystem::SetFlippedY(bool flippedY)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setFlippedY(flippedY);
+			particle->SetFlippedY(flippedY);
 		}
 	}
 
-	void ParticleSystem::setBlendingPreset(DrawableNode::BlendingPreset blendingPreset)
+	void ParticleSystem::SetBlendingPreset(DrawableNode::BlendingPreset blendingPreset)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setBlendingPreset(blendingPreset);
+			particle->SetBlendingPreset(blendingPreset);
 		}
 	}
 
-	void ParticleSystem::setBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor)
+	void ParticleSystem::SetBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setBlendingFactors(srcBlendingFactor, destBlendingFactor);
+			particle->SetBlendingFactors(srcBlendingFactor, destBlendingFactor);
 		}
 	}
 
-	void ParticleSystem::setLayer(std::uint16_t layer)
+	void ParticleSystem::SetLayer(std::uint16_t layer)
 	{
 		for (auto& particle : _particleArray) {
-			particle->setLayer(layer);
+			particle->SetLayer(layer);
 		}
 	}
 
@@ -195,32 +195,32 @@ namespace nCine
 			return;
 		}
 
-		// Overridden `update()` method should call `transform()` like `SceneNode::update()` does
-		SceneNode::transform();
+		// Overridden `update()` method should call `Transform()` like `SceneNode::Update()` does
+		SceneNode::Transform();
 
 		for (std::int32_t i = std::int32_t(_children.size()) - 1; i >= 0; i--) {
 			Particle* particle = static_cast<Particle*>(_children[i]);
 
 			// Update the particle if it's alive
-			if (particle->isAlive()) {
+			if (particle->IsAlive()) {
 				// Calculating the normalized age only once per particle
 				const float normalizedAge = 1.0f - particle->_life / particle->startingLife;
 				for (auto& affector : _affectors) {
-					affector->affect(particle, normalizedAge);
+					affector->Affect(particle, normalizedAge);
 				}
 
 				particle->OnUpdate(timeMult);
 
 				// Releasing the particle if it has just died
-				if (!particle->isAlive()) {
+				if (!particle->IsAlive()) {
 					_poolTop++;
 					_particlePool[_poolTop] = particle;
-					removeChildNodeAt(i);
+					RemoveChildNodeAt(i);
 					continue;
 				}
 
 				// Transforming the particle only if it's still alive
-				particle->transform();
+				particle->Transform();
 			}
 		}
 
@@ -242,21 +242,21 @@ namespace nCine
 
 		for (std::uint32_t i = 0; i < other._affectors.size(); i++) {
 			const ParticleAffector& affector = *other._affectors[i];
-			switch (affector.type()) {
+			switch (affector.GetType()) {
 				case ParticleAffector::Type::Color:
-					_affectors.push_back(new ColorAffector(static_cast<const ColorAffector&>(affector).clone()));
+					_affectors.push_back(new ColorAffector(static_cast<const ColorAffector&>(affector).Clone()));
 					break;
 				case ParticleAffector::Type::Size:
-					_affectors.push_back(new SizeAffector(static_cast<const SizeAffector&>(affector).clone()));
+					_affectors.push_back(new SizeAffector(static_cast<const SizeAffector&>(affector).Clone()));
 					break;
 				case ParticleAffector::Type::Rotation:
-					_affectors.push_back(new RotationAffector(static_cast<const RotationAffector&>(affector).clone()));
+					_affectors.push_back(new RotationAffector(static_cast<const RotationAffector&>(affector).Clone()));
 					break;
 				case ParticleAffector::Type::Position:
-					_affectors.push_back(new PositionAffector(static_cast<const PositionAffector&>(affector).clone()));
+					_affectors.push_back(new PositionAffector(static_cast<const PositionAffector&>(affector).Clone()));
 					break;
 				case ParticleAffector::Type::Velocity:
-					_affectors.push_back(new VelocityAffector(static_cast<const VelocityAffector&>(affector).clone()));
+					_affectors.push_back(new VelocityAffector(static_cast<const VelocityAffector&>(affector).Clone()));
 					break;
 			}
 		}
@@ -271,7 +271,7 @@ namespace nCine
 			}*/
 
 			for (std::uint32_t i = 0; i < _poolSize; i++) {
-				Particle* particle = new Particle(otherParticle.clone());
+				Particle* particle = new Particle(otherParticle.Clone());
 				_particlePool.push_back(particle);
 				_particleArray.push_back(particle);
 			}

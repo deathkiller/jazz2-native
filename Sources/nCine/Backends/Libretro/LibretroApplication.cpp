@@ -52,12 +52,12 @@ namespace nCine::Backends
 		// keep the engine's own frame limiter as a backstop. It is bypassed automatically
 		// while the frontend reports fast-forwarding (see retro_run).
 		SetFrameLimiter(true);
-		_appCfg.withVSync = false;
+		_appCfg.WithVSync = false;
 
 		IGfxDevice::ContextInfo contextInfo(_appCfg);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
-		std::int32_t width = (_appCfg.resolution.X > 0 ? _appCfg.resolution.X : 720);
-		std::int32_t height = (_appCfg.resolution.Y > 0 ? _appCfg.resolution.Y : 405);
+		std::int32_t width = (_appCfg.Resolution.X > 0 ? _appCfg.Resolution.X : 720);
+		std::int32_t height = (_appCfg.Resolution.Y > 0 ? _appCfg.Resolution.Y : 405);
 		const IGfxDevice::WindowMode windowMode(width, height, 0, 0, false, false, false);
 
 		_gfxDevice = std::make_unique<LibretroGfxDevice>(windowMode, contextInfo, displayMode);
@@ -67,20 +67,20 @@ namespace nCine::Backends
 
 		SetAutoSuspension(false);
 		SetFocus(true);
-		static_cast<LibretroInputManager&>(*_inputManager).connectJoystick();
+		static_cast<LibretroInputManager&>(*_inputManager).ConnectJoystick();
 		return !_shouldQuit;
 	}
 
 	void LibretroApplication::RunFrame()
 	{
-		static_cast<LibretroGfxDevice&>(*_gfxDevice).beginFrame();
-		static_cast<LibretroInputManager&>(*_inputManager).processFrame();
+		static_cast<LibretroGfxDevice&>(*_gfxDevice).BeginFrame();
+		static_cast<LibretroInputManager&>(*_inputManager).ProcessFrame();
 		Step();
 	}
 
 	void LibretroApplication::SetFrameLimiter(bool enabled)
 	{
-		_appCfg.frameLimit = (enabled ? (std::uint32_t)(LibretroGfxDevice::GetTargetFps() + 0.5) : 0);
+		_appCfg.FrameLimit = (enabled ? (std::uint32_t)(LibretroGfxDevice::GetTargetFps() + 0.5) : 0);
 	}
 
 	void LibretroApplication::Shutdown()

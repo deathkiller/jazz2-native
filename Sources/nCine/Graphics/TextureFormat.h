@@ -21,23 +21,23 @@ namespace nCine
 		explicit TextureFormat(PixelFormat format) : _pixelFormat(format), _bgr(false) {}
 
 		/** @brief Returns the backend-neutral pixel format */
-		inline PixelFormat pixelFormat() const {
+		inline PixelFormat GetPixelFormat() const {
 			return _pixelFormat;
 		}
 		/** @brief Returns `true` if the format holds compressed data */
-		bool isCompressed() const;
+		bool IsCompressed() const;
 		/** @brief Returns `true` if the external channel order is BGR/BGRA instead of RGB/RGBA */
-		inline bool isBgr() const {
+		inline bool IsBgr() const {
 			return _bgr;
 		}
 		/** @brief Returns the number of color channels */
-		std::uint32_t numChannels() const;
+		std::uint32_t GetChannelCount() const;
 
 		/** @brief Marks the external channel order as BGR/BGRA */
-		void bgrFormat();
+		void BgrFormat();
 
 		/** @brief Calculates the pixel data offset and size for each MIP map level */
-		static std::uint32_t calculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes);
+		static std::uint32_t CalculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes);
 
 	private:
 		PixelFormat _pixelFormat;

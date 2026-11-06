@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Weapons
 			PlaySfx("FireUpgraded"_s);
 
 			// TODO: Add better upgraded effect
-			_renderer.setScale(1.2f);
+			_renderer.SetScale(1.2f);
 		} else {
 			_timeLeft = 44;
 			PlaySfx("Fire"_s);
@@ -68,8 +68,8 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y = sinAngle * baseSpeed;
 
-		_renderer.setRotation(angle);
-		_renderer.setDrawEnabled(false);
+		_renderer.SetRotation(angle);
+		_renderer.SetDrawEnabled(false);
 	}
 
 	void FreezerShot::OnUpdate(float timeMult)
@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 
 		_particlesTime -= timeMult;
@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Weapons
 
 				Tiles::TileMap::DestructibleDebris debris = { };
 				debris.Pos = Vector2f(_pos.X + dx, _pos.Y + dy);
-				debris.Depth = _renderer.layer();
+				debris.Depth = _renderer.GetLayer();
 				debris.Size = Vector2f(currentSize, currentSize);
 				debris.Acceleration = Vector2f(0.0f, _levelHandler->GetGravity());
 
@@ -159,7 +159,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool FreezerShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmokeWhite);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::SmokeWhite);
 
 		return ShotBase::OnPerish(collider);
 	}

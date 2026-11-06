@@ -79,28 +79,28 @@ namespace nCine
 		MeshSprite& operator=(MeshSprite&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline MeshSprite clone() const {
+		inline MeshSprite Clone() const {
 			return MeshSprite(*this);
 		}
 
 		/** @brief Returns the number of bytes used by each vertex */
-		inline std::uint32_t bytesPerVertex() const {
+		inline std::uint32_t GetBytesPerVertex() const {
 			return _bytesPerVertex;
 		}
 		/** @brief Returns the number of vertices of the sprite mesh */
-		inline std::uint32_t numVertices() const {
+		inline std::uint32_t GetVertexCount() const {
 			return _numVertices;
 		}
 		/** @brief Returns the total number of bytes used by all sprite's vertices */
-		inline std::uint32_t numBytes() const {
+		inline std::uint32_t GetByteCount() const {
 			return _numVertices * _bytesPerVertex;
 		}
 		/** @brief Returns the vertices data of the sprite mesh */
-		inline const float* vertices() const {
+		inline const float* GetVertices() const {
 			return _vertexDataPointer;
 		}
 		/** @brief Returns `true` if the vertices belong to the sprite and are not stored externally */
-		inline bool uniqueVertices() const {
+		inline bool HasUniqueVertices() const {
 			return _vertexDataPointer == _vertices.data();
 		}
 
@@ -109,60 +109,60 @@ namespace nCine
 		 *
 		 * @note If used directly, it requires a custom shader that understands the specified data format.
 		 */
-		void copyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData);
+		void CopyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData);
 		/** @brief Copies the vertices data from a pointer into the sprite */
-		void copyVertices(std::uint32_t numVertices, const Vertex* vertices);
+		void CopyVertices(std::uint32_t numVertices, const Vertex* vertices);
 		/** @brief Copies the vertices data from a pointer into the sprite (no texture version) */
-		void copyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices);
+		void CopyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices);
 		/** @brief Copies the vertices data from another sprite and sets the same size */
-		void copyVertices(const MeshSprite& meshSprite);
+		void CopyVertices(const MeshSprite& meshSprite);
 
 		/**
 		 * @brief Sets the vertices data to point to an external array with a custom format
 		 *
 		 * @note If used directly, it requires a custom shader that understands the specified data format.
 		 */
-		void setVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData);
+		void SetVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData);
 		/** @brief Sets the vertices data to point to an external array */
-		void setVertices(std::uint32_t numVertices, const Vertex* vertices);
+		void SetVertices(std::uint32_t numVertices, const Vertex* vertices);
 		/** @brief Sets the vertices data to point to an external array (no texture version) */
-		void setVertices(std::uint32_t numVertices, const VertexNoTexture* vertices);
+		void SetVertices(std::uint32_t numVertices, const VertexNoTexture* vertices);
 		/** @brief Sets the vertices data to the data used by another sprite and sets the same size */
-		void setVertices(const MeshSprite& meshSprite);
+		void SetVertices(const MeshSprite& meshSprite);
 
 		/** @brief Returns the internal vertices data, cleared and set to the required size (custom format version) */
-		float* emplaceVertices(std::uint32_t numElements, std::uint32_t bytesPerVertex);
+		float* EmplaceVertices(std::uint32_t numElements, std::uint32_t bytesPerVertex);
 		/** @brief Returns the internal vertices data, cleared and set to the required size */
-		float* emplaceVertices(std::uint32_t numElements);
+		float* EmplaceVertices(std::uint32_t numElements);
 
 		/** @brief Creates an internal set of vertices from an external array of points in texture space, with the specified texture cut mode */
-		void createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points, TextureCutMode cutMode);
+		void CreateVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points, TextureCutMode cutMode);
 		/** @brief Creates an internal set of vertices from an external array of points in texture space */
-		void createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points);
+		void CreateVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points);
 
 		/** @brief Returns the number of indices used to draw the sprite mesh */
-		inline std::uint32_t numIndices() const {
+		inline std::uint32_t GetIndexCount() const {
 			return _numIndices;
 		}
 		/** @brief Returns the indices used to draw the sprite mesh */
-		inline const std::uint16_t* indices() const {
+		inline const std::uint16_t* GetIndices() const {
 			return _indexDataPointer;
 		}
 		/** @brief Returns `true` if the indices belong to the sprite and are not stored externally */
-		inline bool uniqueIndices() const {
+		inline bool HasUniqueIndices() const {
 			return _indexDataPointer == _indices.data();
 		}
 		/** @brief Copies the indices from a pointer into the sprite */
-		void copyIndices(std::uint32_t numIndices, const std::uint16_t* indices);
+		void CopyIndices(std::uint32_t numIndices, const std::uint16_t* indices);
 		/** @brief Copies the indices from another sprite */
-		void copyIndices(const MeshSprite& meshSprite);
+		void CopyIndices(const MeshSprite& meshSprite);
 		/** @brief Sets the indices data to point to an external array */
-		void setIndices(std::uint32_t numIndices, const std::uint16_t* indices);
+		void SetIndices(std::uint32_t numIndices, const std::uint16_t* indices);
 		/** @brief Sets the indices data to the data used by another sprite */
-		void setIndices(const MeshSprite& meshSprite);
+		void SetIndices(const MeshSprite& meshSprite);
 
 		/** @brief Returns the internal indices data, cleared and set to the required size */
-		std::uint16_t* emplaceIndices(std::uint32_t numIndices);
+		std::uint16_t* EmplaceIndices(std::uint32_t numIndices);
 
 		inline static ObjectType sType() {
 			return ObjectType::MeshSprite;
@@ -190,10 +190,10 @@ namespace nCine
 		std::uint32_t _numIndices;
 
 		/** @brief Initializer method for constructors and the copy constructor */
-		void init();
+		void Init();
 
-		void shaderHasChanged() override;
-		void textureHasChanged(Texture* newTexture) override;
+		void ShaderHasChanged() override;
+		void TextureHasChanged(Texture* newTexture) override;
 	};
 
 }

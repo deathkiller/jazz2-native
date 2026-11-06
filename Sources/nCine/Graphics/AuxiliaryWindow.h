@@ -26,7 +26,7 @@ namespace nCine
 	class Texture;
 	class AuxiliaryWindowPresenter;
 
-	/** @brief How a window besides the main one is made, see @ref IGfxDevice::createAuxiliaryWindow() */
+	/** @brief How a window besides the main one is made, see @ref IGfxDevice::CreateAuxiliaryWindow() */
 	struct AuxiliaryWindowDesc
 	{
 		/** @brief Where it is and its size, in units of the desktop, see @ref AuxiliaryWindow::GetBounds() */
@@ -48,12 +48,12 @@ namespace nCine
 	/**
 		@brief Window of the application besides the main one, as a panel dragged out of it
 
-		Made by @ref IGfxDevice::createAuxiliaryWindow(), it has no border or title bar of the system, whatever it shows
+		Made by @ref IGfxDevice::CreateAuxiliaryWindow(), it has no border or title bar of the system, whatever it shows
 		is drawn by the application into a texture, which is shown in the window every frame, see @ref SetContents().
 		It stays in front of the main window, and is shown on the taskbar unless it's a popup.
 
 		Input over it goes to the input handler of the application as input over the main window would, with the
-		position relative to the main window and @ref MouseState::windowId set to @ref GetId(). Keys typed while it
+		position relative to the main window and @ref MouseState::WindowId set to @ref GetId(). Keys typed while it
 		has the focus go there too, and the application doesn't count as having lost the focus.
 
 		The platform backend makes the window, @ref AuxiliaryWindowPresenter shows the contents with the graphics backend.
@@ -86,7 +86,7 @@ namespace nCine
 		/**
 		 * @brief Returns the scale of the display it's on, 1 for 100 %
 		 *
-		 * The ratio to the scale of the main window (see @ref IGfxDevice::windowContentScale()) is how much larger what
+		 * The ratio to the scale of the main window (see @ref IGfxDevice::GetWindowContentScale()) is how much larger what
 		 * is shown in it has to be drawn on another display. By default it's how many pixels it has for a unit of the
 		 * desktop, which is the scale of the display where the system scales the units of windows by it.
 		 */
@@ -137,7 +137,7 @@ namespace nCine
 			return _contents;
 		}
 
-		/** @brief Shows the contents in the window, called once a frame after it's drawn, see @ref IGfxDevice::presentAuxiliaryWindows() */
+		/** @brief Shows the contents in the window, called once a frame after it's drawn, see @ref IGfxDevice::PresentAuxiliaryWindows() */
 		void Present();
 
 		/** @brief Returns all windows besides the main one */

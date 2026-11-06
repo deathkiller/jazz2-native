@@ -27,30 +27,30 @@ namespace nCine::Backends
 		EglGfxDevice(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~EglGfxDevice() override;
 
-		void setSwapInterval(int interval) override { }
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override { }
-		void setWindowPosition(int x, int y) override { }
-		void setWindowSize(int width, int height) override { }
+		void SetSwapInterval(int interval) override { }
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override { }
+		void SetWindowPosition(int x, int y) override { }
+		void SetWindowSize(int width, int height) override { }
 
-		void update() override;
+		void Update() override;
 
-		void setWindowTitle(StringView windowTitle) override { }
-		void setWindowIcon(StringView windowIconFilename) override { }
+		void SetWindowTitle(StringView windowTitle) override { }
+		void SetWindowIcon(StringView windowIconFilename) override { }
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
-		bool setVideoMode(unsigned int modeIndex) override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
+		bool SetVideoMode(unsigned int modeIndex) override;
 	
 		/** @brief Recreates the drawing surface from the native window */
-		void createSurface();
+		void CreateSurface();
 		/** @brief Makes the EGL context current on the calling thread */
-		void bindContext();
+		void BindContext();
 		/** @brief Releases the EGL context from the calling thread */
-		void unbindContext();
+		void UnbindContext();
 		/** @brief Queries the size of the current drawing surface */
-		Vector2i querySurfaceSize();
+		Vector2i QuerySurfaceSize();
 
 		/** @brief Checks if the desired pixel format is supported */
-		static bool isModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode);
+		static bool IsModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode);
 
 #if defined(DEATH_TARGET_ANDROID)
 		/**
@@ -66,7 +66,7 @@ namespace nCine::Backends
 #endif
 
 	protected:
-		void setResolutionInternal(int width, int height) override { }
+		void SetResolutionInternal(int width, int height) override { }
 
 	private:
 		/** @brief The EGL display connection */
@@ -88,10 +88,10 @@ namespace nCine::Backends
 #endif
 
 		/** @brief Initializes the OpenGL graphics context */
-		void initDevice();
+		void InitDevice();
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
-		void convertVideoModeInfo(const AndroidJniClass_DisplayMode& javaDisplayMode, IGfxDevice::VideoMode& videoMode) const;
+		void ConvertVideoModeInfo(const AndroidJniClass_DisplayMode& javaDisplayMode, IGfxDevice::VideoMode& videoMode) const;
 	};
 }

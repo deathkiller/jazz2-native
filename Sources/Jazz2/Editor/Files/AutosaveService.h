@@ -25,7 +25,8 @@ namespace Jazz2::Editor
 		@brief Keeps a copy of unsaved changes, so they aren't lost if the game ends unexpectedly
 
 		While a level has unsaved changes, it's written every minute --- and when the application is suspended ---
-		into `Editor/Recovery` in the configuration directory, one file for each level file. The copy is removed
+		into `Editor/Recovery` of the user content (see @ref ContentResolver::GetWritableContentPath()), or of the
+		configuration directory where no content can be written to, one file for each level file. The copy is removed
 		when the level is saved, its changes are discarded, or they're all undone, so a copy that is still there when
 		the level is opened again holds changes that would be lost otherwise. The copy is written through a temporary
 		file, so a failed write never replaces a good copy. It keeps the history of the changes too (see
@@ -70,8 +71,14 @@ namespace Jazz2::Editor
 		 * copy of this run --- discarding the changes removes it, new changes are written over it.
 		 */
 		static String FindRecovery(StringView filePath);
+		/**
+		 * @brief Returns the directory the copies are kept in
+		 *
+		 * With @p create the user content directory is created if it doesn't exist yet.
+		 */
+		static String GetRecoveryDirectory(bool create = false);
 		/** @brief Returns where the copy of a level file is kept, each run has its own for a level that wasn't saved yet */
-		static String GetRecoveryPath(StringView filePath);
+		static String GetRecoveryPath(StringView filePath, bool create = false);
 
 	private:
 		// Name of the copy of a level that wasn't saved yet, of this run

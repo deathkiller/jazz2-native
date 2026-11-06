@@ -51,74 +51,74 @@ namespace nCine
 		struct WindowMode
 		{
 			WindowMode()
-				: width(0), height(0), windowPositionX(AppConfiguration::WindowPositionIgnore), windowPositionY(AppConfiguration::WindowPositionIgnore), isFullscreen(false), isResizable(false), hasWindowScaling(true) { }
+				: Width(0), Height(0), WindowPositionX(AppConfiguration::WindowPositionIgnore), WindowPositionY(AppConfiguration::WindowPositionIgnore), IsFullscreen(false), IsResizable(false), HasWindowScaling(true) { }
 			WindowMode(std::int32_t w, std::int32_t h, std::int32_t posX, std::int32_t posY, bool fullscreen, bool resizable, bool windowScaling)
-				: width(w), height(h), windowPositionX(posX), windowPositionY(posY), isFullscreen(fullscreen), isResizable(resizable), hasWindowScaling(windowScaling) { }
+				: Width(w), Height(h), WindowPositionX(posX), WindowPositionY(posY), IsFullscreen(fullscreen), IsResizable(resizable), HasWindowScaling(windowScaling) { }
 
-			std::int32_t width;
-			std::int32_t height;
-			std::int32_t windowPositionX;
-			std::int32_t windowPositionY;
-			bool isFullscreen;
-			bool isResizable;
-			bool hasWindowScaling;
+			std::int32_t Width;
+			std::int32_t Height;
+			std::int32_t WindowPositionX;
+			std::int32_t WindowPositionY;
+			bool IsFullscreen;
+			bool IsResizable;
+			bool HasWindowScaling;
 		};
 
 		/** @brief Video mode supported by a monitor */
 		struct VideoMode
 		{
 			VideoMode()
-				: width(0), height(0), refreshRate(0.0f), redBits(8), greenBits(8), blueBits(8) { }
+				: Width(0), Height(0), RefreshRate(0.0f), RedBits(8), GreenBits(8), BlueBits(8) { }
 
 			inline bool operator==(const VideoMode& mode) const
 			{
-				return (width == mode.width && height == mode.height && refreshRate == mode.refreshRate &&
-						redBits == mode.redBits && greenBits == mode.greenBits && blueBits == mode.blueBits);
+				return (Width == mode.Width && Height == mode.Height && RefreshRate == mode.RefreshRate &&
+						RedBits == mode.RedBits && GreenBits == mode.GreenBits && BlueBits == mode.BlueBits);
 			}
 			inline bool operator!=(const VideoMode& mode) const {
 				return !operator==(mode);
 			}
 
-			std::uint32_t width;
-			std::uint32_t height;
-			float refreshRate;
-			std::uint32_t redBits;
-			std::uint32_t greenBits;
-			std::uint32_t blueBits;
+			std::uint32_t Width;
+			std::uint32_t Height;
+			float RefreshRate;
+			std::uint32_t RedBits;
+			std::uint32_t GreenBits;
+			std::uint32_t BlueBits;
 		};
 
 		/** @brief Connected monitor */
 		struct Monitor
 		{
 			/** @brief Monitor name */
-			const char* name;
+			const char* Name;
 			/** @brief Position of the monitor's viewport on the virtual screen */
-			Vector2i position;
+			Vector2i Position;
 			/** @brief Content scale factor */
-			Vector2f scale;
+			Vector2f Scale;
 
 			/** @brief Number of valid entries in @ref videoModes */
-			std::int32_t numVideoModes;
+			std::int32_t VideoModeCount;
 			/** @brief Video modes supported by the monitor */
-			VideoMode videoModes[MaxVideoModes];
+			VideoMode VideoModes[MaxVideoModes];
 		};
 
 		/** @brief Attributes used to create an OpenGL context */
 		struct ContextInfo
 		{
 			ContextInfo()
-				: majorVersion(0), minorVersion(0), coreProfile(false), forwardCompatible(false), debugContext(false) { }
+				: MajorVersion(0), MinorVersion(0), CoreProfile(false), ForwardCompatible(false), DebugContext(false) { }
 
 			explicit ContextInfo(const AppConfiguration& appCfg)
-				: majorVersion(appCfg.glMajorVersion()), minorVersion(appCfg.glMinorVersion()),
-				  coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
-				  debugContext(appCfg.withGlDebugContext) { }
+				: MajorVersion(appCfg.GetGlMajorVersion()), MinorVersion(appCfg.GetGlMinorVersion()),
+				  CoreProfile(appCfg.IsGlCoreProfile()), ForwardCompatible(appCfg.IsGlForwardCompatible()),
+				  DebugContext(appCfg.WithGlDebugContext) { }
 
-			std::uint32_t majorVersion;
-			std::uint32_t minorVersion;
-			bool coreProfile;
-			bool forwardCompatible;
-			bool debugContext;
+			std::uint32_t MajorVersion;
+			std::uint32_t MinorVersion;
+			bool CoreProfile;
+			bool ForwardCompatible;
+			bool DebugContext;
 		};
 
 		IGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
@@ -129,40 +129,40 @@ namespace nCine
 		 *
 		 * An interval of `-1` will enable adaptive v-sync if available.
 		 */
-		virtual void setSwapInterval(int interval) = 0;
+		virtual void SetSwapInterval(int interval) = 0;
 
 		/** @brief Returns `true` if the device renders in full screen */
-		inline bool isFullscreen() const { return _isFullscreen; }
+		inline bool IsFullscreen() const { return _isFullscreen; }
 		/** @brief Sets the screen resolution with two integers */
-		virtual void setResolution(bool fullscreen, int width = 0, int height = 0) = 0;
+		virtual void SetResolution(bool fullscreen, int width = 0, int height = 0) = 0;
 
 		/** @brief Sets the position of the application window with two integers */
-		virtual void setWindowPosition(int x, int y) = 0;
+		virtual void SetWindowPosition(int x, int y) = 0;
 		/** @brief Sets the position of the application window with a `Vector2i` object */
-		inline void setWindowPosition(Vector2i position) {
-			setWindowPosition(position.X, position.Y);
+		inline void SetWindowPosition(Vector2i position) {
+			SetWindowPosition(position.X, position.Y);
 		}
 		/** @brief Sets the application window title */
-		virtual void setWindowTitle(StringView windowTitle) = 0;
+		virtual void SetWindowTitle(StringView windowTitle) = 0;
 		/** @brief Sets the application window icon */
-		virtual void setWindowIcon(StringView iconFilename) = 0;
+		virtual void SetWindowIcon(StringView iconFilename) = 0;
 
 		/** @brief Returns the window or video mode width in screen coordinates */
-		inline int width() const { return _width; }
+		inline int GetWidth() const { return _width; }
 		/** @brief Returns the window or video mode height in screen coordinates */
-		inline int height() const { return _height; }
+		inline int GetHeight() const { return _height; }
 		/** @brief Returns the window or video mode resolution in screen coordinates as a `Vector2i` object */
-		inline Vector2i resolution() const { return Vector2i(_width, _height); }
+		inline Vector2i GetResolution() const { return Vector2i(_width, _height); }
 		/** @brief Returns the window or video mode resolution in screen coordinates as a `Rectf` object */
-		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_width), static_cast<float>(_height)); }
+		inline Rectf GetScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_width), static_cast<float>(_height)); }
 		/** @brief Returns the window or video mode resolution aspect ratio */
-		inline float aspect() const { return _width / static_cast<float>(_height); }
+		inline float GetAspect() const { return _width / static_cast<float>(_height); }
 		/**
 		 * @brief Sets the window size with two integers
 		 *
 		 * @note If the application is in full screen this method will have no effect.
 		 */
-		virtual void setWindowSize(int width, int height) = 0;
+		virtual void SetWindowSize(int width, int height) = 0;
 		/**
 		 * @brief Sets the pixel size of the drawable (the size the frame is rendered at) without touching the window
 		 *
@@ -172,115 +172,115 @@ namespace nCine
 		 * notified through `OnResizeWindow()`. Everywhere else the drawable follows the window and this does
 		 * nothing. Out-of-range sizes are clamped to what the display can show.
 		 */
-		inline virtual void setDrawableSize(int width, int height) {
+		inline virtual void SetDrawableSize(int width, int height) {
 			static_cast<void>(width);
 			static_cast<void>(height);
 		}
 
 		/** @brief Returns the window position as a `Vector2i` object */
-		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0); }
+		inline virtual const Vector2i GetWindowPosition() const { return Vector2i(0, 0); }
 
 		/**
 		 * @brief Returns the window width in pixels
 		 *
 		 * It may differ from @ref width() on HiDPI screens.
 		 */
-		inline int drawableWidth() const { return _drawableWidth; }
+		inline int GetDrawableWidth() const { return _drawableWidth; }
 		/**
 		 * @brief Returns the window height in pixels
 		 *
 		 * It may differ from @ref height() on HiDPI screens.
 		 */
-		inline int drawableHeight() const { return _drawableHeight; }
+		inline int GetDrawableHeight() const { return _drawableHeight; }
 		/** @brief Returns the window resolution in pixels as a `Vector2i` object */
-		inline Vector2i drawableResolution() const { return Vector2i(_drawableWidth, _drawableHeight); }
+		inline Vector2i GetDrawableResolution() const { return Vector2i(_drawableWidth, _drawableHeight); }
 		/** @brief Returns the window resolution in pixels as a `Rectf` object */
-		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_drawableWidth), static_cast<float>(_drawableHeight)); }
+		inline Rectf GetDrawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_drawableWidth), static_cast<float>(_drawableHeight)); }
 		/** @brief Returns the window drawable resolution aspect ratio */
-		inline float drawableAspect() const { return _drawableWidth / static_cast<float>(_drawableHeight); }
+		inline float GetDrawableAspect() const { return _drawableWidth / static_cast<float>(_drawableHeight); }
 		/**
 		 * @brief Returns the aspect ratio the drawable is actually DISPLAYED at
 		 *
-		 * The same as @ref drawableAspect() wherever a pixel of the drawable is square on the display, which
+		 * The same as @ref GetDrawableAspect() wherever a pixel of the drawable is square on the display, which
 		 * is every desktop and handheld target and most consoles. It is not the same on hardware whose video
 		 * mode does not have square pixels: the PlayStation 2's 640x448 NTSC field pair (1.43) fills a 4:3
 		 * television, so a scene composed for the drawable's own ratio comes out stretched by 7% vertically.
 		 * Anything that decides how much of the world to show - see
 		 * @ref Jazz2::Rendering::UpscaleRenderPass::CalculateViewSize() - has to use this ratio instead.
 		 */
-		inline virtual float displayAspect() const { return drawableAspect(); }
+		inline virtual float GetDisplayAspect() const { return GetDrawableAspect(); }
 
 		/** @brief Highlights the application window to notify the user */
-		inline virtual void flashWindow() const { }
+		inline virtual void FlashWindow() const { }
 
 		/** @brief Returns the OpenGL context creation attributes */
-		inline const ContextInfo& contextInfo() const { return _contextInfo; }
+		inline const ContextInfo& GetContextInfo() const { return _contextInfo; }
 		/** @brief Returns the display mode */
-		inline const DisplayMode& displayMode() const { return _displayMode; }
+		inline const DisplayMode& GetDisplayMode() const { return _displayMode; }
 
 		/** @brief Returns the number of connected monitors */
-		unsigned int numMonitors() const;
+		unsigned int GetMonitorCount() const;
 		/** @brief Returns the array index of the primary monitor */
-		inline virtual unsigned int primaryMonitorIndex() const { return 0; }
+		inline virtual unsigned int GetPrimaryMonitorIndex() const { return 0; }
 		/** @brief Returns the array index of the monitor associated with the window */
-		inline virtual unsigned int windowMonitorIndex() const { return 0; }
+		inline virtual unsigned int GetWindowMonitorIndex() const { return 0; }
 		/** @brief Returns the specified monitor */
-		const Monitor &monitor(unsigned int index) const;
+		const Monitor &GetMonitor(unsigned int index) const;
 		/** @brief Returns the monitor that hosts the window */
-		inline const Monitor& monitor() const { return monitor(windowMonitorIndex()); }
+		inline const Monitor& GetMonitor() const { return GetMonitor(GetWindowMonitorIndex()); }
 
 		/** @brief Returns the current video mode for the specified monitor */
-		virtual const VideoMode& currentVideoMode(unsigned int monitorIndex) const = 0;
+		virtual const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const = 0;
 		/** @brief Returns the current video mode for the monitor that hosts the window */
-		inline const VideoMode& currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
+		inline const VideoMode& GetCurrentVideoMode() const { return GetCurrentVideoMode(GetWindowMonitorIndex()); }
 		/**
 		 * @brief Sets the video mode used in full screen by the monitor that hosts the window
 		 *
 		 * @note Call this method <b>before</b> enabling full screen.
 		 */
-		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }
+		inline virtual bool SetVideoMode(unsigned int modeIndex) { return false; }
 
 		/** @brief Returns the scaling factor for the application window */
-		float windowScalingFactor() const;
+		float GetWindowScalingFactor() const;
 
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Returns `true` if windows besides the main one can be made, see @ref createAuxiliaryWindow()
+		 * @brief Returns `true` if windows besides the main one can be made, see @ref CreateAuxiliaryWindow()
 		 *
 		 * Only desktop systems where windows can be placed anywhere have them, with a graphics backend that can present
 		 * into another window.
 		 */
-		inline virtual bool supportsAuxiliaryWindows() const { return false; }
+		inline virtual bool SupportsAuxiliaryWindows() const { return false; }
 		/** @brief Makes a hidden window besides the main one, `nullptr` if it can't be made, see @ref AuxiliaryWindow */
-		inline virtual std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) { return nullptr; }
+		inline virtual std::unique_ptr<AuxiliaryWindow> CreateAuxiliaryWindow(const AuxiliaryWindowDesc& desc) { return nullptr; }
 		/** @brief Shows the contents of every auxiliary window, called once a frame after it's drawn */
-		void presentAuxiliaryWindows() {
+		void PresentAuxiliaryWindows() {
 			for (AuxiliaryWindow* window : AuxiliaryWindow::GetAll()) {
 				window->Present();
 			}
 		}
 		/** @brief Returns the position of the pointer on the desktop in pixels, `false` if it isn't known */
-		inline virtual bool globalMousePosition(Vector2i& position) const { return false; }
+		inline virtual bool GetGlobalMousePosition(Vector2i& position) const { return false; }
 		/**
 		 * @brief Returns the mouse buttons held now as the system has them, `false` if it isn't known
 		 *
 		 * Bits 0, 1 and 2 are the left, the right and the middle button. Unlike the events, it's never left behind when a
 		 * release goes to a window of the application that was just shown or moved under the pointer.
 		 */
-		inline virtual bool globalMouseButtons(std::uint32_t& buttons) const { return false; }
+		inline virtual bool GetGlobalMouseButtons(std::uint32_t& buttons) const { return false; }
 		/**
 		 * @brief Returns the part of the display at a point of the desktop that windows may take, without the taskbar
 		 *
 		 * The display nearest to the point if it's on none. In units of the desktop, as positions of windows are.
 		 * Returns `false` if it isn't known.
 		 */
-		inline virtual bool desktopWorkArea(Vector2i point, Recti& area) const { return false; }
+		inline virtual bool GetDesktopWorkArea(Vector2i point, Recti& area) const { return false; }
 		/**
 		 * @brief Returns the scale of the display the main window is on, 1 for 100 %, see @ref AuxiliaryWindow::GetContentScale()
 		 *
 		 * By default it's how many pixels the main window has for a unit of the desktop.
 		 */
-		inline virtual float windowContentScale() const { return (_width > 0 ? float(_drawableWidth) / float(_width) : 1.0f); }
+		inline virtual float GetWindowContentScale() const { return (_width > 0 ? float(_drawableWidth) / float(_width) : 1.0f); }
 #endif
 
 	protected:
@@ -309,26 +309,26 @@ namespace nCine
 #endif
 
 		/** @brief Initializes the OpenGL viewport based on the drawable resolution */
-		void initDeviceViewport();
+		void InitDeviceViewport();
 
 		/** @brief Updates the array of connected monitors */
-		inline virtual void updateMonitors() { }
+		inline virtual void UpdateMonitors() { }
 
-		virtual void setResolutionInternal(int width, int height) = 0;
+		virtual void SetResolutionInternal(int width, int height) = 0;
 
 	private:
 		/** @brief Sets up the initial OpenGL state for the scene graph */
-		virtual void setupDevice();
+		virtual void SetupDevice();
 
 		/** @brief Updates the screen by swapping the back and front buffers */
-		virtual void update() = 0;
+		virtual void Update() = 0;
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-		static bool emscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
-		static bool emscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
+		static bool EmscriptenHandleResize(int eventType, const EmscriptenUiEvent* event, void* userData);
+		static bool EmscriptenHandleFullscreen(int eventType, const EmscriptenFullscreenChangeEvent* event, void* userData);
 
 #	if defined(WITH_GLFW)
-		static bool emscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
+		static bool EmscriptenHandleFocus(int eventType, const EmscriptenFocusEvent* event, void* userData);
 #	endif
 #endif
 	};
@@ -346,26 +346,26 @@ namespace nCine
 		NullGfxDevice()
 			: IGfxDevice(WindowMode{}, ContextInfo{}, DisplayMode{}) {}
 
-		void setSwapInterval(int interval) override {}
+		void SetSwapInterval(int interval) override {}
 
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override {}
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override {}
 
-		void setWindowPosition(int x, int y) override {}
-		void setWindowTitle(StringView windowTitle) override {}
-		void setWindowIcon(StringView iconFilename) override {}
+		void SetWindowPosition(int x, int y) override {}
+		void SetWindowTitle(StringView windowTitle) override {}
+		void SetWindowIcon(StringView iconFilename) override {}
 
-		void setWindowSize(int width, int height) override {}
+		void SetWindowSize(int width, int height) override {}
 
-		void flashWindow() const override {}
+		void FlashWindow() const override {}
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override { return _currentVideoMode; }
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override { return _currentVideoMode; }
 
 	protected:
-		void setResolutionInternal(int width, int height) override {}
+		void SetResolutionInternal(int width, int height) override {}
 
 	private:
-		void setupDevice() override {}
-		void update() override {}
+		void SetupDevice() override {}
+		void Update() override {}
 	};
 #endif
 }

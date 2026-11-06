@@ -47,17 +47,17 @@ namespace nCine
 		 *
 		 * Computes the particle's normalized age from its remaining life and forwards to the overloaded method.
 		 */
-		void affect(Particle* particle);
+		void Affect(Particle* particle);
 		/**
 		 * @brief Affects a property of the specified particle using a precomputed normalized age
 		 *
 		 * @param particle      Particle to mutate
 		 * @param normalizedAge Particle age mapped to the `[0, 1]` range, where `0` is birth and `1` is death
 		 */
-		virtual void affect(Particle* particle, float normalizedAge) = 0;
+		virtual void Affect(Particle* particle, float normalizedAge) = 0;
 
 		/** @brief Returns the affector type */
-		inline Type type() const {
+		inline Type GetType() const {
 			return _type;
 		}
 
@@ -81,14 +81,14 @@ namespace nCine
 		struct ColorStep
 		{
 			/** @brief Normalized particle age at which the color applies */
-			float age;
+			float Age;
 			/** @brief Color reached at this age */
-			Colorf color;
+			Colorf Color;
 
 			ColorStep()
-				: age(0.0f) {}
+				: Age(0.0f) {}
 			ColorStep(float newAge, const Colorf& newColor)
-				: age(newAge), color(newColor) {}
+				: Age(newAge), Color(newColor) {}
 		};
 
 		ColorAffector()
@@ -100,24 +100,24 @@ namespace nCine
 		ColorAffector& operator=(ColorAffector&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline ColorAffector clone() const {
+		inline ColorAffector Clone() const {
 			return ColorAffector(*this);
 		}
 
-		void affect(Particle* particle, float normalizedAge) override;
+		void Affect(Particle* particle, float normalizedAge) override;
 		/**
 		 * @brief Appends a color step at the specified age
 		 *
 		 * Steps must be added in ascending age order; an out-of-order step is rejected with a warning.
 		 */
-		void addColorStep(float age, const Colorf& color);
+		void AddColorStep(float age, const Colorf& color);
 
 		/** @brief Returns the array of color steps */
-		inline SmallVectorImpl<ColorStep>& steps() {
+		inline SmallVectorImpl<ColorStep>& GetSteps() {
 			return _colorSteps;
 		}
 		/** @brief Returns the array of color steps (read-only) */
-		inline const SmallVectorImpl<ColorStep>& steps() const {
+		inline const SmallVectorImpl<ColorStep>& GetSteps() const {
 			return _colorSteps;
 		}
 
@@ -142,18 +142,18 @@ namespace nCine
 		struct SizeStep
 		{
 			/** @brief Normalized particle age at which the scale applies */
-			float age;
+			float Age;
 			/** @brief Scale factor reached at this age */
-			Vector2f scale;
+			Vector2f Scale;
 
 			SizeStep()
-				: age(0.0f), scale(1.0f, 1.0f) {}
+				: Age(0.0f), Scale(1.0f, 1.0f) {}
 			SizeStep(float newAge, float newScale)
-				: age(newAge), scale(newScale, newScale) {}
+				: Age(newAge), Scale(newScale, newScale) {}
 			SizeStep(float newAge, float newScaleX, float newScaleY)
-				: age(newAge), scale(newScaleX, newScaleY) {}
+				: Age(newAge), Scale(newScaleX, newScaleY) {}
 			SizeStep(float newAge, Vector2f newScale)
-				: age(newAge), scale(newScale) {}
+				: Age(newAge), Scale(newScale) {}
 		};
 
 		/** @brief Constructs a size affector with a unit base scale factor */
@@ -175,62 +175,62 @@ namespace nCine
 		SizeAffector& operator=(SizeAffector&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline SizeAffector clone() const {
+		inline SizeAffector Clone() const {
 			return SizeAffector(*this);
 		}
 
-		void affect(Particle* particle, float normalizedAge) override;
+		void Affect(Particle* particle, float normalizedAge) override;
 		/** @brief Appends a uniform scale step at the specified age */
-		inline void addSizeStep(float age, float scale) {
-			addSizeStep(age, scale, scale);
+		inline void AddSizeStep(float age, float scale) {
+			AddSizeStep(age, scale, scale);
 		}
 		/**
 		 * @brief Appends a non-uniform scale step at the specified age
 		 *
 		 * Steps must be added in ascending age order; an out-of-order step is rejected with a warning.
 		 */
-		void addSizeStep(float age, float scaleX, float scaleY);
+		void AddSizeStep(float age, float scaleX, float scaleY);
 		/** @brief Appends a vector scale step at the specified age */
-		inline void addSizeStep(float age, Vector2f scale) {
-			addSizeStep(age, scale.X, scale.Y);
+		inline void AddSizeStep(float age, Vector2f scale) {
+			AddSizeStep(age, scale.X, scale.Y);
 		}
 
 		/** @brief Returns the array of size steps */
-		inline SmallVectorImpl<SizeStep>& steps() {
+		inline SmallVectorImpl<SizeStep>& GetSteps() {
 			return _sizeSteps;
 		}
 		/** @brief Returns the array of size steps (read-only) */
-		inline const SmallVectorImpl<SizeStep>& steps() const {
+		inline const SmallVectorImpl<SizeStep>& GetSteps() const {
 			return _sizeSteps;
 		}
 
 		/** @brief Returns the horizontal base scale factor */
-		inline float baseScaleX() const {
+		inline float GetBaseScaleX() const {
 			return _baseScale.X;
 		}
 		/** @brief Sets the horizontal base scale factor */
-		inline void setBaseScaleX(float baseScaleX) {
+		inline void SetBaseScaleX(float baseScaleX) {
 			_baseScale.X = baseScaleX;
 		}
 		/** @brief Returns the vertical base scale factor */
-		inline float baseScaleY() const {
+		inline float GetBaseScaleY() const {
 			return _baseScale.Y;
 		}
 		/** @brief Sets the vertical base scale factor */
-		inline void setBaseScaleY(float baseScaleY) {
+		inline void SetBaseScaleY(float baseScaleY) {
 			_baseScale.Y = baseScaleY;
 		}
 
 		/** @brief Returns the base scale factor */
-		inline Vector2f baseScale() const {
+		inline Vector2f GetBaseScale() const {
 			return _baseScale;
 		}
 		/** @brief Sets a uniform base scale factor */
-		inline void setBaseScale(float baseScale) {
+		inline void SetBaseScale(float baseScale) {
 			_baseScale.Set(baseScale, baseScale);
 		}
 		/** @brief Sets a vector base scale factor */
-		inline void setBaseScale(Vector2f baseScale) {
+		inline void SetBaseScale(Vector2f baseScale) {
 			_baseScale = baseScale;
 		}
 
@@ -256,14 +256,14 @@ namespace nCine
 		struct RotationStep
 		{
 			/** @brief Normalized particle age at which the angle applies */
-			float age;
+			float Age;
 			/** @brief Angle offset in degrees reached at this age */
-			float angle;
+			float Angle;
 
 			RotationStep()
-				: age(0.0f), angle(0.0f) {}
+				: Age(0.0f), Angle(0.0f) {}
 			RotationStep(float newAge, float newAngle)
-				: age(newAge), angle(newAngle) {}
+				: Age(newAge), Angle(newAngle) {}
 		};
 
 		RotationAffector()
@@ -275,24 +275,24 @@ namespace nCine
 		RotationAffector& operator=(RotationAffector&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline RotationAffector clone() const {
+		inline RotationAffector Clone() const {
 			return RotationAffector(*this);
 		}
 
-		void affect(Particle* particle, float normalizedAge) override;
+		void Affect(Particle* particle, float normalizedAge) override;
 		/**
 		 * @brief Appends a rotation step at the specified age
 		 *
 		 * Steps must be added in ascending age order; an out-of-order step is rejected with a warning.
 		 */
-		void addRotationStep(float age, float angle);
+		void AddRotationStep(float age, float angle);
 
 		/** @brief Returns the array of rotation steps */
-		inline SmallVectorImpl<RotationStep>& steps() {
+		inline SmallVectorImpl<RotationStep>& GetSteps() {
 			return _rotationSteps;
 		}
 		/** @brief Returns the array of rotation steps (read-only) */
-		inline const SmallVectorImpl<RotationStep>& steps() const {
+		inline const SmallVectorImpl<RotationStep>& GetSteps() const {
 			return _rotationSteps;
 		}
 
@@ -317,14 +317,14 @@ namespace nCine
 		struct PositionStep
 		{
 			/** @brief Normalized particle age at which the offset applies */
-			float age;
+			float Age;
 			/** @brief Position offset reached at this age */
-			Vector2f position;
+			Vector2f Position;
 
 			PositionStep()
-				: age(0.0f), position(0.0f, 0.0f) {}
+				: Age(0.0f), Position(0.0f, 0.0f) {}
 			PositionStep(float newAge, float newPositionX, float newPositionY)
-				: age(newAge), position(newPositionX, newPositionY) {}
+				: Age(newAge), Position(newPositionX, newPositionY) {}
 		};
 
 		PositionAffector()
@@ -336,28 +336,28 @@ namespace nCine
 		PositionAffector& operator=(PositionAffector&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline PositionAffector clone() const {
+		inline PositionAffector Clone() const {
 			return PositionAffector(*this);
 		}
 
-		void affect(Particle* particle, float normalizedAge) override;
+		void Affect(Particle* particle, float normalizedAge) override;
 		/**
 		 * @brief Appends a position step at the specified age
 		 *
 		 * Steps must be added in ascending age order; an out-of-order step is rejected with a warning.
 		 */
-		void addPositionStep(float age, float posX, float posY);
+		void AddPositionStep(float age, float posX, float posY);
 		/** @brief Appends a vector position step at the specified age */
-		inline void addPositionStep(float age, Vector2f position) {
-			addPositionStep(age, position.X, position.Y);
+		inline void AddPositionStep(float age, Vector2f position) {
+			AddPositionStep(age, position.X, position.Y);
 		}
 
 		/** @brief Returns the array of position steps */
-		inline SmallVectorImpl<PositionStep>& steps() {
+		inline SmallVectorImpl<PositionStep>& GetSteps() {
 			return _positionSteps;
 		}
 		/** @brief Returns the array of position steps (read-only) */
-		inline const SmallVectorImpl<PositionStep>& steps() const {
+		inline const SmallVectorImpl<PositionStep>& GetSteps() const {
 			return _positionSteps;
 		}
 
@@ -382,14 +382,14 @@ namespace nCine
 		struct VelocityStep
 		{
 			/** @brief Normalized particle age at which the offset applies */
-			float age;
+			float Age;
 			/** @brief Velocity offset reached at this age */
-			Vector2f velocity;
+			Vector2f Velocity;
 
 			VelocityStep()
-				: age(0.0f), velocity(0.0f, 0.0f) {}
+				: Age(0.0f), Velocity(0.0f, 0.0f) {}
 			VelocityStep(float newAge, float newVelocityX, float newVelocityY)
-				: age(newAge), velocity(newVelocityX, newVelocityY) {}
+				: Age(newAge), Velocity(newVelocityX, newVelocityY) {}
 		};
 
 		VelocityAffector()
@@ -401,28 +401,28 @@ namespace nCine
 		VelocityAffector& operator=(VelocityAffector&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline VelocityAffector clone() const {
+		inline VelocityAffector Clone() const {
 			return VelocityAffector(*this);
 		}
 
-		void affect(Particle* particle, float normalizedAge) override;
+		void Affect(Particle* particle, float normalizedAge) override;
 		/**
 		 * @brief Appends a velocity step at the specified age
 		 *
 		 * Steps must be added in ascending age order; an out-of-order step is rejected with a warning.
 		 */
-		void addVelocityStep(float age, float velX, float velY);
+		void AddVelocityStep(float age, float velX, float velY);
 		/** @brief Appends a vector velocity step at the specified age */
-		inline void addVelocityStep(float age, Vector2f velocity) {
-			addVelocityStep(age, velocity.X, velocity.Y);
+		inline void AddVelocityStep(float age, Vector2f velocity) {
+			AddVelocityStep(age, velocity.X, velocity.Y);
 		}
 
 		/** @brief Returns the array of velocity steps */
-		inline SmallVectorImpl<VelocityStep>& steps() {
+		inline SmallVectorImpl<VelocityStep>& GetSteps() {
 			return _velocitySteps;
 		}
 		/** @brief Returns the array of velocity steps (read-only) */
-		inline const SmallVectorImpl<VelocityStep>& steps() const {
+		inline const SmallVectorImpl<VelocityStep>& GetSteps() const {
 			return _velocitySteps;
 		}
 

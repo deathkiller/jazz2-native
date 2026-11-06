@@ -92,7 +92,7 @@ namespace nCine::RHI::D3D11
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const D3D11BufferObject* vbo) {
+			inline void SetVbo(const D3D11BufferObject* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

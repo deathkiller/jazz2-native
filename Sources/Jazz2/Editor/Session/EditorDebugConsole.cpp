@@ -115,9 +115,9 @@ namespace Jazz2::Editor
 	void EditorDebugConsole::ReadStartupCommands()
 	{
 		const AppConfiguration& config = theApplication().GetAppConfiguration();
-		for (std::int32_t i = 0; i + 1 < config.argc(); i++) {
-			if (config.argv(i) == "/console"_s) {
-				_startupCommands.emplace_back(config.argv(i + 1));
+		for (std::int32_t i = 0; i + 1 < config.GetArgc(); i++) {
+			if (config.GetArgv(i) == "/console"_s) {
+				_startupCommands.emplace_back(config.GetArgv(i + 1));
 				i++;
 			}
 		}
@@ -919,9 +919,9 @@ namespace Jazz2::Editor
 				pos = Vector2f(pos.X * size.X, pos.Y * size.Y);
 			}
 			MouseEvent event;
-			event.x = std::int32_t(pos.X);
-			event.y = std::int32_t(pos.Y);
-			event.button = (args.Verb == "/rclick"_s ? MouseButton::Right : MouseButton::Left);
+			event.X = std::int32_t(pos.X);
+			event.Y = std::int32_t(pos.Y);
+			event.Button = (args.Verb == "/rclick"_s ? MouseButton::Right : MouseButton::Left);
 			_session.OnMouseDown(event);
 			_session.OnMouseUp(event);
 			return DebugResult::Done;
@@ -932,30 +932,30 @@ namespace Jazz2::Editor
 			Vector2f from(args.Float(1, 0.0f), args.Float(2, 0.0f));
 			Vector2f to(args.Float(3, 0.0f), args.Float(4, 0.0f));
 			MouseEvent event;
-			event.button = MouseButton::Left;
-			event.x = std::int32_t(from.X);
-			event.y = std::int32_t(from.Y);
+			event.Button = MouseButton::Left;
+			event.X = std::int32_t(from.X);
+			event.Y = std::int32_t(from.Y);
 			_session.OnMouseDown(event);
 			struct DebugMouseState : MouseState {
-				bool isButtonDown(MouseButton button) const override { return button == MouseButton::Left; }
+				bool IsButtonDown(MouseButton button) const override { return button == MouseButton::Left; }
 			} state;
 			constexpr std::int32_t Steps = 16;
 			for (std::int32_t i = 1; i <= Steps; i++) {
-				state.x = std::int32_t(from.X + (to.X - from.X) * i / Steps);
-				state.y = std::int32_t(from.Y + (to.Y - from.Y) * i / Steps);
+				state.X = std::int32_t(from.X + (to.X - from.X) * i / Steps);
+				state.Y = std::int32_t(from.Y + (to.Y - from.Y) * i / Steps);
 				_session.OnMouseMove(state);
 			}
-			event.x = std::int32_t(to.X);
-			event.y = std::int32_t(to.Y);
+			event.X = std::int32_t(to.X);
+			event.Y = std::int32_t(to.Y);
 			_session.OnMouseUp(event);
 			return DebugResult::Done;
 		} });
 		auto pressOrRelease = [this](const Args& args) {
 			// A drag over several frames, with /move between, so what animates while it's held can be seen
 			MouseEvent event;
-			event.button = MouseButton::Left;
-			event.x = std::int32_t(args.Float(1, 0.0f));
-			event.y = std::int32_t(args.Float(2, 0.0f));
+			event.Button = MouseButton::Left;
+			event.X = std::int32_t(args.Float(1, 0.0f));
+			event.Y = std::int32_t(args.Float(2, 0.0f));
 			if (args.Verb == "/press"_s) {
 				_session.OnMouseDown(event);
 				// Held over frames while the mouse of the system isn't, see EditorInputRouter::Update()
@@ -969,33 +969,33 @@ namespace Jazz2::Editor
 		commands.push_back({ "/release"_s, 2, "/release <x> <y>"_s, pressOrRelease });
 		commands.push_back({ "/move"_s, 2, "/move <x> <y>"_s, [this](const Args& args) {
 			struct DebugMouseState : MouseState {
-				bool isButtonDown(MouseButton button) const override { return button == MouseButton::Left; }
+				bool IsButtonDown(MouseButton button) const override { return button == MouseButton::Left; }
 			} state;
-			state.x = std::int32_t(args.Float(1, 0.0f));
-			state.y = std::int32_t(args.Float(2, 0.0f));
+			state.X = std::int32_t(args.Float(1, 0.0f));
+			state.Y = std::int32_t(args.Float(2, 0.0f));
 			_session.OnMouseMove(state);
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/hover"_s, 2, "/hover <x> <y>"_s, [this](const Args& args) {
 			struct DebugMouseState : MouseState {
-				bool isButtonDown(MouseButton button) const override { return false; }
+				bool IsButtonDown(MouseButton button) const override { return false; }
 			} state;
-			state.x = std::int32_t(args.Float(1, 0.0f));
-			state.y = std::int32_t(args.Float(2, 0.0f));
+			state.X = std::int32_t(args.Float(1, 0.0f));
+			state.Y = std::int32_t(args.Float(2, 0.0f));
 			_session.OnMouseMove(state);
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/wheel"_s, 3, "/wheel <x> <y> <delta>"_s, [this](const Args& args) {
 			// Scrolls at a position, as the mouse would
 			struct DebugMouseState : MouseState {
-				bool isButtonDown(MouseButton button) const override { return false; }
+				bool IsButtonDown(MouseButton button) const override { return false; }
 			} state;
-			state.x = std::int32_t(args.Float(1, 0.0f));
-			state.y = std::int32_t(args.Float(2, 0.0f));
+			state.X = std::int32_t(args.Float(1, 0.0f));
+			state.Y = std::int32_t(args.Float(2, 0.0f));
 			_session.OnMouseMove(state);
 			ScrollEvent event;
-			event.x = 0.0f;
-			event.y = args.Float(3, 0.0f);
+			event.X = 0.0f;
+			event.Y = args.Float(3, 0.0f);
 			_session.OnMouseWheel(event);
 			return DebugResult::Done;
 		} });
@@ -1008,23 +1008,23 @@ namespace Jazz2::Editor
 				{ "left", Keys::Left }, { "right", Keys::Right }, { "up", Keys::Up }, { "down", Keys::Down },
 				{ "space", Keys::Space }, { "ctrl", Keys::LCtrl }, { "shift", Keys::LShift }, { "alt", Keys::LAlt },
 			};
-			event.sym = Keys::Unknown;
+			event.Sym = Keys::Unknown;
 			for (const KeyName& name : KeyNames) {
 				if (key == StringView(name.Name)) {
-					event.sym = name.Key;
+					event.Sym = name.Key;
 				}
 			}
 			// A letter for itself, as B grabbing a block or M held showing the masks
 			if (key.size() == 1 && key[0] >= 'a' && key[0] <= 'z') {
-				event.sym = Keys(std::int32_t(Keys::A) + (key[0] - 'a'));
+				event.Sym = Keys(std::int32_t(Keys::A) + (key[0] - 'a'));
 			}
-			if (event.sym == Keys::Unknown) {
+			if (event.Sym == Keys::Unknown) {
 				return DebugResult::Failed;
 			}
 			// The modifier keys held, as a real key event has them
 			std::int32_t modifiers = _input.GetModifiers();
-			std::int32_t modifier = (event.sym == Keys::LCtrl ? KeyMod::Ctrl : (event.sym == Keys::LShift ? KeyMod::Shift : (event.sym == Keys::LAlt ? KeyMod::Alt : 0)));
-			event.mod = (args.Verb == "/keyup"_s ? (modifiers & ~modifier) : (modifiers | modifier));
+			std::int32_t modifier = (event.Sym == Keys::LCtrl ? KeyMod::Ctrl : (event.Sym == Keys::LShift ? KeyMod::Shift : (event.Sym == Keys::LAlt ? KeyMod::Alt : 0)));
+			event.Mod = (args.Verb == "/keyup"_s ? (modifiers & ~modifier) : (modifiers | modifier));
 			if (args.Verb != "/keyup"_s) {
 				_session.OnKeyPressed(event);
 			}
@@ -1040,8 +1040,8 @@ namespace Jazz2::Editor
 			// Typed into what has the focus character by character, as the keyboard does
 			for (char c : args[1]) {
 				TextInputEvent event;
-				event.text[0] = (c == '+' ? ' ' : c);
-				event.length = 1;
+				event.Text[0] = (c == '+' ? ' ' : c);
+				event.Length = 1;
 				_session.OnTextInput(event);
 			}
 			return DebugResult::Done;
@@ -1050,17 +1050,17 @@ namespace Jazz2::Editor
 			// In pixels of the screen, the index of the finger that came or went is the last one given
 			TouchEvent event;
 			StringView type = args[1];
-			event.type = (type == "down"_s ? TouchEventType::Down : type == "pointerdown"_s ? TouchEventType::PointerDown :
+			event.Type = (type == "down"_s ? TouchEventType::Down : type == "pointerdown"_s ? TouchEventType::PointerDown :
 				type == "pointerup"_s ? TouchEventType::PointerUp : type == "up"_s ? TouchEventType::Up : TouchEventType::Move);
 			Vector2f screen = _session.GetSurface()->GetScreenSize();
-			for (std::size_t i = 2; i + 2 < args.size() + 0 && event.count < TouchEvent::MaxPointers; i += 3) {
-				TouchEvent::Pointer& pointer = event.pointers[event.count++];
-				pointer.id = std::int32_t(args.Float(i, 0.0f));
-				pointer.x = args.Float(i + 1, 0.0f) / screen.X;
-				pointer.y = args.Float(i + 2, 0.0f) / screen.Y;
-				pointer.pressure = 1.0f;
+			for (std::size_t i = 2; i + 2 < args.size() + 0 && event.Count < TouchEvent::MaxPointers; i += 3) {
+				TouchEvent::Pointer& pointer = event.Pointers[event.Count++];
+				pointer.Id = std::int32_t(args.Float(i, 0.0f));
+				pointer.X = args.Float(i + 1, 0.0f) / screen.X;
+				pointer.Y = args.Float(i + 2, 0.0f) / screen.Y;
+				pointer.Pressure = 1.0f;
 			}
-			event.actionIndex = std::int32_t(event.count) - 1;
+			event.ActionIndex = std::int32_t(event.Count) - 1;
 			_session.OnTouchEvent(event);
 			return DebugResult::Done;
 		} });
@@ -1146,18 +1146,18 @@ namespace Jazz2::Editor
 			std::memcpy(palette, ContentResolver::Get().GetPalettes().data(), sizeof(palette));
 			std::uint32_t rgb = std::uint32_t(std::strtoul(String(args[2]).data(), nullptr, 16));
 			palette[entry] = ((rgb >> 16) & 0xFF) | (rgb & 0xFF00) | ((rgb & 0xFF) << 16) | 0xFF000000u;
-			TimeStamp start = TimeStamp::now();
+			TimeStamp start = TimeStamp::Now();
 			// TRANSLATORS: Name of an undo step in the history, after the palette of the level was changed
 			_session.Execute(std::make_unique<SetLevelPaletteCommand>(_session.GetDocument(), true, palette, _x("editor", "Palette")));
-			LOGI("Palette entry {} changed in {:.2f} ms", entry, start.millisecondsSince());
+			LOGI("Palette entry {} changed in {:.2f} ms", entry, start.GetMillisecondsSince());
 			return DebugResult::Done;
 		} });
 		commands.push_back({ "/palettemove"_s, 3, "/palettemove <first> <last> <-1|1> [keep]"_s, [this](const Args& args) {
 			// Entries of the palette moved, with the pixels of the tiles
-			TimeStamp start = TimeStamp::now();
+			TimeStamp start = TimeStamp::Now();
 			bool moved = MovePaletteEntries(_session, std::int32_t(args.Float(1, 0.0f)), std::int32_t(args.Float(2, 0.0f)), std::int32_t(args.Float(3, 0.0f)),
 				args.size() >= 5 && args[4] == "keep"_s);
-			LOGI("Palette entries moved in {:.2f} ms", start.millisecondsSince());
+			LOGI("Palette entries moved in {:.2f} ms", start.GetMillisecondsSince());
 			return QuietResult(moved);
 		} });
 		commands.push_back({ "/tileoverride"_s, 2, "/tileoverride <tile ID> <palette index>"_s, [this](const Args& args) {

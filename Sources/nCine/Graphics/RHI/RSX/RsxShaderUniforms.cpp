@@ -181,14 +181,14 @@ namespace nCine::RHI::RSX
 		std::int32_t offset = 0;
 		for (RsxUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
-			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
+			offset += cache.GetUniformBlock()->GetSize() - cache.GetUniformBlock()->GetAlignAmount();
 		}
 	}
 
 	bool RsxShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
 		for (const RsxUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
 		}
@@ -198,7 +198,7 @@ namespace nCine::RHI::RSX
 	RsxUniformBlockCache* RsxShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
 		for (RsxUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
 		}
@@ -217,7 +217,7 @@ namespace nCine::RHI::RSX
 			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
 				hasMemoryGaps = true;
 			}
-			totalUsedSize += cache.usedSize();
+			totalUsedSize += cache.GetUsedSize();
 		}
 
 		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
@@ -226,8 +226,8 @@ namespace nCine::RHI::RSX
 				if (hasMemoryGaps) {
 					std::int32_t offset = 0;
 					for (RsxUniformBlockCache& cache : _uniformBlockCaches) {
-						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
-						offset += cache.usedSize();
+						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.GetUsedSize());
+						offset += cache.GetUsedSize();
 					}
 				} else {
 					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
@@ -247,8 +247,8 @@ namespace nCine::RHI::RSX
 		for (RsxUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
 			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
-			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
-			moreOffset += std::size_t(cache.usedSize());
+			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.GetUsedSize()));
+			moreOffset += std::size_t(cache.GetUsedSize());
 		}
 	}
 

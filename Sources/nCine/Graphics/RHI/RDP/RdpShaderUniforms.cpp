@@ -187,14 +187,14 @@ namespace nCine::RHI::RDP
 		std::int32_t offset = 0;
 		for (RdpUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
-			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
+			offset += cache.GetUniformBlock()->GetSize() - cache.GetUniformBlock()->GetAlignAmount();
 		}
 	}
 
 	bool RdpShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
 		for (const RdpUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
 		}
@@ -204,7 +204,7 @@ namespace nCine::RHI::RDP
 	RdpUniformBlockCache* RdpShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
 		for (RdpUniformBlockCache& cache : _uniformBlockCaches) {
-			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
+			if (std::strcmp(cache.GetUniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
 		}
@@ -234,7 +234,7 @@ namespace nCine::RHI::RDP
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
 			const std::uint8_t* data = cache.GetDataPointer();
 			if (data != nullptr) {
-				RdpDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.usedSize()));
+				RdpDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.GetUsedSize()));
 			}
 		}
 	}

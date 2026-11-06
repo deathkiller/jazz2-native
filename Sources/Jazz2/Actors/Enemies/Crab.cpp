@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Enemies
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::Large);
 
 		TryGenerateRandomDrop();
 

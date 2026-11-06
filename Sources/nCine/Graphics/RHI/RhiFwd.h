@@ -65,6 +65,13 @@
 // not even valid there (a "uint aMeshIndex" integer attribute), so that profile does not batch
 #	define RHI_CAP_BATCHING
 #endif
+// `RHI_CAP_AUXILIARY_SWAPCHAINS` means the device can show a texture in a window besides the main one through
+// `CreateAuxiliarySwapchain()`, `ResizeAuxiliarySwapchain()`, `PresentAuxiliaryTexture()` and
+// `DestroyAuxiliarySwapchain()` (see @ref RHI::AuxiliarySwapchainDesc). Desktop OpenGL copies it in a context of
+// that window sharing the objects of the main one, which OpenGL|ES and WebGL can't be relied on to provide.
+#if !defined(RHI_GL_PROFILE_ES)
+#	define RHI_CAP_AUXILIARY_SWAPCHAINS
+#endif
 
 namespace nCine::RHI::GL
 {
@@ -1112,6 +1119,7 @@ namespace nCine::RHI
 #define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
+#define RHI_CAP_AUXILIARY_SWAPCHAINS
 
 namespace nCine::RHI::D3D11
 {
@@ -1197,6 +1205,7 @@ namespace nCine::RHI
 #define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
+#define RHI_CAP_AUXILIARY_SWAPCHAINS
 
 namespace nCine::RHI::Vulkan
 {
@@ -1282,6 +1291,7 @@ namespace nCine::RHI
 #define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
+#define RHI_CAP_AUXILIARY_SWAPCHAINS
 
 namespace nCine::RHI::Metal
 {

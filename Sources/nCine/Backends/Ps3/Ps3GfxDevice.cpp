@@ -24,12 +24,12 @@ namespace nCine::Backends
 		_drawableHeight = _height;
 		_isFullscreen = true;
 
-		_currentVideoMode.width = std::uint32_t(_width);
-		_currentVideoMode.height = std::uint32_t(_height);
-		_currentVideoMode.refreshRate = 60.0f;
+		_currentVideoMode.Width = std::uint32_t(_width);
+		_currentVideoMode.Height = std::uint32_t(_height);
+		_currentVideoMode.RefreshRate = 60.0f;
 
-		updateMonitors();
-		initDeviceViewport();
+		UpdateMonitors();
+		InitDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} (RSX)", _width, _height);
 	}
@@ -39,7 +39,7 @@ namespace nCine::Backends
 		RHI::Device::DestroySwapchain();
 	}
 
-	void Ps3GfxDevice::update()
+	void Ps3GfxDevice::Update()
 	{
 		// Flush the frame's command buffer, flip the display buffer and wait for the flip to be picked up
 		RHI::Device::PresentFrame();
@@ -54,13 +54,13 @@ namespace nCine::Backends
 		}
 	}
 
-	void Ps3GfxDevice::setSwapInterval(int interval)
+	void Ps3GfxDevice::SetSwapInterval(int interval)
 	{
 		// The present path always waits for vertical sync (gcmSetFlipMode(GCM_FLIP_VSYNC))
 		static_cast<void>(interval);
 	}
 
-	void Ps3GfxDevice::setResolution(bool fullscreen, int width, int height)
+	void Ps3GfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		// The display mode is negotiated with the attached display once at startup and does not change
 		static_cast<void>(fullscreen);
@@ -68,52 +68,52 @@ namespace nCine::Backends
 		static_cast<void>(height);
 	}
 
-	void Ps3GfxDevice::setWindowPosition(int x, int y)
+	void Ps3GfxDevice::SetWindowPosition(int x, int y)
 	{
 		static_cast<void>(x);
 		static_cast<void>(y);
 	}
 
-	void Ps3GfxDevice::setWindowSize(int width, int height)
+	void Ps3GfxDevice::SetWindowSize(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void Ps3GfxDevice::setWindowTitle(StringView windowTitle)
+	void Ps3GfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		// The title shown in the XMB comes from PARAM.SFO, which the packaging writes at build time
 		static_cast<void>(windowTitle);
 	}
 
-	void Ps3GfxDevice::setWindowIcon(StringView windowIconFilename)
+	void Ps3GfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 		// Likewise ICON0.PNG, next to PARAM.SFO in the package
 		static_cast<void>(windowIconFilename);
 	}
 
-	const IGfxDevice::VideoMode& Ps3GfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& Ps3GfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
 		return _currentVideoMode;
 	}
 
-	void Ps3GfxDevice::setResolutionInternal(int width, int height)
+	void Ps3GfxDevice::SetResolutionInternal(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void Ps3GfxDevice::updateMonitors()
+	void Ps3GfxDevice::UpdateMonitors()
 	{
 		// One fixed "monitor" (the display the console is attached to), so windowScalingFactor() and the
 		// monitor queries stay valid
 		_numMonitors = 1;
-		_monitors[0].name = "TV";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "TV";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 	}
 }
 

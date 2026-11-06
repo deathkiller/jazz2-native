@@ -637,7 +637,7 @@ namespace nCine::RHI::RSX
 		for (std::uint32_t i = 0; i < _vertexFormat.GetAttributeCount(); i++) {
 			RsxVertexFormat::Attribute& attribute = _vertexFormat[i];
 			if (attribute.IsEnabled()) {
-				attribute.setVbo(vbo);
+				attribute.SetVbo(vbo);
 				attribute.SetBaseOffset(vboOffset);
 			}
 		}

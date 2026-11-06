@@ -14,7 +14,7 @@ namespace nCine
 	{
 	public:
 		IInputEventHandler() {
-			IInputManager::setHandler(this);
+			IInputManager::SetHandler(this);
 		}
 		inline virtual ~IInputEventHandler() { }
 

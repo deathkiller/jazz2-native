@@ -349,7 +349,7 @@ namespace nCine::RHI::Software
 			for (const SwAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
 					SwVertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
-					attr.setVbo(vbo);
+					attr.SetVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}

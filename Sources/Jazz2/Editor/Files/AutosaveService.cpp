@@ -4,6 +4,7 @@
 
 #include "../../Utils/AtomicFile.h"
 #include "../Document/CommandArchive.h"
+#include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 
 #include <Containers/DateTime.h>
@@ -126,7 +127,7 @@ namespace Jazz2::Editor
 			BeforeSave();
 		}
 
-		String path = GetRecoveryPath(_filePath);
+		String path = GetRecoveryPath(_filePath, true);
 		fs::CreateDirectories(fs::GetDirectoryName(path));
 
 		// Where the copy belongs and the history of the changes are kept in the copy itself, the document is left as
@@ -207,7 +208,7 @@ namespace Jazz2::Editor
 		if (filePath.empty()) {
 			// The copy of a level that wasn't saved is of another run, the newest one is offered, and it's taken as the
 			// copy of this run then, so discarding the changes removes it and new changes are written over it
-			String directory = fs::CombinePath({ PreferencesCache::GetDirectory(), "Editor"_s, "Recovery"_s });
+			String directory = GetRecoveryDirectory();
 			String newest;
 			std::int64_t newestTime = INT64_MIN;
 			if (fs::DirectoryExists(directory)) {
@@ -241,7 +242,17 @@ namespace Jazz2::Editor
 		return path;
 	}
 
-	String AutosaveService::GetRecoveryPath(StringView filePath)
+	String AutosaveService::GetRecoveryDirectory(bool create)
+	{
+		StringView root = ContentResolver::Get().GetWritableContentPath(create);
+		if (root.empty()) {
+			// Nothing of the content can be written to, as on the web or in a read-only installation
+			root = PreferencesCache::GetDirectory();
+		}
+		return fs::CombinePath({ root, "Editor"_s, "Recovery"_s });
+	}
+
+	String AutosaveService::GetRecoveryPath(StringView filePath, bool create)
 	{
 		String name;
 		if (filePath.empty()) {
@@ -262,7 +273,7 @@ namespace Jazz2::Editor
 			std::snprintf(buffer, sizeof(buffer), "%016llx.j2l", (unsigned long long)hash);
 			name = buffer;
 		}
-		return fs::CombinePath({ PreferencesCache::GetDirectory(), "Editor"_s, "Recovery"_s, name });
+		return fs::CombinePath(GetRecoveryDirectory(create), name);
 	}
 }
 

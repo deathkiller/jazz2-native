@@ -70,7 +70,7 @@ namespace Jazz2::Actors::Environment
 			} else {
 				_fireCooldown -= timeMult;
 				MoveInstantly(Vector2f((IsFacingLeft() ? -8.0f : 8.0f) * timeMult, -1.0f * timeMult), MoveType::Relative | MoveType::Force);
-				_renderer.setScale(_renderer.scale() + 0.014f * timeMult);
+				_renderer.SetScale(_renderer.GetScale() + 0.014f * timeMult);
 			}
 			return;
 		}
@@ -84,7 +84,7 @@ namespace Jazz2::Actors::Environment
 			if (_attackTime <= 0.0f) {
 				SetAnimation(AnimState::Idle);
 				SetState(ActorState::CollideWithOtherActors, false);
-				_renderer.setRotation(0.0f);
+				_renderer.SetRotation(0.0f);
 			}
 		} else {
 			// Follow player
@@ -132,7 +132,7 @@ namespace Jazz2::Actors::Environment
 				SetAnimation(AnimState::Idle);
 				_attackTime = 0.0f;
 				SetState(ActorState::CollideWithOtherActors, false);
-				_renderer.setRotation(0.0f);
+				_renderer.SetRotation(0.0f);
 				return true;
 			}
 		}
@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Environment
 			SetAnimation(AnimState::Idle);
 			_attackTime = 0.0f;
 			SetState(ActorState::CollideWithOtherActors, false);
-			_renderer.setRotation(0.0f);
+			_renderer.SetRotation(0.0f);
 		}
 	}
 
@@ -183,7 +183,7 @@ namespace Jazz2::Actors::Environment
 							auto fire = [&](auto shot, float angle) {
 								shot->OnActivated(ActorActivationDetails(
 									_levelHandler,
-									Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+									Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2),
 									shotParams
 								));
 								shot->OnFire(sharedOwner, _pos, _speed, angle, IsFacingLeft());
@@ -220,7 +220,7 @@ namespace Jazz2::Actors::Environment
 						if (IsFacingLeft()) {
 							angle += fPi;
 						}
-						_renderer.setRotation(angle);
+						_renderer.SetRotation(angle);
 
 						float distance = (newPos - _pos).Length();
 						_attackTime = distance * 0.2f;

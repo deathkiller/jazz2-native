@@ -30,7 +30,7 @@ namespace nCine::RHI::GL
 		explicit GLUniformBlockCache(GLUniformBlock* uniformBlock);
 
 		/** @brief Returns the uniform block described by this cache */
-		inline const GLUniformBlock* uniformBlock() const {
+		inline const GLUniformBlock* GetUniformBlock() const {
 			return _uniformBlock;
 		}
 		/** @brief Wrapper around @ref GLUniformBlock::GetIndex() */
@@ -54,7 +54,7 @@ namespace nCine::RHI::GL
 		void SetDataPointer(GLubyte* dataPointer);
 
 		/** @brief Returns how many bytes of the cache are uploaded to the UBO */
-		inline GLint usedSize() const {
+		inline GLint GetUsedSize() const {
 			return _usedSize;
 		}
 		/** @brief Sets how many bytes of the cache are uploaded to the UBO */

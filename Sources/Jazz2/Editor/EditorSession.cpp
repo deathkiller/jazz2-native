@@ -203,7 +203,7 @@ namespace Jazz2::Editor
 		// A function key that has an action, as the help or playing, does it while typing too, a key that types a character
 		// is typed whatever it does otherwise
 		_surface->IsKeyLeftByText = [this](const KeyboardEvent& event) {
-			return (event.sym >= Keys::F1 && event.sym <= Keys::F12 && _actions.FindByShortcut(Shortcut::FromEvent(event)) != nullptr);
+			return (event.Sym >= Keys::F1 && event.Sym <= Keys::F12 && _actions.FindByShortcut(Shortcut::FromEvent(event)) != nullptr);
 		};
 		_shell = _surface->SetRoot<EditorShell>(*this);
 		// The ring back into the editor reveals all of it, the panels too, so it's over them. The ring into the game is
@@ -811,7 +811,7 @@ namespace Jazz2::Editor
 
 		if (_surface != nullptr) {
 			// Drawn over everything, at the size of the window
-			_surface->setParent(&theApplication().GetRootNode());
+			_surface->SetParent(&theApplication().GetRootNode());
 		}
 		UpdateUiScale();
 	}
@@ -827,12 +827,12 @@ namespace Jazz2::Editor
 	float EditorSession::GetAutoUiScale()
 	{
 		IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		float width = float(gfxDevice.drawableWidth()), height = float(gfxDevice.drawableHeight());
+		float width = float(gfxDevice.GetDrawableWidth()), height = float(gfxDevice.GetDrawableHeight());
 
 		// By how large the system shows its own interface (its DPI), not by the size of the window, so a large screen
 		// shows more of the level instead of larger panels, while a small screen with many pixels still gets a larger
 		// interface; one pixel a unit at 100%, and only as large as still leaves room for the smallest layout of the panels
-		float systemScale = gfxDevice.windowScalingFactor();
+		float systemScale = gfxDevice.GetWindowScalingFactor();
 		if (!(systemScale > 0.0f && systemScale < 16.0f)) {
 			systemScale = 1.0f;
 		}

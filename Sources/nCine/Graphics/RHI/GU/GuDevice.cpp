@@ -1098,11 +1098,11 @@ namespace nCine::RHI::GU
 		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below. The GE
 		// has run the list while it was being built, so the wait is only what it still had left at this point.
 		const bool timed = FrameStatistics::IsEnabled();
-		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 		sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 		_listOpen = false;
 		if (timed) {
-			FrameStatistics::AddCounter("GE wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("GE wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 			FrameStatistics::AddCounter("Display list", float(listBytes) * 100.0f / float(DisplayListBytes), FrameStatistics::Unit::Percent);
 		}
 

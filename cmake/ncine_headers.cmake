@@ -154,6 +154,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Viewport.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/IRhiCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Rhi.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiAuxiliarySwapchain.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiCapabilitiesBase.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiFwd.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiTypes.h

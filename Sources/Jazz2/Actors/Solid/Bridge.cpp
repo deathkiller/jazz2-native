@@ -302,7 +302,7 @@ namespace Jazz2::Actors::Solid
 				// Placed by the hotspot of the frame, as the frames differ in size
 				Vector2i anchor = _currentAnimation->Base->GetFrameAnchor(curAnimFrame);
 				command->SetTransformation(Matrix4x4f::Translation(pos.X - anchor.X, pos.Y - anchor.Y, 0.0f));
-				command->SetLayer(_renderer.layer());
+				command->SetLayer(_renderer.GetLayer());
 				resolver.BindSpritePalette(*command, *_currentAnimation->Base->TextureDiffuse.get(), indexed, _currentAnimation->PaletteOffset);
 
 				renderQueue.AddCommand(command);

@@ -91,8 +91,8 @@ namespace Jazz2::Editor
 	Shortcut Shortcut::FromEvent(const KeyboardEvent& event)
 	{
 		Shortcut shortcut;
-		shortcut.Key = event.sym;
-		if ((event.mod & KeyMod::Ctrl) != 0) {
+		shortcut.Key = event.Sym;
+		if ((event.Mod & KeyMod::Ctrl) != 0) {
 			shortcut.Modifiers |= KeyMod::Ctrl;
 		}
 #if defined(DEATH_TARGET_APPLE)
@@ -101,10 +101,10 @@ namespace Jazz2::Editor
 			shortcut.Modifiers |= KeyMod::Ctrl;
 		}
 #endif
-		if ((event.mod & KeyMod::Shift) != 0) {
+		if ((event.Mod & KeyMod::Shift) != 0) {
 			shortcut.Modifiers |= KeyMod::Shift;
 		}
-		if ((event.mod & KeyMod::Alt) != 0) {
+		if ((event.Mod & KeyMod::Alt) != 0) {
 			shortcut.Modifiers |= KeyMod::Alt;
 		}
 		return shortcut;
@@ -178,12 +178,12 @@ namespace Jazz2::Editor
 
 	bool Shortcut::Matches(const KeyboardEvent& event) const
 	{
-		if (Key == Keys::Unknown || !AreSameKey(Key, event.sym)) {
+		if (Key == Keys::Unknown || !AreSameKey(Key, event.Sym)) {
 			return false;
 		}
 #if !defined(DEATH_TARGET_APPLE)
 		// A key pressed with the system key is meant for the system, Win+S isn't S
-		if ((event.mod & KeyMod::Super) != 0) {
+		if ((event.Mod & KeyMod::Super) != 0) {
 			return false;
 		}
 #endif
@@ -575,11 +575,11 @@ namespace Jazz2::Editor
 			problems++;
 		}
 		KeyboardEvent save;
-		save.sym = Keys::S;
-		save.mod = KeyMod::LCtrl;
+		save.Sym = Keys::S;
+		save.Mod = KeyMod::LCtrl;
 		KeyboardEvent other;
-		other.sym = Keys::X;
-		other.mod = 0;
+		other.Sym = Keys::X;
+		other.Mod = 0;
 		if (!registry.MatchesWhileTyping(save) || registry.MatchesWhileTyping(other)) {
 			LOGE("Shortcuts that work while typing aren't told apart");
 			problems++;
@@ -605,8 +605,8 @@ namespace Jazz2::Editor
 				problems++;
 			}
 			KeyboardEvent b;
-			b.sym = Keys::B;
-			b.mod = 0;
+			b.Sym = Keys::B;
+			b.Mod = 0;
 			if (!mlle.HandleKey(b) || !mlle.HandleKey(b, ActionScope::Edit, true) || grabbed != 1) {
 				LOGE("A key held runs an action that ignores repeating more than once");
 				problems++;
@@ -628,11 +628,11 @@ namespace Jazz2::Editor
 		help.Key = { Keys::F6, 0 };
 		help.Scope = ActionScope::Both;
 		KeyboardEvent f6;
-		f6.sym = Keys::F6;
-		f6.mod = 0;
+		f6.Sym = Keys::F6;
+		f6.Mod = 0;
 		KeyboardEvent ctrlZ;
-		ctrlZ.sym = Keys::Z;
-		ctrlZ.mod = KeyMod::LCtrl;
+		ctrlZ.Sym = Keys::Z;
+		ctrlZ.Mod = KeyMod::LCtrl;
 		bool editRan = scoped.HandleKey(f6, ActionScope::Edit);
 		bool playRan = scoped.HandleKey(f6, ActionScope::Play);
 		if (!editRan || !playRan || edited != 1 || played != 1 || scoped.HandleKey(ctrlZ, ActionScope::Play) ||
@@ -651,10 +651,10 @@ namespace Jazz2::Editor
 		EditorAction& byButton = scoped.Add("view.byButton"_s, "By Button"_s, EditorIcon::None, [&pressed]() { pressed++; });
 		byButton.Key = { Shortcut::Mouse4, KeyMod::Shift };
 		KeyboardEvent mouse4;
-		mouse4.sym = Shortcut::GetMouseButtonKey(MouseButton::Fourth);
-		mouse4.mod = KeyMod::LShift;
+		mouse4.Sym = Shortcut::GetMouseButtonKey(MouseButton::Fourth);
+		mouse4.Mod = KeyMod::LShift;
 		KeyboardEvent mouse5 = mouse4;
-		mouse5.sym = Shortcut::GetMouseButtonKey(MouseButton::Fifth);
+		mouse5.Sym = Shortcut::GetMouseButtonKey(MouseButton::Fifth);
 		if (!scoped.HandleKey(mouse4) || scoped.HandleKey(mouse5) || pressed != 1 ||
 			Shortcut::GetMouseButtonKey(MouseButton::Middle) != Keys::Unknown) {
 			LOGE("Side buttons of the mouse don't run their actions");

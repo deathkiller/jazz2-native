@@ -33,80 +33,80 @@ namespace nCine
 		RectAnimation(float defaultFrameDuration, LoopMode loopMode);
 
 		/** @brief Returns whether the animation is paused */
-		inline bool isPaused() const {
+		inline bool IsPaused() const {
 			return _isPaused;
 		}
 		/** @brief Sets the pause flag */
-		inline void setPaused(bool isPaused) {
+		inline void SetPaused(bool isPaused) {
 			_isPaused = isPaused;
 		}
 
 		/** @brief Advances the current frame by the time elapsed since the last update */
-		void updateFrame(float interval);
+		void UpdateFrame(float interval);
 
 		/** @brief Returns the current frame index */
-		inline std::uint32_t frame() const {
+		inline std::uint32_t GetFrame() const {
 			return _currentFrame;
 		}
 		/** @brief Sets the current frame index */
-		void setFrame(std::uint32_t frameNum);
+		void SetFrame(std::uint32_t frameNum);
 
 		/** @brief Returns the default frame duration in seconds */
-		float defaultFrameDuration() const {
+		float GetDefaultFrameDuration() const {
 			return _defaultFrameDuration;
 		}
 		/** @brief Sets the default frame duration in seconds */
-		inline void setDefaultFrameDuration(float defaultFrameDuration) {
+		inline void SetDefaultFrameDuration(float defaultFrameDuration) {
 			_defaultFrameDuration = defaultFrameDuration;
 		}
 
 		/** @brief Returns the loop mode */
-		LoopMode loopMode() const {
+		LoopMode GetLoopMode() const {
 			return _loopMode;
 		}
 		/** @brief Sets the loop mode */
-		inline void setLoopMode(LoopMode loopMode) {
+		inline void SetLoopMode(LoopMode loopMode) {
 			_loopMode = loopMode;
 		}
 
 		/** @brief Appends a rectangle with the specified frame duration */
-		void addRect(const Recti& rect, float frameTime);
+		void AddRect(const Recti& rect, float frameTime);
 		/** @brief Creates a rectangle from origin and size and appends it with the specified frame duration */
-		void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameTime);
+		void AddRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameTime);
 
 		/** @brief Appends a rectangle with the default frame duration */
-		inline void addRect(const Recti& rect) {
-			addRect(rect, _defaultFrameDuration);
+		inline void AddRect(const Recti& rect) {
+			AddRect(rect, _defaultFrameDuration);
 		}
 		/** @brief Creates a rectangle from origin and size and appends it with the default frame duration */
-		inline void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h) {
-			addRect(x, y, w, h, _defaultFrameDuration);
+		inline void AddRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h) {
+			AddRect(x, y, w, h, _defaultFrameDuration);
 		}
 
 		/** @brief Returns the current rectangle */
-		inline const Recti& rect() const {
+		inline const Recti& GetRect() const {
 			return _rects[_currentFrame];
 		}
 		/** @brief Returns the current frame duration in seconds */
-		inline float frameDuration() const {
+		inline float GetFrameDuration() const {
 			return _frameDurations[_currentFrame];
 		}
 
 		/** @brief Returns the array of all rectangles */
-		inline SmallVectorImpl<Recti>& rectangles() {
+		inline SmallVectorImpl<Recti>& GetRectangles() {
 			return _rects;
 		}
 		/** @brief Returns the array of all rectangles (read-only) */
-		inline const SmallVectorImpl<Recti>& rectangles() const {
+		inline const SmallVectorImpl<Recti>& GetRectangles() const {
 			return _rects;
 		}
 
 		/** @brief Returns the array of all frame durations */
-		inline SmallVectorImpl<float>& frameDurations() {
+		inline SmallVectorImpl<float>& GetFrameDurations() {
 			return _frameDurations;
 		}
 		/** @brief Returns the array of all frame durations (read-only) */
-		inline const SmallVectorImpl<float>& frameDurations() const {
+		inline const SmallVectorImpl<float>& GetFrameDurations() const {
 			return _frameDurations;
 		}
 

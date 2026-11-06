@@ -17,12 +17,12 @@ namespace nCine::Backends
 	class ImGuiGlfwInput
 	{
 	public:
-		static void init(GLFWwindow* window, bool withCallbacks);
-		static void shutdown();
-		static void newFrame();
-		static void endFrame();
+		static void Init(GLFWwindow* window, bool withCallbacks);
+		static void Shutdown();
+		static void NewFrame();
+		static void EndFrame();
 
-		static inline void setInputEnabled(bool inputEnabled) {
+		static inline void SetInputEnabled(bool inputEnabled) {
 			_inputEnabled = inputEnabled;
 		}
 
@@ -38,54 +38,54 @@ namespace nCine::Backends
 		static bool _wantUpdateMonitors;
 		static GLFWwindow* _keyOwnerWindows[GLFW_KEY_LAST];
 
-		static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-		static void keyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods);
-		static void windowFocusCallback(GLFWwindow* window, int focused);
-		static void cursorPosCallback(GLFWwindow* window, double x, double y);
-		static void cursorEnterCallback(GLFWwindow* window, int entered);
-		static void charCallback(GLFWwindow* window, unsigned int c);
-		static void monitorCallback(GLFWmonitor* monitor, int event);
+		static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+		static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+		static void KeyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods);
+		static void WindowFocusCallback(GLFWwindow* window, int focused);
+		static void CursorPosCallback(GLFWwindow* window, double x, double y);
+		static void CursorEnterCallback(GLFWwindow* window, int entered);
+		static void CharCallback(GLFWwindow* window, unsigned int c);
+		static void MonitorCallback(GLFWmonitor* monitor, int event);
 #if defined(IMGUI_HAS_VIEWPORT)
-		static void windowCloseCallback(GLFWwindow* window);
-		static void windowPosCallback(GLFWwindow* window, int, int);
-		static void windowSizeCallback(GLFWwindow* window, int, int);
+		static void WindowCloseCallback(GLFWwindow* window);
+		static void WindowPosCallback(GLFWwindow* window, int, int);
+		static void WindowSizeCallback(GLFWwindow* window, int, int);
 #endif
 
-		static void installCallbacks(GLFWwindow* window);
-		static void restoreCallbacks(GLFWwindow* window);
+		static void InstallCallbacks(GLFWwindow* window);
+		static void RestoreCallbacks(GLFWwindow* window);
 
-		static void updateMouseData();
-		static void updateMouseCursor();
-		static void updateGamepads();
+		static void UpdateMouseData();
+		static void UpdateMouseCursor();
+		static void UpdateGamepads();
 
-		static float getContentScaleForWindow(GLFWwindow* window);
-		static float getContentScaleForMonitor(GLFWmonitor* monitor);
-		static void getWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale);
+		static float GetContentScaleForWindow(GLFWwindow* window);
+		static float GetContentScaleForMonitor(GLFWmonitor* monitor);
+		static void GetWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale);
 
 #if defined(IMGUI_HAS_DOCK)
-		static void updateMonitors();
+		static void UpdateMonitors();
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		static ImGuiViewport* getParentViewport(ImGuiViewport* viewport);
-		static void addParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport);
+		static ImGuiViewport* GetParentViewport(ImGuiViewport* viewport);
+		static void AddParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport);
 
-		static void onCreateWindow(ImGuiViewport* viewport);
-		static void onDestroyWindow(ImGuiViewport* viewport);
-		static void onShowWindow(ImGuiViewport* viewport);
-		static ImVec2 onGetWindowPos(ImGuiViewport* viewport);
-		static void onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos);
-		static ImVec2 onGetWindowSize(ImGuiViewport* viewport);
-		static void onSetWindowSize(ImGuiViewport* viewport, ImVec2 size);
-		static ImVec2 onGetWindowFramebufferScale(ImGuiViewport* viewport);
-		static void onSetWindowTitle(ImGuiViewport* viewport, const char* title);
-		static bool onGetWindowFocus(ImGuiViewport* viewport);
-		static void onSetWindowFocus(ImGuiViewport* viewport);
-		static bool onGetWindowMinimized(ImGuiViewport* viewport);
-		static void onSetWindowAlpha(ImGuiViewport* viewport, float alpha);
-		static void onRenderWindow(ImGuiViewport* viewport, void*);
-		static void onSwapBuffers(ImGuiViewport* viewport, void*);
+		static void OnCreateWindow(ImGuiViewport* viewport);
+		static void OnDestroyWindow(ImGuiViewport* viewport);
+		static void OnShowWindow(ImGuiViewport* viewport);
+		static ImVec2 OnGetWindowPos(ImGuiViewport* viewport);
+		static void OnSetWindowPos(ImGuiViewport* viewport, ImVec2 pos);
+		static ImVec2 OnGetWindowSize(ImGuiViewport* viewport);
+		static void OnSetWindowSize(ImGuiViewport* viewport, ImVec2 size);
+		static ImVec2 OnGetWindowFramebufferScale(ImGuiViewport* viewport);
+		static void OnSetWindowTitle(ImGuiViewport* viewport, const char* title);
+		static bool OnGetWindowFocus(ImGuiViewport* viewport);
+		static void OnSetWindowFocus(ImGuiViewport* viewport);
+		static bool OnGetWindowMinimized(ImGuiViewport* viewport);
+		static void OnSetWindowAlpha(ImGuiViewport* viewport, float alpha);
+		static void OnRenderWindow(ImGuiViewport* viewport, void*);
+		static void OnSwapBuffers(ImGuiViewport* viewport, void*);
 #endif
 	};
 }

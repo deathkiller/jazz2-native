@@ -230,7 +230,7 @@ namespace Jazz2::Editor
 		}
 		std::int32_t builds = 0;
 		bool skipped = false;
-		TimeStamp buildStart = TimeStamp::now();
+		TimeStamp buildStart = TimeStamp::Now();
 		for (std::int32_t cy = FloorDivide(from.Y, ChunkTiles); cy <= FloorDivide(to.Y, ChunkTiles); cy++) {
 			for (std::int32_t cx = FloorDivide(from.X, ChunkTiles); cx <= FloorDivide(to.X, ChunkTiles); cx++) {
 				// Where the pattern of a layer that repeats is at the start of the chunk, the chunk is the same there
@@ -241,7 +241,7 @@ namespace Jazz2::Editor
 				if (it != _chunks.end()) {
 					chunk = &it->second;
 				} else {
-					if (builds >= MaxBuildsPerFrame || (builds > 0 && buildStart.millisecondsSince() >= MaxBuildMilliseconds)) {
+					if (builds >= MaxBuildsPerFrame || (builds > 0 && buildStart.GetMillisecondsSince() >= MaxBuildMilliseconds)) {
 						skipped = true;
 						continue;
 					}

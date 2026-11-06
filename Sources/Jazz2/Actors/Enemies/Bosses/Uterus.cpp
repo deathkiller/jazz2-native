@@ -44,7 +44,7 @@ namespace Jazz2::Actors::Bosses
 		async_await RequestMetadataAsync("Boss/Uterus"_s);
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}
@@ -52,7 +52,7 @@ namespace Jazz2::Actors::Bosses
 	bool Uterus::OnActivatedBoss()
 	{
 		SetHealthByDifficulty(50);
-		_renderer.setDrawEnabled(true);
+		_renderer.SetDrawEnabled(true);
 
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 
@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Bosses
 			_shields[i]->Phase = (fTwoPi * i / std::int32_t(arraySize(_shields)));
 			_shields[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
-				Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.layer() + 2)
+				Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.GetLayer() + 2)
 			));
 			_levelHandler->AddActor(_shields[i]);
 		}
@@ -102,7 +102,7 @@ namespace Jazz2::Actors::Bosses
 					std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
 					crab->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 4)
+						Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 4)
 					));
 					crab->AddExternalForce(force, 0.0f);
 					_levelHandler->AddActor(crab);
@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Bosses
 			_anglePhase += timeMult * 0.02f;
 			float sinPhase, cosPhase;
 			sincosApprox(_anglePhase, sinPhase, cosPhase);
-			_renderer.setRotation(fPiOver2 + sinPhase * 0.2f);
+			_renderer.SetRotation(fPiOver2 + sinPhase * 0.2f);
 
 			Vector2f pos = _lastPos + Vector2f(cosPhase * 60.0f, sinPhase * 60.0f);
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
@@ -179,8 +179,8 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokePoof);
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::SmokePoof);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::RF);
 
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -281,7 +281,7 @@ namespace Jazz2::Actors::Bosses
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::Tiny);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::Tiny);
 
 		return EnemyBase::OnPerish(collider);
 	}
@@ -290,6 +290,6 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
 
-		_renderer.setRotation(phase);
+		_renderer.SetRotation(phase);
 	}
 }

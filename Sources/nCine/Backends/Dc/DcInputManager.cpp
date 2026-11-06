@@ -65,22 +65,22 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	bool DcJoystickState::isButtonPressed(int buttonId) const
+	bool DcJoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
-	unsigned char DcJoystickState::hatState(int hatId) const
+	unsigned char DcJoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
-	float DcJoystickState::axisValue(int axisId) const
+	float DcJoystickState::GetAxisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
-	void DcJoystickState::resetJoystickState(int joyId)
+	void DcJoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		_hatState = HatState::Centered;
@@ -88,48 +88,48 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	void DcJoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void DcJoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
-			_joyButtonEvent.joyId = _joyId;
-			_joyButtonEvent.buttonId = buttonId;
+		if (IInputManager::GetHandler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.JoyId = _joyId;
+			_joyButtonEvent.ButtonId = buttonId;
 			if (pressed) {
 				DcInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
 				DcInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
 		_buttonsState[buttonId] = pressed;
 	}
 
-	void DcJoystickState::simulateHatEvent(unsigned char state)
+	void DcJoystickState::SimulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && _hatState != state) {
-			_joyHatEvent.joyId = _joyId;
-			_joyHatEvent.hatId = 0;
-			_joyHatEvent.hatState = state;
+		if (IInputManager::GetHandler() != nullptr && _hatState != state) {
+			_joyHatEvent.JoyId = _joyId;
+			_joyHatEvent.HatId = 0;
+			_joyHatEvent.HatState = state;
 			DcInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+			IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 		}
 		_hatState = state;
 	}
 
-	void DcJoystickState::simulateAxisEvent(int axisId, float value)
+	void DcJoystickState::SimulateAxisEvent(int axisId, float value)
 	{
 		if (axisId < 0 || axisId >= MaxNumAxes) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
-			_joyAxisEvent.joyId = _joyId;
-			_joyAxisEvent.axisId = axisId;
-			_joyAxisEvent.value = value;
+		if (IInputManager::GetHandler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
+			_joyAxisEvent.JoyId = _joyId;
+			_joyAxisEvent.AxisId = axisId;
+			_joyAxisEvent.Value = value;
 			DcInputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
-			IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
+			IInputManager::GetHandler()->OnJoyAxisMoved(_joyAxisEvent);
 		}
 		_axesValuesState[axisId] = value;
 	}
@@ -139,72 +139,72 @@ namespace nCine::Backends
 		_joyMapping.Init(this);
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			_pads[i].State.resetJoystickState(i);
+			_pads[i].State.ResetJoystickState(i);
 		}
 		// Poll once so an already-plugged controller connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	DcInputManager::~DcInputManager() = default;
 
-	const MouseState& DcInputManager::mouseState() const
+	const MouseState& DcInputManager::GetMouseState() const
 	{
 		static NullInputManager::NullMouseState nullMouseState;
 		return nullMouseState;
 	}
 
-	const KeyboardState& DcInputManager::keyboardState() const
+	const KeyboardState& DcInputManager::GetKeyboardState() const
 	{
 		static NullInputManager::NullKeyboardState nullKeyboardState;
 		return nullKeyboardState;
 	}
 
-	bool DcInputManager::isJoyPresent(int joyId) const
+	bool DcInputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
-	const char* DcInputManager::joyName(int joyId) const
+	const char* DcInputManager::GetJoyName(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return "Sega Dreamcast Controller";
 	}
 
-	const JoystickGuid DcInputManager::joyGuid(int joyId) const
+	const JoystickGuid DcInputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The state publishes the XInput-shaped layout, so the built-in default mapping applies
 		return JoystickGuidType::Xinput;
 	}
 
-	int DcInputManager::joyNumButtons(int joyId) const
+	int DcInputManager::GetJoyButtonCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return DcJoystickState::MaxNumButtons;
 	}
 
-	int DcInputManager::joyNumHats(int joyId) const
+	int DcInputManager::GetJoyHatCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return DcJoystickState::MaxNumHats;
 	}
 
-	int DcInputManager::joyNumAxes(int joyId) const
+	int DcInputManager::GetJoyAxisCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return DcJoystickState::MaxNumAxes;
 	}
 
-	const JoystickState& DcInputManager::joystickState(int joyId) const
+	const JoystickState& DcInputManager::GetJoystickState(int joyId) const
 	{
 		static DcJoystickState nullJoystickState;
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _pads[joyId].State;
 		}
 		return nullJoystickState;
 	}
 
-	bool DcInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool DcInputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// TODO(DC): drive a Puru Puru (jump) pack when present
 		static_cast<void>(joyId);
@@ -214,7 +214,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	bool DcInputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool DcInputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		static_cast<void>(joyId);
 		static_cast<void>(left);
@@ -223,20 +223,20 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void DcInputManager::handleConnection(std::int32_t joyId, bool connected)
+	void DcInputManager::HandleConnection(std::int32_t joyId, bool connected)
 	{
 		if (_pads[joyId].Connected == connected) {
 			return;
 		}
 		_pads[joyId].Connected = connected;
-		_joyConnectionEvent.joyId = joyId;
+		_joyConnectionEvent.JoyId = joyId;
 		if (connected) {
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
-			_pads[joyId].State.resetJoystickState(joyId);
+			_pads[joyId].State.ResetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
@@ -244,11 +244,11 @@ namespace nCine::Backends
 		}
 	}
 
-	void DcInputManager::updateJoystickStates()
+	void DcInputManager::UpdateJoystickStates()
 	{
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
 			maple_device_t* device = maple_enum_type(i, MAPLE_FUNC_CONTROLLER);
-			handleConnection(i, device != nullptr);
+			HandleConnection(i, device != nullptr);
 			if (device == nullptr) {
 				continue;
 			}
@@ -259,36 +259,36 @@ namespace nCine::Backends
 
 			DcJoystickState& state = _pads[i].State;
 
-			state.simulateButtonEvent(ButtonA, (st->buttons & CONT_A) != 0);
-			state.simulateButtonEvent(ButtonB, (st->buttons & CONT_B) != 0);
-			state.simulateButtonEvent(ButtonX, (st->buttons & CONT_X) != 0);
-			state.simulateButtonEvent(ButtonY, (st->buttons & CONT_Y) != 0);
-			state.simulateButtonEvent(ButtonStart, (st->buttons & CONT_START) != 0);
+			state.SimulateButtonEvent(ButtonA, (st->buttons & CONT_A) != 0);
+			state.SimulateButtonEvent(ButtonB, (st->buttons & CONT_B) != 0);
+			state.SimulateButtonEvent(ButtonX, (st->buttons & CONT_X) != 0);
+			state.SimulateButtonEvent(ButtonY, (st->buttons & CONT_Y) != 0);
+			state.SimulateButtonEvent(ButtonStart, (st->buttons & CONT_START) != 0);
 			// The digital clicks of the analog triggers double as the shoulder buttons
-			state.simulateButtonEvent(ButtonLShoulder, st->ltrig > 224);
-			state.simulateButtonEvent(ButtonRShoulder, st->rtrig > 224);
+			state.SimulateButtonEvent(ButtonLShoulder, st->ltrig > 224);
+			state.SimulateButtonEvent(ButtonRShoulder, st->rtrig > 224);
 			// The pad has no Back or Guide button, so C and Z stand in for them. Both are absent from a
 			// standard controller - their bits simply never set there - but arcade sticks and the six-button
 			// pads have them, and without this they would do nothing at all.
-			state.simulateButtonEvent(ButtonBack, (st->buttons & CONT_C) != 0);
-			state.simulateButtonEvent(ButtonGuide, (st->buttons & CONT_Z) != 0);
+			state.SimulateButtonEvent(ButtonBack, (st->buttons & CONT_C) != 0);
+			state.SimulateButtonEvent(ButtonGuide, (st->buttons & CONT_Z) != 0);
 			// Nothing on the pad clicks the stick
-			state.simulateButtonEvent(ButtonLStick, false);
-			state.simulateButtonEvent(ButtonRStick, false);
+			state.SimulateButtonEvent(ButtonLStick, false);
+			state.SimulateButtonEvent(ButtonRStick, false);
 
 			unsigned char hat = HatState::Centered;
 			if (st->buttons & CONT_DPAD_UP) hat |= HatState::Up;
 			if (st->buttons & CONT_DPAD_RIGHT) hat |= HatState::Right;
 			if (st->buttons & CONT_DPAD_DOWN) hat |= HatState::Down;
 			if (st->buttons & CONT_DPAD_LEFT) hat |= HatState::Left;
-			state.simulateHatEvent(hat);
+			state.SimulateHatEvent(hat);
 
-			state.simulateAxisEvent(0, NormalizeStick(st->joyx));
-			state.simulateAxisEvent(1, NormalizeStick(st->joyy));
-			state.simulateAxisEvent(2, NormalizeStick(st->joy2x));
-			state.simulateAxisEvent(3, NormalizeStick(st->joy2y));
-			state.simulateAxisEvent(4, NormalizeTrigger(st->ltrig));
-			state.simulateAxisEvent(5, NormalizeTrigger(st->rtrig));
+			state.SimulateAxisEvent(0, NormalizeStick(st->joyx));
+			state.SimulateAxisEvent(1, NormalizeStick(st->joyy));
+			state.SimulateAxisEvent(2, NormalizeStick(st->joy2x));
+			state.SimulateAxisEvent(3, NormalizeStick(st->joy2y));
+			state.SimulateAxisEvent(4, NormalizeTrigger(st->ltrig));
+			state.SimulateAxisEvent(5, NormalizeTrigger(st->rtrig));
 		}
 	}
 }

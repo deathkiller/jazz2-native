@@ -453,7 +453,7 @@ namespace nCine::RHI::Software::sw
 	 * rasterizer's gather phase has already fetched the texel of this pixel into `in.rgba` (the 4-byte
 	 * expanded texel, before the sampling swizzle), so the fragment reads it back - applying the unit's swizzle -
 	 * instead of re-deriving the texel address and re-fetching through the full sampler. For a
-	 * bilinear-filtered texture the gather holds the FILTERED sample - exactly what GL's `texture()`
+	 * bilinear-filtered texture the gather holds the FILTERED sample - exactly what GL's `GetTexture()`
 	 * returns there - so reading it back is what keeps `texture(uTexture, vTexCoords)` bilinear on the
 	 * software backend (the generic @ref swTexture samples nearest).
 	 *

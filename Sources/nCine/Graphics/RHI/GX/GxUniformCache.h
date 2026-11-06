@@ -89,7 +89,7 @@ namespace nCine::RHI::GX
 			: _uniformBlock(nullptr), _dataPointer(nullptr), _usedSize(0) {}
 		explicit GxUniformBlockCache(GxUniformBlock* uniformBlock);
 
-		inline const GxUniformBlock* uniformBlock() const {
+		inline const GxUniformBlock* GetUniformBlock() const {
 			return _uniformBlock;
 		}
 		std::uint32_t GetIndex() const;
@@ -105,7 +105,7 @@ namespace nCine::RHI::GX
 		}
 		void SetDataPointer(std::uint8_t* dataPointer);
 
-		inline std::int32_t usedSize() const {
+		inline std::int32_t GetUsedSize() const {
 			return _usedSize;
 		}
 		void SetUsedSize(std::int32_t usedSize);

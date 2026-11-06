@@ -1508,7 +1508,7 @@ namespace nCine::RHI::Vulkan
 				}
 			}
 
-			if (!EnsureRenderPass(VulkanDevice::currentRenderTargetInternal())) {
+			if (!EnsureRenderPass(VulkanDevice::GetCurrentRenderTargetInternal())) {
 				return;
 			}
 
@@ -1664,7 +1664,7 @@ namespace nCine::RHI::Vulkan
 	}
 
 	// Internal accessors used by the anonymous-namespace draw helpers
-	VulkanRenderTarget* VulkanDevice::currentRenderTargetInternal() { return _currentRenderTarget; }
+	VulkanRenderTarget* VulkanDevice::GetCurrentRenderTargetInternal() { return _currentRenderTarget; }
 	std::uint32_t VulkanDevice::MaxUniformBindingsPublic() { return MaxUniformBindings; }
 	void VulkanDevice::GetUniformRange(std::uint32_t index, const std::uint8_t*& data, std::uint32_t& size)
 	{
@@ -2108,7 +2108,7 @@ namespace nCine::RHI::Vulkan
 		// -- Auxiliary swap chains (windows a panel of ImGui or of the UI is dragged out into) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
 		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
-		// pipeline/render-pass caches) applies unchanged. QueueAuxiliaryPresent() then hands that target's texture
+		// pipeline/render-pass caches) applies unchanged. PresentAuxiliaryTexture() then hands that target's texture
 		// over for the frame, and PresentFrame() blits each one into its window's acquired image and joins it into
 		// the single submit + present the frame already does. While nothing is undocked the pending list stays
 		// empty and none of it runs, so the ordinary path keeps its exact behavior and cost.
@@ -2728,8 +2728,9 @@ namespace nCine::RHI::Vulkan
 		}
 	}
 
-	void* VulkanDevice::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* VulkanDevice::CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height)
 	{
+		void* windowHandle = desc.WindowHandle;
 		if (s_device == VK_NULL_HANDLE || s_instance == VK_NULL_HANDLE || windowHandle == nullptr) {
 			return nullptr;
 		}
@@ -2806,7 +2807,7 @@ namespace nCine::RHI::Vulkan
 		}
 	}
 
-	void VulkanDevice::QueueAuxiliaryPresent(void* handle, const VulkanTexture* source)
+	void VulkanDevice::PresentAuxiliaryTexture(void* handle, const VulkanTexture* source)
 	{
 		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || !sc->Ready || source == nullptr) {

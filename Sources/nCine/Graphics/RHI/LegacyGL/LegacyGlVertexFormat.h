@@ -94,7 +94,7 @@ namespace nCine::RHI::LegacyGL
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const LegacyGlBuffer* vbo) {
+			inline void SetVbo(const LegacyGlBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

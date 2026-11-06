@@ -187,7 +187,7 @@ namespace nCine::RHI::Metal
 		// -- Auxiliary windows (windows a panel of ImGui or of the UI is dragged out into) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
 		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
-		// pipeline cache) applies unchanged. QueueAuxiliaryPresent() hands that target's texture over for the
+		// pipeline cache) applies unchanged. PresentAuxiliaryTexture() hands that target's texture over for the
 		// frame, and PresentFrame() draws each one into its window's drawable with the same present pass.
 		struct AuxiliarySwapchain
 		{
@@ -921,7 +921,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 				}
 			}
 
-			if (!EnsureEncoder(MetalDevice::currentRenderTargetInternal(), 0, Colorf())) {
+			if (!EnsureEncoder(MetalDevice::GetCurrentRenderTargetInternal(), 0, Colorf())) {
 				return;
 			}
 
@@ -1271,7 +1271,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 	}
 
 	// Internal accessors used by the anonymous-namespace draw helpers
-	MetalRenderTarget* MetalDevice::currentRenderTargetInternal() { return _currentRenderTarget; }
+	MetalRenderTarget* MetalDevice::GetCurrentRenderTargetInternal() { return _currentRenderTarget; }
 	std::uint32_t MetalDevice::MaxUniformBindingsPublic() { return MaxUniformBindings; }
 	void MetalDevice::GetUniformRange(std::uint32_t index, const std::uint8_t*& data, std::uint32_t& size)
 	{
@@ -1389,8 +1389,9 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		}
 	}
 
-	void* MetalDevice::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* MetalDevice::CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height)
 	{
+		void* windowHandle = desc.WindowHandle;
 #if defined(WITH_SDL2) || defined(WITH_SDL3)
 		if (s_device == nullptr || windowHandle == nullptr) {
 			return nullptr;
@@ -1469,7 +1470,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		}
 	}
 
-	void MetalDevice::QueueAuxiliaryPresent(void* handle, const MetalTexture* source)
+	void MetalDevice::PresentAuxiliaryTexture(void* handle, const MetalTexture* source)
 	{
 		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
 		if (sc == nullptr || !sc->Ready || source == nullptr) {

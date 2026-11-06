@@ -94,7 +94,7 @@ namespace nCine::RHI::PVR
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const PvrBuffer* vbo) {
+			inline void SetVbo(const PvrBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

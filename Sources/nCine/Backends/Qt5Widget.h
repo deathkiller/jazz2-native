@@ -32,12 +32,12 @@ namespace nCine::Backends
 		~Qt5Widget();
 
 		/** @brief If set to `false` the widget will stop automatically updating each frame */
-		inline void setShouldUpdate(bool shouldUpdate) {
+		inline void SetShouldUpdate(bool shouldUpdate) {
 			_shouldUpdate = shouldUpdate;
 		}
 
 		/** @brief Returns the application event handler driving the embedded engine */
-		IAppEventHandler& appEventHandler();
+		IAppEventHandler& GetAppEventHandler();
 
 	protected:
 		bool event(QEvent* event) override;
@@ -51,7 +51,7 @@ namespace nCine::Backends
 
 	private slots:
 		/** @brief The function slot called at each `frameSwapped` signal */
-		void autoUpdate();
+		void AutoUpdate();
 
 	private:
 		MainApplication& _application;
@@ -59,7 +59,7 @@ namespace nCine::Backends
 		bool _isInitialized;
 		bool _shouldUpdate;
 
-		void shutdown();
+		void Shutdown();
 
 		/** @brief Deleted copy constructor */
 		Qt5Widget(const Qt5Widget&) = delete;

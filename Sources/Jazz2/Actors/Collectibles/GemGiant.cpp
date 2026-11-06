@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Collectibles
 
 		SetAnimation(AnimState::Default);
 
-		_renderer.setAlphaF(0.7f);
+		_renderer.SetAlphaF(0.7f);
 
 		async_return true;
 	}
@@ -64,7 +64,7 @@ namespace Jazz2::Actors::Collectibles
 			float fx = Random().NextFloat(-16.0f, 16.0f);
 			float fy = Random().NextFloat(-2.0f, 2.0f);
 			std::uint8_t eventParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x01 };
-			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.layer() - 10));
+			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.GetLayer() - 10));
 			if (actor != nullptr) {
 				actor->AddExternalForce(fx, fy);
 				_levelHandler->AddActor(actor);

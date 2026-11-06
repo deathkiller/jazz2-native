@@ -235,8 +235,8 @@ namespace Jazz2::Editor
 				_overlay = std::make_unique<PlayTestDebugOverlay>(*this);
 			}
 			SceneNode* hudParent = _levelHandler.GetHudParentNode();
-			if (_overlay->parent() != hudParent) {
-				_overlay->setParent(hudParent);
+			if (_overlay->GetParent() != hudParent) {
+				_overlay->SetParent(hudParent);
 			}
 		} else {
 			// Not visited at all while nothing of it is shown
@@ -247,7 +247,7 @@ namespace Jazz2::Editor
 	void PlayTestDebug::DetachOverlay()
 	{
 		if (_overlay != nullptr) {
-			_overlay->setParent(nullptr);
+			_overlay->SetParent(nullptr);
 		}
 	}
 

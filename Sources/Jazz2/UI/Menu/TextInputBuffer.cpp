@@ -60,7 +60,7 @@ namespace Jazz2::UI::Menu
 			return false;
 		}
 
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Backspace: {
 				if (_cursor > 0) {
 					auto [_, prevPos] = Utf8::PrevChar(_text, _cursor);
@@ -114,9 +114,9 @@ namespace Jazz2::UI::Menu
 			return false;
 		}
 
-		if (_text.size() + event.length <= _maxLength) {
-			_text = _text.prefix(_cursor) + StringView(event.text, event.length) + _text.exceptPrefix(_cursor);
-			_cursor += event.length;
+		if (_text.size() + event.Length <= _maxLength) {
+			_text = _text.prefix(_cursor) + StringView(event.Text, event.Length) + _text.exceptPrefix(_cursor);
+			_cursor += event.Length;
 			_caretAnim = 0.0f;
 			return true;
 		}

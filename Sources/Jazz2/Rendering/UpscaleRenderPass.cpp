@@ -42,8 +42,8 @@ namespace Jazz2::Rendering
 		// asks the set to stretch it to 16:9. Where a pixel is square - every other target, and the Wii on a
 		// 4:3 set - the correction is exactly 1 and this is the ratio it always was.
 		const IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
-		const float drawableRatio = gfxDevice.drawableAspect();
-		const float pixelAspect = (drawableRatio > 0.0f && drawableRatio < HUGE_VALF ? gfxDevice.displayAspect() / drawableRatio : 1.0f);
+		const float drawableRatio = gfxDevice.GetDrawableAspect();
+		const float pixelAspect = (drawableRatio > 0.0f && drawableRatio < HUGE_VALF ? gfxDevice.GetDisplayAspect() / drawableRatio : 1.0f);
 		float currentRatio = ((float)targetWidth / targetHeight) * pixelAspect;
 
 		// A zero-sized target is not hypothetical - a minimized window reports one, and so does a resize
@@ -103,7 +103,7 @@ namespace Jazz2::Rendering
 
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
-			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_node->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_view = std::make_unique<Viewport>();
 			_view->SetRootNode(_node.get());
@@ -176,7 +176,7 @@ namespace Jazz2::Rendering
 
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
-			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_node->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_target = std::make_unique<Texture>(nullptr, targetFormat, textureWidth, textureHeight);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
@@ -209,8 +209,8 @@ namespace Jazz2::Rendering
 			//_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
 			SceneNode& rootNode = theApplication().GetRootNode();
-			_antialiasing.setParent(&rootNode);
-			setParent(nullptr);
+			_antialiasing.SetParent(&rootNode);
+			SetParent(nullptr);
 
 			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
@@ -227,8 +227,8 @@ namespace Jazz2::Rendering
 			_antialiasing._view = nullptr;
 
 			SceneNode& rootNode = theApplication().GetRootNode();
-			_antialiasing.setParent(nullptr);
-			setParent(&rootNode);
+			_antialiasing.SetParent(nullptr);
+			SetParent(&rootNode);
 		}
 
 		// Prepare render command
@@ -297,8 +297,8 @@ namespace Jazz2::Rendering
 
 	void UpscaleRenderPass::Detach()
 	{
-		_antialiasing.setParent(nullptr);
-		setParent(nullptr);
+		_antialiasing.SetParent(nullptr);
+		SetParent(nullptr);
 	}
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
@@ -334,7 +334,7 @@ namespace Jazz2::Rendering
 
 	UpscaleRenderPass::AntialiasingSubpass::AntialiasingSubpass()
 	{
-		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+		SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 
 	void UpscaleRenderPass::AntialiasingSubpass::Register()
@@ -382,7 +382,7 @@ namespace Jazz2::Rendering
 		// screen framebuffer (like the base scene view), so they carry no FBO target
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();
-			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_clippedNode->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_clippedView = std::make_unique<Viewport>();
 			_clippedView->SetRootNode(_clippedNode.get());
@@ -393,7 +393,7 @@ namespace Jazz2::Rendering
 
 		if (_overlayView == nullptr) {
 			_overlayNode = std::make_unique<SceneNode>();
-			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_overlayNode->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_overlayView = std::make_unique<Viewport>();
 			_overlayView->SetRootNode(_overlayNode.get());
@@ -404,7 +404,7 @@ namespace Jazz2::Rendering
 #else
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();
-			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_clippedNode->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_clippedView->SetRootNode(_clippedNode.get());
@@ -416,7 +416,7 @@ namespace Jazz2::Rendering
 
 		if (_overlayView == nullptr) {
 			_overlayNode = std::make_unique<SceneNode>();
-			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			_overlayNode->SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
 			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_overlayView->SetRootNode(_overlayNode.get());

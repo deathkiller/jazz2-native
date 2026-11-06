@@ -85,7 +85,7 @@ namespace nCine::RHI::GL
 			/** @brief Sets the stride and the byte offset of the attribute within the buffer */
 			void SetVboParameters(GLsizei stride, const GLvoid* pointer);
 			/** @brief Sets the source vertex buffer object */
-			void setVbo(const GLBufferObject* vbo);
+			void SetVbo(const GLBufferObject* vbo);
 			/** @brief Sets the additional base vertex byte offset */
 			inline void SetBaseOffset(std::uint32_t baseOffset) {
 				_baseOffset = baseOffset;

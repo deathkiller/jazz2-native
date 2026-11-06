@@ -15,7 +15,7 @@ namespace nCine
 	{
 	}
 
-	void BaseSprite::setSize(float width, float height)
+	void BaseSprite::SetSize(float width, float height)
 	{
 		// Update anchor points when size changes
 		if (_anchorPoint.X != 0.0f) {
@@ -31,26 +31,26 @@ namespace nCine
 		_dirtyBits.set(DirtyBitPositions::AabbBit);
 	}
 
-	/** @note Setting a texture that is already assigned is equivalent to @ref resetTexture() */
-	void BaseSprite::setTexture(Texture* texture)
+	/** @note Setting a texture that is already assigned is equivalent to @ref ResetTexture() */
+	void BaseSprite::SetTexture(Texture* texture)
 	{
 		// Allow self-assignment to take into account the case where the texture stays the same but it loads new data
-		textureHasChanged(texture);
+		TextureHasChanged(texture);
 		_texture = texture;
 		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
 	/** @note Use this method when the content of the currently assigned texture changes */
-	void BaseSprite::resetTexture()
+	void BaseSprite::ResetTexture()
 	{
-		textureHasChanged(_texture);
+		TextureHasChanged(_texture);
 		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
-	void BaseSprite::setTexRect(const Recti& rect)
+	void BaseSprite::SetTexRect(const Recti& rect)
 	{
 		_texRect = rect;
-		setSize(static_cast<float>(rect.W), static_cast<float>(rect.H));
+		SetSize(static_cast<float>(rect.W), static_cast<float>(rect.H));
 
 		if (_flippedX) {
 			_texRect.X += _texRect.W;
@@ -65,7 +65,7 @@ namespace nCine
 		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
-	void BaseSprite::setFlippedX(bool flippedX)
+	void BaseSprite::SetFlippedX(bool flippedX)
 	{
 		if (_flippedX != flippedX) {
 			_texRect.X += _texRect.W;
@@ -76,7 +76,7 @@ namespace nCine
 		}
 	}
 
-	void BaseSprite::setFlippedY(bool flippedY)
+	void BaseSprite::SetFlippedY(bool flippedY)
 	{
 		if (_flippedY != flippedY) {
 			_texRect.Y += _texRect.H;
@@ -93,7 +93,7 @@ namespace nCine
 	{
 	}
 
-	void BaseSprite::setPaletteOffset(float paletteOffset)
+	void BaseSprite::SetPaletteOffset(float paletteOffset)
 	{
 		if (_paletteOffset != paletteOffset) {
 			_paletteOffset = paletteOffset;
@@ -102,7 +102,7 @@ namespace nCine
 		}
 	}
 
-	void BaseSprite::shaderHasChanged()
+	void BaseSprite::ShaderHasChanged()
 	{
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
 		RHI::UniformCache* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
@@ -116,7 +116,7 @@ namespace nCine
 		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
-	void BaseSprite::updateRenderCommand()
+	void BaseSprite::UpdateRenderCommand()
 	{
 		ZoneScopedC(0x81A861);
 
@@ -136,7 +136,7 @@ namespace nCine
 		}
 		if (_dirtyBits.test(DirtyBitPositions::ColorUploadBit)) {
 			if (instanceUniforms->Color != nullptr) {
-				instanceUniforms->Color->SetFloatVector(absColor().Data());
+				instanceUniforms->Color->SetFloatVector(GetAbsColor().Data());
 			}
 			//_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
 		}

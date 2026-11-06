@@ -34,14 +34,14 @@ namespace nCine::Backends
 		Ps2GfxDevice(const Ps2GfxDevice&) = delete;
 		Ps2GfxDevice& operator=(const Ps2GfxDevice&) = delete;
 
-		void setSwapInterval(int interval) override;
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
-		void setWindowPosition(int x, int y) override;
-		void setWindowSize(int width, int height) override;
-		void setWindowTitle(StringView windowTitle) override;
-		void setWindowIcon(StringView windowIconFilename) override;
+		void SetSwapInterval(int interval) override;
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetWindowPosition(int x, int y) override;
+		void SetWindowSize(int width, int height) override;
+		void SetWindowTitle(StringView windowTitle) override;
+		void SetWindowIcon(StringView windowIconFilename) override;
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
 
 		/**
 			@brief 4:3, which is not the 640/448 the framebuffer measures
@@ -51,17 +51,17 @@ namespace nCine::Backends
 			the display - the logical view size above all - has to be told that, or it comes out stretched.
 			(A PAL console runs this disc through its 60 Hz path, so there is no second geometry to answer for.)
 		*/
-		inline float displayAspect() const override {
+		inline float GetDisplayAspect() const override {
 			return 4.0f / 3.0f;
 		}
 
 	protected:
-		void setResolutionInternal(int width, int height) override;
+		void SetResolutionInternal(int width, int height) override;
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
 	private:
-		void update() override;
+		void Update() override;
 
 		friend class ::nCine::MainApplication;
 	};

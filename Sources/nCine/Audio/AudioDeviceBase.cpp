@@ -76,7 +76,7 @@ namespace nCine
 		// Iterating backwards because Stop() unregisters the player, erasing it from the array
 		for (std::size_t i = _players.size(); i > 0; i--) {
 			IAudioPlayer* player = _players[i - 1];
-			if (player->type() == objectType) {
+			if (player->GetType() == objectType) {
 				player->Stop();
 			}
 		}
@@ -90,7 +90,7 @@ namespace nCine
 
 		// The players stay registered, see PausePlayers() above
 		for (auto& player : _players) {
-			if (player->type() == objectType) {
+			if (player->GetType() == objectType) {
 				player->Pause();
 			}
 		}
@@ -135,14 +135,14 @@ namespace nCine
 
 		// Rate-limited, refused players retry every frame. The looping count tells a leaked loop from a busy scene.
 		_suppressedSourceWarnings++;
-		if (_lastSourceWarningTime.ticks() != 0 && _lastSourceWarningTime.secondsSince() < SourceWarningIntervalSecs) {
+		if (_lastSourceWarningTime.GetTicks() != 0 && _lastSourceWarningTime.GetSecondsSince() < SourceWarningIntervalSecs) {
 			return;
 		}
-		_lastSourceWarningTime = TimeStamp::now();
+		_lastSourceWarningTime = TimeStamp::Now();
 
 		std::uint32_t numLooping = 0, numStreamed = 0;
 		for (auto& activePlayer : _players) {
-			if (activePlayer->type() == AudioStreamPlayer::sType()) {
+			if (activePlayer->GetType() == AudioStreamPlayer::sType()) {
 				numStreamed++;
 			} else if (activePlayer->IsLooping()) {
 				numLooping++;
@@ -254,12 +254,12 @@ namespace nCine
 			return;
 		}
 
-		if (_stalledSince.ticks() == 0 || progress != _lastSourceProgress) {
-			_stalledSince = TimeStamp::now();
+		if (_stalledSince.GetTicks() == 0 || progress != _lastSourceProgress) {
+			_stalledSince = TimeStamp::Now();
 			_lastSourceProgress = progress;
 			return;
 		}
-		if (_stalledSince.secondsSince() < StalledTimeoutSecs) {
+		if (_stalledSince.GetSecondsSince() < StalledTimeoutSecs) {
 			return;
 		}
 

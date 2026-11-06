@@ -556,22 +556,22 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 	float ScriptActorWrapper::asGetAlpha() const
 	{
-		return _renderer.alpha();
+		return _renderer.GetAlpha();
 	}
 
 	void ScriptActorWrapper::asSetAlpha(float value)
 	{
-		_renderer.setAlphaF(value);
+		_renderer.SetAlphaF(value);
 	}
 
 	uint16_t ScriptActorWrapper::asGetLayer() const
 	{
-		return _renderer.layer();
+		return _renderer.GetLayer();
 	}
 
 	void ScriptActorWrapper::asSetLayer(std::uint16_t value)
 	{
-		_renderer.setLayer(value);
+		_renderer.SetLayer(value);
 	}
 
 	void ScriptActorWrapper::asDecreaseHealth(std::int32_t amount)
@@ -695,7 +695,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 
 		if (result) {
 			player->AddScore(_scoreValue);
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()), Explosion::Type::Generator);
 			DecreaseHealth(INT32_MAX);
 			return true;
 		} else {

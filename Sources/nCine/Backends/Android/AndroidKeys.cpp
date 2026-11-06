@@ -4,7 +4,7 @@
 
 namespace nCine::Backends
 {
-	Keys AndroidKeys::keySymValueToEnum(int keysym)
+	Keys AndroidKeys::KeySymValueToEnum(int keysym)
 	{
 		// clang-format off
 		switch (keysym) {
@@ -219,7 +219,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int AndroidKeys::keyModMaskToEnumMask(int keymod)
+	int AndroidKeys::KeyModMaskToEnumMask(int keymod)
 	{
 		int result = 0;
 

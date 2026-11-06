@@ -43,26 +43,26 @@ namespace nCine::Backends
 		AmigaGfxDevice(const AmigaGfxDevice&) = delete;
 		AmigaGfxDevice& operator=(const AmigaGfxDevice&) = delete;
 
-		void setSwapInterval(int interval) override;
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
-		void setWindowPosition(int x, int y) override;
-		void setWindowSize(int width, int height) override;
-		void setWindowTitle(StringView windowTitle) override;
-		void setWindowIcon(StringView windowIconFilename) override;
+		void SetSwapInterval(int interval) override;
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetWindowPosition(int x, int y) override;
+		void SetWindowSize(int width, int height) override;
+		void SetWindowTitle(StringView windowTitle) override;
+		void SetWindowIcon(StringView windowIconFilename) override;
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
 
 	protected:
-		void setResolutionInternal(int width, int height) override;
+		void SetResolutionInternal(int width, int height) override;
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
 	private:
-		void update() override;
+		void Update() override;
 
-		bool openDisplay(std::int32_t requestedWidth, std::int32_t requestedHeight);
-		void closeDisplay();
-		void presentFramebuffer();
+		bool OpenDisplay(std::int32_t requestedWidth, std::int32_t requestedHeight);
+		void CloseDisplay();
+		void PresentFramebuffer();
 
 		Screen* _screen;
 		Window* _window;

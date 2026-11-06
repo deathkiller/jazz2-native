@@ -41,7 +41,7 @@ namespace Jazz2::Rendering
 		 * deliberate trade rather than an oversight: the alternative is a 704x528 view, which would map 1:1
 		 * vertically but has to be squeezed horizontally into the same 640 columns, costing more fill and a
 		 * softer picture for the same geometry. Shapes are correct either way - that is what
-		 * @ref IGfxDevice::displayAspect() guarantees - and only the resampling differs.
+		 * @ref IGfxDevice::GetDisplayAspect() guarantees - and only the resampling differs.
 		 *
 		 * It costs fill rate in proportion: about 1.2x the pixels on the PlayStation 2 and 1.4x on the other
 		 * three, which @ref PreferencesCache::RenderingResolutionPercent scales back down for anyone who
@@ -79,7 +79,7 @@ namespace Jazz2::Rendering
 				, _resizeShader(nullptr)
 #endif
 		{
-			setVisitOrderState(VisitOrderState::Disabled);
+			SetVisitOrderState(VisitOrderState::Disabled);
 		}
 
 		/**

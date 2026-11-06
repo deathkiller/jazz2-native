@@ -541,7 +541,7 @@ namespace Jazz2
 		 * @brief Applies @ref RenderingResolutionPercent to the graphics device
 		 *
 		 * A no-op everywhere but on the PS Vita's native backend, where the whole frame is rendered into a surface smaller than
-		 * the panel and stretched at present time (see @ref IGfxDevice::setDrawableSize()): the preference
+		 * the panel and stretched at present time (see @ref IGfxDevice::SetDrawableSize()): the preference
 		 * sizes that surface, and the logical view then follows the drawable size as on any other display.
 		 */
 		static void ApplyRenderingResolution();

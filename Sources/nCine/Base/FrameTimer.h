@@ -66,11 +66,11 @@ namespace nCine
 		}
 		/** @brief Returns the duration in seconds since the last call to @ref AddFrame() */
 		inline float GetFrameDuration() const {
-			return _frameStart.secondsSince();
+			return _frameStart.GetSecondsSince();
 		}
 		/** @brief Returns the duration in ticks since the last call to @ref AddFrame() */
 		inline std::uint64_t GetFrameDurationAsTicks() const {
-			return _frameStart.timeSince().ticks();
+			return _frameStart.GetTimeSince().GetTicks();
 		}
 		/** @brief Returns the average FPS measured over the averaging interval */
 		inline float GetAverageFps() const {

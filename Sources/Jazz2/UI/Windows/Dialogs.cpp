@@ -293,11 +293,11 @@ namespace Jazz2::UI::Windows
 
 	bool Dialog::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if (event.sym == Keys::Escape) {
+		if (event.Sym == Keys::Escape) {
 			Cancel();
 			return true;
 		}
-		if ((event.sym != Keys::Return && event.sym != Keys::NumPadEnter) || _buttonList.empty()) {
+		if ((event.Sym != Keys::Return && event.Sym != Keys::NumPadEnter) || _buttonList.empty()) {
 			return false;
 		}
 		// The accented button is the one that confirms, a button that does something else can be first
@@ -759,7 +759,7 @@ namespace Jazz2::UI::Windows
 		pathBox->MaxLength = 1024;
 		pathBox->TextFunc = [this]() { return GetRelativeDirectory(); };
 		pathBox->OnKeyPreview = [this, pathBox](const KeyboardEvent& event) {
-			if (event.sym != Keys::Return && event.sym != Keys::NumPadEnter) {
+			if (event.Sym != Keys::Return && event.Sym != Keys::NumPadEnter) {
 				return false;
 			}
 			// Only Enter goes there, and it doesn't also confirm the dialog with the file chosen before; deferred like going
@@ -825,7 +825,7 @@ namespace Jazz2::UI::Windows
 			_nameBox->MaxLength = 64;
 			// The list is moved through while the name is typed
 			_nameBox->OnKeyPreview = [this](const KeyboardEvent& event) {
-				if (event.sym == Keys::Up || event.sym == Keys::Down || event.sym == Keys::PageUp || event.sym == Keys::PageDown) {
+				if (event.Sym == Keys::Up || event.Sym == Keys::Down || event.Sym == Keys::PageUp || event.Sym == Keys::PageDown) {
 					_rows->OnKeyPressed(event);
 					return true;
 				}

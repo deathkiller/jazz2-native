@@ -335,7 +335,7 @@ namespace nCine
 		std::int64_t frame;
 		if (_queuedChunkCount > 0) {
 			const QueuedChunk& chunk = _queuedChunks[_firstQueuedChunk];
-			std::int64_t elapsed = std::int64_t(_firstChunkStartTime.secondsSince() * float(_frequency));
+			std::int64_t elapsed = std::int64_t(_firstChunkStartTime.GetSecondsSince() * float(_frequency));
 			frame = chunk.StartFrame + std::clamp<std::int64_t>(elapsed, 0, std::max<std::int64_t>(chunk.FrameCount - 1, 0));
 		} else {
 			frame = _audioReader->GetDecodedFrames();
@@ -404,7 +404,7 @@ namespace nCine
 		std::int32_t frameSize = _numChannels * _bytesPerSample;
 		std::int32_t frames = (frameSize > 0 ? bytes / frameSize : 0);
 		if (_queuedChunkCount == 0) {
-			_firstChunkStartTime = TimeStamp::now();
+			_firstChunkStartTime = TimeStamp::Now();
 		}
 		// Nothing else is decoding now, so the reader stopped right at the end of this chunk
 		QueuedChunk& chunk = _queuedChunks[(_firstQueuedChunk + _queuedChunkCount) % NumBuffers];
@@ -422,7 +422,7 @@ namespace nCine
 
 		_firstQueuedChunk = (_firstQueuedChunk + count) % NumBuffers;
 		_queuedChunkCount -= count;
-		_firstChunkStartTime = TimeStamp::now();
+		_firstChunkStartTime = TimeStamp::Now();
 	}
 
 	void AudioStream::SetLooping(bool value)

@@ -206,7 +206,7 @@ namespace Jazz2::Input
 						if (target.Data & GamepadAnalogMask) {
 							// Analog axis
 							AxisName axisName = (AxisName)(target.Data & ButtonMask);
-							float axisValue = joyStates[joyIdx]->axisValue(axisName);
+							float axisValue = joyStates[joyIdx]->GetAxisValue(axisName);
 							if (target.Data & GamepadNegativeMask) {
 								axisValue = -axisValue;
 							}
@@ -250,7 +250,7 @@ namespace Jazz2::Input
 							}
 						} else {
 							// Button
-							if (joyStates[joyIdx]->isButtonPressed((ButtonName)(target.Data & ButtonMask))) {
+							if (joyStates[joyIdx]->IsButtonPressed((ButtonName)(target.Data & ButtonMask))) {
 								result.PressedActions |= (1ull << (std::uint32_t)i) | (1ull << (32 + (std::uint32_t)i));
 								if (analogAsButtons) {
 									switch ((PlayerAction)i) {
@@ -324,7 +324,7 @@ namespace Jazz2::Input
 							if (target.Data & GamepadAnalogMask) {
 								// Analog axis
 								AxisName axisName = (AxisName)(target.Data & ButtonMask);
-								float axisValue = joyStates[joyIdx]->axisValue(axisName);
+								float axisValue = joyStates[joyIdx]->GetAxisValue(axisName);
 								if (target.Data & GamepadNegativeMask) {
 									axisValue = -axisValue;
 								}
@@ -336,7 +336,7 @@ namespace Jazz2::Input
 							} else if (i == (std::size_t)PlayerAction::Up || i == (std::size_t)PlayerAction::Down ||
 								i == (std::size_t)PlayerAction::Left || i == (std::size_t)PlayerAction::Right) {
 								// Button, only directions follow bindings, the rest is fixed below
-								if (joyStates[joyIdx]->isButtonPressed((ButtonName)(target.Data & ButtonMask))) {
+								if (joyStates[joyIdx]->IsButtonPressed((ButtonName)(target.Data & ButtonMask))) {
 									pressedActions |= (1 << (std::uint32_t)i);
 									break;
 								}
@@ -359,13 +359,13 @@ namespace Jazz2::Input
 				continue;
 			}
 			const auto* joyState = joyStates[joyIdx];
-			if (joyState->isButtonPressed(ButtonName::A) || joyState->isButtonPressed(ButtonName::X)) {
+			if (joyState->IsButtonPressed(ButtonName::A) || joyState->IsButtonPressed(ButtonName::X)) {
 				pressedActions |= (1 << (std::uint32_t)PlayerAction::Fire);
 			}
-			if (joyState->isButtonPressed(ButtonName::B) || joyState->isButtonPressed(ButtonName::Start)) {
+			if (joyState->IsButtonPressed(ButtonName::B) || joyState->IsButtonPressed(ButtonName::Start)) {
 				pressedActions |= (1 << (std::uint32_t)PlayerAction::Menu);
 			}
-			if (joyState->isButtonPressed(ChangeWeaponMenuButton)) {
+			if (joyState->IsButtonPressed(ChangeWeaponMenuButton)) {
 				pressedActions |= (1 << (std::uint32_t)PlayerAction::ChangeWeapon);
 			}
 		}

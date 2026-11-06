@@ -39,53 +39,53 @@ namespace nCine
 		AnimatedSprite& operator=(AnimatedSprite&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline AnimatedSprite clone() const {
+		inline AnimatedSprite Clone() const {
 			return AnimatedSprite(*this);
 		}
 
 		/** @brief Returns whether the current animation is paused */
-		bool isPaused() const;
+		bool IsPaused() const;
 		/** @brief Sets the pause state of the current animation */
-		void setPaused(bool isPaused);
+		void SetPaused(bool isPaused);
 
 		void OnUpdate(float timeMult) override;
 
 		/** @brief Adds a new animation */
-		void addAnimation(const RectAnimation& anim);
+		void AddAnimation(const RectAnimation& anim);
 		/** @brief Adds a new animation with move semantics */
-		void addAnimation(RectAnimation&& anim);
+		void AddAnimation(RectAnimation&& anim);
 		/** @brief Removes all animations */
-		void clearAnimations();
+		void ClearAnimations();
 
 		/** @brief Returns the number of animations */
-		inline std::uint32_t numAnimations() {
+		inline std::uint32_t GetAnimationCount() {
 			return std::uint32_t(_anims.size());
 		}
 		/** @brief Returns the array of all animations */
-		inline SmallVectorImpl<RectAnimation>& animations() {
+		inline SmallVectorImpl<RectAnimation>& GetAnimations() {
 			return _anims;
 		}
 		/** @brief Returns the array of all animations (read-only) */
-		inline const SmallVectorImpl<RectAnimation>& animations() const {
+		inline const SmallVectorImpl<RectAnimation>& GetAnimations() const {
 			return _anims;
 		}
 
 		/** @brief Returns the index of the current animation */
-		std::uint32_t animationIndex() const {
+		std::uint32_t GetAnimationIndex() const {
 			return _currentAnimIndex;
 		}
 		/** @brief Sets the current animation by index and resets its frame number */
-		void setAnimationIndex(std::uint32_t animIndex);
+		void SetAnimationIndex(std::uint32_t animIndex);
 
 		/** @brief Returns the current animation, or `nullptr` if there is none */
-		RectAnimation* currentAnimation();
+		RectAnimation* GetCurrentAnimation();
 		/** @brief Returns the current animation (read-only), or `nullptr` if there is none */
-		const RectAnimation* currentAnimation() const;
+		const RectAnimation* GetCurrentAnimation() const;
 
 		/** @brief Returns the frame number of the current animation */
-		std::uint32_t frame() const;
+		std::uint32_t GetFrame() const;
 		/** @brief Sets the current animation to the specified frame number */
-		void setFrame(std::uint32_t frameNum);
+		void SetFrame(std::uint32_t frameNum);
 
 		inline static ObjectType sType() {
 			return ObjectType::AnimatedSprite;

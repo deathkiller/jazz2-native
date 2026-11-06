@@ -192,7 +192,7 @@ namespace Jazz2::Editor
 			_wantedTilePixels(TilePixels), _drawnChunks(0), _lastDrawnChunks(0), _drawnBytes(0), _lastDrawnBytes(0), _missingChunks(0), _lastMissingChunks(0), _drawnChunkTiles(GetChunkTiles(TilePixels)), _active(false),
 			_warmUpState(WarmUpState::Done), _warmUpLayer(0), _warmUpRow(0), _warmUpColumn(0), _warmUpNext(0), _baseChunksDirty(false)
 	{
-		_lastChange = TimeStamp::now();
+		_lastChange = TimeStamp::Now();
 		ClearBlockCache();
 		RestartWarmUp();
 	}
@@ -200,7 +200,7 @@ namespace Jazz2::Editor
 	bool TileLod::IsWarmUpAllowed() const
 	{
 		// Close to where the images are drawn, as the view may get there fast, or when nothing changed for a while
-		return (_zoom < MaxZoom * WarmUpZoomFactor || _lastChange.millisecondsSince() >= IdleMilliseconds);
+		return (_zoom < MaxZoom * WarmUpZoomFactor || _lastChange.GetMillisecondsSince() >= IdleMilliseconds);
 	}
 
 	void TileLod::RestartWarmUp()
@@ -221,7 +221,7 @@ namespace Jazz2::Editor
 		}
 		if (_warmUpState == WarmUpState::Done) {
 			// Those that changed are made again once the level isn't changed for a moment, they stand in for others only
-			if (!_baseChunksDirty || !UseBaseChunks || _lastChange.millisecondsSince() < IdleMilliseconds) {
+			if (!_baseChunksDirty || !UseBaseChunks || _lastChange.GetMillisecondsSince() < IdleMilliseconds) {
 				return;
 			}
 			_baseChunksDirty = false;
@@ -231,7 +231,7 @@ namespace Jazz2::Editor
 			_warmUpColumn = 0;
 		}
 
-		TimeStamp start = TimeStamp::now();
+		TimeStamp start = TimeStamp::Now();
 		if (_warmUpState == WarmUpState::BaseChunks) {
 			if (BuildBaseChunks(start, milliseconds)) {
 				_warmUpState = WarmUpState::Done;
@@ -290,7 +290,7 @@ namespace Jazz2::Editor
 				_warmUpCounts[runKey] += runLength * weight;
 			}
 			_warmUpRow++;
-			if (start.millisecondsSince() >= milliseconds) {
+			if (start.GetMillisecondsSince() >= milliseconds) {
 				return;
 			}
 		}
@@ -298,7 +298,7 @@ namespace Jazz2::Editor
 		while (_warmUpNext < _warmUpKeys.size()) {
 			std::uint32_t key = _warmUpKeys[_warmUpNext++];
 			GetBlock(TileRef{ std::uint16_t(key & 0xFFFFu), std::uint8_t(key >> 24), std::uint8_t((key >> 16) & 0x03) });
-			if (start.millisecondsSince() >= milliseconds) {
+			if (start.GetMillisecondsSince() >= milliseconds) {
 				return;
 			}
 		}
@@ -343,7 +343,7 @@ namespace Jazz2::Editor
 			_warmUpColumn++;
 			if (chunk.TilePixels == 0 || chunk.Dirty) {
 				BuildChunk(chunk, 1);
-				if (start.millisecondsSince() >= milliseconds) {
+				if (start.GetMillisecondsSince() >= milliseconds) {
 					done = false;
 					break;
 				}
@@ -386,7 +386,7 @@ namespace Jazz2::Editor
 	void TileLod::Invalidate(bool keepBlocks)
 	{
 		ClearChunks();
-		_lastChange = TimeStamp::now();
+		_lastChange = TimeStamp::Now();
 		if (!keepBlocks) {
 			ClearBlockCache();
 			_blocks.clear();
@@ -487,7 +487,7 @@ namespace Jazz2::Editor
 		}
 		// The colors of the tiles, kept by how a tile is referenced, they're prepared again; every block a chunk shows is
 		// there as long as the chunk isn't changed, so the keys of those dropped tell which chunks show the tiles
-		_lastChange = TimeStamp::now();
+		_lastChange = TimeStamp::Now();
 		ClearBlockCache();
 		SmallVector<std::uint32_t, 0> erased;
 		for (auto it = _blocks.begin(); it != _blocks.end(); ) {
@@ -553,7 +553,7 @@ namespace Jazz2::Editor
 	{
 		// A layer hidden or shown only isn't a change of the level
 		if (changes.GetKinds() != DocumentChangeKind::EditorState) {
-			_lastChange = TimeStamp::now();
+			_lastChange = TimeStamp::Now();
 		}
 		// Other tile sets, the colors of the tiles may be other ones; overridden tiles are made again by InvalidateTileIds(),
 		// only those that changed
@@ -700,7 +700,7 @@ namespace Jazz2::Editor
 		if (scale != _lastScale) {
 			// The view zooms, so it isn't idle, see WarmUp()
 			_lastScale = scale;
-			_lastChange = TimeStamp::now();
+			_lastChange = TimeStamp::Now();
 		}
 		if (_frame - _lastOverrideFrame > EvictFrames) {
 			// The view is close for a while, so the images aren't drawn
@@ -1046,7 +1046,7 @@ namespace Jazz2::Editor
 
 	void TileLod::BuildChunk(Chunk& chunk, std::int32_t tilePixels)
 	{
-		TimeStamp start = TimeStamp::now();
+		TimeStamp start = TimeStamp::Now();
 		_buildsLeft--;
 		_bytes -= chunk.Bytes;
 		chunk.Dirty = false;
@@ -1171,7 +1171,7 @@ namespace Jazz2::Editor
 			chunk.Bytes = std::size_t(size) * std::size_t(size) * 4;
 		}
 		_bytes += chunk.Bytes;
-		_buildMilliseconds += start.millisecondsSince();
+		_buildMilliseconds += start.GetMillisecondsSince();
 	}
 
 	std::uint32_t TileLod::GetBlockKey(const TileRef& tile)

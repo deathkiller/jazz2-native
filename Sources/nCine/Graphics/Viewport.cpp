@@ -286,11 +286,11 @@ namespace nCine
 
 		const Camera* vieportCamera = (_camera != nullptr ? _camera : RenderResources::GetCurrentCamera());
 		Camera::ProjectionValues projValues = vieportCamera->GetProjectionValues();
-		if (projValues.top > projValues.bottom) std::swap(projValues.top, projValues.bottom);
+		if (projValues.Top > projValues.Bottom) std::swap(projValues.Top, projValues.Bottom);
 
-		const float projWidth = projValues.right - projValues.left;
-		const float projHeight = projValues.bottom - projValues.top;
-		_cullingRect.Set(projValues.left, projValues.top, projWidth, projHeight);
+		const float projWidth = projValues.Right - projValues.Left;
+		const float projHeight = projValues.Bottom - projValues.Top;
+		_cullingRect.Set(projValues.Left, projValues.Top, projWidth, projHeight);
 
 		const bool scissorRectNonZeroArea = (_scissorRect.W > 0 && _scissorRect.H > 0);
 		if (scissorRectNonZeroArea) {
@@ -309,8 +309,8 @@ namespace nCine
 				scissorRectFloat.H *= viewportHeightRatio;
 			}
 
-			scissorRectFloat.X = (scissorRectFloat.X * projWidth / float(width)) + projValues.left;
-			scissorRectFloat.Y = (scissorRectFloat.Y * projHeight / float(height)) + projValues.top;
+			scissorRectFloat.X = (scissorRectFloat.X * projWidth / float(width)) + projValues.Left;
+			scissorRectFloat.Y = (scissorRectFloat.Y * projHeight / float(height)) + projValues.Top;
 			scissorRectFloat.W *= projWidth / float(width);
 			scissorRectFloat.H *= projHeight / float(height);
 
@@ -318,20 +318,20 @@ namespace nCine
 		}
 
 		const Camera::ViewValues viewValues = vieportCamera->GetViewValues();
-		if (viewValues.scale != 0.0f && viewValues.scale != 1.0f) {
-			const float invScale = 1.0f / viewValues.scale;
-			_cullingRect.X = (_cullingRect.X + viewValues.position.X) * invScale;
-			_cullingRect.Y = (_cullingRect.Y + viewValues.position.Y) * invScale;
+		if (viewValues.Scale != 0.0f && viewValues.Scale != 1.0f) {
+			const float invScale = 1.0f / viewValues.Scale;
+			_cullingRect.X = (_cullingRect.X + viewValues.Position.X) * invScale;
+			_cullingRect.Y = (_cullingRect.Y + viewValues.Position.Y) * invScale;
 			_cullingRect.W *= invScale;
 			_cullingRect.H *= invScale;
 		} else {
-			_cullingRect.X += viewValues.position.X;
-			_cullingRect.Y += viewValues.position.Y;
+			_cullingRect.X += viewValues.Position.X;
+			_cullingRect.Y += viewValues.Position.Y;
 		}
 
-		if (viewValues.rotation > SceneNode::MinRotation || viewValues.rotation < -SceneNode::MinRotation) {
+		if (viewValues.Rotation > SceneNode::MinRotation || viewValues.Rotation < -SceneNode::MinRotation) {
 			float sinRot, cosRot;
-			sincosApprox(-viewValues.rotation, sinRot, cosRot);
+			sincosApprox(-viewValues.Rotation, sinRot, cosRot);
 			const float rotatedWidth = fabsf(_cullingRect.W * cosRot) + fabsf(_cullingRect.H * sinRot);
 			const float rotatedHeight = fabsf(_cullingRect.W * sinRot) + fabsf(_cullingRect.H * cosRot);
 
@@ -351,7 +351,7 @@ namespace nCine
 
 		if (_rootNode != nullptr) {
 			ZoneScopedC(0x81A861);
-			if (_rootNode->lastFrameUpdated() < theApplication().GetFrameCount()) {
+			if (_rootNode->GetLastFrameUpdated() < theApplication().GetFrameCount()) {
 				_rootNode->OnUpdate(theApplication().GetTimeMult());
 			}
 			// AABBs should update after nodes have been transformed
@@ -541,7 +541,7 @@ namespace nCine
 		}
 
 		if (_type == Type::WithTexture && _depthStencilFormat != DepthStencilFormat::None &&
-			!theApplication().GetAppConfiguration().withGlDebugContext) {
+			!theApplication().GetAppConfiguration().WithGlDebugContext) {
 			_fbo->InvalidateDepthStencil(_depthStencilFormat);
 		}
 
@@ -611,14 +611,14 @@ namespace nCine
 
 	void Viewport::UpdateCulling(SceneNode* node)
 	{
-		for (SceneNode* child : node->children()) {
+		for (SceneNode* child : node->GetChildren()) {
 			UpdateCulling(child);
 		}
 
-		if (node->type() != Object::ObjectType::SceneNode &&
-			node->type() != Object::ObjectType::ParticleSystem) {
+		if (node->GetType() != Object::ObjectType::SceneNode &&
+			node->GetType() != Object::ObjectType::ParticleSystem) {
 			DrawableNode* drawable = static_cast<DrawableNode*>(node);
-			drawable->updateCulling();
+			drawable->UpdateCulling();
 		}
 	}
 }

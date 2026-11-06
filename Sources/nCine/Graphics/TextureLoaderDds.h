@@ -72,9 +72,9 @@ namespace nCine
 		static const std::uint32_t DDS_ATCI = 0x49435441; // "ATCI"
 
 		/** @brief Reads the DDS header and fills the corresponding structure */
-		bool readHeader(DdsHeader& header);
+		bool ReadHeader(DdsHeader& header);
 		/** @brief Parses the DDS header to determine the texture format */
-		bool parseFormat(const DdsHeader& header);
+		bool ParseFormat(const DdsHeader& header);
 	};
 
 }

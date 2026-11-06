@@ -88,14 +88,14 @@ namespace Jazz2::Actors::Weapons
 				if (_preexplosionTime != fraction) {
 					_preexplosionTime = fraction;
 
-					_renderer.setScale(5.0f);
+					_renderer.SetScale(5.0f);
 					if (_noise == nullptr) {
 						_noise = PlaySfx(Random().NextBool() ? "Bell1"_s : "Bell2"_s);
 					} else if (!_noise->IsPlaying()) {
 						_noise->Play();
 					}
 				}
-				_renderer.setScale(_renderer.scale() - timeMult * 0.36f);
+				_renderer.SetScale(_renderer.GetScale() - timeMult * 0.36f);
 			}
 		} else if (!_isExploded) {
 			_isExploded = true;
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Weapons
 				DecreaseHealth(INT32_MAX);
 			});
 
-			_renderer.setScale(1.0f);
+			_renderer.SetScale(1.0f);
 			PlaySfx("Explosion"_s);
 
 			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 96.0f, [this](ActorBase* actor) {
@@ -126,7 +126,7 @@ namespace Jazz2::Actors::Weapons
 			}
 		} else {
 			_lightIntensity -= timeMult * 0.02f;
-			_renderer.setScale(_renderer.scale() + timeMult * 0.01f);
+			_renderer.SetScale(_renderer.GetScale() + timeMult * 0.01f);
 		}
 	}
 

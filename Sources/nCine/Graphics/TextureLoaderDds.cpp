@@ -16,15 +16,15 @@ namespace nCine
 			return;
 		}
 
-		const bool headerRead = readHeader(header);
+		const bool headerRead = ReadHeader(header);
 		DEATH_ASSERT(headerRead, "DDS header cannot be read", );
-		const bool formatParsed = parseFormat(header);
+		const bool formatParsed = ParseFormat(header);
 		DEATH_ASSERT(formatParsed, "DDS format cannot be parsed", );
 
 		_hasLoaded = true;
 	}
 
-	bool TextureLoaderDds::readHeader(DdsHeader& header)
+	bool TextureLoaderDds::ReadHeader(DdsHeader& header)
 	{
 		// DDS header is 128 bytes long
 		_fileHandle->Read(&header, 128);
@@ -44,7 +44,7 @@ namespace nCine
 		return true;
 	}
 
-	bool TextureLoaderDds::parseFormat(const DdsHeader& header)
+	bool TextureLoaderDds::ParseFormat(const DdsHeader& header)
 	{
 		PixelFormat internalFormat = PixelFormat::RGB8; // to suppress uninitialized variable warning
 
@@ -85,7 +85,7 @@ namespace nCine
 					return false;
 			}
 
-			loadPixels(internalFormat);
+			LoadPixels(internalFormat);
 		} else {
 			// Texture contains uncompressed data
 			const uint32_t bitCount = AsLE(header.ddspf.dwRGBBitCount);
@@ -136,10 +136,10 @@ namespace nCine
 				return false;
 			}
 
-			loadPixels(internalFormat);
+			LoadPixels(internalFormat);
 
 			if (redMask > blueMask && bitCount > 16) {
-				_texFormat.bgrFormat();
+				_texFormat.BgrFormat();
 			}
 		}
 
@@ -147,7 +147,7 @@ namespace nCine
 			LOGI("MIP Maps: {}", _mipMapCount);
 			_mipDataOffsets = std::make_unique<std::uint32_t[]>(_mipMapCount);
 			_mipDataSizes = std::make_unique<std::uint32_t[]>(_mipMapCount);
-			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
+			std::uint32_t dataSizesSum = TextureFormat::CalculateMipSizes(internalFormat, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
 			if (dataSizesSum != _dataSize) {
 				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, _dataSize);
 			}

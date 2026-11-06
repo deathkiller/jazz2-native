@@ -79,15 +79,15 @@ namespace nCine
 			return;
 		}
 
-		const bool headerRead = readHeader(header);
+		const bool headerRead = ReadHeader(header);
 		DEATH_ASSERT(headerRead, "KTX header cannot be read", );
-		const bool formatParsed = parseFormat(header);
+		const bool formatParsed = ParseFormat(header);
 		DEATH_ASSERT(formatParsed, "KTX format cannot be parsed", );
 
 		_hasLoaded = true;
 	}
 
-	bool TextureLoaderKtx::readHeader(KtxHeader& header)
+	bool TextureLoaderKtx::ReadHeader(KtxHeader& header)
 	{
 		bool checkPassed = true;
 
@@ -113,17 +113,17 @@ namespace nCine
 		return true;
 	}
 
-	bool TextureLoaderKtx::parseFormat(const KtxHeader& header)
+	bool TextureLoaderKtx::ParseFormat(const KtxHeader& header)
 	{
 		const PixelFormat format = pixelFormatFromCode(AsLE(header.internalFormat));
 
-		loadPixels(format);
+		LoadPixels(format);
 
 		if (_mipMapCount > 1) {
 			LOGI("MIP Maps: {}", _mipMapCount);
 			_mipDataOffsets = std::make_unique<std::uint32_t[]>(_mipMapCount);
 			_mipDataSizes = std::make_unique<std::uint32_t[]>(_mipMapCount);
-			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(format, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
+			std::uint32_t dataSizesSum = TextureFormat::CalculateMipSizes(format, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
 
 			// HACK: accounting for `UInt32 imageSize` on top of each MIP level
 			// Excluding the first one, already taken into account in header size

@@ -107,7 +107,7 @@ namespace nCine
 			_dispatcher.ProcessEvents(winrtWUC::CoreProcessEventsOption::ProcessAllIfPresent);
 
 			if (!ShouldSuspend()) {
-				UwpInputManager::updateJoystickStates();
+				UwpInputManager::UpdateJoystickStates();
 				Step();
 			}
 		}
@@ -149,7 +149,7 @@ namespace nCine
 		}*/
 
 #if defined(NCINE_PROFILING)
-		_profileStartTime = TimeStamp::now();
+		_profileStartTime = TimeStamp::Now();
 #endif
 		//_wasSuspended = shouldSuspend();
 
@@ -174,7 +174,7 @@ namespace nCine
 
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
-		//auto windowTitleW = Utf8::ToUtf16(_appCfg.windowTitle);
+		//auto windowTitleW = Utf8::ToUtf16(_appCfg.WindowTitle);
 		//winrtWUV::ApplicationView::GetForCurrentView().Title(winrt::hstring(windowTitleW.data(), windowTitleW.size()));
 
 		winrtWAC::CoreApplication::GetCurrentView().TitleBar().ExtendViewIntoTitleBar(true);
@@ -188,12 +188,12 @@ namespace nCine
 
 		auto displayInfo = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView();
 
-		if (_appCfg.fullscreen) {
+		if (_appCfg.Fullscreen) {
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::FullScreen);
 			window.Activate();
-		} else if (_appCfg.resolution.X > 0 && _appCfg.resolution.Y > 0) {
+		} else if (_appCfg.Resolution.X > 0 && _appCfg.Resolution.Y > 0) {
 			winrtWUV::ApplicationView::PreferredLaunchWindowingMode(winrtWUV::ApplicationViewWindowingMode::PreferredLaunchViewSize);
-			winrtWF::Size desiredSize = winrtWF::Size(_appCfg.resolution.X, _appCfg.resolution.Y);
+			winrtWF::Size desiredSize = winrtWF::Size(_appCfg.Resolution.X, _appCfg.Resolution.Y);
 			winrtWUV::ApplicationView::PreferredLaunchViewSize(desiredSize);
 			window.Activate();
 			winrtWUV::ApplicationView::GetForCurrentView().TryResizeView(desiredSize);
@@ -204,9 +204,9 @@ namespace nCine
 		_dispatcher = window.Dispatcher();
 
 		IGfxDevice::ContextInfo contextInfo(_appCfg);
-		const DisplayMode::VSync vSyncMode = (_appCfg.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
+		const DisplayMode::VSync vSyncMode = (_appCfg.WithVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
-		const IGfxDevice::WindowMode windowMode(_appCfg.resolution.X, _appCfg.resolution.Y, _appCfg.windowPosition.X, _appCfg.windowPosition.Y, _appCfg.fullscreen, _appCfg.resizable, _appCfg.windowScaling);
+		const IGfxDevice::WindowMode windowMode(_appCfg.Resolution.X, _appCfg.Resolution.Y, _appCfg.WindowPosition.X, _appCfg.WindowPosition.Y, _appCfg.Fullscreen, _appCfg.Resizable, _appCfg.WindowScaling);
 
 		// Graphics device should always be created before the input manager
 		_gfxDevice = std::make_unique<UwpGfxDevice>(windowMode, contextInfo, displayMode, window);
@@ -214,20 +214,20 @@ namespace nCine
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {
 			auto& gfxDevice = static_cast<UwpGfxDevice&>(_instance->GetGfxDevice());
-			gfxDevice.updateMonitors();
+			gfxDevice.UpdateMonitors();
 		});
 
-		_gfxDevice->setWindowTitle(_appCfg.windowTitle.data());
+		_gfxDevice->SetWindowTitle(_appCfg.WindowTitle.data());
 		// TODO: Not supported
-		//if (!_appCfg.windowIconFilename.empty()) {
-		//	String windowIconFilePath = fs::CombinePath(GetDataPath(), _appCfg.windowIconFilename);
+		//if (!_appCfg.WindowIconFilename.empty()) {
+		//	String windowIconFilePath = fs::CombinePath(GetDataPath(), _appCfg.WindowIconFilename);
 		//	if (fs::IsReadableFile(windowIconFilePath)) {
 		//		_gfxDevice->setWindowIcon(windowIconFilePath);
 		//	}
 		//}
 
 #if defined(NCINE_PROFILING)
-		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.secondsSince();
+		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.GetSecondsSince();
 #endif
 	}
 

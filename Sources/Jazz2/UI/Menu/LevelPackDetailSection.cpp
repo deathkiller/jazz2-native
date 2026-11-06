@@ -277,17 +277,17 @@ namespace Jazz2::UI::Menu
 
 	void LevelPackDetailSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down: {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex != -1) {
-					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 					if (y < 80.0f) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_root->LeaveSection();
 						return;
 					}
-					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, y);
+					_touchStart = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
@@ -295,9 +295,9 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 					if (pointerIndex != -1) {
-						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+						Vector2f touchMove = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, event.Pointers[pointerIndex].Y * viewSize.Y);
 						if (_availableHeight < _height) {
 							_y += touchMove.Y - _touchLast.Y;
 						}

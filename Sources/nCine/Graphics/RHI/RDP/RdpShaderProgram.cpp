@@ -268,7 +268,7 @@ namespace nCine::RHI::RDP
 			for (const RdpAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
 					RdpVertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
-					attr.setVbo(vbo);
+					attr.SetVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}

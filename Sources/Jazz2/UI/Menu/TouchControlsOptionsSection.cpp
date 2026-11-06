@@ -360,22 +360,22 @@ namespace Jazz2::UI::Menu
 		float saveLeft = chrome.SaveLeft;
 		float resetLeft = chrome.ResetLeft;
 
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down:
 			case TouchEventType::PointerDown: {
-				std::int32_t pi = event.findPointerIndex(event.actionIndex);
+				std::int32_t pi = event.FindPointerIndex(event.ActionIndex);
 				if (pi == -1) break;
 
-				float px = event.pointers[pi].x * (float)viewSize.X;
-				float py = event.pointers[pi].y * (float)viewSize.Y;
+				float px = event.Pointers[pi].X * (float)viewSize.X;
+				float py = event.Pointers[pi].Y * (float)viewSize.Y;
 
 				// Second finger while dragging → start pinch (any position)
 				if (_primaryPointerId != -1 && _secondaryPointerId == -1 && _focusedSlot >= 0) {
-					_secondaryPointerId = event.actionIndex;
-					std::int32_t pIdx = event.findPointerIndex(_primaryPointerId);
+					_secondaryPointerId = event.ActionIndex;
+					std::int32_t pIdx = event.FindPointerIndex(_primaryPointerId);
 					if (pIdx != -1) {
-						float dx = (event.pointers[pi].x - event.pointers[pIdx].x) * (float)viewSize.X;
-						float dy = (event.pointers[pi].y - event.pointers[pIdx].y) * (float)viewSize.Y;
+						float dx = (event.Pointers[pi].X - event.Pointers[pIdx].X) * (float)viewSize.X;
+						float dy = (event.Pointers[pi].Y - event.Pointers[pIdx].Y) * (float)viewSize.Y;
 						_pinchStartDist = std::max(1.0f, std::sqrt(dx * dx + dy * dy));
 						_pinchStartScale = PreferencesCache::TouchButtons[_focusedSlot].Scale;
 						_editMode = EditMode::Resizing;
@@ -396,7 +396,7 @@ namespace Jazz2::UI::Menu
 					float fdx = px - r.CenterX;
 					float fdy = py - r.CenterY;
 
-					_primaryPointerId = event.actionIndex;
+					_primaryPointerId = event.ActionIndex;
 					_primaryStartX = px;
 					_primaryStartY = py;
 					_pinchStartDist = std::max(1.0f, std::sqrt(fdx * fdx + fdy * fdy));
@@ -421,7 +421,7 @@ namespace Jazz2::UI::Menu
 						_cornerHandleX = ch.X;
 						_cornerHandleY = ch.Y;
 
-						_primaryPointerId = event.actionIndex;
+						_primaryPointerId = event.ActionIndex;
 						_primaryStartX = px;
 						_primaryStartY = py;
 						_slotEdgeOffsetAtStart = PreferencesCache::TouchButtons[i].EdgeOffset;
@@ -495,18 +495,18 @@ namespace Jazz2::UI::Menu
 
 			case TouchEventType::Move: {
 				if (_primaryPointerId == -1) break;
-				std::int32_t pi = event.findPointerIndex(_primaryPointerId);
+				std::int32_t pi = event.FindPointerIndex(_primaryPointerId);
 				if (pi == -1) break;
 
-				float px = event.pointers[pi].x * (float)viewSize.X;
-				float py = event.pointers[pi].y * (float)viewSize.Y;
+				float px = event.Pointers[pi].X * (float)viewSize.X;
+				float py = event.Pointers[pi].Y * (float)viewSize.Y;
 
 				if (_editMode == EditMode::Resizing && _secondaryPointerId != -1) {
 					// Pinch resize
-					std::int32_t si = event.findPointerIndex(_secondaryPointerId);
+					std::int32_t si = event.FindPointerIndex(_secondaryPointerId);
 					if (si != -1) {
-						float dx = (event.pointers[pi].x - event.pointers[si].x) * (float)viewSize.X;
-						float dy = (event.pointers[pi].y - event.pointers[si].y) * (float)viewSize.Y;
+						float dx = (event.Pointers[pi].X - event.Pointers[si].X) * (float)viewSize.X;
+						float dy = (event.Pointers[pi].Y - event.Pointers[si].Y) * (float)viewSize.Y;
 						float newDist = std::max(1.0f, std::sqrt(dx * dx + dy * dy));
 						PreferencesCache::TouchButtons[_focusedSlot].Scale =
 							std::clamp(_pinchStartScale * (newDist / _pinchStartDist), MinScale, MaxScale);
@@ -596,12 +596,12 @@ namespace Jazz2::UI::Menu
 			}
 
 			case TouchEventType::PointerUp: {
-				if (event.actionIndex == _secondaryPointerId) {
+				if (event.ActionIndex == _secondaryPointerId) {
 					_secondaryPointerId = -1;
 					if (_editMode == EditMode::Resizing && _primaryPointerId != -1) {
 						_editMode = EditMode::Dragging;
 					}
-				} else if (event.actionIndex == _primaryPointerId) {
+				} else if (event.ActionIndex == _primaryPointerId) {
 					if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 						_bounceAnim[_focusedSlot] = 1.0f;
 						_root->PlaySfx("MenuSelect"_s, 0.35f);

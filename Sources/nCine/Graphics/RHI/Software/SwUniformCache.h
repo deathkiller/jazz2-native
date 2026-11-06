@@ -89,7 +89,7 @@ namespace nCine::RHI::Software
 			: _uniformBlock(nullptr), _dataPointer(nullptr), _usedSize(0) {}
 		explicit SwUniformBlockCache(SwUniformBlock* uniformBlock);
 
-		inline const SwUniformBlock* uniformBlock() const {
+		inline const SwUniformBlock* GetUniformBlock() const {
 			return _uniformBlock;
 		}
 		std::uint32_t GetIndex() const;
@@ -105,7 +105,7 @@ namespace nCine::RHI::Software
 		}
 		void SetDataPointer(std::uint8_t* dataPointer);
 
-		inline std::int32_t usedSize() const {
+		inline std::int32_t GetUsedSize() const {
 			return _usedSize;
 		}
 		void SetUsedSize(std::int32_t usedSize);

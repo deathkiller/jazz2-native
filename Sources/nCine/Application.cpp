@@ -1255,7 +1255,7 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 	Application::GuiSettings::GuiSettings()
-		: imguiLayer(0xffff - 1024), imguiViewport(nullptr)
+		: ImguiLayer(0xffff - 1024), ImguiViewport(nullptr)
 	{
 	}
 #endif
@@ -1429,7 +1429,7 @@ namespace nCine
 
 		std::set_new_handler(ReportFailedAllocation);
 		// This timestamp is needed to initialize random number generator
-		_profileStartTime = TimeStamp::now();
+		_profileStartTime = TimeStamp::Now();
 
 #if defined(WITH_TRACY)
 		TracyAppInfo(NCINE_APP, sizeof(NCINE_APP) - 1);
@@ -1437,15 +1437,15 @@ namespace nCine
 #endif
 
 		// Initialization of the static random generator seeds
-		Random().Init(TimeStamp::now().ticks(), _profileStartTime.ticks());
+		Random().Init(TimeStamp::Now().GetTicks(), _profileStartTime.GetTicks());
 
-		_frameTimer = std::make_unique<FrameTimer>(_appCfg.frameTimerLogInterval, 0.2f);
+		_frameTimer = std::make_unique<FrameTimer>(_appCfg.FrameTimerLogInterval, 0.2f);
 #if defined(DEATH_TARGET_WINDOWS)
 		_waitableTimer = ::CreateWaitableTimerW(NULL, TRUE, NULL);
 #endif
 
 #if defined(WITH_AUDIO)
-		if (_appCfg.withAudio) {
+		if (_appCfg.WithAudio) {
 #	if defined(WITH_OPENAL)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<ALAudioDevice>());
 #	elif defined(WITH_ASND)
@@ -1470,19 +1470,19 @@ namespace nCine
 		}
 #endif
 #if defined(WITH_THREADS)
-		if (_appCfg.withThreads) {
+		if (_appCfg.WithThreads) {
 			theServiceLocator().RegisterThreadPool(std::make_unique<ThreadPool>());
 		}
 #endif
 
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 			theServiceLocator().RegisterRhiCapabilities(std::make_unique<RHI::Capabilities>());
 			const auto& rhiCapabilities = theServiceLocator().GetRhiCapabilities();
 			RHI::Debug::Init(rhiCapabilities);
 
 #if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
-			if (_appCfg.fixedBatchSize > 0) {
-				LOGI("Using fixed batch size: {}", _appCfg.fixedBatchSize);
+			if (_appCfg.FixedBatchSize > 0) {
+				LOGI("Using fixed batch size: {}", _appCfg.FixedBatchSize);
 			} else {
 				const auto& info = rhiCapabilities.GetInfoStrings();
 				const StringView vendor = info.vendor;
@@ -1496,13 +1496,13 @@ namespace nCine
 					} else {
 						LOGW("Detected {} {}: Using fixed batch size", vendor, renderer);
 					}
-					_appCfg.fixedBatchSize = 10;
+					_appCfg.FixedBatchSize = 10;
 				}
 			}
 #endif
 
 #if defined(WITH_RENDERDOC)
-			RenderDocCapture::init();
+			RenderDocCapture::Init();
 #endif
 
 #if defined(WITH_THREADS) && defined(DEATH_TRACE)
@@ -1517,8 +1517,8 @@ namespace nCine
 			// Create a minimal set of render resources before compiling the first shader
 			RenderResources::CreateMinimal(); // they are required for rendering even without a scenegraph
 
-			if (_appCfg.withScenegraph) {
-				_gfxDevice->setupDevice();
+			if (_appCfg.WithScenegraph) {
+				_gfxDevice->SetupDevice();
 				RenderResources::Create();
 				_rootNode = std::make_unique<SceneNode>();
 				_screenViewport = std::make_unique<ScreenViewport>();
@@ -1526,16 +1526,16 @@ namespace nCine
 			}
 
 #if defined(WITH_IMGUI)
-			_imguiDrawing = std::make_unique<ImGuiDrawing>(_appCfg.withScenegraph);
+			_imguiDrawing = std::make_unique<ImGuiDrawing>(_appCfg.WithScenegraph);
 
 			// Debug overlay is available even when scenegraph is not
-			if (_appCfg.withDebugOverlay) {
+			if (_appCfg.WithDebugOverlay) {
 				_debugOverlay = std::make_unique<ImGuiDebugOverlay>(0.5f);	// 2 updates per second
 			}
 #endif
 		} else {
 			// Create scenegraph even without graphics to update nodes properly
-			if (_appCfg.withScenegraph) {
+			if (_appCfg.WithScenegraph) {
 				_rootNode = std::make_unique<SceneNode>();
 				_screenViewport = std::make_unique<ScreenViewport>();
 				_screenViewport->SetRootNode(_rootNode.get());
@@ -1544,23 +1544,23 @@ namespace nCine
 
 		LOGI("Core components initialized");
 #if defined(NCINE_PROFILING)
-		_timings[(std::int32_t)Timings::InitCommon] = _profileStartTime.secondsSince();
+		_timings[(std::int32_t)Timings::InitCommon] = _profileStartTime.GetSecondsSince();
 #endif
 		{
 			ZoneScopedNC("OnInitialize", 0x81A861);
 #if defined(NCINE_PROFILING)
-			_profileStartTime = TimeStamp::now();
+			_profileStartTime = TimeStamp::Now();
 #endif
 			_appEventHandler->OnInitialize();
 #if defined(NCINE_PROFILING)
-			_timings[(std::int32_t)Timings::AppInit] = _profileStartTime.secondsSince();
+			_timings[(std::int32_t)Timings::AppInit] = _profileStartTime.GetSecondsSince();
 #endif
 			LOGB("IAppEventHandler::OnInitialize() invoked");
 		}
 
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 			// Swapping frame now for a cleaner API trace capture when debugging
-			_gfxDevice->update();
+			_gfxDevice->Update();
 			FrameMark;
 			TracyGpuCollect;
 		}
@@ -1599,18 +1599,18 @@ namespace nCine
 			}
 		}
 #if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
-		const TimeStamp stepStart = TimeStamp::now();
+		const TimeStamp stepStart = TimeStamp::Now();
 #endif
 
 #if defined(WITH_IMGUI)
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 			ZoneScopedN("ImGui newFrame");
 #	if defined(NCINE_PROFILING)
-			_profileStartTime = TimeStamp::now();
+			_profileStartTime = TimeStamp::Now();
 #	endif
 			_imguiDrawing->NewFrame();
 #	if defined(NCINE_PROFILING)
-			_timings[(std::int32_t)Timings::ImGui] = _profileStartTime.secondsSince();
+			_timings[(std::int32_t)Timings::ImGui] = _profileStartTime.GetSecondsSince();
 #	endif
 		}
 #endif
@@ -1621,11 +1621,11 @@ namespace nCine
 		{
 			ZoneScopedNC("OnBeginFrame", 0x81A861);
 			if (measure) {
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 			}
 			_appEventHandler->OnBeginFrame();
 			if (measure) {
-				_timings[(std::int32_t)Timings::BeginFrame] = _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::BeginFrame] = _profileStartTime.GetSecondsSince();
 			}
 		}
 
@@ -1635,39 +1635,39 @@ namespace nCine
 		}
 #endif
 
-		if (_appCfg.withScenegraph) {
+		if (_appCfg.WithScenegraph) {
 			ZoneScopedNC("SceneGraph", 0x81A861);
 			{
 				ZoneScopedNC("Update", 0x81A861);
 				if (measure) {
-					_profileStartTime = TimeStamp::now();
+					_profileStartTime = TimeStamp::Now();
 				}
 				_screenViewport->Update();
 				if (measure) {
-					_timings[(std::int32_t)Timings::Update] = _profileStartTime.secondsSince();
+					_timings[(std::int32_t)Timings::Update] = _profileStartTime.GetSecondsSince();
 				}
 			}
 
 			{
 				ZoneScopedNC("OnPostUpdate", 0x81A861);
 				if (measure) {
-					_profileStartTime = TimeStamp::now();
+					_profileStartTime = TimeStamp::Now();
 				}
 				_appEventHandler->OnPostUpdate();
 				if (measure) {
-					_timings[(std::int32_t)Timings::PostUpdate] = _profileStartTime.secondsSince();
+					_timings[(std::int32_t)Timings::PostUpdate] = _profileStartTime.GetSecondsSince();
 				}
 			}
 
-			if (_appCfg.withGraphics) {
+			if (_appCfg.WithGraphics) {
 				{
 					ZoneScopedNC("Visit", 0x81A861);
 					if (measure) {
-						_profileStartTime = TimeStamp::now();
+						_profileStartTime = TimeStamp::Now();
 					}
 					_screenViewport->Visit();
 					if (measure) {
-						_timings[(std::int32_t)Timings::Visit] = _profileStartTime.secondsSince();
+						_timings[(std::int32_t)Timings::Visit] = _profileStartTime.GetSecondsSince();
 					}
 				}
 
@@ -1675,12 +1675,12 @@ namespace nCine
 				{
 					ZoneScopedN("ImGui endFrame");
 #	if defined(NCINE_PROFILING)
-					_profileStartTime = TimeStamp::now();
+					_profileStartTime = TimeStamp::Now();
 #	endif
-					RenderQueue& imguiRenderQueue = (_guiSettings.imguiViewport ? _guiSettings.imguiViewport->_renderQueue : _screenViewport->_renderQueue);
+					RenderQueue& imguiRenderQueue = (_guiSettings.ImguiViewport ? _guiSettings.ImguiViewport->_renderQueue : _screenViewport->_renderQueue);
 					_imguiDrawing->EndFrame(imguiRenderQueue);
 #	if defined(NCINE_PROFILING)
-					_timings[(std::int32_t)Timings::ImGui] += _profileStartTime.secondsSince();
+					_timings[(std::int32_t)Timings::ImGui] += _profileStartTime.GetSecondsSince();
 #	endif
 				}
 #endif
@@ -1688,29 +1688,29 @@ namespace nCine
 				{
 					ZoneScopedNC("Draw", 0x81A861);
 					if (measure) {
-						_profileStartTime = TimeStamp::now();
+						_profileStartTime = TimeStamp::Now();
 					}
 					_screenViewport->SortAndCommitQueue();
 					_screenViewport->Draw();
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS)
 					// Whatever auxiliary windows show is drawn with the frame, it's handed over to them now
-					_gfxDevice->presentAuxiliaryWindows();
+					_gfxDevice->PresentAuxiliaryWindows();
 #endif
 					if (measure) {
-						_timings[(std::int32_t)Timings::Draw] = _profileStartTime.secondsSince();
+						_timings[(std::int32_t)Timings::Draw] = _profileStartTime.GetSecondsSince();
 					}
 				}
 			}
 		} else {
 #if defined(WITH_IMGUI)
-			if (_appCfg.withGraphics) {
+			if (_appCfg.WithGraphics) {
 				ZoneScopedN("ImGui endFrame");
 #	if defined(NCINE_PROFILING)
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 #	endif
 				_imguiDrawing->EndFrame();
 #	if defined(NCINE_PROFILING)
-				_timings[(std::int32_t)Timings::ImGui] += _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::ImGui] += _profileStartTime.GetSecondsSince();
 #	endif
 			}
 #endif
@@ -1718,22 +1718,22 @@ namespace nCine
 
 		{
 			if (measure) {
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 			}
 			theServiceLocator().GetAudioDevice().UpdatePlayers();
 			if (measure) {
-				_timings[(std::int32_t)Timings::Audio] = _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::Audio] = _profileStartTime.GetSecondsSince();
 			}
 		}
 
 		{
 			ZoneScopedNC("OnFrameEnd", 0x81A861);
 			if (measure) {
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 			}
 			_appEventHandler->OnEndFrame();
 			if (measure) {
-				_timings[(std::int32_t)Timings::EndFrame] = _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::EndFrame] = _profileStartTime.GetSecondsSince();
 			}
 		}
 
@@ -1743,16 +1743,16 @@ namespace nCine
 		}
 #endif
 
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 			if (measure) {
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 			}
-			_gfxDevice->update();
+			_gfxDevice->Update();
 			// The streaming ring section of the next frame is waited on only now, the swap has given the GPU time
 			// to finish with it, and the wait still comes before the next frame reads input
 			RenderResources::GetBuffersManager().WaitForCurrentSection();
 			if (measure) {
-				_timings[(std::int32_t)Timings::Present] = _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::Present] = _profileStartTime.GetSecondsSince();
 			}
 			FrameMark;
 			TracyGpuCollect;
@@ -1765,9 +1765,9 @@ namespace nCine
 			for (std::int32_t i = 0; i < (std::int32_t)Timings::Count; i++) {
 				_timingsAccum[i] += _timings[i];
 			}
-			_stepAccum += stepStart.secondsSince();
+			_stepAccum += stepStart.GetSecondsSince();
 			_timingsFrames++;
-			if (_timingsLogStart.secondsSince() >= 5.0f) {
+			if (_timingsLogStart.GetSecondsSince() >= 5.0f) {
 				if (_timingsFrames > 0) {
 					const float toMs = 1000.0f / (float)_timingsFrames;
 					LOGI("Frame profile over {} frames: {:.2f} ms/frame - begin {:.2f}, update {:.2f}, post-update {:.2f}, visit {:.2f}, draw {:.2f}, audio {:.2f}, end {:.2f}, present {:.2f}",
@@ -1782,22 +1782,22 @@ namespace nCine
 				}
 				_stepAccum = 0.0f;
 				_timingsFrames = 0;
-				_timingsLogStart = TimeStamp::now();
+				_timingsLogStart = TimeStamp::Now();
 			}
 		}
 #endif
 
-		if (_appCfg.frameLimit > 0) {
+		if (_appCfg.FrameLimit > 0) {
 			FrameMarkStart("Frame limiting");
 			if (measure) {
-				_profileStartTime = TimeStamp::now();
+				_profileStartTime = TimeStamp::Now();
 			}
-			const std::int64_t frameTimeDuration = clock().frequency() / _appCfg.frameLimit;
+			const std::int64_t frameTimeDuration = clock().GetFrequency() / _appCfg.FrameLimit;
 
 #if defined(DEATH_TARGET_WINDOWS)
 			// It can wait longer than necessary, so subtract 1 ms to compensate
 			const std::int64_t remainingTime100ns = ((((std::int64_t)frameTimeDuration - (std::int64_t)_frameTimer->GetFrameDurationAsTicks())
-				* 10'000'000LL) / (std::int64_t)clock().frequency()) - 10'000; // 1 ms
+				* 10'000'000LL) / (std::int64_t)clock().GetFrequency()) - 10'000; // 1 ms
 			if (remainingTime100ns > 0) {
 				LARGE_INTEGER dueTime;
 				dueTime.QuadPart = -remainingTime100ns;
@@ -1808,8 +1808,8 @@ namespace nCine
 			}
 #elif defined(DEATH_TARGET_APPLE)
 			// It can wait longer than necessary, so subtract 0.5 ms to compensate
-			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)_appCfg.frameLimit) -
-				((std::int64_t)_frameTimer->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
+			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)_appCfg.FrameLimit) -
+				((std::int64_t)_frameTimer->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().GetFrequency()) - 500'000LL;
 			if (remainingTimeNs > 0) {
 				timespec dueTime{};
 				dueTime.tv_nsec += remainingTimeNs;
@@ -1821,8 +1821,8 @@ namespace nCine
 			}
 #elif defined(DEATH_TARGET_UNIX)
 			// It can wait longer than necessary, so subtract 0.5 ms to compensate
-			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)_appCfg.frameLimit) -
-				((std::int64_t)_frameTimer->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
+			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)_appCfg.FrameLimit) -
+				((std::int64_t)_frameTimer->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().GetFrequency()) - 500'000LL;
 			if (remainingTimeNs > 0) {
 				timespec dueTime;
 				clock_gettime(CLOCK_MONOTONIC, &dueTime);
@@ -1838,7 +1838,7 @@ namespace nCine
 			// new targets): a coarse millisecond sleep covers the bulk of the wait so the spin below only tops
 			// up the last couple of milliseconds instead of burning a full core for the whole frame remainder
 			const std::int64_t remainingTimeMs = (((std::int64_t)frameTimeDuration - (std::int64_t)_frameTimer->GetFrameDurationAsTicks())
-				* 1'000LL) / (std::int64_t)clock().frequency() - 2; // 2 ms slack for coarse sleep granularity
+				* 1'000LL) / (std::int64_t)clock().GetFrequency() - 2; // 2 ms slack for coarse sleep granularity
 			if (remainingTimeMs > 0) {
 				Thread::Sleep((std::uint32_t)remainingTimeMs);
 			}
@@ -1848,7 +1848,7 @@ namespace nCine
 				Thread::Sleep(0);
 			}
 			if (measure) {
-				_timings[(std::int32_t)Timings::Wait] = _profileStartTime.secondsSince();
+				_timings[(std::int32_t)Timings::Wait] = _profileStartTime.GetSecondsSince();
 			}
 			FrameMarkEnd("Frame limiting");
 		}
@@ -1863,13 +1863,13 @@ namespace nCine
 
 		_rootNode = nullptr;
 
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 #if defined(WITH_IMGUI)
 			_imguiDrawing = nullptr;
 			_debugOverlay = nullptr;
 #endif
 #if defined(WITH_RENDERDOC)
-			RenderDocCapture::removeHooks();
+			RenderDocCapture::RemoveHooks();
 #endif
 			RenderResources::Dispose();
 			_gfxDevice = nullptr;
@@ -2401,7 +2401,7 @@ namespace nCine
 			_appEventHandler->OnSuspend();
 		}
 #if defined(WITH_AUDIO)
-		if (_appCfg.withAudio) {
+		if (_appCfg.WithAudio) {
 			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 			audioDevice.SuspendDevice();
 		}
@@ -2416,14 +2416,14 @@ namespace nCine
 			_appEventHandler->OnResume();
 		}
 #if defined(WITH_AUDIO)
-		if (_appCfg.withAudio) {
+		if (_appCfg.WithAudio) {
 			IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
 			audioDevice.ResumeDevice();
 		}
 #endif
 
 		DEATH_UNUSED TimeStamp suspensionDuration = _frameTimer->Resume();
-		LOGD("Suspended for {:.3} seconds", suspensionDuration.seconds());
+		LOGD("Suspended for {:.3} seconds", suspensionDuration.GetSeconds());
 #if defined(NCINE_PROFILING)
 		_profileStartTime += suspensionDuration;
 #endif
@@ -2498,7 +2498,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_ANDROID)
 		// A device has no host name a user would recognize; the Android ID (64 bits as hex, fixed per device,
 		// user and signing key) stands in for it
-		return Backends::AndroidJniWrap_Secure::getAndroidId();
+		return Backends::AndroidJniWrap_Secure::GetAndroidId();
 #elif defined(DEATH_TARGET_SWITCH)
 		// The nickname the console was given in its settings is the nearest thing to a host name - what libnx's
 		// gethostname() answers is the current IP address, which is neither a name nor stable. A console with
@@ -3193,7 +3193,7 @@ namespace nCine
 		}
 
 #		if defined(DEATH_TARGET_ANDROID)
-		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
+		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::GetPackageName();
 #		else
 		auto executablePath = fs::GetExecutablePath();
 		auto executableFileName = fs::GetFileName(executablePath);
@@ -3204,11 +3204,11 @@ namespace nCine
 
 		// The executable itself is not among the arguments, it's stripped when they are parsed
 		std::string arguments;
-		for (std::size_t i = 0; i < _appCfg.argc(); i++) {
+		for (std::size_t i = 0; i < _appCfg.GetArgc(); i++) {
 			if (i > 0) {
 				arguments += ' ';
 			}
-			arguments += _appCfg.argv(i);
+			arguments += _appCfg.GetArgv(i);
 		}
 
 		char buffer[256];

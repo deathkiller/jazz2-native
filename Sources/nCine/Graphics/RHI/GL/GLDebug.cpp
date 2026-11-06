@@ -67,7 +67,7 @@ namespace nCine::RHI::GL
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		_debugAvailable = caps.HasExtension(IRhiCapabilities::Extensions::KhrDebug) &&
-			theApplication().GetGfxDevice().contextInfo().debugContext;
+			theApplication().GetGfxDevice().GetContextInfo().DebugContext;
 
 		glGetIntegerv(GL_MAX_LABEL_LENGTH, &_maxLabelLength);
 

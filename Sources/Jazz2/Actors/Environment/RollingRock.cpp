@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> RollingRock::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_renderer.setLayer(_renderer.layer() + 10);
+		_renderer.SetLayer(_renderer.GetLayer() + 10);
 
 		EventParamsReader params(details);
 		_id = params.GetUint8(0);
@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Environment
 		async_await RequestMetadataAsync("Object/RollingRock"_s);
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setRotation(_pos.X + _pos.Y);
+		_renderer.SetRotation(_pos.X + _pos.Y);
 
 		async_return true;
 	}
@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Environment
 				_canHurtPlayer = false;
 			}
 
-			_renderer.setRotation(_renderer.rotation() + _speed.X * 0.02f * timeMult);
+			_renderer.SetRotation(_renderer.GetRotation() + _speed.X * 0.02f * timeMult);
 		}
 
 		// Trigger

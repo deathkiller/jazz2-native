@@ -129,7 +129,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
-		_modelMatrix[3][2] = CalculateDepth(_layer, cameraValues.nearClip, cameraValues.farClip);
+		_modelMatrix[3][2] = CalculateDepth(_layer, cameraValues.NearClip, cameraValues.FarClip);
 
 		if (_material._shaderProgram && _material._shaderProgram->GetStatus() == RHI::ShaderProgram::Status::LinkedWithIntrospection) {
 			RefreshCachedUniforms();

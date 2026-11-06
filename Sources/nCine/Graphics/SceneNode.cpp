@@ -18,7 +18,7 @@ namespace nCine
 		_worldMatrix(Matrix4x4f::Identity), _localMatrix(Matrix4x4f::Identity),
 		_shouldDeleteChildrenOnDestruction(true), _dirtyBits(0xFF), _lastFrameUpdated(0)
 	{
-		setParent(parent);
+		SetParent(parent);
 	}
 
 	/** @param parent The parent can be `nullptr` */
@@ -50,7 +50,7 @@ namespace nCine
 			}
 		}
 
-		setParent(nullptr);
+		SetParent(nullptr);
 	}
 
 	SceneNode::SceneNode(SceneNode&& other) noexcept
@@ -59,7 +59,7 @@ namespace nCine
 			_scaleFactor(other._scaleFactor), _rotation(other._rotation), _color(other._color), _layer(other._layer),
 			_shouldDeleteChildrenOnDestruction(other._shouldDeleteChildrenOnDestruction), _dirtyBits(other._dirtyBits), _lastFrameUpdated(other._lastFrameUpdated)
 	{
-		swapChildPointer(this, &other);
+		SwapChildPointer(this, &other);
 		for (SceneNode* child : _children) {
 			child->_parent = this;
 		}
@@ -84,7 +84,7 @@ namespace nCine
 		_dirtyBits = other._dirtyBits;
 		_lastFrameUpdated = other._lastFrameUpdated;
 
-		swapChildPointer(this, &other);
+		SwapChildPointer(this, &other);
 		for (SceneNode* child : _children) {
 			child->_parent = this;
 		}
@@ -92,7 +92,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the parent has been set */
-	bool SceneNode::setParent(SceneNode* parentNode)
+	bool SceneNode::SetParent(SceneNode* parentNode)
 	{
 		// Can't set yourself or your parent as parent
 		if (parentNode == this || parentNode == _parent) {
@@ -100,7 +100,7 @@ namespace nCine
 		}
 
 		if (_parent != nullptr) {
-			_parent->removeChildNode(this);
+			_parent->RemoveChildNode(this);
 		}
 		if (parentNode != nullptr) {
 			parentNode->_children.push_back(this);
@@ -115,7 +115,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the node has been added */
-	bool SceneNode::addChildNode(SceneNode* childNode)
+	bool SceneNode::AddChildNode(SceneNode* childNode)
 	{
 		// Can't add yourself or one of your children as a child
 		if (childNode == this || (childNode != nullptr && childNode->_parent == this)) {
@@ -123,7 +123,7 @@ namespace nCine
 		}
 
 		if (childNode->_parent != nullptr) {
-			childNode->_parent->removeChildNode(childNode);
+			childNode->_parent->RemoveChildNode(childNode);
 		}
 		_children.push_back(childNode);
 		childNode->_childOrderIndex = (unsigned int)_children.size() - 1;
@@ -133,7 +133,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the node has been removed */
-	bool SceneNode::removeChildNode(SceneNode* childNode)
+	bool SceneNode::RemoveChildNode(SceneNode* childNode)
 	{
 		// Can't remove yourself or a `nullptr` from your children
 		if (childNode == this || childNode == nullptr) {
@@ -146,7 +146,7 @@ namespace nCine
 		{
 			for (unsigned int i = 0; i < _children.size(); i++) {
 				if (_children[i] == childNode) {
-					hasBeenRemoved = removeChildNodeAt(i);
+					hasBeenRemoved = RemoveChildNodeAt(i);
 					break;
 				}
 			}
@@ -156,7 +156,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the node has been removed */
-	bool SceneNode::removeChildNodeAt(std::uint32_t index)
+	bool SceneNode::RemoveChildNodeAt(std::uint32_t index)
 	{
 		// Can't remove at an index past the number of children
 		if (_children.empty() || index > _children.size() - 1) {
@@ -174,7 +174,7 @@ namespace nCine
 	}
 
 	/** @return `true` if there was at least one node to remove */
-	bool SceneNode::removeAllChildrenNodes()
+	bool SceneNode::RemoveAllChildrenNodes()
 	{
 		if (_children.empty()) {
 			return false;
@@ -191,7 +191,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the node has been unlinked */
-	bool SceneNode::unlinkChildNode(SceneNode* childNode)
+	bool SceneNode::UnlinkChildNode(SceneNode* childNode)
 	{
 		// Can't unlink yourself or a `nullptr` from your children
 		if (childNode == this || childNode == nullptr) {
@@ -203,11 +203,11 @@ namespace nCine
 		if (!_children.empty() &&			// Avoid checking if this node has no children
 			childNode->_parent == this)		// Avoid checking if the child doesn't belong to this node
 		{
-			removeChildNode(childNode);
+			RemoveChildNode(childNode);
 
 			// Nephews reparenting
 			for (SceneNode* child : childNode->_children) {
-				addChildNode(child);
+				AddChildNode(child);
 			}
 			hasBeenUnlinked = true;
 		}
@@ -216,7 +216,7 @@ namespace nCine
 	}
 
 	/** @return The order index among the siblings, or 0 if the node has no parent */
-	std::uint32_t SceneNode::childOrderIndex() const
+	std::uint32_t SceneNode::GetChildOrderIndex() const
 	{
 		std::uint32_t index = 0;
 		if (_parent != nullptr) {
@@ -228,7 +228,7 @@ namespace nCine
 	}
 
 	/** @return `true` if the two nodes have been swapped */
-	bool SceneNode::swapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex)
+	bool SceneNode::SwapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex)
 	{
 		// Check if there are at least two children and if the indices are different and valid
 		const std::uint32_t numChildren = std::uint32_t(_children.size());
@@ -243,23 +243,23 @@ namespace nCine
 	}
 
 	/** @return `true` if the node has been moved one position forward */
-	bool SceneNode::swapNodeForward()
+	bool SceneNode::SwapNodeForward()
 	{
 		if (_parent == nullptr) {
 			return false;
 		}
 
-		return _parent->swapChildrenNodes(_childOrderIndex, _childOrderIndex + 1);
+		return _parent->SwapChildrenNodes(_childOrderIndex, _childOrderIndex + 1);
 	}
 
 	/** @return `true` if the node has been moved one position back */
-	bool SceneNode::swapNodeBack()
+	bool SceneNode::SwapNodeBack()
 	{
 		if (_parent == nullptr || _childOrderIndex == 0) {
 			return false;
 		}
 
-		return _parent->swapChildrenNodes(_childOrderIndex, _childOrderIndex - 1);
+		return _parent->SwapChildrenNodes(_childOrderIndex, _childOrderIndex - 1);
 	}
 
 	void SceneNode::OnUpdate(float timeMult)
@@ -267,7 +267,7 @@ namespace nCine
 		// Early return not needed, the first call to this method is on the root node
 
 		if (_updateEnabled) {
-			transform();
+			Transform();
 
 			for (unsigned int i = 0; i < (unsigned int)_children.size(); i++) {
 				_children[i]->OnUpdate(timeMult);
@@ -276,7 +276,7 @@ namespace nCine
 			_dirtyBits.reset(DirtyBitPositions::TransformationBit);
 			_dirtyBits.reset(DirtyBitPositions::ColorBit);
 
-			// A non-drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
+			// A non-drawable scenenode does not have the `UpdateRenderCommand()` method to reset the flags
 			if (_type == ObjectType::SceneNode || _type == ObjectType::ParticleSystem) {
 				_dirtyBits.reset(DirtyBitPositions::TransformationUploadBit);
 				_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
@@ -316,11 +316,11 @@ namespace nCine
 			_absLayer(0), _worldMatrix(Matrix4x4f::Identity), _localMatrix(Matrix4x4f::Identity),
 			_shouldDeleteChildrenOnDestruction(other._shouldDeleteChildrenOnDestruction), _dirtyBits(0xFF)
 	{
-		setParent(other._parent);
+		SetParent(other._parent);
 	}
 
-	/** @note Faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
-	void SceneNode::swapChildPointer(SceneNode* first, SceneNode* second)
+	/** @note Faster than calling `SetParent()` on the first child and `RemoveChildNode()` on the second one */
+	void SceneNode::SwapChildPointer(SceneNode* first, SceneNode* second)
 	{
 		DEATH_ASSERT(first->_parent == second->_parent);
 
@@ -337,7 +337,7 @@ namespace nCine
 		}
 	}
 
-	void SceneNode::transform()
+	void SceneNode::Transform()
 	{
 		ZoneScopedC(0x81A861);
 

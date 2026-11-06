@@ -28,9 +28,9 @@ namespace nCine::Backends
 	GlfwGfxDevice::GlfwGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 			: IGfxDevice(windowMode, contextInfo, displayMode)
 	{
-		initGraphics();
-		updateMonitors();
-		initDevice(windowMode.windowPositionX, windowMode.windowPositionY, windowMode.isResizable, windowMode.hasWindowScaling);
+		InitGraphics();
+		UpdateMonitors();
+		InitDevice(windowMode.WindowPositionX, windowMode.WindowPositionY, windowMode.IsResizable, windowMode.HasWindowScaling);
 	}
 
 	GlfwGfxDevice::~GlfwGfxDevice()
@@ -42,15 +42,15 @@ namespace nCine::Backends
 		glfwTerminate();
 	}
 
-	void GlfwGfxDevice::setSwapInterval(int interval)
+	void GlfwGfxDevice::SetSwapInterval(int interval)
 	{
 		glfwSwapInterval(interval);
 	}
 
-	void GlfwGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void GlfwGfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		// The windows goes in full screen on the same monitor
-		_fsMonitorIndex = windowMonitorIndex();
+		_fsMonitorIndex = GetWindowMonitorIndex();
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		GLFWmonitor* monitor = _monitorPointers[_fsMonitorIndex];
@@ -75,18 +75,18 @@ namespace nCine::Backends
 			int height = (monitor != nullptr ? currentMode->height : _height);
 			int refreshRate = (monitor != nullptr ? currentMode->refreshRate : GLFW_DONT_CARE);
 
-			if (_fsModeIndex >= 0 && _fsModeIndex < _monitors[_fsMonitorIndex].numVideoModes) {
-				const IGfxDevice::VideoMode& mode = _monitors[_fsMonitorIndex].videoModes[_fsModeIndex];
-				width = mode.width;
-				height = mode.height;
-				refreshRate = (int)mode.refreshRate;
+			if (_fsModeIndex >= 0 && _fsModeIndex < _monitors[_fsMonitorIndex].VideoModeCount) {
+				const IGfxDevice::VideoMode& mode = _monitors[_fsMonitorIndex].VideoModes[_fsModeIndex];
+				width = mode.Width;
+				height = mode.Height;
+				refreshRate = (int)mode.RefreshRate;
 			}
 
 			glfwSetWindowMonitor(_windowHandle, monitor, 0, 0, width, height, refreshRate);
 
 #	if defined(DEATH_TARGET_WINDOWS)
 			// Swap internal must be set again after glfwSetWindowMonitor, otherwise V-Sync is turned off
-			const int interval = (_displayMode.hasVSync() ? 1 : 0);
+			const int interval = (_displayMode.HasVSync() ? 1 : 0);
 			glfwSwapInterval(interval);
 #	endif
 #endif
@@ -106,8 +106,8 @@ namespace nCine::Backends
 #else
 			glfwSetWindowMonitor(_windowHandle, nullptr, 0, 0, _width, _height, GLFW_DONT_CARE);
 			if (wasFullscreen) {
-				glfwSetWindowPos(_windowHandle, _monitors[_fsMonitorIndex].position.X + (currentMode->width - _width) / 2,
-								 _monitors[_fsMonitorIndex].position.Y + (currentMode->height - _height) / 2);
+				glfwSetWindowPos(_windowHandle, _monitors[_fsMonitorIndex].Position.X + (currentMode->width - _width) / 2,
+								 _monitors[_fsMonitorIndex].Position.Y + (currentMode->height - _height) / 2);
 			}
 #endif
 		}
@@ -121,34 +121,34 @@ namespace nCine::Backends
 		}
 	}
 
-	void GlfwGfxDevice::update()
+	void GlfwGfxDevice::Update()
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN) // Buffers are swapped implicitly in WebGL
 		glfwSwapBuffers(_windowHandle);
 #endif
 	}
 
-	void GlfwGfxDevice::setResolutionInternal(int width, int height)
+	void GlfwGfxDevice::SetResolutionInternal(int width, int height)
 	{
 		glfwSetWindowSize(_windowHandle, width, height);
 		glfwGetWindowSize(_windowHandle, &_width, &_height);
 		glfwGetFramebufferSize(_windowHandle, &_drawableWidth, &_drawableHeight);
 	}
 
-	void GlfwGfxDevice::setWindowIcon(StringView windowIconFilename)
+	void GlfwGfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);
+		std::unique_ptr<ITextureLoader> image = ITextureLoader::CreateFromFile(windowIconFilename);
 		GLFWimage glfwImage;
-		glfwImage.width = image->width();
-		glfwImage.height = image->height();
-		glfwImage.pixels = const_cast<unsigned char*>(image->pixels());
+		glfwImage.width = image->GetWidth();
+		glfwImage.height = image->GetHeight();
+		glfwImage.pixels = const_cast<unsigned char*>(image->GetPixels());
 
 		glfwSetWindowIcon(_windowHandle, 1, &glfwImage);
 #endif
 	}
 
-	const Vector2i GlfwGfxDevice::windowPosition() const
+	const Vector2i GlfwGfxDevice::GetWindowPosition() const
 	{
 		Vector2i position(0, 0);
 		glfwGetWindowPos(_windowHandle, &position.X, &position.Y);
@@ -156,17 +156,17 @@ namespace nCine::Backends
 	}
 
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS)
-	bool GlfwGfxDevice::supportsAuxiliaryWindows() const
+	bool GlfwGfxDevice::SupportsAuxiliaryWindows() const
 	{
 		return GlfwAuxiliaryWindow::IsSupported();
 	}
 
-	std::unique_ptr<AuxiliaryWindow> GlfwGfxDevice::createAuxiliaryWindow(const AuxiliaryWindowDesc& desc)
+	std::unique_ptr<AuxiliaryWindow> GlfwGfxDevice::CreateAuxiliaryWindow(const AuxiliaryWindowDesc& desc)
 	{
 		return GlfwAuxiliaryWindow::Create(desc);
 	}
 
-	bool GlfwGfxDevice::globalMousePosition(Vector2i& position) const
+	bool GlfwGfxDevice::GetGlobalMousePosition(Vector2i& position) const
 	{
 		if (!GlfwAuxiliaryWindow::IsSupported()) {
 			return false;
@@ -174,12 +174,12 @@ namespace nCine::Backends
 		// GLFW knows the pointer only relative to a window, the main one is as good as any
 		double x = 0.0, y = 0.0;
 		glfwGetCursorPos(_windowHandle, &x, &y);
-		Vector2i windowPos = windowPosition();
+		Vector2i windowPos = GetWindowPosition();
 		position = Vector2i(windowPos.X + std::int32_t(x), windowPos.Y + std::int32_t(y));
 		return true;
 	}
 
-	bool GlfwGfxDevice::globalMouseButtons(std::uint32_t& buttons) const
+	bool GlfwGfxDevice::GetGlobalMouseButtons(std::uint32_t& buttons) const
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		// GLFW knows only the buttons of its own events, the system is asked, with the buttons swapped if they're set so
@@ -193,7 +193,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	bool GlfwGfxDevice::desktopWorkArea(Vector2i point, Recti& area) const
+	bool GlfwGfxDevice::GetDesktopWorkArea(Vector2i point, Recti& area) const
 	{
 		// The monitor at the point, or the nearest one by the distance to its edges
 		int count = 0;
@@ -221,7 +221,7 @@ namespace nCine::Backends
 		return found;
 	}
 
-	float GlfwGfxDevice::windowContentScale() const
+	float GlfwGfxDevice::GetWindowContentScale() const
 	{
 		float xScale = 1.0f, yScale = 1.0f;
 		glfwGetWindowContentScale(_windowHandle, &xScale, &yScale);
@@ -229,7 +229,7 @@ namespace nCine::Backends
 	}
 #endif
 
-	void GlfwGfxDevice::setWindowPosition(int x, int y)
+	void GlfwGfxDevice::SetWindowPosition(int x, int y)
 	{
 		int width = _width;
 		int height = _height;
@@ -241,11 +241,11 @@ namespace nCine::Backends
 		glfwSetWindowPos(_windowHandle, x, y);
 		glfwSetWindowSize(_windowHandle, width, height);
 
-		glfwSetWindowSizeCallback(_windowHandle, GlfwInputManager::windowSizeCallback);
-		glfwSetFramebufferSizeCallback(_windowHandle, GlfwInputManager::framebufferSizeCallback);
+		glfwSetWindowSizeCallback(_windowHandle, GlfwInputManager::WindowSizeCallback);
+		glfwSetFramebufferSizeCallback(_windowHandle, GlfwInputManager::FramebufferSizeCallback);
 	}
 
-	void GlfwGfxDevice::setWindowSize(int width, int height)
+	void GlfwGfxDevice::SetWindowSize(int width, int height)
 	{
 		// change resolution only in case it is valid and it really changes
 		if (width == 0 || height == 0 || (width == _width && height == _height)) {
@@ -259,22 +259,22 @@ namespace nCine::Backends
 		}
 	}
 
-	void GlfwGfxDevice::flashWindow() const
+	void GlfwGfxDevice::FlashWindow() const
 	{
 #if GLFW_VERSION_COMBINED >= 3300 && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwRequestWindowAttention(_windowHandle);
 #endif
 	}
 
-	unsigned int GlfwGfxDevice::primaryMonitorIndex() const
+	unsigned int GlfwGfxDevice::GetPrimaryMonitorIndex() const
 	{
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 
-		const int retrievedIndex = retrieveMonitorIndex(monitor);
+		const int retrievedIndex = RetrieveMonitorIndex(monitor);
 		return (retrievedIndex >= 0 ? static_cast<unsigned int>(retrievedIndex) : 0);
 	}
 
-	unsigned int GlfwGfxDevice::windowMonitorIndex() const
+	unsigned int GlfwGfxDevice::GetWindowMonitorIndex() const
 	{
 		if (_numMonitors == 1 || _windowHandle == nullptr) {
 			return 0;
@@ -292,8 +292,8 @@ namespace nCine::Backends
 			const Vector2i windowCenter = position + size / 2;
 
 			for (unsigned int i = 0; i < _numMonitors; i++) {
-				const VideoMode& videoMode = currentVideoMode(i);
-				const Recti surface(_monitors[i].position, Vector2i(videoMode.width, videoMode.height));
+				const VideoMode& videoMode = GetCurrentVideoMode(i);
+				const Recti surface(_monitors[i].Position, Vector2i(videoMode.Width, videoMode.Height));
 				if (surface.Contains(windowCenter)) {
 					monitor = _monitorPointers[i];
 					break;
@@ -301,11 +301,11 @@ namespace nCine::Backends
 			}
 		}
 
-		const int index = retrieveMonitorIndex(monitor);
+		const int index = RetrieveMonitorIndex(monitor);
 		return (index < 0 ? 0 : static_cast<unsigned int>(index));
 	}
 
-	const IGfxDevice::VideoMode& GlfwGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& GlfwGfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		// Fallback if the index is not valid
 		GLFWmonitor* monitor = (_windowHandle != nullptr ? glfwGetWindowMonitor(_windowHandle) : nullptr);
@@ -317,24 +317,24 @@ namespace nCine::Backends
 
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 		if (mode != nullptr) {
-			convertVideoModeInfo(*mode, _currentVideoMode);
+			ConvertVideoModeInfo(*mode, _currentVideoMode);
 		}
 
 		return _currentVideoMode;
 	}
 
-	bool GlfwGfxDevice::setVideoMode(unsigned int modeIndex)
+	bool GlfwGfxDevice::SetVideoMode(unsigned int modeIndex)
 	{
-		const int monitorIndex = windowMonitorIndex();
+		const int monitorIndex = GetWindowMonitorIndex();
 		DEATH_ASSERT(monitorIndex >= 0);
 
-		const unsigned int numVideoModes = _monitors[monitorIndex].numVideoModes;
+		const unsigned int numVideoModes = _monitors[monitorIndex].VideoModeCount;
 		DEATH_ASSERT(modeIndex < numVideoModes);
 
 		if (modeIndex < numVideoModes) {
 			GLFWmonitor* monitor = _monitorPointers[monitorIndex];
-			const IGfxDevice::VideoMode& mode = _monitors[monitorIndex].videoModes[modeIndex];
-			glfwSetWindowMonitor(_windowHandle, monitor, 0, 0, mode.width, mode.height, static_cast<int>(mode.refreshRate));
+			const IGfxDevice::VideoMode& mode = _monitors[monitorIndex].VideoModes[modeIndex];
+			glfwSetWindowMonitor(_windowHandle, monitor, 0, 0, mode.Width, mode.Height, static_cast<int>(mode.RefreshRate));
 
 			_fsMonitorIndex = monitorIndex;
 			_fsModeIndex = modeIndex;
@@ -344,16 +344,16 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void GlfwGfxDevice::initGraphics()
+	void GlfwGfxDevice::InitGraphics()
 	{
 #if GLFW_VERSION_COMBINED >= 3300 && !defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 #endif
-		glfwSetErrorCallback(errorCallback);
+		glfwSetErrorCallback(ErrorCallback);
 		FATAL_ASSERT_MSG(glfwInit() == GLFW_TRUE, "glfwInit() failed");
 	}
 
-	void GlfwGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling)
+	void GlfwGfxDevice::InitDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling)
 	{
 		GLFWmonitor* monitor = nullptr;
 		if (_isFullscreen) {
@@ -379,15 +379,15 @@ namespace nCine::Backends
 
 		// Setting window hints and creating a window with GLFW
 		glfwWindowHint(GLFW_RESIZABLE, isResizable ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(_contextInfo.majorVersion));
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(_contextInfo.minorVersion));
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, _contextInfo.debugContext ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_RED_BITS, static_cast<int>(_displayMode.redBits()));
-		glfwWindowHint(GLFW_GREEN_BITS, static_cast<int>(_displayMode.greenBits()));
-		glfwWindowHint(GLFW_BLUE_BITS, static_cast<int>(_displayMode.blueBits()));
-		glfwWindowHint(GLFW_ALPHA_BITS, static_cast<int>(_displayMode.alphaBits()));
-		glfwWindowHint(GLFW_DEPTH_BITS, static_cast<int>(_displayMode.depthBits()));
-		glfwWindowHint(GLFW_STENCIL_BITS, static_cast<int>(_displayMode.stencilBits()));
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(_contextInfo.MajorVersion));
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(_contextInfo.MinorVersion));
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, _contextInfo.DebugContext ? GLFW_TRUE : GLFW_FALSE);
+		glfwWindowHint(GLFW_RED_BITS, static_cast<int>(_displayMode.GetRedBits()));
+		glfwWindowHint(GLFW_GREEN_BITS, static_cast<int>(_displayMode.GetGreenBits()));
+		glfwWindowHint(GLFW_BLUE_BITS, static_cast<int>(_displayMode.GetBlueBits()));
+		glfwWindowHint(GLFW_ALPHA_BITS, static_cast<int>(_displayMode.GetAlphaBits()));
+		glfwWindowHint(GLFW_DEPTH_BITS, static_cast<int>(_displayMode.GetDepthBits()));
+		glfwWindowHint(GLFW_STENCIL_BITS, static_cast<int>(_displayMode.GetStencilBits()));
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
@@ -395,8 +395,8 @@ namespace nCine::Backends
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 #else
-		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, _contextInfo.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, _contextInfo.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, _contextInfo.ForwardCompatible ? GLFW_TRUE : GLFW_FALSE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, _contextInfo.CoreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
 #if GLFW_VERSION_COMBINED >= 3400
 		if (windowPosX != AppConfiguration::WindowPositionIgnore) {
@@ -418,26 +418,26 @@ namespace nCine::Backends
 	Retry:
 		_windowHandle = glfwCreateWindow(_width, _height, "", monitor, nullptr);
 
-		if (!_windowHandle && _contextInfo.minorVersion > 0) {
+		if (!_windowHandle && _contextInfo.MinorVersion > 0) {
 			// Retry with lower minor version
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("glfwCreateWindow() with OpenGL|ES {}.{} failed, retrying with lower version",
-				_contextInfo.majorVersion, _contextInfo.minorVersion);
+				_contextInfo.MajorVersion, _contextInfo.MinorVersion);
 #else
-			LOGW(_contextInfo.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed, retrying with lower version" : "glfwCreateWindow() with OpenGL {}.{} failed, retrying with lower version",
-				_contextInfo.majorVersion, _contextInfo.minorVersion);
+			LOGW(_contextInfo.CoreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed, retrying with lower version" : "glfwCreateWindow() with OpenGL {}.{} failed, retrying with lower version",
+				_contextInfo.MajorVersion, _contextInfo.MinorVersion);
 #endif
-			_contextInfo.minorVersion--;
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(_contextInfo.minorVersion));
+			_contextInfo.MinorVersion--;
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(_contextInfo.MinorVersion));
 			goto Retry;
 		}
 
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(_windowHandle, "glfwCreateWindow() with OpenGL|ES {}.{} failed",
-			_contextInfo.majorVersion, _contextInfo.minorVersion);
+			_contextInfo.MajorVersion, _contextInfo.MinorVersion);
 #else
-		FATAL_ASSERT_MSG(_windowHandle, _contextInfo.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed" : "glfwCreateWindow() with OpenGL {}.{} failed",
-			_contextInfo.majorVersion, _contextInfo.minorVersion);
+		FATAL_ASSERT_MSG(_windowHandle, _contextInfo.CoreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed" : "glfwCreateWindow() with OpenGL {}.{} failed",
+			_contextInfo.MajorVersion, _contextInfo.MinorVersion);
 #endif
 
 #if GLFW_VERSION_COMBINED < 3400
@@ -455,7 +455,7 @@ namespace nCine::Backends
 #endif
 
 		glfwGetFramebufferSize(_windowHandle, &_drawableWidth, &_drawableHeight);
-		initDeviceViewport();
+		InitDeviceViewport();
 
 		glfwSetWindowSizeLimits(_windowHandle, 200, 160, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
@@ -463,18 +463,18 @@ namespace nCine::Backends
 
 		glfwMakeContextCurrent(_windowHandle);
 
-		const int interval = (_displayMode.hasVSync() ? 1 : 0);
+		const int interval = (_displayMode.HasVSync() ? 1 : 0);
 		glfwSwapInterval(interval);
 
 #if defined(WITH_GLEW)
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
-		_contextInfo.debugContext = (_contextInfo.debugContext && glewIsSupported("GL_ARB_debug_output"));
+		_contextInfo.DebugContext = (_contextInfo.DebugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
 
-	void GlfwGfxDevice::updateMonitors()
+	void GlfwGfxDevice::UpdateMonitors()
 	{
 		LOGD("Updating list of monitors...");
 
@@ -489,30 +489,30 @@ namespace nCine::Backends
 
 		for (unsigned int i = 0; i < _numMonitors; i++) {
 			GLFWmonitor* monitor = monitors[i];
-			_monitors[i].name = glfwGetMonitorName(monitor);
-			DEATH_ASSERT(_monitors[i].name != nullptr);
-			glfwGetMonitorPos(monitor, &_monitors[i].position.X, &_monitors[i].position.Y);
+			_monitors[i].Name = glfwGetMonitorName(monitor);
+			DEATH_ASSERT(_monitors[i].Name != nullptr);
+			glfwGetMonitorPos(monitor, &_monitors[i].Position.X, &_monitors[i].Position.Y);
 #if GLFW_VERSION_COMBINED >= 3300
-			glfwGetMonitorContentScale(monitor, &_monitors[i].scale.X, &_monitors[i].scale.Y);
+			glfwGetMonitorContentScale(monitor, &_monitors[i].Scale.X, &_monitors[i].Scale.Y);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-			_monitors[i].scale.X = emscripten_get_device_pixel_ratio();
-			_monitors[i].scale.Y = _monitors[i].scale.X;
+			_monitors[i].Scale.X = emscripten_get_device_pixel_ratio();
+			_monitors[i].Scale.Y = _monitors[i].Scale.X;
 #endif
 
 			int modeCount = 0;
 			const GLFWvidmode* modes = glfwGetVideoModes(monitor, &modeCount);
-			_monitors[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
+			_monitors[i].VideoModeCount = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
 
-			for (unsigned int j = 0; j < _monitors[i].numVideoModes; j++) {
+			for (unsigned int j = 0; j < _monitors[i].VideoModeCount; j++) {
 				// Reverse GLFW video mode array to be consistent with SDL
 				const int srcIndex = modeCount - 1 - j;
-				convertVideoModeInfo(modes[srcIndex], _monitors[i].videoModes[j]);
+				ConvertVideoModeInfo(modes[srcIndex], _monitors[i].VideoModes[j]);
 			}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-			if (_monitors[0].numVideoModes == 0) {
-				_monitors[0].numVideoModes = 1;
-				_monitors[0].videoModes[0] = _currentVideoMode;
+			if (_monitors[0].VideoModeCount == 0) {
+				_monitors[0].VideoModeCount = 1;
+				_monitors[0].VideoModes[0] = _currentVideoMode;
 			}
 #endif
 		}
@@ -521,7 +521,7 @@ namespace nCine::Backends
 		_fsModeIndex = -1;
 	}
 
-	void GlfwGfxDevice::updateMonitorScaling(unsigned int monitorIndex)
+	void GlfwGfxDevice::UpdateMonitorScaling(unsigned int monitorIndex)
 	{
 		int monitorCount = 0;
 		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
@@ -530,7 +530,7 @@ namespace nCine::Backends
 			IGfxDevice::Monitor& monitor = _monitors[monitorIndex];
 
 #if GLFW_VERSION_COMBINED >= 3300
-			glfwGetMonitorContentScale(monitors[monitorIndex], &monitor.scale.X, &monitor.scale.Y);
+			glfwGetMonitorContentScale(monitors[monitorIndex], &monitor.Scale.X, &monitor.Scale.Y);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 			monitor.scale.X = emscripten_get_device_pixel_ratio();
 			monitor.scale.Y = monitor.scale.X;
@@ -538,7 +538,7 @@ namespace nCine::Backends
 		}
 	}
 
-	int GlfwGfxDevice::retrieveMonitorIndex(GLFWmonitor* monitor) const
+	int GlfwGfxDevice::RetrieveMonitorIndex(GLFWmonitor* monitor) const
 	{
 		int index = -1;
 		for (unsigned int i = 0; i < _numMonitors; i++) {
@@ -550,17 +550,17 @@ namespace nCine::Backends
 		return index;
 	}
 
-	void GlfwGfxDevice::convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const
+	void GlfwGfxDevice::ConvertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const
 	{
-		videoMode.width = static_cast<unsigned int>(glfwVideoMode.width);
-		videoMode.height = static_cast<unsigned int>(glfwVideoMode.height);
-		videoMode.refreshRate = static_cast<float>(glfwVideoMode.refreshRate);
-		videoMode.redBits = static_cast<unsigned char>(glfwVideoMode.redBits);
-		videoMode.greenBits = static_cast<unsigned char>(glfwVideoMode.greenBits);
-		videoMode.blueBits = static_cast<unsigned char>(glfwVideoMode.blueBits);
+		videoMode.Width = static_cast<unsigned int>(glfwVideoMode.width);
+		videoMode.Height = static_cast<unsigned int>(glfwVideoMode.height);
+		videoMode.RefreshRate = static_cast<float>(glfwVideoMode.refreshRate);
+		videoMode.RedBits = static_cast<unsigned char>(glfwVideoMode.redBits);
+		videoMode.GreenBits = static_cast<unsigned char>(glfwVideoMode.greenBits);
+		videoMode.BlueBits = static_cast<unsigned char>(glfwVideoMode.blueBits);
 	}
 
-	void GlfwGfxDevice::errorCallback(int error, const char* description)
+	void GlfwGfxDevice::ErrorCallback(int error, const char* description)
 	{
 		LOGE("GLFW error {}: \"{}\"", error, description);
 	}

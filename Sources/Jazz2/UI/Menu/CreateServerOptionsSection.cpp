@@ -313,11 +313,11 @@ namespace Jazz2::UI::Menu
 
 	void CreateServerOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (!_shouldStart && event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (!_shouldStart && event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x * (float)viewSize.X;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X * (float)viewSize.X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				float halfWidth = viewSize.X * 0.5f;
 
 				// The band above the rows that takes a tap back, which moves down with them (see OnDraw)

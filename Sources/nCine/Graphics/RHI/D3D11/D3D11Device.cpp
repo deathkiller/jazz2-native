@@ -1395,8 +1395,9 @@ namespace nCine::RHI::D3D11
 		};
 	}
 
-	void* D3D11Device::CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	void* D3D11Device::CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height)
 	{
+		void* windowHandle = desc.WindowHandle;
 		if (_device == nullptr || _swapchain == nullptr || windowHandle == nullptr) {
 			return nullptr;
 		}

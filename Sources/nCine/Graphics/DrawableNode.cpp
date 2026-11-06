@@ -19,7 +19,7 @@ namespace nCine
 		_renderCommand(),
 		_lastFrameRendered(0)
 	{
-		_renderCommand.SetIdSortKey(id());
+		_renderCommand.SetIdSortKey(GetId());
 	}
 
 	DrawableNode::DrawableNode(SceneNode* parent, Vector2f position)
@@ -49,7 +49,7 @@ namespace nCine
 		if (_width == 0.0f || _height == 0.0f)
 			return false;
 
-		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
+		const bool cullingEnabled = theApplication().GetRenderingSettings().CullingEnabled;
 
 		bool overlaps = false;
 		if (cullingEnabled && _lastFrameRendered == theApplication().GetFrameCount()) {
@@ -61,7 +61,7 @@ namespace nCine
 		if (!cullingEnabled || overlaps) {
 			_renderCommand.SetLayer(_absLayer);
 			_renderCommand.SetVisitOrder(_withVisitOrder ? _visitOrderIndex : 0);
-			updateRenderCommand();
+			UpdateRenderCommand();
 			_dirtyBits.reset(DirtyBitPositions::TransformationUploadBit);
 			_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
 			renderQueue.AddCommand(&_renderCommand);
@@ -77,31 +77,31 @@ namespace nCine
 
 	/**
 	 * @note Sets the anchor point relative to the node width and height. To set the anchor point in
-	 * pixels use `setAbsAnchorPoint()` instead.
+	 * pixels use `SetAbsAnchorPoint()` instead.
 	 */
-	void DrawableNode::setAnchorPoint(float xx, float yy)
+	void DrawableNode::SetAnchorPoint(float xx, float yy)
 	{
 		const float clampedX = std::clamp(xx, 0.0f, 1.0f);
 		const float clampedY = std::clamp(yy, 0.0f, 1.0f);
-		_anchorPoint.Set((clampedX - 0.5f) * width(), (clampedY - 0.5f) * height());
+		_anchorPoint.Set((clampedX - 0.5f) * GetWidth(), (clampedY - 0.5f) * GetHeight());
 	}
 
-	bool DrawableNode::isBlendingEnabled() const
+	bool DrawableNode::IsBlendingEnabled() const
 	{
 		return _renderCommand.GetMaterial().IsBlendingEnabled();
 	}
 
-	void DrawableNode::setBlendingEnabled(bool blendingEnabled)
+	void DrawableNode::SetBlendingEnabled(bool blendingEnabled)
 	{
 		_renderCommand.GetMaterial().SetBlendingEnabled(blendingEnabled);
 	}
 
-	BlendingFactor DrawableNode::srcBlendingFactor() const
+	BlendingFactor DrawableNode::GetSrcBlendingFactor() const
 	{
 		return _renderCommand.GetMaterial().GetSrcBlendingFactor();
 	}
 
-	BlendingFactor DrawableNode::destBlendingFactor() const
+	BlendingFactor DrawableNode::GetDestBlendingFactor() const
 	{
 		return _renderCommand.GetMaterial().GetDestBlendingFactor();
 	}
@@ -129,10 +129,10 @@ namespace nCine
 		};
 	}
 
-	DrawableNode::BlendingPreset DrawableNode::blendingPreset() const
+	DrawableNode::BlendingPreset DrawableNode::GetBlendingPreset() const
 	{
-		const BlendingFactor src = srcBlendingFactor();
-		const BlendingFactor dest = destBlendingFactor();
+		const BlendingFactor src = GetSrcBlendingFactor();
+		const BlendingFactor dest = GetDestBlendingFactor();
 
 		for (const auto& entry : BlendingPresets) {
 			if (entry.Src == src && entry.Dest == dest) {
@@ -144,7 +144,7 @@ namespace nCine
 		return BlendingPreset::Alpha;
 	}
 
-	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
+	void DrawableNode::SetBlendingPreset(BlendingPreset blendingPreset)
 	{
 		for (const auto& entry : BlendingPresets) {
 			if (entry.Preset == blendingPreset) {
@@ -154,17 +154,17 @@ namespace nCine
 		}
 	}
 
-	void DrawableNode::setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
+	void DrawableNode::SetBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
 	{
 		_renderCommand.GetMaterial().SetBlendingFactors(srcBlendingFactor, destBlendingFactor);
 	}
 
-	void DrawableNode::updateAabb()
+	void DrawableNode::UpdateAabb()
 	{
 		//ZoneScopedC(0x81A861);
 
-		const float width = absWidth();
-		const float height = absHeight();
+		const float width = GetAbsWidth();
+		const float height = GetAbsHeight();
 
 		if (_absRotation > MinRotation || _absRotation < -MinRotation) {
 			// Calculate max size for any rotation angle, this will create larger bounding boxes but avoids using sin/cos
@@ -175,12 +175,12 @@ namespace nCine
 		}
 	}
 
-	void DrawableNode::updateCulling()
+	void DrawableNode::UpdateCulling()
 	{
-		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
+		const bool cullingEnabled = theApplication().GetRenderingSettings().CullingEnabled;
 		if (_drawEnabled && cullingEnabled && _width > 0 && _height > 0) {
 			if (_dirtyBits.test(DirtyBitPositions::AabbBit)) {
-				updateAabb();
+				UpdateAabb();
 				_dirtyBits.reset(DirtyBitPositions::AabbBit);
 			}
 
@@ -197,9 +197,9 @@ namespace nCine
 	DrawableNode::DrawableNode(const DrawableNode& other)
 		: SceneNode(other), _width(other._width), _height(other._height), _renderCommand(), _lastFrameRendered(0)
 	{
-		_renderCommand.SetIdSortKey(id());
-		setBlendingEnabled(other.isBlendingEnabled());
-		setBlendingFactors(other.srcBlendingFactor(), other.destBlendingFactor());
-		setLayer(other.layer());
+		_renderCommand.SetIdSortKey(GetId());
+		SetBlendingEnabled(other.IsBlendingEnabled());
+		SetBlendingFactors(other.GetSrcBlendingFactor(), other.GetDestBlendingFactor());
+		SetLayer(other.GetLayer());
 	}
 }

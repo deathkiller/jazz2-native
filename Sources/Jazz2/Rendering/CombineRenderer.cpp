@@ -172,7 +172,7 @@ namespace Jazz2::Rendering
 	CombineRenderer::CombineRenderer(PlayerViewport* owner)
 		: _owner(owner)
 	{
-		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+		SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 		
 	void CombineRenderer::Initialize(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)

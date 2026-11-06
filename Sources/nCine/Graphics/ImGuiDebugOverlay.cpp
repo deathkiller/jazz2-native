@@ -122,32 +122,32 @@ namespace nCine
 			ImGui::EndMainMenuBar();
 		}*/
 
-		guiWindow();
+		GuiWindow();
 
 		//ImGui::ShowMetricsWindow();
 		//ImGui::ShowDemoWindow();
 
-		if (_settings.showInfoText) {
+		if (_settings.ShowInfoText) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-			if (appCfg.withScenegraph) {
+			if (appCfg.WithScenegraph) {
 #if defined(NCINE_PROFILING)
-				guiTopLeft();
+				GuiTopLeft();
 #endif
-				guiBottomRight();
+				GuiBottomRight();
 			}
-			guiTopRight();
-			guiBottomLeft();
-			guiLog();
+			GuiTopRight();
+			GuiBottomLeft();
+			GuiLog();
 		}
 
-		if (_settings.showProfilerGraphs) {
-			guiPlots();
+		if (_settings.ShowProfilerGraphs) {
+			GuiPlots();
 		}
 	}
 
 	void ImGuiDebugOverlay::UpdateFrameTimings()
 	{
-		if (_lastUpdateTime.secondsSince() > _updateTime) {
+		if (_lastUpdateTime.GetSecondsSince() > _updateTime) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
 			_plotValues[ValuesType::FrameTime][_index] = theApplication().GetFrameTimer().GetLastFrameDuration() * 1000.0f;
@@ -155,13 +155,13 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			auto timings = theApplication().GetTimings();
 			_plotValues[ValuesType::BeginFrame][_index] = timings[(std::int32_t)Application::Timings::BeginFrame] * 1000.0f;
-			if (appCfg.withScenegraph) {
+			if (appCfg.WithScenegraph) {
 				_plotValues[ValuesType::PostUpdate][_index] = timings[(std::int32_t)Application::Timings::PostUpdate] * 1000.0f;
 			}
 			_plotValues[ValuesType::ImGui][_index] = timings[(std::int32_t)Application::Timings::ImGui] * 1000.0f;
 			_plotValues[ValuesType::EndFrame][_index] = timings[(std::int32_t)Application::Timings::EndFrame] * 1000.0f;
 
-			if (appCfg.withScenegraph) {
+			if (appCfg.WithScenegraph) {
 				_plotValues[ValuesType::UpdateVisitDraw][_index] = timings[(std::int32_t)Application::Timings::Update] * 1000.0f +
 					timings[(std::int32_t)Application::Timings::Visit] * 1000.0f + timings[(std::int32_t)Application::Timings::Draw] * 1000.0f;
 				_plotValues[ValuesType::Update][_index] = timings[(std::int32_t)Application::Timings::Update] * 1000.0f;
@@ -181,7 +181,7 @@ namespace nCine
 				avgFrameTime += _plotValues[ValuesType::FrameTime][i];
 
 #if defined(NCINE_PROFILING)
-				if (appCfg.withScenegraph) {
+				if (appCfg.WithScenegraph) {
 					if (maxUpdateVisitDraw < _plotValues[ValuesType::UpdateVisitDraw][i]) {
 						maxUpdateVisitDraw = _plotValues[ValuesType::UpdateVisitDraw][i];
 					}
@@ -211,13 +211,13 @@ namespace nCine
 				_maxUpdateVisitDraw = lerp(_maxUpdateVisitDraw, maxUpdateVisitDraw, 0.2f);
 			}
 
-			if (appCfg.withScenegraph) {
+			if (appCfg.WithScenegraph) {
 				UpdateOverlayTimings();
 			}
 #endif
 
 			_index = (_index + 1) % _numValues;
-			_lastUpdateTime = TimeStamp::now();
+			_lastUpdateTime = TimeStamp::Now();
 		}
 	}
 
@@ -296,9 +296,9 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::guiWindow()
+	void ImGuiDebugOverlay::GuiWindow()
 	{
-		if (!_settings.showInterface) {
+		if (!_settings.ShowInterface) {
 			return;
 		}
 
@@ -308,7 +308,7 @@ namespace nCine
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PushStyleColor(ImGuiCol_WindowShadow, ImVec4(0, 0, 0, 1));
 #endif
-		bool isVisible = ImGui::Begin("Debug Overlay", &_settings.showInterface);
+		bool isVisible = ImGui::Begin("Debug Overlay", &_settings.ShowInterface);
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PopStyleColor();
 #endif
@@ -324,45 +324,45 @@ namespace nCine
 				theApplication().Quit();
 			}*/
 
-			guiConfigureGui();
-			guiInitTimes();
-			guiGraphicsCapabilities();
-			guiApplicationConfiguration();
-			if (appCfg.withScenegraph) {
-				guiRenderingSettings();
+			GuiConfigureGui();
+			GuiInitTimes();
+			GuiGraphicsCapabilities();
+			GuiApplicationConfiguration();
+			if (appCfg.WithScenegraph) {
+				GuiRenderingSettings();
 			}
 			//guiWindowSettings();
-			guiAudioPlayers();
+			GuiAudioPlayers();
 			//guiInputState();
-			guiRenderDoc();
-			guiAllocators();
-			if (appCfg.withScenegraph) {
-				guiNodeInspector();
+			GuiRenderDoc();
+			GuiAllocators();
+			if (appCfg.WithScenegraph) {
+				GuiNodeInspector();
 			}
 		}
 
 		ImGui::End();
 	}
 
-	void ImGuiDebugOverlay::guiConfigureGui()
+	void ImGuiDebugOverlay::GuiConfigureGui()
 	{
 		static std::int32_t numValues = 0;
 
 		if (ImGui::CollapsingHeader("Configure GUI")) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 
-			ImGui::Checkbox("Show interface", &_settings.showInterface);
+			ImGui::Checkbox("Show interface", &_settings.ShowInterface);
 			if (ImGui::TreeNodeEx("Overlays", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::Checkbox("Show overlays", &_settings.showInfoText);
+				ImGui::Checkbox("Show overlays", &_settings.ShowInfoText);
 				ImGui::Checkbox("Lock overlay positions", &_lockOverlayPositions);
-				if (appCfg.withScenegraph) {
+				if (appCfg.WithScenegraph) {
 					ImGui::Checkbox("Show Top-Left", &_showTopLeftOverlay);
 					ImGui::SameLine();
 				}
 				ImGui::Checkbox("Show Top-Right", &_showTopRightOverlay);
 				ImGui::Checkbox("Show Bottom-Left", &_showBottomLeftOverlay);
 #if defined(WITH_LUA)
-				if (appCfg.withScenegraph) {
+				if (appCfg.WithScenegraph) {
 					ImGui::SameLine();
 					ImGui::Checkbox("Show Bottom-Right", &_showBottomRightOverlay);
 				}
@@ -371,9 +371,9 @@ namespace nCine
 			}
 
 			if (ImGui::TreeNodeEx("Profiling Graphs", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::Checkbox("Show profiling graphs", &_settings.showProfilerGraphs);
+				ImGui::Checkbox("Show profiling graphs", &_settings.ShowProfilerGraphs);
 				ImGui::Checkbox("Plot additional frame values", &_plotAdditionalFrameValues);
-				if (appCfg.withScenegraph)
+				if (appCfg.WithScenegraph)
 					ImGui::Checkbox("Plot overlay values", &_plotOverlayValues);
 				ImGui::SliderFloat("Graphs update time", &_updateTime, 0.0f, 1.0f, "%.3f s");
 				numValues = (numValues == 0) ? static_cast<int>(_numValues) : numValues;
@@ -450,7 +450,7 @@ namespace nCine
 			numValues = 0;
 	}
 
-	void ImGuiDebugOverlay::guiInitTimes()
+	void ImGuiDebugOverlay::GuiInitTimes()
 	{
 #if defined(NCINE_PROFILING)
 		if (ImGui::CollapsingHeader("Init Times")) {
@@ -469,12 +469,12 @@ namespace nCine
 #endif
 	}
 
-	void ImGuiDebugOverlay::guiLog()
+	void ImGuiDebugOverlay::GuiLog()
 	{
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PushStyleColor(ImGuiCol_WindowShadow, ImVec4(0, 0, 0, 1));
 #endif
-		bool isVisible = ImGui::Begin("Log", &_settings.showInterface);
+		bool isVisible = ImGui::Begin("Log", &_settings.ShowInterface);
 #if defined(IMGUI_HAS_SHADOWS)
 		ImGui::PopStyleColor();
 #endif
@@ -522,7 +522,7 @@ namespace nCine
 		ImGui::End();
 	}
 
-	void ImGuiDebugOverlay::guiGraphicsCapabilities()
+	void ImGuiDebugOverlay::GuiGraphicsCapabilities()
 	{
 		if (ImGui::CollapsingHeader("Graphics Capabilities")) {
 			const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
@@ -577,25 +577,25 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::guiApplicationConfiguration()
+	void ImGuiDebugOverlay::GuiApplicationConfiguration()
 	{
 		if (ImGui::CollapsingHeader("Application Configuration")) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 #if !defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN)
-			ImGui::Text("OpenGL Core: %s", appCfg.glCoreProfile() ? "true" : "false");
-			ImGui::Text("OpenGL Forward: %s", appCfg.glForwardCompatible() ? "true" : "false");
+			ImGui::Text("OpenGL Core: %s", appCfg.IsGlCoreProfile() ? "true" : "false");
+			ImGui::Text("OpenGL Forward: %s", appCfg.IsGlForwardCompatible() ? "true" : "false");
 #endif
-			ImGui::Text("%s Major: %d", openglApiName, appCfg.glMajorVersion());
-			ImGui::Text("%s Minor: %d", openglApiName, appCfg.glMinorVersion());
+			ImGui::Text("%s Major: %d", openglApiName, appCfg.GetGlMajorVersion());
+			ImGui::Text("%s Minor: %d", openglApiName, appCfg.GetGlMinorVersion());
 
 			ImGui::Separator();
-			ImGui::Text("Data path: \"%s\"", appCfg.dataPath().data());
+			ImGui::Text("Data path: \"%s\"", appCfg.GetDataPath().data());
 			//ImGui::Text("Log file: \"%s\"", appCfg.logFile.data());
 			//ImGui::Text("Console log level: %d", static_cast<int>(appCfg.consoleLogLevel));
 			//ImGui::Text("File log level: %d", static_cast<int>(appCfg.fileLogLevel));
-			ImGui::Text("Frametimer Log interval: %f", appCfg.frameTimerLogInterval);
+			ImGui::Text("Frametimer Log interval: %f", appCfg.FrameTimerLogInterval);
 			//ImGui::Text("Profile text update time: %f", appCfg.profileTextUpdateTime());
-			ImGui::Text("Resolution: %d x %d", appCfg.resolution.X, appCfg.resolution.Y);
+			ImGui::Text("Resolution: %d x %d", appCfg.Resolution.X, appCfg.Resolution.Y);
 			//ImGui::Text("Refresh Rate: %f", appCfg.refreshRate);
 			/*_widgetName.assign("Window Position: ");
 			if (appCfg.windowPosition.x == AppConfiguration::WindowPositionIgnore)
@@ -608,56 +608,56 @@ namespace nCine
 				_widgetName.formatAppend("%d", appCfg.windowPosition.y);
 			ImGui::TextUnformatted(_widgetName.data());*/
 			//ImGui::Text("Full Screen: %s", appCfg.fullScreen ? "true" : "false");
-			ImGui::Text("Resizable: %s", appCfg.resizable ? "true" : "false");
-			ImGui::Text("Window Scaling: %s", appCfg.windowScaling ? "true" : "false");
-			ImGui::Text("Frame Limit: %u", appCfg.frameLimit);
+			ImGui::Text("Resizable: %s", appCfg.Resizable ? "true" : "false");
+			ImGui::Text("Window Scaling: %s", appCfg.WindowScaling ? "true" : "false");
+			ImGui::Text("Frame Limit: %u", appCfg.FrameLimit);
 
 			ImGui::Separator();
-			ImGui::Text("Window title: \"%s\"", appCfg.windowTitle.data());
-			ImGui::Text("Window icon: \"%s\"", appCfg.windowIconFilename.data());
+			ImGui::Text("Window title: \"%s\"", appCfg.WindowTitle.data());
+			ImGui::Text("Window icon: \"%s\"", appCfg.WindowIconFilename.data());
 
 			ImGui::Separator();
-			ImGui::Text("Buffer mapping: %s", appCfg.useBufferMapping ? "true" : "false");
+			ImGui::Text("Buffer mapping: %s", appCfg.UseBufferMapping ? "true" : "false");
 			//ImGui::Text("Defer shader queries: %s", appCfg.deferShaderQueries ? "true" : "false");
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
-			ImGui::Text("Fixed batch size: %u", appCfg.fixedBatchSize);
+			ImGui::Text("Fixed batch size: %u", appCfg.FixedBatchSize);
 #endif
-			ImGui::Text("VBO size: %lu", appCfg.vboSize);
-			ImGui::Text("IBO size: %lu", appCfg.iboSize);
-			ImGui::Text("Vao pool size: %u", appCfg.vaoPoolSize);
-			ImGui::Text("RenderCommand pool size: %u", appCfg.renderCommandPoolSize);
+			ImGui::Text("VBO size: %lu", appCfg.VboSize);
+			ImGui::Text("IBO size: %lu", appCfg.IboSize);
+			ImGui::Text("Vao pool size: %u", appCfg.VaoPoolSize);
+			ImGui::Text("RenderCommand pool size: %u", appCfg.RenderCommandPoolSize);
 
 			ImGui::Separator();
-			ImGui::Text("Debug Overlay: %s", appCfg.withDebugOverlay ? "true" : "false");
-			ImGui::Text("Audio: %s", appCfg.withAudio ? "true" : "false");
-			ImGui::Text("Threads: %s", appCfg.withThreads ? "true" : "false");
-			ImGui::Text("Scenegraph: %s", appCfg.withScenegraph ? "true" : "false");
-			ImGui::Text("VSync: %s", appCfg.withVSync ? "true" : "false");
-			ImGui::Text("%s Debug Context: %s", openglApiName, appCfg.withGlDebugContext ? "true" : "false");
+			ImGui::Text("Debug Overlay: %s", appCfg.WithDebugOverlay ? "true" : "false");
+			ImGui::Text("Audio: %s", appCfg.WithAudio ? "true" : "false");
+			ImGui::Text("Threads: %s", appCfg.WithThreads ? "true" : "false");
+			ImGui::Text("Scenegraph: %s", appCfg.WithScenegraph ? "true" : "false");
+			ImGui::Text("VSync: %s", appCfg.WithVSync ? "true" : "false");
+			ImGui::Text("%s Debug Context: %s", openglApiName, appCfg.WithGlDebugContext ? "true" : "false");
 			//ImGui::Text("Console Colors: %s", appCfg.withConsoleColors ? "true" : "false");
 		}
 	}
 
-	void ImGuiDebugOverlay::guiRenderingSettings()
+	void ImGuiDebugOverlay::GuiRenderingSettings()
 	{
 		if (ImGui::CollapsingHeader("Rendering Settings")) {
 			Application::RenderingSettings& settings = theApplication().GetRenderingSettings();
-			std::int32_t minBatchSize = settings.minBatchSize;
-			std::int32_t maxBatchSize = settings.maxBatchSize;
+			std::int32_t minBatchSize = settings.MinBatchSize;
+			std::int32_t maxBatchSize = settings.MaxBatchSize;
 
-			ImGui::Checkbox("Batching", &settings.batchingEnabled);
+			ImGui::Checkbox("Batching", &settings.BatchingEnabled);
 			ImGui::SameLine();
-			ImGui::Checkbox("Batching with indices", &settings.batchingWithIndices);
+			ImGui::Checkbox("Batching with indices", &settings.BatchingWithIndices);
 			ImGui::SameLine();
-			ImGui::Checkbox("Culling", &settings.cullingEnabled);
+			ImGui::Checkbox("Culling", &settings.CullingEnabled);
 			ImGui::DragIntRange2("Batch size", &minBatchSize, &maxBatchSize, 1.0f, 0, 512);
 
-			settings.minBatchSize = minBatchSize;
-			settings.maxBatchSize = maxBatchSize;
+			settings.MinBatchSize = minBatchSize;
+			settings.MaxBatchSize = maxBatchSize;
 		}
 	}
 
-	void ImGuiDebugOverlay::guiWindowSettings()
+	void ImGuiDebugOverlay::GuiWindowSettings()
 	{
 		if (ImGui::CollapsingHeader("Window Settings")) {
 			/*IGfxDevice& gfxDevice = theApplication().gfxDevice();
@@ -772,7 +772,7 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::guiAudioPlayers()
+	void ImGuiDebugOverlay::GuiAudioPlayers()
 	{
 #if defined(WITH_AUDIO)
 		if (ImGui::CollapsingHeader("Audio Players")) {
@@ -823,7 +823,7 @@ namespace nCine
 #endif
 	}
 
-	void ImGuiDebugOverlay::guiInputState()
+	void ImGuiDebugOverlay::GuiInputState()
 	{
 		if (ImGui::CollapsingHeader("Input State")) {
 			const IInputManager& input = theApplication().GetInputManager();
@@ -840,10 +840,10 @@ namespace nCine
 			}*/
 
 			if (ImGui::TreeNode("Mouse")) {
-				ImGui::Text("Cursor Mode: %s", mouseCursorModeToString(input.cursor()));
+				ImGui::Text("Cursor Mode: %s", mouseCursorModeToString(input.GetCursor()));
 
-				const MouseState& mouseState = input.mouseState();
-				ImGui::Text("Position: %d, %d", mouseState.x, mouseState.y);
+				const MouseState& mouseState = input.GetMouseState();
+				ImGui::Text("Position: %d, %d", mouseState.X, mouseState.Y);
 
 				/*nctl::String pressedMouseButtons(32);
 				if (mouseState.isLeftButtonDown())
@@ -862,7 +862,7 @@ namespace nCine
 
 			std::uint32_t numConnectedJoysticks = 0;
 			for (std::int32_t joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
-				if (input.isJoyPresent(joyId))
+				if (input.IsJoyPresent(joyId))
 					numConnectedJoysticks++;
 			}
 			if (numConnectedJoysticks > 0) {
@@ -870,23 +870,23 @@ namespace nCine
 				std::size_t length = formatInto(widgetName, "{} Joystick(s)", numConnectedJoysticks);
 				widgetName[length] = '\0';
 				if (ImGui::TreeNode(widgetName)) {
-					ImGui::Text("Joystick mappings: %u", input.numJoyMappings());
+					ImGui::Text("Joystick mappings: %u", input.GetJoyMappingCount());
 
 					for (std::int32_t joyId = 0; joyId < IInputManager::MaxNumJoysticks; joyId++) {
-						if (input.isJoyPresent(joyId) == false)
+						if (input.IsJoyPresent(joyId) == false)
 							continue;
 
 						length = formatInto(widgetName, "Joystick {}", joyId);
 						widgetName[length] = '\0';
 						if (ImGui::TreeNode(widgetName)) {
-							ImGui::Text("Name: %s", input.joyName(joyId));
-							ImGui::Text("GUID: %s", input.joyGuid(joyId));
-							ImGui::Text("Num Buttons: %d", input.joyNumButtons(joyId));
-							ImGui::Text("Num Hats: %d", input.joyNumHats(joyId));
-							ImGui::Text("Num Axes: %d", input.joyNumAxes(joyId));
+							ImGui::Text("Name: %s", input.GetJoyName(joyId));
+							ImGui::Text("GUID: %s", input.GetJoyGuid(joyId));
+							ImGui::Text("Num Buttons: %d", input.GetJoyButtonCount(joyId));
+							ImGui::Text("Num Hats: %d", input.GetJoyHatCount(joyId));
+							ImGui::Text("Num Axes: %d", input.GetJoyAxisCount(joyId));
 							ImGui::Separator();
 
-							const JoystickState& joyState = input.joystickState(joyId);
+							const JoystickState& joyState = input.GetJoystickState(joyId);
 							/*nctl::String pressedButtons;
 							for (std::int32_t buttonId = 0; buttonId < input.joyNumButtons(joyId); buttonId++) {
 								if (joyState.isButtonPressed(buttonId))
@@ -894,13 +894,13 @@ namespace nCine
 							}
 							ImGui::Text("Pressed buttons: %s", pressedButtons.data());*/
 
-							for (std::int32_t hatId = 0; hatId < input.joyNumHats(joyId); hatId++) {
-								unsigned char hatState = joyState.hatState(hatId);
+							for (std::int32_t hatId = 0; hatId < input.GetJoyHatCount(joyId); hatId++) {
+								unsigned char hatState = joyState.GetHatState(hatId);
 								ImGui::Text("Hat %d: %u", hatId, hatState);
 							}
 
-							for (std::int32_t axisId = 0; axisId < input.joyNumAxes(joyId); axisId++) {
-								const float axisValue = joyState.axisValue(axisId);
+							for (std::int32_t axisId = 0; axisId < input.GetJoyAxisCount(joyId); axisId++) {
+								const float axisValue = joyState.GetAxisValue(axisId);
 								ImGui::Text("Axis %d:", axisId);
 								ImGui::SameLine();
 								ImGui::ProgressBar((axisValue + 1.0f) / 2.0f);
@@ -908,9 +908,9 @@ namespace nCine
 								ImGui::Text("%.2f", axisValue);
 							}
 
-							if (input.isJoyMapped(joyId)) {
+							if (input.IsJoyMapped(joyId)) {
 								ImGui::Separator();
-								const JoyMappedState& joyMappedState = input.joyMappedState(joyId);
+								const JoyMappedState& joyMappedState = input.GetJoyMappedState(joyId);
 								/*nctl::String pressedMappedButtons(64);
 								for (std::uint32_t buttonId = 0; buttonId < JoyMappedState::NumButtons; buttonId++) {
 									const ButtonName buttonName = static_cast<ButtonName>(buttonId);
@@ -921,7 +921,7 @@ namespace nCine
 
 								for (std::uint32_t axisId = 0; axisId < JoyMappedState::NumAxes; axisId++) {
 									const AxisName axisName = static_cast<AxisName>(axisId);
-									const float axisValue = joyMappedState.axisValue(axisName);
+									const float axisValue = joyMappedState.GetAxisValue(axisName);
 									ImGui::Text("Axis %s:", mappedAxisNameToString(axisName));
 									ImGui::SameLine();
 									ImGui::ProgressBar((axisValue + 1.0f) / 2.0f);
@@ -939,50 +939,50 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::guiRenderDoc()
+	void ImGuiDebugOverlay::GuiRenderDoc()
 	{
 #if defined(WITH_RENDERDOC)
-		if (!RenderDocCapture::isAvailable())
+		if (!RenderDocCapture::IsAvailable())
 			return;
 
-		if (RenderDocCapture::numCaptures() > _renderDocLastNumCaptures) {
+		if (RenderDocCapture::GetCaptureCount() > _renderDocLastNumCaptures) {
 			std::uint32_t pathLength = 0;
 			uint64_t timestamp = 0;
-			RenderDocCapture::captureInfo(RenderDocCapture::numCaptures() - 1, _renderDocCapturePath.data(), &pathLength, &timestamp);
+			RenderDocCapture::GetCaptureInfo(RenderDocCapture::GetCaptureCount() - 1, _renderDocCapturePath.data(), &pathLength, &timestamp);
 			_renderDocCapturePath.setLength(pathLength);
-			RenderDocCapture::setCaptureFileComments(_renderDocCapturePath.data(), _renderDocFileComments.data());
-			_renderDocLastNumCaptures = RenderDocCapture::numCaptures();
-			LOGI("RenderDoc capture {}: {} ({})", RenderDocCapture::numCaptures() - 1, _renderDocCapturePath, timestamp);
+			RenderDocCapture::SetCaptureFileComments(_renderDocCapturePath.data(), _renderDocFileComments.data());
+			_renderDocLastNumCaptures = RenderDocCapture::GetCaptureCount();
+			LOGI("RenderDoc capture {}: {} ({})", RenderDocCapture::GetCaptureCount() - 1, _renderDocCapturePath, timestamp);
 		}
 
 		if (ImGui::CollapsingHeader("RenderDoc")) {
 			std::int32_t major, minor, patch;
-			RenderDocCapture::apiVersion(&major, &minor, &patch);
+			RenderDocCapture::GetApiVersion(&major, &minor, &patch);
 			ImGui::Text("RenderDoc API: %d.%d.%d", major, minor, patch);
-			ImGui::Text("Target control connected: %s", RenderDocCapture::isTargetControlConnected() ? "true" : "false");
-			ImGui::Text("Number of captures: %u", RenderDocCapture::numCaptures());
+			ImGui::Text("Target control connected: %s", RenderDocCapture::IsTargetControlConnected() ? "true" : "false");
+			ImGui::Text("Number of captures: %u", RenderDocCapture::GetCaptureCount());
 			if (_renderDocCapturePath.isEmpty())
 				ImGui::Text("Last capture path: (no capture has been made yet)");
 			else
 				ImGui::Text("Last capture path: %s", _renderDocCapturePath.data());
 			ImGui::Separator();
 
-			_renderDocPathTemplate = RenderDocCapture::captureFilePathTemplate();
+			_renderDocPathTemplate = RenderDocCapture::GetCaptureFilePathTemplate();
 			if (ImGui::InputText("File path template", _renderDocPathTemplate.data(), MaxRenderDocPathLength,
 				ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackResize,
 				inputTextCallback, &_renderDocPathTemplate)) {
-				RenderDocCapture::setCaptureFilePathTemplate(_renderDocPathTemplate.data());
+				RenderDocCapture::SetCaptureFilePathTemplate(_renderDocPathTemplate.data());
 			}
 
 			ImGui::InputTextMultiline("File comments", _renderDocFileComments.data(), MaxRenderDocCommentsLength,
 									  ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackResize,
 									  inputTextCallback, &_renderDocFileComments);
 
-			static bool overlayEnabled = RenderDocCapture::isOverlayEnabled();
+			static bool overlayEnabled = RenderDocCapture::IsOverlayEnabled();
 			ImGui::Checkbox("Enable overlay", &overlayEnabled);
-			RenderDocCapture::enableOverlay(overlayEnabled);
+			RenderDocCapture::EnableOverlay(overlayEnabled);
 
-			if (RenderDocCapture::isFrameCapturing())
+			if (RenderDocCapture::IsFrameCapturing())
 				ImGui::TextUnformatted("Capturing a frame...");
 			else {
 				static std::int32_t numFrames = 1;
@@ -992,20 +992,20 @@ namespace nCine
 					numFrames = 1;
 				ImGui::SameLine();
 				if (ImGui::Button("Capture"))
-					RenderDocCapture::triggerMultiFrameCapture(numFrames);
+					RenderDocCapture::TriggerMultiFrameCapture(numFrames);
 			}
 
-			if (RenderDocCapture::isTargetControlConnected())
+			if (RenderDocCapture::IsTargetControlConnected())
 				ImGui::TextUnformatted("Replay UI is connected");
 			else {
 				if (ImGui::Button("Launch Replay UI"))
-					RenderDocCapture::launchReplayUI(1, nullptr);
+					RenderDocCapture::LaunchReplayUI(1, nullptr);
 			}
 
 			static bool crashHandlerLoaded = true;
 			if (crashHandlerLoaded) {
 				if (ImGui::Button("Unload crash handler")) {
-					RenderDocCapture::unloadCrashHandler();
+					RenderDocCapture::UnloadCrashHandler();
 					crashHandlerLoaded = false;
 				}
 			} else
@@ -1015,7 +1015,7 @@ namespace nCine
 	}
 
 #if defined(RECORD_ALLOCATIONS)
-	void guiAllocator(nctl::IAllocator& alloc)
+	void GuiAllocator(nctl::IAllocator& alloc)
 	{
 		ImGui::Text("Allocations - Recorded: %lu, Active: %lu, Used Memory: %lu",
 					alloc.numEntries(), alloc.numAllocations(), alloc.usedMemory());
@@ -1041,7 +1041,7 @@ namespace nCine
 				ImGui::TableNextColumn();
 				ImGui::Text("#%u", i);
 				ImGui::TableNextColumn();
-				ImGui::Text("%f s", e.timestamp.seconds());
+				ImGui::Text("%f s", e.timestamp.GetSeconds());
 				ImGui::TableNextColumn();
 				ImGui::Text("0x%lx", uintptr_t(e.ptr));
 				ImGui::TableNextColumn();
@@ -1051,7 +1051,7 @@ namespace nCine
 				ImGui::TableNextColumn();
 				if (deallocationIndex > 0) {
 					const TimeStamp diffStamp = alloc.entry(deallocationIndex).timestamp - e.timestamp;
-					ImGui::Text("Freed by #%u after %f s", deallocationIndex, diffStamp.seconds());
+					ImGui::Text("Freed by #%u after %f s", deallocationIndex, diffStamp.GetSeconds());
 				} else
 					ImGui::TextUnformatted("Active");
 			}
@@ -1061,7 +1061,7 @@ namespace nCine
 	}
 #endif
 
-	void ImGuiDebugOverlay::guiAllocators()
+	void ImGuiDebugOverlay::GuiAllocators()
 	{
 #if defined(WITH_ALLOCATORS)
 		if (ImGui::CollapsingHeader("Memory Allocators")) {
@@ -1072,7 +1072,7 @@ namespace nCine
 #else
 			_widgetName.append("###DefaultAllocator");
 			if (ImGui::TreeNode(_widgetName.data())) {
-				guiAllocator(nctl::theDefaultAllocator());
+				GuiAllocator(nctl::theDefaultAllocator());
 				ImGui::TreePop();
 			}
 #endif
@@ -1085,7 +1085,7 @@ namespace nCine
 #else
 				_widgetName.append("###StringAllocator");
 				if (ImGui::TreeNode(_widgetName.data())) {
-					guiAllocator(nctl::theStringAllocator());
+					GuiAllocator(nctl::theStringAllocator());
 					ImGui::TreePop();
 				}
 #endif
@@ -1100,7 +1100,7 @@ namespace nCine
 #else
 				_widgetName.append("###ImGuiAllocator");
 				if (ImGui::TreeNode(_widgetName.data())) {
-					guiAllocator(nctl::theImGuiAllocator());
+					GuiAllocator(nctl::theImGuiAllocator());
 					ImGui::TreePop();
 				}
 #endif
@@ -1116,7 +1116,7 @@ namespace nCine
 #else
 				_widgetName.append("###LuaAllocator");
 				if (ImGui::TreeNode(_widgetName.data())) {
-					guiAllocator(nctl::theLuaAllocator());
+					GuiAllocator(nctl::theLuaAllocator());
 					ImGui::TreePop();
 				}
 #endif
@@ -1128,7 +1128,7 @@ namespace nCine
 #endif
 	}
 
-	void ImGuiDebugOverlay::guiViewports(Viewport* viewport, std::uint32_t viewportId)
+	void ImGuiDebugOverlay::GuiViewports(Viewport* viewport, std::uint32_t viewportId)
 	{
 		char widgetName[64];
 		std::size_t length = formatInto(widgetName, "#{} Viewport", viewportId);
@@ -1145,17 +1145,17 @@ namespace nCine
 		if (rootNode != nullptr && ImGui::TreeNode(widgetName)) {
 			if (viewport->GetCamera() != nullptr) {
 				const Camera::ViewValues& viewValues = viewport->GetCamera()->GetViewValues();
-				ImGui::Text("Camera view - position: <%.2f, %.2f>, rotation: %.2f, scale: %.2f", viewValues.position.X, viewValues.position.Y, viewValues.rotation, viewValues.scale);
+				ImGui::Text("Camera view - position: <%.2f, %.2f>, rotation: %.2f, scale: %.2f", viewValues.Position.X, viewValues.Position.Y, viewValues.Rotation, viewValues.Scale);
 				const Camera::ProjectionValues& projValues = viewport->GetCamera()->GetProjectionValues();
-				ImGui::Text("Camera projection - left: %.2f, right: %.2f, top: %.2f, bottom: %.2f", projValues.left, projValues.right, projValues.top, projValues.bottom);
+				ImGui::Text("Camera projection - left: %.2f, right: %.2f, top: %.2f, bottom: %.2f", projValues.Left, projValues.Right, projValues.Top, projValues.Bottom);
 			}
 
-			guiRecursiveChildrenNodes(rootNode, 0);
+			GuiRecursiveChildrenNodes(rootNode, 0);
 			ImGui::TreePop();
 		}
 	}
 
-	void ImGuiDebugOverlay::guiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId)
+	void ImGuiDebugOverlay::GuiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId)
 	{
 		/*DrawableNode* drawable = nullptr;
 		if (node->type() != Object::ObjectType::SceneNode &&
@@ -1337,17 +1337,17 @@ namespace nCine
 		}*/
 	}
 
-	void ImGuiDebugOverlay::guiNodeInspector()
+	void ImGuiDebugOverlay::GuiNodeInspector()
 	{
 		if (ImGui::CollapsingHeader("Node Inspector")) {
-			guiViewports(&theApplication().GetScreenViewport(), 0);
+			GuiViewports(&theApplication().GetScreenViewport(), 0);
 			for (std::uint32_t i = 0; i < Viewport::GetChain().size(); i++)
-				guiViewports(Viewport::GetChain()[i], i + 1);
+				GuiViewports(Viewport::GetChain()[i], i + 1);
 		}
 	}
 
 #if defined(NCINE_PROFILING)
-	void ImGuiDebugOverlay::guiTopLeft()
+	void ImGuiDebugOverlay::GuiTopLeft()
 	{
 		if (!_showTopLeftOverlay) {
 			return;
@@ -1414,7 +1414,7 @@ namespace nCine
 	}
 #endif
 
-	void ImGuiDebugOverlay::guiTopRight()
+	void ImGuiDebugOverlay::GuiTopRight()
 	{
 		if (!_showTopRightOverlay) {
 			return;
@@ -1438,7 +1438,7 @@ namespace nCine
 
 #if defined(NCINE_PROFILING)
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		if (appCfg.withScenegraph) {
+		if (appCfg.WithScenegraph) {
 			const RenderStatistics::Commands& spriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::Sprite);
 			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::MeshSprite);
 			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::GetCommands(RenderCommand::Type::TileMap);
@@ -1510,7 +1510,7 @@ namespace nCine
 		ImGui::End();
 	}
 
-	void ImGuiDebugOverlay::guiBottomLeft()
+	void ImGuiDebugOverlay::GuiBottomLeft()
 	{
 		/*const ImVec2 windowPos = ImVec2(Margin, ImGui::GetIO().DisplaySize.y - Margin);
 		const ImVec2 windowPosPivot = ImVec2(0.0f, 1.0f);
@@ -1530,7 +1530,7 @@ namespace nCine
 		}*/
 	}
 
-	void ImGuiDebugOverlay::guiBottomRight()
+	void ImGuiDebugOverlay::GuiBottomRight()
 	{
 #if defined(WITH_LUA)
 		// Do not show statistics if there are no registered state managers
@@ -1580,7 +1580,7 @@ namespace nCine
 #endif
 	}
 
-	void ImGuiDebugOverlay::guiPlots()
+	void ImGuiDebugOverlay::GuiPlots()
 	{
 		const float appWidth = theApplication().GetWidth();
 
@@ -1600,7 +1600,7 @@ namespace nCine
 
 #if defined(NCINE_PROFILING)
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		if (appCfg.withScenegraph) {
+		if (appCfg.WithScenegraph) {
 			ImGui::Separator();
 			ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
 			ImGui::PlotLines("Update", _plotValues[ValuesType::Update].get(), _numValues, _index, nullptr, 0.0f, _maxUpdateVisitDraw, ImVec2(appWidth * 0.2f, 0.0f));
@@ -1619,7 +1619,7 @@ namespace nCine
 		if (_plotAdditionalFrameValues) {
 			ImGui::Separator();
 			ImGui::PlotLines("OnFrameStart", _plotValues[ValuesType::BeginFrame].get(), _numValues, _index, nullptr, 0.0f, _maxUpdateVisitDraw, ImVec2(appWidth * 0.2f, 0.0f));
-			if (appCfg.withScenegraph)
+			if (appCfg.WithScenegraph)
 				ImGui::PlotLines("OnPostUpdate", _plotValues[ValuesType::PostUpdate].get(), _numValues, _index, nullptr, 0.0f, _maxUpdateVisitDraw, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PlotLines("OnFrameEnd", _plotValues[ValuesType::EndFrame].get(), _numValues, _index, nullptr, 0.0f, _maxUpdateVisitDraw, ImVec2(appWidth * 0.2f, 0.0f));
 			ImGui::PlotLines("ImGui", _plotValues[ValuesType::ImGui].get(), _numValues, _index, nullptr, 0.0f, _maxUpdateVisitDraw, ImVec2(appWidth * 0.2f, 0.0f));

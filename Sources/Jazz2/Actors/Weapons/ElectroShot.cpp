@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Weapons
 		}
 		PlaySfx("Fire"_s);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}
@@ -87,7 +87,7 @@ namespace Jazz2::Actors::Weapons
 			_particleSpawnTime -= timeMult;
 			if (_particleSpawnTime <= 0.0f) {
 				_particleSpawnTime += 1.0f;
-				CreateParticles(_levelHandler, _metadata, _pos, _renderer.layer(), _currentStep, IsFacingLeft(), (_upgrades & 0x1) != 0);
+				CreateParticles(_levelHandler, _metadata, _pos, _renderer.GetLayer(), _currentStep, IsFacingLeft(), (_upgrades & 0x1) != 0);
 			}
 
 			_currentStep += timeMult;

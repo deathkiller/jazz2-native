@@ -624,7 +624,7 @@ namespace Jazz2::Actors
 			void UpdateAnchor();
 
 		protected:
-			void textureHasChanged(Texture* newTexture) override;
+			void TextureHasChanged(Texture* newTexture) override;
 
 		private:
 			// Whether the current graphic is indexed (uses the palette shader even without a recolor override)

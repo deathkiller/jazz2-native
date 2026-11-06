@@ -105,7 +105,7 @@ namespace Jazz2::Actors::Enemies
 			std::uint8_t suckerParams[Events::EventSpawner::SpawnParamsSize] = { (std::uint8_t)dir };
 			ActorActivationDetails details(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()),
 				suckerParams
 			);
 			// The sucker is a regular event object, so it can be spawned again from a level state snapshot

@@ -137,7 +137,7 @@ namespace Jazz2::Actors::Environment
 					}
 				}
 
-				player->_renderer.setRotation(chunkAngle);
+				player->_renderer.SetRotation(chunkAngle);
 			}
 		}
 
@@ -205,7 +205,7 @@ namespace Jazz2::Actors::Environment
 				worldMatrix.RotateZ(chunkAngle);
 				worldMatrix.Translate(frameWidth * -0.5f, chunkHeight * -0.5f, 0.0f);
 				command->SetTransformation(worldMatrix);
-				command->SetLayer(_renderer.layer());
+				command->SetLayer(_renderer.GetLayer());
 				resolver.BindSpritePalette(*command, *resBase->TextureDiffuse, indexed, _currentAnimation->PaletteOffset);
 
 				renderQueue.AddCommand(command);

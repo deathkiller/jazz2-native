@@ -239,11 +239,11 @@ namespace Jazz2::UI::Multiplayer
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void MpInGameLobby::OnTouchEvent(const nCine::TouchEvent& event)
 	{
-		if (event.type != TouchEventType::Down) {
+		if (event.Type != TouchEventType::Down) {
 			return;
 		}
 
-		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 		if (pointerIndex == -1) {
 			return;
 		}
@@ -252,8 +252,8 @@ namespace Jazz2::UI::Multiplayer
 		// which is the same space OnDraw() lays the rows out in (the previous code left x normalized, so the hit
 		// regions didn't line up with the drawn characters / confirm prompt).
 		Vector2i viewSize = _levelHandler->GetViewSize();
-		float x = event.pointers[pointerIndex].x * (float)viewSize.X;
-		float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+		float x = event.Pointers[pointerIndex].X * (float)viewSize.X;
+		float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 		Vector2i center = viewSize / 2;
 
 		RefreshTeamInfo();
@@ -371,8 +371,8 @@ namespace Jazz2::UI::Multiplayer
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[joyStatesCount++] = &input.joyMappedState(i);
+			if (input.IsJoyMapped(i)) {
+				joyStates[joyStatesCount++] = &input.GetJoyMappedState(i);
 			}
 		}
 

@@ -492,4 +492,99 @@ namespace nCine::RHI::GL
 		gpuTimerPendingCount++;
 #endif
 	}
+
+	namespace
+	{
+		// Payload behind the void* handle of the *Auxiliary* functions
+		struct AuxiliarySwapchain
+		{
+			AuxiliarySwapchainDesc Desc;
+			// The texture is shared with the context of the window, a framebuffer isn't, so it has one of its own
+			GLuint Framebuffer = 0;
+			std::int32_t Width = 0;
+			std::int32_t Height = 0;
+		};
+	}
+
+	void* GLDevice::CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height)
+	{
+#if !defined(RHI_GL_PROFILE_ES)
+		if (!desc.MakeCurrent || !desc.SwapBuffers || !desc.RestoreMain) {
+			return nullptr;
+		}
+		AuxiliarySwapchain* sc = new AuxiliarySwapchain();
+		sc->Desc = Death::move(desc);
+		sc->Width = width;
+		sc->Height = height;
+		return sc;
+#else
+		static_cast<void>(desc);
+		static_cast<void>(width);
+		static_cast<void>(height);
+		return nullptr;
+#endif
+	}
+
+	void GLDevice::DestroyAuxiliarySwapchain(void* handle)
+	{
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
+		if (sc == nullptr) {
+			return;
+		}
+#if !defined(RHI_GL_PROFILE_ES)
+		if (sc->Framebuffer != 0 && sc->Desc.MakeCurrent()) {
+			glDeleteFramebuffers(1, &sc->Framebuffer);
+			sc->Desc.RestoreMain();
+		}
+#endif
+		delete sc;
+	}
+
+	void GLDevice::ResizeAuxiliarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	{
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
+		if (sc != nullptr) {
+			sc->Width = width;
+			sc->Height = height;
+		}
+	}
+
+	void GLDevice::PresentAuxiliaryTexture(void* handle, const GLTexture* source)
+	{
+#if !defined(RHI_GL_PROFILE_ES)
+		AuxiliarySwapchain* sc = static_cast<AuxiliarySwapchain*>(handle);
+		if (sc == nullptr || source == nullptr || sc->Width <= 0 || sc->Height <= 0 || !sc->Desc.MakeCurrent()) {
+			return;
+		}
+
+		// Raw GL in the context of the window, the state caches track the main context, which stays untouched
+		if (sc->Framebuffer == 0) {
+			glGenFramebuffers(1, &sc->Framebuffer);
+		}
+		GLint textureWidth = 0, textureHeight = 0;
+		glBindTexture(GL_TEXTURE_2D, source->GetGLHandle());
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &textureWidth);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &textureHeight);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, sc->Framebuffer);
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, source->GetGLHandle(), 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glViewport(0, 0, sc->Width, sc->Height);
+		glDisable(GL_SCISSOR_TEST);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		const GLint width = std::min<GLint>(textureWidth, sc->Width);
+		const GLint height = std::min<GLint>(textureHeight, sc->Height);
+		// The first row of a render target is the top of it, the window's starts at the bottom
+		glBlitFramebuffer(0, 0, width, height, 0, sc->Height, width, sc->Height - height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+		sc->Desc.SwapBuffers();
+		sc->Desc.RestoreMain();
+#else
+		static_cast<void>(handle);
+		static_cast<void>(source);
+#endif
+	}
 }

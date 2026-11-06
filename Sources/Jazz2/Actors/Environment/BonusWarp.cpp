@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Environment
 		//_showAnim = details.Params[4] != 0;
 
 		SetState(ActorState::CanBeFrozen, false);
-		_renderer.setLayer(_renderer.layer() - 20);
+		_renderer.SetLayer(_renderer.GetLayer() - 20);
 
 		async_await RequestMetadataAsync("Object/BonusWarp"_s);
 

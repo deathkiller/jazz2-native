@@ -360,11 +360,11 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (!_shouldStart && event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (!_shouldStart && event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 
 				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
 					if (_skipSecondItem && i == 1) {
@@ -415,7 +415,7 @@ namespace Jazz2::UI::Menu
 				else {
 #	if defined(DEATH_TARGET_ANDROID)
 					// Show `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` intent on Android
-					Backends::AndroidJniWrap_Activity::requestExternalStoragePermission();
+					Backends::AndroidJniWrap_Activity::RequestExternalStoragePermission();
 #	else
 					// `_sourcePath` contains adjusted path for display purposes
 					auto& resolver = ContentResolver::Get();

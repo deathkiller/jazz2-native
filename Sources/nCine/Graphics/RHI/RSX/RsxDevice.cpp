@@ -951,12 +951,12 @@ namespace nCine::RHI::RSX
 			// The previous flip happens only once the RSX has finished that frame and the vertical blank has come,
 			// so this is where a GPU-bound frame shows up on the CPU side
 			const bool timed = FrameStatistics::IsEnabled();
-			const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+			const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 			while (gcmGetFlipStatus() != 0) {
 				::usleep(200);
 			}
 			if (timed) {
-				FrameStatistics::AddCounter("Flip wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+				FrameStatistics::AddCounter("Flip wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 			}
 		}
 		gcmResetFlipStatus();

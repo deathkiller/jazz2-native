@@ -411,9 +411,9 @@ namespace nCine::RHI::Software
 		// The draws the tile renderer deferred are rasterized here, on every worker at once, which is the nearest
 		// this backend has to a GPU time; a frame can flush more than once (before a render target is sampled),
 		// and the flushes of one frame add up
-		const TimeStamp start = TimeStamp::now();
+		const TimeStamp start = TimeStamp::Now();
 		SwRaster::Flush();
-		FrameStatistics::AddCounter("Raster", start.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		FrameStatistics::AddCounter("Raster", start.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 	}
 
 	void SwDevice::EndFrame()

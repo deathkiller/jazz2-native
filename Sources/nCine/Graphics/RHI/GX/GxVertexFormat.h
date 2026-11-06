@@ -94,7 +94,7 @@ namespace nCine::RHI::GX
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const GxBuffer* vbo) {
+			inline void SetVbo(const GxBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

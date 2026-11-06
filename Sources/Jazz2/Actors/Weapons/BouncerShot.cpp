@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Weapons
 
 		_elasticity = 0.9f;
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 	}
 
 	void BouncerShot::OnUpdate(float timeMult)
@@ -98,7 +98,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute);
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 	}
 
@@ -116,7 +116,7 @@ namespace Jazz2::Actors::Weapons
 
 	bool BouncerShot::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::SmallDark);
 
 		return ShotBase::OnPerish(collider);
 	}

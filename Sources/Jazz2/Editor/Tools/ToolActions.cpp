@@ -353,7 +353,7 @@ namespace Jazz2::Editor::ToolActions
 			session.ShowMessage(_x("editor", "There's nothing to copy there"));
 			return false;
 		}
-		theApplication().GetInputManager().setClipboardText(StampClipboard::WriteLayered(stamp, &document));
+		theApplication().GetInputManager().SetClipboardText(StampClipboard::WriteLayered(stamp, &document));
 		LayeredClipboard() = Death::move(stamp);
 		session.ShowMessage(_x("editor", "Copied from all layers, with the events"));
 		return true;
@@ -362,7 +362,7 @@ namespace Jazz2::Editor::ToolActions
 	bool PasteAllLayers(IEditorContext& session)
 	{
 		LayeredStamp stamp;
-		String text = theApplication().GetInputManager().getClipboardText();
+		String text = theApplication().GetInputManager().GetClipboardText();
 		// Copied from another level, its tiles are found in the tile sets of this one
 		if (!StampClipboard::ReadLayered(text, stamp, &session.GetDocument())) {
 			stamp = LayeredClipboard();
@@ -496,7 +496,7 @@ namespace Jazz2::Editor::ToolActions
 		// Only the event changes, the tool stays, so it can be placed by the key while tiles are painted; it's in the
 		// clipboard too, as Copy would put it there, so it can be pasted into another level
 		EventStamp stamp = EventStamp::FromEvent(*event);
-		theApplication().GetInputManager().setClipboardText(StampClipboard::WriteEvents(stamp));
+		theApplication().GetInputManager().SetClipboardText(StampClipboard::WriteEvents(stamp));
 		session.GetEventBrush() = Death::move(stamp);
 		session.GetEventSelection().Clear();
 		session.GetTools().GetSettings().PlaceEventsAgain();

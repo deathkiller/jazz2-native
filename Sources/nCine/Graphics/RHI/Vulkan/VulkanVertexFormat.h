@@ -93,7 +93,7 @@ namespace nCine::RHI::Vulkan
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const VulkanBufferObject* vbo) {
+			inline void SetVbo(const VulkanBufferObject* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

@@ -290,7 +290,7 @@ namespace Jazz2::Editor
 		// Does some of the work, returns `true` once all of it is done
 		bool Step(float budgetMs)
 		{
-			TimeStamp start = TimeStamp::now();
+			TimeStamp start = TimeStamp::Now();
 			while (!Cancelled.load(std::memory_order_relaxed)) {
 				switch (Phase) {
 					case 0: {
@@ -311,7 +311,7 @@ namespace Jazz2::Editor
 						if (Directories.empty()) {
 							std::sort(Files.begin(), Files.end());
 							Files.erase(std::unique(Files.begin(), Files.end()), Files.end());
-							SavedAt = TimeStamp::now();
+							SavedAt = TimeStamp::Now();
 							Phase = 2;
 							break;
 						}
@@ -353,7 +353,7 @@ namespace Jazz2::Editor
 						Enter();
 						Progress = float(NextFile) / float(Files.size());
 						Leave();
-						if (Changed && (ReadSinceSave >= SaveEveryLevels || SavedAt.secondsSince() >= SaveInterval)) {
+						if (Changed && (ReadSinceSave >= SaveEveryLevels || SavedAt.GetSecondsSince() >= SaveInterval)) {
 							SaveCache(false);
 						}
 						break;
@@ -361,7 +361,7 @@ namespace Jazz2::Editor
 					default:
 						return true;
 				}
-				if (start.millisecondsSince() >= budgetMs) {
+				if (start.GetMillisecondsSince() >= budgetMs) {
 					return false;
 				}
 			}
@@ -623,7 +623,7 @@ namespace Jazz2::Editor
 				LOGW("Cache of the tiles of \"{}\" cannot be written", TileSet);
 			}
 			ReadSinceSave = 0;
-			SavedAt = TimeStamp::now();
+			SavedAt = TimeStamp::Now();
 		}
 	};
 
@@ -802,7 +802,7 @@ namespace Jazz2::Editor
 		_job->Step(StepBudgetMs);
 #endif
 		// What was read is taken in a little at a time, the levels known from the cache come all at once
-		TimeStamp start = TimeStamp::now();
+		TimeStamp start = TimeStamp::Now();
 		bool done = false;
 		while (true) {
 			Contribution contribution;
@@ -821,7 +821,7 @@ namespace Jazz2::Editor
 			}
 			Merge(contribution, false);
 			_levelCount++;
-			if (start.millisecondsSince() >= MergeBudgetMs) {
+			if (start.GetMillisecondsSince() >= MergeBudgetMs) {
 				break;
 			}
 		}
@@ -857,7 +857,7 @@ namespace Jazz2::Editor
 			mix((std::uint64_t(std::uint32_t(layer.GetWidth())) << 32) | std::uint32_t(layer.GetHeight()));
 		}
 		if (!_documentPass) {
-			if (_documentLearned && (key == _documentKey || _documentLearnedAt.secondsSince() < DocumentRelearnInterval)) {
+			if (_documentLearned && (key == _documentKey || _documentLearnedAt.GetSecondsSince() < DocumentRelearnInterval)) {
 				return;
 			}
 			// The level as it is now, a change while it's gone through is learned the next time
@@ -876,7 +876,7 @@ namespace Jazz2::Editor
 		if (_documentFrameMs >= DocumentBudgetMs) {
 			return;
 		}
-		TimeStamp start = TimeStamp::now();
+		TimeStamp start = TimeStamp::Now();
 		while (true) {
 			if (_documentPassLayer >= document.Layers.size()) {
 				// What layers removed since told is forgotten
@@ -889,7 +889,7 @@ namespace Jazz2::Editor
 				_documentPass = false;
 				_documentLearned = true;
 				_documentKey = _documentPassKey;
-				_documentLearnedAt = TimeStamp::now();
+				_documentLearnedAt = TimeStamp::Now();
 				break;
 			}
 			const DocumentLayer& layer = document.Layers[_documentPassLayer];
@@ -915,11 +915,11 @@ namespace Jazz2::Editor
 			}
 			LearnBand(layer, _documentPassBand, bands[_documentPassBand]);
 			_documentPassBand++;
-			if (_documentFrameMs + start.millisecondsSince() >= DocumentBudgetMs) {
+			if (_documentFrameMs + start.GetMillisecondsSince() >= DocumentBudgetMs) {
 				break;
 			}
 		}
-		_documentFrameMs += start.millisecondsSince();
+		_documentFrameMs += start.GetMillisecondsSince();
 	}
 
 	void SmartTileModel::LearnBand(const DocumentLayer& layer, std::int32_t band, DocumentBand& state)
@@ -1345,12 +1345,12 @@ namespace Jazz2::Editor
 	void SmartTileModel::EnsureNeighbors()
 	{
 		// All pairs are gone through, which takes a while with many levels, so not more often than once in a while
-		if (!_neighborsDirty || (_neighborsBuilt && _neighborsBuiltAt.secondsSince() < RebuildInterval)) {
+		if (!_neighborsDirty || (_neighborsBuilt && _neighborsBuiltAt.GetSecondsSince() < RebuildInterval)) {
 			return;
 		}
 		_neighborsDirty = false;
 		_neighborsBuilt = true;
-		_neighborsBuiltAt = TimeStamp::now();
+		_neighborsBuiltAt = TimeStamp::Now();
 
 		// What is next to each tile, see Suggest()
 		for (auto& lists : _neighborsOf) {

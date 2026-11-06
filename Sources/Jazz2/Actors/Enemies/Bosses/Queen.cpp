@@ -59,7 +59,7 @@ namespace Jazz2::Actors::Bosses
 		_block = std::make_shared<InvisibleBlock>();
 		_block->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 1)
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 1)
 		));
 		_levelHandler->AddActor(_block);
 
@@ -150,7 +150,7 @@ namespace Jazz2::Actors::Bosses
 							std::shared_ptr<Brick> brick = std::make_shared<Brick>();
 							brick->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)(player->GetPos().X + Random().NextFloat(-50.0f, 50.0f)), (std::int32_t)(_pos.Y - 200.0f), _renderer.layer() - 20)
+								Vector3i((std::int32_t)(player->GetPos().X + Random().NextFloat(-50.0f, 50.0f)), (std::int32_t)(_pos.Y - 200.0f), _renderer.GetLayer() - 20)
 							));
 							_levelHandler->AddActor(Death::move(brick));
 
@@ -339,7 +339,7 @@ namespace Jazz2::Actors::Bosses
 		async_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}

@@ -69,7 +69,7 @@ namespace Jazz2::Actors::Enemies
 						std::shared_ptr<Smoke> smoke = std::make_shared<Smoke>();
 						smoke->OnActivated(ActorActivationDetails(
 							_levelHandler,
-							Vector3i((std::int32_t)_pos.X - 26, (std::int32_t)_pos.Y - 18, _renderer.layer() + 20)
+							Vector3i((std::int32_t)_pos.X - 26, (std::int32_t)_pos.Y - 18, _renderer.GetLayer() + 20)
 						));
 						_levelHandler->AddActor(smoke);
 
@@ -162,7 +162,7 @@ namespace Jazz2::Actors::Enemies
 		_speed.Y = _baseSpeed.Y + sinApprox((500.0f - _time) * 0.05f) * 0.5f;
 
 		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
-		_renderer.setScale(_renderer.scale() - 0.0011f * timeMult);
+		_renderer.SetScale(_renderer.GetScale() - 0.0011f * timeMult);
 
 		if (_time <= 0.0f) {
 			DecreaseHealth(INT32_MAX);

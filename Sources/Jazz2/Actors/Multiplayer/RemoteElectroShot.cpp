@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Multiplayer
 		_particleSpawnTime -= timeMult;
 		if (_particleSpawnTime <= 0.0f) {
 			_particleSpawnTime += 1.0f;
-			Weapons::ElectroShot::CreateParticles(_levelHandler, _metadata, _pos, _renderer.layer(),
+			Weapons::ElectroShot::CreateParticles(_levelHandler, _metadata, _pos, _renderer.GetLayer(),
 				_currentStep, IsFacingLeft(), _poweredUp);
 		}
 

@@ -33,7 +33,7 @@ namespace nCine
 	{
 	}
 
-	std::int32_t ITextureLoader::dataSize(std::uint32_t mipMapLevel) const
+	std::int32_t ITextureLoader::GetDataSize(std::uint32_t mipMapLevel) const
 	{
 		std::int32_t dataSize = 0;
 		if (_mipMapCount > 1 && std::uint32_t(mipMapLevel) < _mipMapCount) {
@@ -44,7 +44,7 @@ namespace nCine
 		return dataSize;
 	}
 
-	const std::uint8_t* ITextureLoader::pixels(std::uint32_t mipMapLevel) const
+	const std::uint8_t* ITextureLoader::GetPixels(std::uint32_t mipMapLevel) const
 	{
 		const std::uint8_t* pixels = nullptr;
 
@@ -66,17 +66,17 @@ namespace nCine
 		return createLoader(std::make_unique<MemoryStream>(bufferPtr, bufferSize), {});
 	}*/
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView path)
+	std::unique_ptr<ITextureLoader> ITextureLoader::CreateFromFile(const StringView path)
 	{
-		return createLoader(fs::Open(path, FileAccess::Read), path);
+		return CreateLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)
+	std::unique_ptr<ITextureLoader> ITextureLoader::CreateFromStream(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
-		return createLoader(Death::move(fileHandle), path);
+		return CreateLoader(Death::move(fileHandle), path);
 	}
 
-	std::unique_ptr<ITextureLoader> ITextureLoader::createLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
+	std::unique_ptr<ITextureLoader> ITextureLoader::CreateLoader(std::unique_ptr<Stream> fileHandle, const StringView path)
 	{
 		auto extension = fs::GetExtension(path);
 		if (extension == "dds"_s) {
@@ -112,7 +112,7 @@ namespace nCine
 		return std::make_unique<InvalidTextureLoader>(Death::move(fileHandle));
 	}
 
-	void ITextureLoader::loadPixels(PixelFormat format)
+	void ITextureLoader::LoadPixels(PixelFormat format)
 	{
 		_texFormat = TextureFormat(format);
 

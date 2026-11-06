@@ -27,14 +27,14 @@ namespace nCine::Backends
 
 		CtrJoystickState();
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
-		void resetJoystickState(int joyId);
-		void simulateButtonEvent(int buttonId, bool pressed);
-		void simulateHatEvent(unsigned char state);
-		void simulateAxisEvent(int axisId, float value);
+		void ResetJoystickState(int joyId);
+		void SimulateButtonEvent(int buttonId, bool pressed);
+		void SimulateHatEvent(unsigned char state);
+		void SimulateAxisEvent(int axisId, float value);
 
 	private:
 		int _joyId;
@@ -48,7 +48,7 @@ namespace nCine::Backends
 	/**
 		@brief The `IInputManager` implementation for the Nintendo 3DS (libctru HID)
 
-		Gamepad-only: `updateJoystickStates()` is polled once per frame from
+		Gamepad-only: `UpdateJoystickStates()` is polled once per frame from
 		`MainApplication::ProcessStep()` and diffs the HID state into engine joystick events (the same
 		poll-and-dispatch pattern as the Dc/Ogc/Psp backends). The single built-in pad is always present, so
 		it connects during construction and never disconnects. The touch screen is not read - the game draws
@@ -60,21 +60,21 @@ namespace nCine::Backends
 		CtrInputManager();
 		~CtrInputManager() override;
 
-		const MouseState& mouseState() const override;
-		const KeyboardState& keyboardState() const override;
+		const MouseState& GetMouseState() const override;
+		const KeyboardState& GetKeyboardState() const override;
 
-		bool isJoyPresent(int joyId) const override;
-		const char* joyName(int joyId) const override;
-		const JoystickGuid joyGuid(int joyId) const override;
-		int joyNumButtons(int joyId) const override;
-		int joyNumHats(int joyId) const override;
-		int joyNumAxes(int joyId) const override;
-		const JoystickState& joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
-		bool joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
+		bool IsJoyPresent(int joyId) const override;
+		const char* GetJoyName(int joyId) const override;
+		const JoystickGuid GetJoyGuid(int joyId) const override;
+		int GetJoyButtonCount(int joyId) const override;
+		int GetJoyHatCount(int joyId) const override;
+		int GetJoyAxisCount(int joyId) const override;
+		const JoystickState& GetJoystickState(int joyId) const override;
+		bool JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
+		bool JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
 
 		/** @brief Polls the HID service and dispatches the resulting joystick events (once per frame) */
-		static void updateJoystickStates();
+		static void UpdateJoystickStates();
 		/**
 			@brief Reports the pad as idle until every button has been released once
 
@@ -82,7 +82,7 @@ namespace nCine::Backends
 			that closed it is usually still held, and would otherwise reach the game as a press on whatever sits
 			under the field the keyboard was opened for.
 		*/
-		static void discardInputUntilReleased();
+		static void DiscardInputUntilReleased();
 
 	private:
 		static bool _connected;

@@ -72,14 +72,14 @@ namespace Jazz2::UI::Menu
 		// A tap cycles the value (left half decrements, right half increments, mirroring the `< >` arrows), but
 		// only once the row is selected, so the first tap just selects it (matching the keyboard flow). Returning
 		// false lets the container select an unselected row.
-		if (!Selected || ReadOnly || !OnChange || event.type != TouchEventType::Up) {
+		if (!Selected || ReadOnly || !OnChange || event.Type != TouchEventType::Up) {
 			return false;
 		}
-		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 		if (pointerIndex == -1) {
 			return false;
 		}
-		float x = event.pointers[pointerIndex].x * viewSize.X;
+		float x = event.Pointers[pointerIndex].X * viewSize.X;
 		root->PlaySfx("MenuSelect"_s, 0.6f);
 		// The handler goes last, see OnNavigate()
 		Animation.Restart(0.0f);
@@ -136,15 +136,15 @@ namespace Jazz2::UI::Menu
 	{
 		// A tap cycles the value (left half decrements, right half increments) once selected, or activates the row
 		// when it has no cycler - the touch equivalent of the keyboard Left/Right/Fire handling above
-		if (!Selected || ReadOnly || event.type != TouchEventType::Up) {
+		if (!Selected || ReadOnly || event.Type != TouchEventType::Up) {
 			return false;
 		}
-		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 		if (pointerIndex == -1) {
 			return false;
 		}
 		if (OnChange) {
-			float x = event.pointers[pointerIndex].x * viewSize.X;
+			float x = event.Pointers[pointerIndex].X * viewSize.X;
 			root->PlaySfx("MenuSelect"_s, 0.6f);
 			OnChange(x < Bounds.X + Bounds.W * 0.5f ? -1 : 1);
 			Animation.Restart(0.0f);
@@ -181,10 +181,10 @@ namespace Jazz2::UI::Menu
 
 	bool CanvasWidget::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
 	{
-		if (OnTouch && event.type == TouchEventType::Up) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (OnTouch && event.Type == TouchEventType::Up) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				OnTouch(Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y)));
+				OnTouch(Vector2i((std::int32_t)(event.Pointers[pointerIndex].X * viewSize.X), (std::int32_t)(event.Pointers[pointerIndex].Y * viewSize.Y)));
 				return true;
 			}
 		}
@@ -391,11 +391,11 @@ namespace Jazz2::UI::Menu
 
 	bool StackLayout::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
 	{
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x * viewSize.X;
-				float y = event.pointers[pointerIndex].y * viewSize.Y;
+				float x = event.Pointers[pointerIndex].X * viewSize.X;
+				float y = event.Pointers[pointerIndex].Y * viewSize.Y;
 				for (std::int32_t i = 0; i < (std::int32_t)_children.size(); i++) {
 					auto& child = _children[i];
 					if (child->Focusable && child->Visible && child->Bounds.Contains(x, y)) {
@@ -530,11 +530,11 @@ namespace Jazz2::UI::Menu
 
 	bool ScrollView::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
 	{
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down: {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex != -1) {
-					_touchStart = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+					_touchStart = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, event.Pointers[pointerIndex].Y * viewSize.Y);
 					_touchLast = _touchStart;
 					_touchTime = 0.0f;
 				}
@@ -542,9 +542,9 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Move: {
 				if (_touchStart != Vector2f::Zero) {
-					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 					if (pointerIndex != -1) {
-						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
+						Vector2f touchMove = Vector2f(event.Pointers[pointerIndex].X * viewSize.X, event.Pointers[pointerIndex].Y * viewSize.Y);
 						if (_scrollable) {
 							float delta = touchMove.Y - _touchLast.Y;
 							if (delta != 0.0f) {
@@ -691,14 +691,14 @@ namespace Jazz2::UI::Menu
 		// the tap differently: StackLayout hands the selected row the Down, ScrollView hands the tapped row the
 		// Up (and only for a tap that didn't scroll). Neither forwards the other, so reacting to both adjusts
 		// exactly once per tap in either
-		if (!Selected || (event.type != TouchEventType::Down && event.type != TouchEventType::Up)) {
+		if (!Selected || (event.Type != TouchEventType::Down && event.Type != TouchEventType::Up)) {
 			return false;
 		}
-		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 		if (pointerIndex == -1) {
 			return false;
 		}
-		float x = event.pointers[pointerIndex].x * viewSize.X;
+		float x = event.Pointers[pointerIndex].X * viewSize.X;
 		// The bar is centred in the row, not necessarily on the screen (e.g., with asymmetric safe-area insets)
 		float centerX = Bounds.X + Bounds.W * 0.5f;
 		// Only the central bar region reacts; tapping its left/right half nudges the value down/up
@@ -816,7 +816,7 @@ namespace Jazz2::UI::Menu
 		if (!_active) {
 			return false;
 		}
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Escape:
 				Cancel(root);
 				return true;

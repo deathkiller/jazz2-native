@@ -152,7 +152,7 @@ namespace Jazz2::UI::Windows
 
 	bool ColorSwatch::OnKeyPressed(const KeyboardEvent& event)
 	{
-		if ((event.sym == Keys::Return || event.sym == Keys::NumPadEnter || event.sym == Keys::Space) && OnClick && IsUsable()) {
+		if ((event.Sym == Keys::Return || event.Sym == Keys::NumPadEnter || event.Sym == Keys::Space) && OnClick && IsUsable()) {
 			OnClick();
 			return true;
 		}

@@ -260,7 +260,7 @@ namespace nCine
 	/**
 		@brief Keyboard modifier flags
 		
-		Bit flags reported in @ref KeyboardEvent::mod. The combined values (@ref Ctrl, @ref Shift, etc.)
+		Bit flags reported in @ref KeyboardEvent::Mod. The combined values (@ref Ctrl, @ref Shift, etc.)
 		match either the left or the right modifier.
 	*/
 	enum KeyMod

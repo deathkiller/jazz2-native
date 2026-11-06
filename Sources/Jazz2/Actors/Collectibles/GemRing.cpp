@@ -147,7 +147,7 @@ namespace Jazz2::Actors::Collectibles
 
 					auto& pos = _pieces[i].Pos;
 					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
-					command->SetLayer(_renderer.layer() - 2);
+					command->SetLayer(_renderer.GetLayer() - 2);
 					resolver.BindSpritePalette(*command, *res->Base->TextureDiffuse.get(), indexed, res->PaletteOffset);
 
 					renderQueue.AddCommand(command);

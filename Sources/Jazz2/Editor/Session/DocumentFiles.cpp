@@ -1565,7 +1565,7 @@ namespace Jazz2::Editor
 		// The window is told only when the title is another one
 		String title = String(NCINE_APP_NAME " - "_s + _("Level Editor") + " - "_s + name);
 		if (force || title != _windowTitle) {
-			theApplication().GetGfxDevice().setWindowTitle(title);
+			theApplication().GetGfxDevice().SetWindowTitle(title);
 			_windowTitle = Death::move(title);
 		}
 	}

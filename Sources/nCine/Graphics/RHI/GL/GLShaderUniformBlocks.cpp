@@ -26,15 +26,15 @@ namespace nCine::RHI::GL
 			// spans the whole block there, and the rest of it is whatever follows in the buffer. Not past the
 			// allocation, though: a block that doesn't fit whole after the ones before it makes WebGL skip that
 			// draw, which is still better than asking for more than a uniform buffer holds.
-			const GLint usedSize = uniformBlockCache.usedSize();
-			const GLint declaredSize = uniformBlockCache.uniformBlock()->GetSize() - uniformBlockCache.uniformBlock()->GetAlignAmount();
+			const GLint usedSize = uniformBlockCache.GetUsedSize();
+			const GLint declaredSize = uniformBlockCache.GetUniformBlock()->GetSize() - uniformBlockCache.GetUniformBlock()->GetAlignAmount();
 			if (declaredSize <= usedSize) {
 				return usedSize;
 			}
 			return GLint(std::max<std::int64_t>(usedSize, std::min<std::int64_t>(declaredSize, available)));
 #else
 			static_cast<void>(available);
-			return uniformBlockCache.usedSize();
+			return uniformBlockCache.GetUsedSize();
 #endif
 		}
 	}
@@ -88,7 +88,7 @@ namespace nCine::RHI::GL
 #endif
 				_uboParams.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset,
 					GetBoundSize(uniformBlockCache, std::int64_t(_uboParams.size) - std::int64_t(moreOffset)));
-				moreOffset += uniformBlockCache.usedSize();
+				moreOffset += uniformBlockCache.GetUsedSize();
 			}
 		}
 #endif
@@ -119,7 +119,7 @@ namespace nCine::RHI::GL
 		std::int32_t offset = 0;
 		for (GLUniformBlockCache& uniformBlockCache : _uniformBlockCaches) {
 			uniformBlockCache.SetDataPointer(dataPointer + offset);
-			offset += uniformBlockCache.uniformBlock()->GetSize() - uniformBlockCache.uniformBlock()->GetAlignAmount();
+			offset += uniformBlockCache.GetUniformBlock()->GetSize() - uniformBlockCache.GetUniformBlock()->GetAlignAmount();
 		}
 	}
 
@@ -160,7 +160,7 @@ namespace nCine::RHI::GL
 						hasMemoryGaps = true;
 					}
 					totalBoundSize = std::max<std::int32_t>(totalBoundSize, totalUsedSize + GetBoundSize(uniformBlockCache, maxAllocationSize - totalUsedSize));
-					totalUsedSize += uniformBlockCache.usedSize();
+					totalUsedSize += uniformBlockCache.GetUsedSize();
 				}
 
 				if (totalUsedSize > 0) {
@@ -170,8 +170,8 @@ namespace nCine::RHI::GL
 						if (hasMemoryGaps) {
 							std::int32_t offset = 0;
 							for (GLUniformBlockCache& uniformBlockCache : _uniformBlockCaches) {
-								std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, uniformBlockCache.GetDataPointer(), uniformBlockCache.usedSize());
-								offset += uniformBlockCache.usedSize();
+								std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, uniformBlockCache.GetDataPointer(), uniformBlockCache.GetUsedSize());
+								offset += uniformBlockCache.GetUsedSize();
 							}
 						} else {
 							std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);

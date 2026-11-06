@@ -117,29 +117,29 @@ namespace nCine
 		std::uint32_t _renderDocLastNumCaptures;
 #endif
 
-		void guiWindow();
-		void guiConfigureGui();
-		void guiInitTimes();
-		void guiLog();
-		void guiGraphicsCapabilities();
-		void guiApplicationConfiguration();
-		void guiRenderingSettings();
-		void guiWindowSettings();
-		void guiAudioPlayers();
-		void guiInputState();
-		void guiRenderDoc();
-		void guiAllocators();
-		void guiViewports(Viewport* viewport, std::uint32_t viewportId);
-		void guiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId);
-		void guiNodeInspector();
+		void GuiWindow();
+		void GuiConfigureGui();
+		void GuiInitTimes();
+		void GuiLog();
+		void GuiGraphicsCapabilities();
+		void GuiApplicationConfiguration();
+		void GuiRenderingSettings();
+		void GuiWindowSettings();
+		void GuiAudioPlayers();
+		void GuiInputState();
+		void GuiRenderDoc();
+		void GuiAllocators();
+		void GuiViewports(Viewport* viewport, std::uint32_t viewportId);
+		void GuiRecursiveChildrenNodes(SceneNode* node, std::uint32_t childId);
+		void GuiNodeInspector();
 
 #if defined(NCINE_PROFILING)
-		void guiTopLeft();
+		void GuiTopLeft();
 #endif
-		void guiTopRight();
-		void guiBottomLeft();
-		void guiBottomRight();
-		void guiPlots();
+		void GuiTopRight();
+		void GuiBottomLeft();
+		void GuiBottomRight();
+		void GuiPlots();
 
 		void InitPlotValues();
 #if defined(NCINE_PROFILING)

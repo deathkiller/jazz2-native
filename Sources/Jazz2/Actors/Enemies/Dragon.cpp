@@ -95,7 +95,7 @@ namespace Jazz2::Actors::Enemies
 							fireParams[0] = (IsFacingLeft() ? 1 : 0);
 							fire->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14 : 14), (std::int32_t)_pos.Y - 6, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14 : 14), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
 								fireParams
 							));
 							_levelHandler->AddActor(fire);
@@ -141,7 +141,7 @@ namespace Jazz2::Actors::Enemies
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Tiny);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::Tiny);
 
 		TryGenerateRandomDrop();
 

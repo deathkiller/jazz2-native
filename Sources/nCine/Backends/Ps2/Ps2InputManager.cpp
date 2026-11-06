@@ -85,22 +85,22 @@ namespace nCine::Backends
 		}
 	}
 
-	bool Ps2JoystickState::isButtonPressed(int buttonId) const
+	bool Ps2JoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons ? _buttonsState[buttonId] : false);
 	}
 
-	unsigned char Ps2JoystickState::hatState(int hatId) const
+	unsigned char Ps2JoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : 0);
 	}
 
-	float Ps2JoystickState::axisValue(int axisId) const
+	float Ps2JoystickState::GetAxisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
-	void Ps2JoystickState::resetJoystickState(int joyId)
+	void Ps2JoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		std::memset(_buttonsState, 0, sizeof(_buttonsState));
@@ -111,39 +111,39 @@ namespace nCine::Backends
 		}
 	}
 
-	void Ps2JoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void Ps2JoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons || _buttonsState[buttonId] == pressed) {
 			return;
 		}
 		_buttonsState[buttonId] = pressed;
 
-		_joyButtonEvent.joyId = _joyId;
-		_joyButtonEvent.buttonId = buttonId;
+		_joyButtonEvent.JoyId = _joyId;
+		_joyButtonEvent.ButtonId = buttonId;
 		if (pressed) {
 			Ps2InputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-			IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+			IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 		} else {
 			Ps2InputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-			IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+			IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 		}
 	}
 
-	void Ps2JoystickState::simulateHatEvent(unsigned char state)
+	void Ps2JoystickState::SimulateHatEvent(unsigned char state)
 	{
 		if (_hatState == state) {
 			return;
 		}
 		_hatState = state;
 
-		_joyHatEvent.joyId = _joyId;
-		_joyHatEvent.hatId = 0;
-		_joyHatEvent.hatState = state;
+		_joyHatEvent.JoyId = _joyId;
+		_joyHatEvent.HatId = 0;
+		_joyHatEvent.HatState = state;
 		Ps2InputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-		IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+		IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 	}
 
-	void Ps2JoystickState::simulateAxisEvent(int axisId, float value)
+	void Ps2JoystickState::SimulateAxisEvent(int axisId, float value)
 	{
 		if (axisId < 0 || axisId >= MaxNumAxes ||
 			std::fabs(_axesValuesState[axisId] - value) < AxisEventTolerance) {
@@ -151,11 +151,11 @@ namespace nCine::Backends
 		}
 		_axesValuesState[axisId] = value;
 
-		_joyAxisEvent.joyId = _joyId;
-		_joyAxisEvent.axisId = axisId;
-		_joyAxisEvent.value = value;
+		_joyAxisEvent.JoyId = _joyId;
+		_joyAxisEvent.AxisId = axisId;
+		_joyAxisEvent.Value = value;
 		Ps2InputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
-		IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
+		IInputManager::GetHandler()->OnJoyAxisMoved(_joyAxisEvent);
 	}
 
 	Ps2InputManager::Ps2InputManager()
@@ -173,7 +173,7 @@ namespace nCine::Backends
 		padInit(0);
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			_pads[i].State.resetJoystickState(i);
+			_pads[i].State.ResetJoystickState(i);
 			_pads[i].PortOpen = (padPortOpen(int(i), 0, _padBuffer[i]) != 0);
 			if (!_pads[i].PortOpen) {
 				LOGW("Cannot open pad port {}", i);
@@ -181,7 +181,7 @@ namespace nCine::Backends
 		}
 
 		// Poll once so an already-plugged controller connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	Ps2InputManager::~Ps2InputManager()
@@ -194,60 +194,60 @@ namespace nCine::Backends
 		}
 	}
 
-	const MouseState& Ps2InputManager::mouseState() const
+	const MouseState& Ps2InputManager::GetMouseState() const
 	{
 		static NullInputManager::NullMouseState nullMouseState;
 		return nullMouseState;
 	}
 
-	const KeyboardState& Ps2InputManager::keyboardState() const
+	const KeyboardState& Ps2InputManager::GetKeyboardState() const
 	{
 		static NullInputManager::NullKeyboardState nullKeyboardState;
 		return nullKeyboardState;
 	}
 
-	bool Ps2InputManager::isJoyPresent(int joyId) const
+	bool Ps2InputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
-	const char* Ps2InputManager::joyName(int joyId) const
+	const char* Ps2InputManager::GetJoyName(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? "PlayStation 2 Controller" : nullptr);
+		return (IsJoyPresent(joyId) ? "PlayStation 2 Controller" : nullptr);
 	}
 
-	const JoystickGuid Ps2InputManager::joyGuid(int joyId) const
+	const JoystickGuid Ps2InputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The engine's built-in "xinput" mapping is what the button order above targets
 		return JoystickGuidType::Xinput;
 	}
 
-	int Ps2InputManager::joyNumButtons(int joyId) const
+	int Ps2InputManager::GetJoyButtonCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps2JoystickState::MaxNumButtons : -1);
+		return (IsJoyPresent(joyId) ? Ps2JoystickState::MaxNumButtons : -1);
 	}
 
-	int Ps2InputManager::joyNumHats(int joyId) const
+	int Ps2InputManager::GetJoyHatCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps2JoystickState::MaxNumHats : -1);
+		return (IsJoyPresent(joyId) ? Ps2JoystickState::MaxNumHats : -1);
 	}
 
-	int Ps2InputManager::joyNumAxes(int joyId) const
+	int Ps2InputManager::GetJoyAxisCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps2JoystickState::MaxNumAxes : -1);
+		return (IsJoyPresent(joyId) ? Ps2JoystickState::MaxNumAxes : -1);
 	}
 
-	const JoystickState& Ps2InputManager::joystickState(int joyId) const
+	const JoystickState& Ps2InputManager::GetJoystickState(int joyId) const
 	{
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _pads[joyId].State;
 		}
 		static NullInputManager::NullJoystickState nullJoystickState;
 		return nullJoystickState;
 	}
 
-	bool Ps2InputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool Ps2InputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// DualShock 2 actuators are reachable through padSetActDirect(), but they need the pad put into a
 		// mode that also changes how its buttons report; not worth it for the engine's short rumble pulses
@@ -258,7 +258,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	bool Ps2InputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool Ps2InputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		static_cast<void>(joyId);
 		static_cast<void>(left);
@@ -267,20 +267,20 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void Ps2InputManager::handleConnection(std::int32_t joyId, bool connected)
+	void Ps2InputManager::HandleConnection(std::int32_t joyId, bool connected)
 	{
 		if (_pads[joyId].Connected == connected) {
 			return;
 		}
 		_pads[joyId].Connected = connected;
-		_joyConnectionEvent.joyId = joyId;
+		_joyConnectionEvent.JoyId = joyId;
 		if (connected) {
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
-			_pads[joyId].State.resetJoystickState(joyId);
+			_pads[joyId].State.ResetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
@@ -323,11 +323,11 @@ namespace nCine::Backends
 		padSetMainMode(int(joyId), 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);
 	}
 
-	void Ps2InputManager::updateJoystickStates()
+	void Ps2InputManager::UpdateJoystickStates()
 	{
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
 			if (!_pads[i].PortOpen) {
-				handleConnection(i, false);
+				HandleConnection(i, false);
 				continue;
 			}
 
@@ -338,7 +338,7 @@ namespace nCine::Backends
 			// analogue-mode request was the thing causing most of it.
 			const std::int32_t state = padGetState(int(i), 0);
 			if (state == PAD_STATE_DISCONN || state == PAD_STATE_ERROR) {
-				handleConnection(i, false);
+				HandleConnection(i, false);
 				_pads[i].AnalogRequested = false;
 				continue;
 			}
@@ -363,7 +363,7 @@ namespace nCine::Backends
 			if ((status.mode >> 4) == 0) {
 				continue;
 			}
-			handleConnection(i, true);
+			HandleConnection(i, true);
 			// A DualShock reports digital until it is asked to do otherwise, which is why this is here and
 			// not only in the constructor: a pad plugged in mid-game has to be asked too
 			RequestAnalogMode(i);
@@ -374,16 +374,16 @@ namespace nCine::Backends
 
 			Ps2JoystickState& joyState = _pads[i].State;
 
-			joyState.simulateButtonEvent(ButtonA, (buttons & PAD_CROSS) != 0);
-			joyState.simulateButtonEvent(ButtonB, (buttons & PAD_CIRCLE) != 0);
-			joyState.simulateButtonEvent(ButtonX, (buttons & PAD_SQUARE) != 0);
-			joyState.simulateButtonEvent(ButtonY, (buttons & PAD_TRIANGLE) != 0);
-			joyState.simulateButtonEvent(ButtonLShoulder, (buttons & PAD_L1) != 0);
-			joyState.simulateButtonEvent(ButtonRShoulder, (buttons & PAD_R1) != 0);
-			joyState.simulateButtonEvent(ButtonBack, (buttons & PAD_SELECT) != 0);
-			joyState.simulateButtonEvent(ButtonStart, (buttons & PAD_START) != 0);
-			joyState.simulateButtonEvent(ButtonLStick, (buttons & PAD_L3) != 0);
-			joyState.simulateButtonEvent(ButtonRStick, (buttons & PAD_R3) != 0);
+			joyState.SimulateButtonEvent(ButtonA, (buttons & PAD_CROSS) != 0);
+			joyState.SimulateButtonEvent(ButtonB, (buttons & PAD_CIRCLE) != 0);
+			joyState.SimulateButtonEvent(ButtonX, (buttons & PAD_SQUARE) != 0);
+			joyState.SimulateButtonEvent(ButtonY, (buttons & PAD_TRIANGLE) != 0);
+			joyState.SimulateButtonEvent(ButtonLShoulder, (buttons & PAD_L1) != 0);
+			joyState.SimulateButtonEvent(ButtonRShoulder, (buttons & PAD_R1) != 0);
+			joyState.SimulateButtonEvent(ButtonBack, (buttons & PAD_SELECT) != 0);
+			joyState.SimulateButtonEvent(ButtonStart, (buttons & PAD_START) != 0);
+			joyState.SimulateButtonEvent(ButtonLStick, (buttons & PAD_L3) != 0);
+			joyState.SimulateButtonEvent(ButtonRStick, (buttons & PAD_R3) != 0);
 
 			unsigned char hat = 0;
 			if ((buttons & PAD_UP) != 0) {
@@ -398,26 +398,26 @@ namespace nCine::Backends
 			if ((buttons & PAD_LEFT) != 0) {
 				hat |= HatLeft;
 			}
-			joyState.simulateHatEvent(hat);
+			joyState.SimulateHatEvent(hat);
 
 			// A digital pad (or one whose mode has not settled) reports its sticks at rest rather than
 			// centred, so the analogue axes are only trusted once the pad says it is in analogue mode
 			const bool analogue = (status.mode >> 4) == 0x7;
 			if (analogue) {
-				joyState.simulateAxisEvent(0, NormalizeStick(status.ljoy_h));
-				joyState.simulateAxisEvent(1, NormalizeStick(status.ljoy_v));
-				joyState.simulateAxisEvent(2, NormalizeStick(status.rjoy_h));
-				joyState.simulateAxisEvent(3, NormalizeStick(status.rjoy_v));
+				joyState.SimulateAxisEvent(0, NormalizeStick(status.ljoy_h));
+				joyState.SimulateAxisEvent(1, NormalizeStick(status.ljoy_v));
+				joyState.SimulateAxisEvent(2, NormalizeStick(status.rjoy_h));
+				joyState.SimulateAxisEvent(3, NormalizeStick(status.rjoy_v));
 			} else {
-				joyState.simulateAxisEvent(0, 0.0f);
-				joyState.simulateAxisEvent(1, 0.0f);
-				joyState.simulateAxisEvent(2, 0.0f);
-				joyState.simulateAxisEvent(3, 0.0f);
+				joyState.SimulateAxisEvent(0, 0.0f);
+				joyState.SimulateAxisEvent(1, 0.0f);
+				joyState.SimulateAxisEvent(2, 0.0f);
+				joyState.SimulateAxisEvent(3, 0.0f);
 			}
 
 			// L2/R2 are digital in the default mode, so they drive the trigger axes from the button bits
-			joyState.simulateAxisEvent(4, (buttons & PAD_L2) != 0 ? 1.0f : -1.0f);
-			joyState.simulateAxisEvent(5, (buttons & PAD_R2) != 0 ? 1.0f : -1.0f);
+			joyState.SimulateAxisEvent(4, (buttons & PAD_L2) != 0 ? 1.0f : -1.0f);
+			joyState.SimulateAxisEvent(5, (buttons & PAD_R2) != 0 ? 1.0f : -1.0f);
 		}
 	}
 }

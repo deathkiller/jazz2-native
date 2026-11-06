@@ -23,47 +23,47 @@ namespace nCine
 		BaseSprite& operator=(const BaseSprite&) = delete;
 
 		/** @brief Sets the sprite size */
-		void setSize(float width, float height);
+		void SetSize(float width, float height);
 		/** @brief Sets the sprite size from a `Vector2f` */
-		inline void setSize(Vector2f size) {
-			setSize(size.X, size.Y);
+		inline void SetSize(Vector2f size) {
+			SetSize(size.X, size.Y);
 		}
 
 		/** @brief Returns the texture object */
-		inline const Texture* texture() const {
+		inline const Texture* GetTexture() const {
 			return _texture;
 		}
 		/** @brief Sets the texture object */
-		void setTexture(Texture* texture);
+		void SetTexture(Texture* texture);
 		/** @brief Triggers a texture update without setting a new texture */
-		void resetTexture();
+		void ResetTexture();
 
 		/** @brief Returns the texture source rectangle used for blitting */
-		inline Recti texRect() const {
+		inline Recti GetTexRect() const {
 			return _texRect;
 		}
 		/** @brief Sets the texture source rectangle used for blitting */
-		void setTexRect(const Recti& rect);
+		void SetTexRect(const Recti& rect);
 
 		/** @brief Returns whether the sprite texture is horizontally flipped */
-		inline bool isFlippedX() const {
+		inline bool IsFlippedX() const {
 			return _flippedX;
 		}
 		/** @brief Flips the texture rectangle horizontally */
-		void setFlippedX(bool flippedX);
+		void SetFlippedX(bool flippedX);
 		/** @brief Returns whether the sprite texture is vertically flipped */
-		inline bool isFlippedY() const {
+		inline bool IsFlippedY() const {
 			return _flippedY;
 		}
 		/** @brief Flips the texture rectangle vertically */
-		void setFlippedY(bool flippedY);
+		void SetFlippedY(bool flippedY);
 
 		/** @brief Returns the flat palette offset added to the per-pixel index by palette shaders */
-		inline float paletteOffset() const {
+		inline float GetPaletteOffset() const {
 			return _paletteOffset;
 		}
 		/** @brief Sets the flat palette offset used by palette shaders (no effect on non-palette shaders) */
-		void setPaletteOffset(float paletteOffset);
+		void SetPaletteOffset(float paletteOffset);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -89,12 +89,12 @@ namespace nCine
 		BaseSprite(const BaseSprite& other);
 
 		/** @brief Performs the required tasks upon a change to the shader */
-		void shaderHasChanged() override;
+		void ShaderHasChanged() override;
 
 		/** @brief Performs the required tasks upon a change to the texture */
-		virtual void textureHasChanged(Texture* newTexture) = 0;
+		virtual void TextureHasChanged(Texture* newTexture) = 0;
 
-		void updateRenderCommand() override;
+		void UpdateRenderCommand() override;
 	};
 
 }

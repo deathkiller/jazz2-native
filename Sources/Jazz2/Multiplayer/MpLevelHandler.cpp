@@ -289,7 +289,7 @@ namespace Jazz2::Multiplayer
 
 		if (!ContentResolver::Get().IsHeadless()) {
 			_inGameCanvasLayer = std::make_unique<UI::Multiplayer::MpInGameCanvasLayer>(this);
-			_inGameCanvasLayer->setParent(_rootNode.get());
+			_inGameCanvasLayer->SetParent(_rootNode.get());
 			_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
 		}
 
@@ -315,7 +315,7 @@ namespace Jazz2::Multiplayer
 
 		if (!ContentResolver::Get().IsHeadless()) {
 			_inGameCanvasLayer = std::make_unique<UI::Multiplayer::MpInGameCanvasLayer>(this);
-			_inGameCanvasLayer->setParent(_rootNode.get());
+			_inGameCanvasLayer->SetParent(_rootNode.get());
 			_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
 		}
 
@@ -501,10 +501,10 @@ namespace Jazz2::Multiplayer
 				if (peerDesc->RemotePeer && !peerDesc->IsAuthenticated) {
 					// Anything that connects and never authenticates (a stuck client, a port scanner) would otherwise
 					// hold a slot for as long as it keeps the connection open
-					if (peerDesc->ConnectedSince.secondsSince() >= AuthTimeoutSecs) {
+					if (peerDesc->ConnectedSince.GetSecondsSince() >= AuthTimeoutSecs) {
 						LOGI("Peer kicked ({}) [{}]: Not authenticated within {} seconds", _networkManager->AddressToString(peer), peer, AuthTimeoutSecs);
 						// Re-armed, so a peer that doesn't react to the kick is not kicked again on every frame
-						peerDesc->ConnectedSince = TimeStamp::now();
+						peerDesc->ConnectedSince = TimeStamp::Now();
 						_networkManager->Kick(peer, Reason::AuthFailed);
 					}
 					continue;
@@ -742,7 +742,7 @@ namespace Jazz2::Multiplayer
 						for (auto* player : _players) {
 							auto* mpPlayer = static_cast<MpPlayer*>(player);
 							auto peerDesc = mpPlayer->GetPeerDescriptor();
-							peerDesc->LapStarted = TimeStamp::now();
+							peerDesc->LapStarted = TimeStamp::Now();
 							// The first lap is measured from the start as well, not from when the player spawned
 							peerDesc->LapsElapsedFrames = _elapsedFrames;
 
@@ -901,14 +901,14 @@ namespace Jazz2::Multiplayer
 			} else {
 				if (!_players.empty()) {
 					Clock& c = nCine::clock();
-					std::uint64_t now = c.now() * 1000 / c.frequency();
+					std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
 					auto player = _players[0];
 
 					RemotePlayerOnServer::PlayerFlags flags = (RemotePlayerOnServer::PlayerFlags)player->_currentSpecialMove;
 					if (player->IsFacingLeft()) {
 						flags |= RemotePlayerOnServer::PlayerFlags::IsFacingLeft;
 					}
-					if (player->_renderer.isDrawEnabled()) {
+					if (player->_renderer.IsDrawEnabled()) {
 						flags |= RemotePlayerOnServer::PlayerFlags::IsVisible;
 					}
 					if (player->_isActivelyPushing) {
@@ -1036,7 +1036,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::OnInitializeViewport(width, height);
 
 		if (_inGameLobby != nullptr) {
-			_inGameLobby->setParent(GetHudParentNode());
+			_inGameLobby->SetParent(GetHudParentNode());
 		}
 	}
 
@@ -1132,7 +1132,7 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint32((std::uint32_t)eventTile.EventFlags);
 					packet.WriteVariableInt32((std::int32_t)originTile.X);
 					packet.WriteVariableInt32((std::int32_t)originTile.Y);
-					packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.layer());
+					packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.GetLayer());
 
 					_networkManager->SendTo([this](const Peer& peer) {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
@@ -1603,7 +1603,7 @@ namespace Jazz2::Multiplayer
 				player->_checkpointPos = mpPlayer->RespawnPos;
 
 				Clock& c = nCine::clock();
-				std::uint64_t now = c.now() * 1000 / c.frequency();
+				std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
 
 				MemoryStream packetAck(24);
 				packetAck.WriteVariableUint32(_lastSpawnedActorId);
@@ -1647,8 +1647,8 @@ namespace Jazz2::Multiplayer
 				float sinceLastLap = (_elapsedFrames - peerDesc->LapsElapsedFrames);
 				if (sinceLastLap < 0.0f || sinceLastLap > 2.0f * FrameTimer::FramesPerSecond) {
 					peerDesc->Laps++;
-					auto now = TimeStamp::now();
-					float lapSecs = (now - peerDesc->LapStarted).seconds();
+					auto now = TimeStamp::Now();
+					float lapSecs = (now - peerDesc->LapStarted).GetSeconds();
 					//peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
 					peerDesc->LapStarted = now;
@@ -1698,7 +1698,7 @@ namespace Jazz2::Multiplayer
 			}
 		} else {
 			Clock& c = nCine::clock();
-			std::uint64_t now = c.now() * 1000 / c.frequency();
+			std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
 
 			MemoryStream packetAck(24);
 			packetAck.WriteVariableUint32(_lastSpawnedActorId);
@@ -3315,7 +3315,7 @@ namespace Jazz2::Multiplayer
 			// Spawned at the start again, so the lap clock and the progress along the track start over too - a lap
 			// timestamp kept from before (possibly from an earlier level) refused the next lap as "twice in a row"
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
-			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->LapStarted = TimeStamp::Now();
 			peerDesc->RaceProgress = 0.0f;
 		}
 
@@ -3745,7 +3745,7 @@ namespace Jazz2::Multiplayer
 					// empty struct, but the server tracks the real score/lives/weapons for it.
 					peerDesc->CarryOver = player->Player::PrepareLevelCarryOver();
 					peerDesc->HasCarryOver = true;
-					peerDesc->DisconnectedSince = TimeStamp::now();
+					peerDesc->DisconnectedSince = TimeStamp::Now();
 
 					for (std::size_t i = 0; i < _players.size(); i++) {
 						if (_players[i] == player) {
@@ -3889,7 +3889,7 @@ namespace Jazz2::Multiplayer
 			constexpr std::uint32_t MaxPacketsPerPeerPerSecond = 300;
 			if (auto floodPeerDesc = _networkManager->GetPeerDescriptor(peer)) {
 				Clock& c = nCine::clock();
-				std::uint64_t nowMs = c.now() * 1000 / c.frequency();
+				std::uint64_t nowMs = c.Now() * 1000 / c.GetFrequency();
 				if (nowMs - floodPeerDesc->PacketRateWindowStart >= 1000) {
 					floodPeerDesc->PacketRateWindowStart = nowMs;
 					floodPeerDesc->PacketRateCount = 0;
@@ -4237,7 +4237,7 @@ namespace Jazz2::Multiplayer
 		auto* _this = this;
 #endif
 			LOGI("Started streaming {} assets to peer \"{}\" [{}]", missingAssets.size(), peerDesc->PlayerName, peer);
-			TimeStamp begin = TimeStamp::now();
+			TimeStamp begin = TimeStamp::Now();
 
 			for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
 				if (!peerDesc->IsAuthenticated || _this->_ignorePackets) {
@@ -4283,7 +4283,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			LOGI("Finished streaming {} assets to peer \"{}\" [{}] - took {:.1f} ms",
-			missingAssets.size(), peerDesc->PlayerName, peer, begin.millisecondsSince());
+			missingAssets.size(), peerDesc->PlayerName, peer, begin.GetMillisecondsSince());
 			if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
 				MemoryStream packet;
 				_this->InitializeLoadLevelPacket(packet);
@@ -5457,7 +5457,7 @@ namespace Jazz2::Multiplayer
 			player->_controllable = (flags & 0x01) != 0;
 			player->_controllableExternal = (flags & 0x02) != 0;
 
-			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->LapStarted = TimeStamp::Now();
 			// Spawning as a real player clears any stale spectate state on the client; a spectate spawn
 			// sends a separate PlayerSetProperty::Spectate right after to set it back
 			if (playerType != PlayerType::Spectate) {
@@ -6474,7 +6474,7 @@ namespace Jazz2::Multiplayer
 						auto* player = static_cast<RemotablePlayer*>(_players[0]);
 						auto peerDesc = player->GetPeerDescriptor();
 						peerDesc->Laps = currentLaps;
-						peerDesc->LapStarted = TimeStamp::now();
+						peerDesc->LapStarted = TimeStamp::Now();
 					}
 				});
 				break;
@@ -6516,7 +6516,7 @@ namespace Jazz2::Multiplayer
 				peerDesc->Deaths = 0;
 				peerDesc->Kills = 0;
 				peerDesc->Laps = 0;
-				peerDesc->LapStarted = TimeStamp::now();
+				peerDesc->LapStarted = TimeStamp::Now();
 				peerDesc->TreasureCollected = 0;
 				peerDesc->DeathElapsedFrames = FLT_MAX;
 				peerDesc->RaceFinishOrder = 0;
@@ -6562,7 +6562,7 @@ namespace Jazz2::Multiplayer
 				}
 
 				Clock& c = nCine::clock();
-				std::uint64_t now = c.now() * 1000 / c.frequency();
+				std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
 
 				MemoryStream packetAck(24);
 				packetAck.WriteVariableUint32(_lastSpawnedActorId);
@@ -6996,7 +6996,7 @@ namespace Jazz2::Multiplayer
 			}
 			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
-			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->LapStarted = TimeStamp::Now();
 			peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
 			// Local players use the host's configured color so remote clients see it (sent via MarkRemoteActorAsPlayer)
 			peerDesc->FurColor = PreferencesCache::PlayerFurColor;
@@ -7030,7 +7030,7 @@ namespace Jazz2::Multiplayer
 		peerDesc->HasCarryOver = false;
 		peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 		peerDesc->LapsElapsedFrames = _elapsedFrames;
-		peerDesc->LapStarted = TimeStamp::now();
+		peerDesc->LapStarted = TimeStamp::Now();
 		peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
 		peerDesc->FurColor = PreferencesCache::PlayerFurColor;
 		return std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
@@ -7112,7 +7112,7 @@ namespace Jazz2::Multiplayer
 	std::uint64_t MpLevelHandler::GetAntiCheatTimeMs()
 	{
 		Clock& c = nCine::clock();
-		return c.now() * 1000 / c.frequency();
+		return c.Now() * 1000 / c.GetFrequency();
 	}
 
 	float MpLevelHandler::GetMaxPlausibleSpeed() const
@@ -8207,10 +8207,10 @@ namespace Jazz2::Multiplayer
 			s.Animation = (std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State
 				: (actor->_currentAnimation != nullptr ? actor->_currentAnimation->State : AnimState::Idle));
 
-			float rotation = actor->_renderer.rotation();
+			float rotation = actor->_renderer.GetRotation();
 			if (rotation < 0.0f) rotation += fRadAngle360;
 			s.Rotation = (std::uint16_t)(rotation * UINT16_MAX / fRadAngle360);
-			Vector2f scale = actor->_renderer.scale();
+			Vector2f scale = actor->_renderer.GetScale();
 			s.ScaleX = (std::uint16_t)Half{scale.X};
 			s.ScaleY = (std::uint16_t)Half{scale.Y};
 			Actors::ActorRendererType rendererType = actor->_renderer.GetRendererType();
@@ -8221,16 +8221,16 @@ namespace Jazz2::Multiplayer
 			s.RendererType = (std::uint8_t)rendererType;
 
 			s.Flags = 0;
-			if (actor->_renderer.isDrawEnabled()) {
+			if (actor->_renderer.IsDrawEnabled()) {
 				s.Flags |= 0x04;
 			}
 			if (actor->_renderer.AnimPaused) {
 				s.Flags |= 0x08;
 			}
-			if (actor->_renderer.isFlippedX()) {
+			if (actor->_renderer.IsFlippedX()) {
 				s.Flags |= 0x10;
 			}
-			if (actor->_renderer.isFlippedY()) {
+			if (actor->_renderer.IsFlippedY()) {
 				s.Flags |= 0x20;
 			}
 			s.IsPlayer = isPlayer;
@@ -8691,7 +8691,7 @@ namespace Jazz2::Multiplayer
 							packet.WriteVariableUint32((std::uint32_t)eventTile.EventFlags);
 							packet.WriteVariableInt32((std::int32_t)originTile.X);
 							packet.WriteVariableInt32((std::int32_t)originTile.Y);
-							packet.WriteVariableInt32((std::int32_t)remotingActor->_renderer.layer());
+							packet.WriteVariableInt32((std::int32_t)remotingActor->_renderer.GetLayer());
 
 							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
 						}
@@ -8761,7 +8761,7 @@ namespace Jazz2::Multiplayer
 					}
 
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
-					peerDesc->LapStarted = TimeStamp::now();
+					peerDesc->LapStarted = TimeStamp::Now();
 
 					Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
 					_players.push_back(ptr);
@@ -11679,16 +11679,16 @@ namespace Jazz2::Multiplayer
 		String metadataPath = fs::FromNativeSeparators(actor->_metadata->Path);
 
 		std::uint8_t flags = 0;
-		if (actor->_renderer.isDrawEnabled()) {
+		if (actor->_renderer.IsDrawEnabled()) {
 			flags |= 0x04;
 		}
 		if (actor->_renderer.AnimPaused) {
 			flags |= 0x08;
 		}
-		if (actor->_renderer.isFlippedX()) {
+		if (actor->_renderer.IsFlippedX()) {
 			flags |= 0x10;
 		}
-		if (actor->_renderer.isFlippedY()) {
+		if (actor->_renderer.IsFlippedY()) {
 			flags |= 0x20;
 		}
 
@@ -11709,20 +11709,20 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint8_t>(flags);
 		packet.WriteVariableInt32((std::int32_t)actor->_pos.X);
 		packet.WriteVariableInt32((std::int32_t)actor->_pos.Y);
-		packet.WriteVariableInt32((std::int32_t)actor->_renderer.layer());
+		packet.WriteVariableInt32((std::int32_t)actor->_renderer.GetLayer());
 		packet.WriteVariableUint32((std::uint32_t)state);
 		packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
 		packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
 		packet.WriteVariableUint32((std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State : actor->_currentAnimation->State));
 
-		float rotation = actor->_renderer.rotation();
+		float rotation = actor->_renderer.GetRotation();
 		if (rotation < 0.0f) rotation += fRadAngle360;
 		packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
-		Vector2f scale = actor->_renderer.scale();
+		Vector2f scale = actor->_renderer.GetScale();
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
-		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.blendingPreset());
+		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetBlendingPreset());
 
 		// The periodic update only resends lights that changed, so a newly created actor (and a peer that just
 		// joined, which gets one of these for every actor already in the level) needs the current state here

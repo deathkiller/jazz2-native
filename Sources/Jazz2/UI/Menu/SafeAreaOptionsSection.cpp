@@ -429,19 +429,19 @@ namespace Jazz2::UI::Menu
 
 	void SafeAreaOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		switch (event.type) {
+		switch (event.Type) {
 			case TouchEventType::Down:
 			case TouchEventType::PointerDown: {
 				if (_draggedPointerId != -1) {
 					break;
 				}
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex == -1) {
 					break;
 				}
 
-				float px = event.pointers[pointerIndex].x * (float)viewSize.X;
-				float py = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float px = event.Pointers[pointerIndex].X * (float)viewSize.X;
+				float py = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				Edges safe = GetSafeEdges(viewSize);
 
 				// The nearest of the four lines the finger is within reach of, so that a corner takes the edge
@@ -463,7 +463,7 @@ namespace Jazz2::UI::Menu
 
 				if (bestEdge >= 0) {
 					_draggedEdge = bestEdge;
-					_draggedPointerId = event.actionIndex;
+					_draggedPointerId = event.ActionIndex;
 					if (_list != nullptr) {
 						// Keep the row in step with the line being dragged, so the two never disagree
 						_list->SetSelectedIndex(bestEdge, false);
@@ -477,13 +477,13 @@ namespace Jazz2::UI::Menu
 				if (_draggedEdge < 0) {
 					break;
 				}
-				std::int32_t pointerIndex = event.findPointerIndex(_draggedPointerId);
+				std::int32_t pointerIndex = event.FindPointerIndex(_draggedPointerId);
 				if (pointerIndex == -1) {
 					break;
 				}
 
-				float px = event.pointers[pointerIndex].x * (float)viewSize.X;
-				float py = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float px = event.Pointers[pointerIndex].X * (float)viewSize.X;
+				float py = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 
 				float inset;
 				switch ((SafeAreaEdge)_draggedEdge) {
@@ -506,7 +506,7 @@ namespace Jazz2::UI::Menu
 			}
 			case TouchEventType::Up:
 			case TouchEventType::PointerUp: {
-				if (_draggedEdge >= 0 && event.actionIndex == _draggedPointerId) {
+				if (_draggedEdge >= 0 && event.ActionIndex == _draggedPointerId) {
 					_draggedEdge = -1;
 					_draggedPointerId = -1;
 					return;

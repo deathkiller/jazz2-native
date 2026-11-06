@@ -63,22 +63,22 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	bool OgcJoystickState::isButtonPressed(int buttonId) const
+	bool OgcJoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
-	unsigned char OgcJoystickState::hatState(int hatId) const
+	unsigned char OgcJoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
-	float OgcJoystickState::axisValue(int axisId) const
+	float OgcJoystickState::GetAxisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
-	void OgcJoystickState::resetJoystickState(int joyId)
+	void OgcJoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		_hatState = HatState::Centered;
@@ -86,48 +86,48 @@ namespace nCine::Backends
 		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
-	void OgcJoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void OgcJoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
-			_joyButtonEvent.joyId = _joyId;
-			_joyButtonEvent.buttonId = buttonId;
+		if (IInputManager::GetHandler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.JoyId = _joyId;
+			_joyButtonEvent.ButtonId = buttonId;
 			if (pressed) {
 				OgcInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
 				OgcInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
 		_buttonsState[buttonId] = pressed;
 	}
 
-	void OgcJoystickState::simulateHatEvent(unsigned char state)
+	void OgcJoystickState::SimulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && _hatState != state) {
-			_joyHatEvent.joyId = _joyId;
-			_joyHatEvent.hatId = 0;
-			_joyHatEvent.hatState = state;
+		if (IInputManager::GetHandler() != nullptr && _hatState != state) {
+			_joyHatEvent.JoyId = _joyId;
+			_joyHatEvent.HatId = 0;
+			_joyHatEvent.HatState = state;
 			OgcInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+			IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 		}
 		_hatState = state;
 	}
 
-	void OgcJoystickState::simulateAxisEvent(int axisId, float value)
+	void OgcJoystickState::SimulateAxisEvent(int axisId, float value)
 	{
 		if (axisId < 0 || axisId >= MaxNumAxes) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
-			_joyAxisEvent.joyId = _joyId;
-			_joyAxisEvent.axisId = axisId;
-			_joyAxisEvent.value = value;
+		if (IInputManager::GetHandler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
+			_joyAxisEvent.JoyId = _joyId;
+			_joyAxisEvent.AxisId = axisId;
+			_joyAxisEvent.Value = value;
 			OgcInputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
-			IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
+			IInputManager::GetHandler()->OnJoyAxisMoved(_joyAxisEvent);
 		}
 		_axesValuesState[axisId] = value;
 	}
@@ -137,33 +137,33 @@ namespace nCine::Backends
 		_joyMapping.Init(this);
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			_pads[i].State.resetJoystickState(i);
+			_pads[i].State.ResetJoystickState(i);
 		}
 		// PAD_Init()/WPAD_Init() ran in MainApplication::Run(); poll once so an already-plugged pad
 		// connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	OgcInputManager::~OgcInputManager() = default;
 
-	const MouseState& OgcInputManager::mouseState() const
+	const MouseState& OgcInputManager::GetMouseState() const
 	{
 		static NullInputManager::NullMouseState nullMouseState;
 		return nullMouseState;
 	}
 
-	const KeyboardState& OgcInputManager::keyboardState() const
+	const KeyboardState& OgcInputManager::GetKeyboardState() const
 	{
 		static NullInputManager::NullKeyboardState nullKeyboardState;
 		return nullKeyboardState;
 	}
 
-	bool OgcInputManager::isJoyPresent(int joyId) const
+	bool OgcInputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
-	const char* OgcInputManager::joyName(int joyId) const
+	const char* OgcInputManager::GetJoyName(int joyId) const
 	{
 		static_cast<void>(joyId);
 #if defined(DEATH_TARGET_WII)
@@ -173,41 +173,41 @@ namespace nCine::Backends
 #endif
 	}
 
-	const JoystickGuid OgcInputManager::joyGuid(int joyId) const
+	const JoystickGuid OgcInputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The state publishes the XInput-shaped layout, so the built-in default mapping applies
 		return JoystickGuidType::Xinput;
 	}
 
-	int OgcInputManager::joyNumButtons(int joyId) const
+	int OgcInputManager::GetJoyButtonCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return OgcJoystickState::MaxNumButtons;
 	}
 
-	int OgcInputManager::joyNumHats(int joyId) const
+	int OgcInputManager::GetJoyHatCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return OgcJoystickState::MaxNumHats;
 	}
 
-	int OgcInputManager::joyNumAxes(int joyId) const
+	int OgcInputManager::GetJoyAxisCount(int joyId) const
 	{
 		static_cast<void>(joyId);
 		return OgcJoystickState::MaxNumAxes;
 	}
 
-	const JoystickState& OgcInputManager::joystickState(int joyId) const
+	const JoystickState& OgcInputManager::GetJoystickState(int joyId) const
 	{
 		static OgcJoystickState nullJoystickState;
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _pads[joyId].State;
 		}
 		return nullJoystickState;
 	}
 
-	bool OgcInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool OgcInputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// GameCube pads only expose an on/off motor; treat any nonzero request as on for the poll period
 		if (joyId < 0 || joyId >= MaxJoysticks || !_pads[joyId].Connected) {
@@ -218,7 +218,7 @@ namespace nCine::Backends
 		return true;
 	}
 
-	bool OgcInputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool OgcInputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		static_cast<void>(joyId);
 		static_cast<void>(left);
@@ -227,20 +227,20 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void OgcInputManager::handleConnection(std::int32_t joyId, bool connected)
+	void OgcInputManager::HandleConnection(std::int32_t joyId, bool connected)
 	{
 		if (_pads[joyId].Connected == connected) {
 			return;
 		}
 		_pads[joyId].Connected = connected;
-		_joyConnectionEvent.joyId = joyId;
+		_joyConnectionEvent.JoyId = joyId;
 		if (connected) {
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
-			_pads[joyId].State.resetJoystickState(joyId);
+			_pads[joyId].State.ResetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
@@ -248,7 +248,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void OgcInputManager::updateJoystickStates()
+	void OgcInputManager::UpdateJoystickStates()
 	{
 		// PAD_ScanPads() reads every port and keeps what it read for PAD_ButtonsHeld() and the rest, and says
 		// which ports answered. That is the only read there can be in a frame: the serial interface hands each
@@ -269,7 +269,7 @@ namespace nCine::Backends
 			const bool wpadPresent = (WPAD_Probe(i, &wpadType) == WPAD_ERR_NONE);
 			connected |= wpadPresent;
 #endif
-			handleConnection(i, connected);
+			HandleConnection(i, connected);
 			if (!_pads[i].Connected) {
 				continue;
 			}
@@ -278,27 +278,27 @@ namespace nCine::Backends
 
 			if (useGcPad) {
 				const std::uint16_t held = PAD_ButtonsHeld(i);
-				state.simulateButtonEvent(ButtonA, (held & PAD_BUTTON_A) != 0);
-				state.simulateButtonEvent(ButtonB, (held & PAD_BUTTON_B) != 0);
-				state.simulateButtonEvent(ButtonX, (held & PAD_BUTTON_X) != 0);
-				state.simulateButtonEvent(ButtonY, (held & PAD_BUTTON_Y) != 0);
-				state.simulateButtonEvent(ButtonStart, (held & PAD_BUTTON_START) != 0);
-				state.simulateButtonEvent(ButtonRShoulder, (held & PAD_TRIGGER_Z) != 0);
-				state.simulateButtonEvent(ButtonLShoulder, (held & PAD_TRIGGER_L) != 0);
+				state.SimulateButtonEvent(ButtonA, (held & PAD_BUTTON_A) != 0);
+				state.SimulateButtonEvent(ButtonB, (held & PAD_BUTTON_B) != 0);
+				state.SimulateButtonEvent(ButtonX, (held & PAD_BUTTON_X) != 0);
+				state.SimulateButtonEvent(ButtonY, (held & PAD_BUTTON_Y) != 0);
+				state.SimulateButtonEvent(ButtonStart, (held & PAD_BUTTON_START) != 0);
+				state.SimulateButtonEvent(ButtonRShoulder, (held & PAD_TRIGGER_Z) != 0);
+				state.SimulateButtonEvent(ButtonLShoulder, (held & PAD_TRIGGER_L) != 0);
 
 				unsigned char hat = HatState::Centered;
 				if (held & PAD_BUTTON_UP) hat |= HatState::Up;
 				if (held & PAD_BUTTON_RIGHT) hat |= HatState::Right;
 				if (held & PAD_BUTTON_DOWN) hat |= HatState::Down;
 				if (held & PAD_BUTTON_LEFT) hat |= HatState::Left;
-				state.simulateHatEvent(hat);
+				state.SimulateHatEvent(hat);
 
-				state.simulateAxisEvent(0, NormalizeStick(PAD_StickX(i)));
-				state.simulateAxisEvent(1, -NormalizeStick(PAD_StickY(i)));
-				state.simulateAxisEvent(2, NormalizeStick(PAD_SubStickX(i)));
-				state.simulateAxisEvent(3, -NormalizeStick(PAD_SubStickY(i)));
-				state.simulateAxisEvent(4, NormalizeTrigger(PAD_TriggerL(i)));
-				state.simulateAxisEvent(5, NormalizeTrigger(PAD_TriggerR(i)));
+				state.SimulateAxisEvent(0, NormalizeStick(PAD_StickX(i)));
+				state.SimulateAxisEvent(1, -NormalizeStick(PAD_StickY(i)));
+				state.SimulateAxisEvent(2, NormalizeStick(PAD_SubStickX(i)));
+				state.SimulateAxisEvent(3, -NormalizeStick(PAD_SubStickY(i)));
+				state.SimulateAxisEvent(4, NormalizeTrigger(PAD_TriggerL(i)));
+				state.SimulateAxisEvent(5, NormalizeTrigger(PAD_TriggerR(i)));
 				continue;
 			}
 
@@ -311,22 +311,22 @@ namespace nCine::Backends
 					// The face buttons by position, not by their labels - the Classic Controller has the 3DS layout
 					// (A on the right, B at the bottom, X on top, Y on the left), and the XInput names and the Switch
 					// labels the menus draw for them are positions, see CtrInputManager
-					state.simulateButtonEvent(ButtonA, (held & WPAD_CLASSIC_BUTTON_B) != 0);
-					state.simulateButtonEvent(ButtonB, (held & WPAD_CLASSIC_BUTTON_A) != 0);
-					state.simulateButtonEvent(ButtonX, (held & WPAD_CLASSIC_BUTTON_Y) != 0);
-					state.simulateButtonEvent(ButtonY, (held & WPAD_CLASSIC_BUTTON_X) != 0);
-					state.simulateButtonEvent(ButtonBack, (held & WPAD_CLASSIC_BUTTON_MINUS) != 0);
-					state.simulateButtonEvent(ButtonGuide, (held & WPAD_CLASSIC_BUTTON_HOME) != 0);
-					state.simulateButtonEvent(ButtonStart, (held & WPAD_CLASSIC_BUTTON_PLUS) != 0);
-					state.simulateButtonEvent(ButtonLShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_L) != 0);
-					state.simulateButtonEvent(ButtonRShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_R) != 0);
+					state.SimulateButtonEvent(ButtonA, (held & WPAD_CLASSIC_BUTTON_B) != 0);
+					state.SimulateButtonEvent(ButtonB, (held & WPAD_CLASSIC_BUTTON_A) != 0);
+					state.SimulateButtonEvent(ButtonX, (held & WPAD_CLASSIC_BUTTON_Y) != 0);
+					state.SimulateButtonEvent(ButtonY, (held & WPAD_CLASSIC_BUTTON_X) != 0);
+					state.SimulateButtonEvent(ButtonBack, (held & WPAD_CLASSIC_BUTTON_MINUS) != 0);
+					state.SimulateButtonEvent(ButtonGuide, (held & WPAD_CLASSIC_BUTTON_HOME) != 0);
+					state.SimulateButtonEvent(ButtonStart, (held & WPAD_CLASSIC_BUTTON_PLUS) != 0);
+					state.SimulateButtonEvent(ButtonLShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_L) != 0);
+					state.SimulateButtonEvent(ButtonRShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_R) != 0);
 
 					unsigned char hat = HatState::Centered;
 					if (held & WPAD_CLASSIC_BUTTON_UP) hat |= HatState::Up;
 					if (held & WPAD_CLASSIC_BUTTON_RIGHT) hat |= HatState::Right;
 					if (held & WPAD_CLASSIC_BUTTON_DOWN) hat |= HatState::Down;
 					if (held & WPAD_CLASSIC_BUTTON_LEFT) hat |= HatState::Left;
-					state.simulateHatEvent(hat);
+					state.SimulateHatEvent(hat);
 
 					const joystick_t& left = data->exp.classic.ljs;
 					const joystick_t& right = data->exp.classic.rjs;
@@ -338,28 +338,28 @@ namespace nCine::Backends
 						const float range = (pos >= center ? max - center : center - min);
 						return (range > 0.0f ? (pos - center) / range : 0.0f);
 					};
-					state.simulateAxisEvent(0, normalize(left, true));
-					state.simulateAxisEvent(1, -normalize(left, false));
-					state.simulateAxisEvent(2, normalize(right, true));
-					state.simulateAxisEvent(3, -normalize(right, false));
-					state.simulateAxisEvent(4, (data->exp.classic.l_shoulder * 2.0f) - 1.0f);
-					state.simulateAxisEvent(5, (data->exp.classic.r_shoulder * 2.0f) - 1.0f);
+					state.SimulateAxisEvent(0, normalize(left, true));
+					state.SimulateAxisEvent(1, -normalize(left, false));
+					state.SimulateAxisEvent(2, normalize(right, true));
+					state.SimulateAxisEvent(3, -normalize(right, false));
+					state.SimulateAxisEvent(4, (data->exp.classic.l_shoulder * 2.0f) - 1.0f);
+					state.SimulateAxisEvent(5, (data->exp.classic.r_shoulder * 2.0f) - 1.0f);
 				} else {
 					// Sideways Wii Remote fallback: 2 for A, 1 for B, the D-pad rotated for horizontal play
-					state.simulateButtonEvent(ButtonA, (held & WPAD_BUTTON_2) != 0);
-					state.simulateButtonEvent(ButtonB, (held & WPAD_BUTTON_1) != 0);
-					state.simulateButtonEvent(ButtonX, (held & WPAD_BUTTON_A) != 0);
-					state.simulateButtonEvent(ButtonY, (held & WPAD_BUTTON_B) != 0);
-					state.simulateButtonEvent(ButtonBack, (held & WPAD_BUTTON_MINUS) != 0);
-					state.simulateButtonEvent(ButtonGuide, (held & WPAD_BUTTON_HOME) != 0);
-					state.simulateButtonEvent(ButtonStart, (held & WPAD_BUTTON_PLUS) != 0);
+					state.SimulateButtonEvent(ButtonA, (held & WPAD_BUTTON_2) != 0);
+					state.SimulateButtonEvent(ButtonB, (held & WPAD_BUTTON_1) != 0);
+					state.SimulateButtonEvent(ButtonX, (held & WPAD_BUTTON_A) != 0);
+					state.SimulateButtonEvent(ButtonY, (held & WPAD_BUTTON_B) != 0);
+					state.SimulateButtonEvent(ButtonBack, (held & WPAD_BUTTON_MINUS) != 0);
+					state.SimulateButtonEvent(ButtonGuide, (held & WPAD_BUTTON_HOME) != 0);
+					state.SimulateButtonEvent(ButtonStart, (held & WPAD_BUTTON_PLUS) != 0);
 
 					unsigned char hat = HatState::Centered;
 					if (held & WPAD_BUTTON_RIGHT) hat |= HatState::Up;
 					if (held & WPAD_BUTTON_DOWN) hat |= HatState::Right;
 					if (held & WPAD_BUTTON_LEFT) hat |= HatState::Down;
 					if (held & WPAD_BUTTON_UP) hat |= HatState::Left;
-					state.simulateHatEvent(hat);
+					state.SimulateHatEvent(hat);
 				}
 			}
 #endif

@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Returns the current timestamp of the interpolation clock, in milliseconds */
 		static std::int64_t Now() {
 			Clock& c = nCine::clock();
-			return std::int64_t(c.now() * 1000 / c.frequency());
+			return std::int64_t(c.Now() * 1000 / c.GetFrequency());
 		}
 
 		/** @brief Resets the whole buffer to a single position (spawn, warp, forced resync), disabling interpolation */

@@ -119,7 +119,7 @@ namespace Jazz2::Actors::Collectibles
 		} else if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
 			if (_timeLeft <= 0.0f) {
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()), Explosion::Type::Generator);
 				DecreaseHealth(INT32_MAX);
 			}
 		}
@@ -178,7 +178,7 @@ namespace Jazz2::Actors::Collectibles
 	void CollectibleBase::OnCollect(Player* player)
 	{
 		player->AddScore(_scoreValue);
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), Explosion::Type::Generator);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()), Explosion::Type::Generator);
 		DecreaseHealth(INT32_MAX);
 	}
 

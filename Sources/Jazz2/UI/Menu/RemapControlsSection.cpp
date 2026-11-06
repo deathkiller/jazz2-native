@@ -138,14 +138,14 @@ namespace Jazz2::UI::Menu
 			const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 			std::int32_t joyStatesCount = 0;
 			for (std::uint32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)) && waitingForInput; i++) {
-				if (input.isJoyMapped(i)) {
-					joyStates[joyStatesCount] = &input.joyMappedState(i);
+				if (input.IsJoyMapped(i)) {
+					joyStates[joyStatesCount] = &input.GetJoyMappedState(i);
 					auto& prevState = _joyStatesLast[joyStatesCount];
 					auto& currentState = *joyStates[joyStatesCount];
 
 					for (std::int32_t j = 0; j < JoyMappedState::NumButtons && waitingForInput; j++) {
-						bool wasPressed = prevState.isButtonPressed((ButtonName)j);
-						bool isPressed = currentState.isButtonPressed((ButtonName)j);
+						bool wasPressed = prevState.IsButtonPressed((ButtonName)j);
+						bool isPressed = currentState.IsButtonPressed((ButtonName)j);
 						if (isPressed != wasPressed && isPressed) {
 							newTarget = ControlScheme::CreateTarget(joyStatesCount, (ButtonName)j);
 							PlayerAction collidingAction;
@@ -163,8 +163,8 @@ namespace Jazz2::UI::Menu
 					}
 
 					for (std::int32_t j = 0; j < JoyMappedState::NumAxes && waitingForInput; j++) {
-						float prevValue = prevState.axisValue((AxisName)j);
-						float currentValue = currentState.axisValue((AxisName)j);
+						float prevValue = prevState.GetAxisValue((AxisName)j);
+						float currentValue = currentState.GetAxisValue((AxisName)j);
 						bool wasPressed = std::abs(prevValue) > 0.5f;
 						bool isPressed = std::abs(currentValue) > 0.5f;
 						if (isPressed != wasPressed && isPressed) {
@@ -346,7 +346,7 @@ namespace Jazz2::UI::Menu
 		}
 		PlayerAction action = _actions[row];
 
-		if (event.sym == Keys::Escape) {
+		if (event.Sym == Keys::Escape) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_waitForInput = false;
 			_waitForInputPrev = true;
@@ -354,7 +354,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		bool waitingForInput = true;
-		MappingTarget newTarget = ControlScheme::CreateTarget(event.sym);
+		MappingTarget newTarget = ControlScheme::CreateTarget(event.Sym);
 		PlayerAction collidingAction;
 		std::int32_t collidingAssignment;
 		if (!HasCollision(action, newTarget, collidingAction, collidingAssignment)) {
@@ -551,7 +551,7 @@ namespace Jazz2::UI::Menu
 				}
 			} else {
 				Keys key = (Keys)(data & ControlScheme::ButtonMask);
-				value = theApplication().GetInputManager().getKeyName(key);
+				value = theApplication().GetInputManager().GetKeyName(key);
 			}
 
 			if (!value.empty()) {
@@ -643,8 +643,8 @@ namespace Jazz2::UI::Menu
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				_joyStatesLast[joyStatesCount++] = input.joyMappedState(i);
+			if (input.IsJoyMapped(i)) {
+				_joyStatesLast[joyStatesCount++] = input.GetJoyMappedState(i);
 			}
 		}
 	}

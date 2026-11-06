@@ -30,9 +30,9 @@ namespace Jazz2::UI::Menu
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
 		auto& overlayPass = root->GetActiveOverlayPass();
-		_canvasBackground->setParent(overlayPass.GetNode());
-		_canvasClipped->setParent(overlayPass.GetClippedNode());
-		_canvasOverlay->setParent(overlayPass.GetOverlayNode());
+		_canvasBackground->SetParent(overlayPass.GetNode());
+		_canvasClipped->SetParent(overlayPass.GetClippedNode());
+		_canvasOverlay->SetParent(overlayPass.GetOverlayNode());
 
 		UpdateContentBounds(overlayPass.GetViewSize());
 
@@ -54,9 +54,9 @@ namespace Jazz2::UI::Menu
 
 	InGameMenu::~InGameMenu()
 	{
-		_canvasBackground->setParent(nullptr);
-		_canvasClipped->setParent(nullptr);
-		_canvasOverlay->setParent(nullptr);
+		_canvasBackground->SetParent(nullptr);
+		_canvasClipped->SetParent(nullptr);
+		_canvasOverlay->SetParent(nullptr);
 	}
 
 	void InGameMenu::MenuBackgroundCanvas::OnUpdate(float timeMult)
@@ -118,9 +118,9 @@ namespace Jazz2::UI::Menu
 	{
 		// The active overlay pass can change (e.g. when the splitscreen player count changes), so re-attach the canvases
 		auto& overlayPass = _root->GetActiveOverlayPass();
-		_canvasBackground->setParent(overlayPass.GetNode());
-		_canvasClipped->setParent(overlayPass.GetClippedNode());
-		_canvasOverlay->setParent(overlayPass.GetOverlayNode());
+		_canvasBackground->SetParent(overlayPass.GetNode());
+		_canvasClipped->SetParent(overlayPass.GetClippedNode());
+		_canvasOverlay->SetParent(overlayPass.GetOverlayNode());
 
 		UpdateContentBounds(Vector2i(width, height));
 

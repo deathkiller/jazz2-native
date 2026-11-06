@@ -12,23 +12,23 @@ namespace nCine
 {
 	AppConfiguration::AppConfiguration()
 		:
-		resolution(0, 0),
-		windowPosition(WindowPositionIgnore, WindowPositionIgnore),
-		frameLimit(0),
-		frameTimerLogInterval(5.0f),
-		fullscreen(false),
-		resizable(true),
-		windowScaling(true),
-		useBufferMapping(false),
-		useBufferStorage(true),
+		Resolution(0, 0),
+		WindowPosition(WindowPositionIgnore, WindowPositionIgnore),
+		FrameLimit(0),
+		FrameTimerLogInterval(5.0f),
+		Fullscreen(false),
+		Resizable(true),
+		WindowScaling(true),
+		UseBufferMapping(false),
+		UseBufferStorage(true),
 		// Only the build-time override lives here. A batch size that follows from the rendering device is the
 		// device's own business and is published as IntValues::MaxBatchSize by the backend that knows it
 		// (GLRhiCapabilities for the ANGLE/Emscripten/WinRT targets, GxmRhiCapabilities, RsxRhiCapabilities);
 		// everything that sizes a batch consults that, so leaving this 0 is what lets the device speak.
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
-		fixedBatchSize(WITH_FIXED_BATCH_SIZE),
+		FixedBatchSize(WITH_FIXED_BATCH_SIZE),
 #else
-		fixedBatchSize(0),
+		FixedBatchSize(0),
 #endif
 		// These two also decide how many draws an aggregated mesh costs: a tile layer goes out as one command
 		// per RenderResources::GetMaxQuadsPerDraw() quads, and a quad is 128 bytes of vertices and 12 of
@@ -37,27 +37,27 @@ namespace nCine
 		// how many of those a frame needed moved with the camera. 512 KB / 128 KB is a whole layer in one
 		// draw at any resolution the game runs at, for under 2 MB. The console backends keep the small pair,
 		// where a few hundred quads fit either way and buffer memory is what is short, keyed on the backend
-		// like `useBufferMapping` below, the ES2 profile being Vita's vitaGL.
+		// like `UseBufferMapping` below, the ES2 profile being Vita's vitaGL.
 #if !defined(WITH_IMGUI) && (defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || \
 		defined(WITH_RHI_GX) || defined(WITH_RHI_GS) || defined(WITH_RHI_PICA) || defined(WITH_RHI_SOFTWARE) || \
 		defined(WITH_RHI_LEGACYGL) || defined(WITH_RHI_GXM) || defined(WITH_RHI_RSX) || defined(RHI_GL_PROFILE_ES2))
-		vboSize(64 * 1024),
-		iboSize(8 * 1024),
+		VboSize(64 * 1024),
+		IboSize(8 * 1024),
 #else
-		vboSize(512 * 1024),
-		iboSize(128 * 1024),
+		VboSize(512 * 1024),
+		IboSize(128 * 1024),
 #endif
-		vaoPoolSize(16),
-		renderCommandPoolSize(32),
+		VaoPoolSize(16),
+		RenderCommandPoolSize(32),
 #if defined(WITH_IMGUI)
-		withDebugOverlay(false),
+		WithDebugOverlay(false),
 #endif
-		withAudio(true),
-		withGraphics(true),
-		withScenegraph(true),
-		withThreads(false),
-		withVSync(true),
-		withGlDebugContext(false),
+		WithAudio(true),
+		WithGraphics(true),
+		WithScenegraph(true),
+		WithThreads(false),
+		WithVSync(true),
+		WithGlDebugContext(false),
 
 		// Compile-time variables
 #if defined(WITH_RHI_LEGACYGL)
@@ -88,19 +88,19 @@ namespace nCine
 		_argv(nullptr)
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		dataPath() = "assets:/"_s;
+		GetDataPath() = "assets:/"_s;
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-		dataPath() = fs::PathSeparator;
+		GetDataPath() = fs::PathSeparator;
 		// Always disable mapping on Emscripten as it is not supported by WebGL 2
-		useBufferMapping = false;
+		UseBufferMapping = false;
 #else
-		dataPath() = "Content"_s + fs::PathSeparator;
+		GetDataPath() = "Content"_s + fs::PathSeparator;
 #endif
 
 #if defined(RHI_GL_PROFILE_ES2)
 		// glMapBufferRange()/glUnmapBuffer() are ES 3.0 (OES_mapbuffer is write-only and not assumed), so the
 		// streaming buffers must use the glBufferSubData() host-copy path on the ES2 profile
-		useBufferMapping = false;
+		UseBufferMapping = false;
 #endif
 
 #if defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || defined(WITH_RHI_GX) || \
@@ -124,26 +124,26 @@ namespace nCine
 		// staging buffers it drops also stopped competing for memory bandwidth with the audio mixer thread
 		// (updatePlayers() fell from about 2.1 ms to well under 1). Only the GU number is measured; the
 		// other four are enabled on the strength of their buffer classes being identical.
-		useBufferMapping = true;
+		UseBufferMapping = true;
 #endif
 
 #if defined(DEATH_TARGET_UNIX) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 		// DPI queries do not seem to work reliably on X11 with SDL2
-		windowScaling = false;
+		WindowScaling = false;
 #endif
 	}
 
-	const String& AppConfiguration::dataPath() const
+	const String& AppConfiguration::GetDataPath() const
 	{
 		return _dataPath;
 	}
 
-	String& AppConfiguration::dataPath()
+	String& AppConfiguration::GetDataPath()
 	{
 		return _dataPath;
 	}
 
-	const StringView AppConfiguration::argv(std::size_t index) const
+	const StringView AppConfiguration::GetArgv(std::size_t index) const
 	{
 		return _argv[index];
 	}

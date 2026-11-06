@@ -924,13 +924,13 @@ namespace Jazz2::Editor
 			return false;
 		}
 		// Shift pressed or released while it's dragged moves it at once, not with the next move of the pointer
-		_offGridPointer.Modifiers = event.mod;
+		_offGridPointer.Modifiers = event.Mod;
 		bool taken = false;
-		if ((event.mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
-			if (event.sym == Keys::X) {
+		if ((event.Mod & (KeyMod::Ctrl | KeyMod::Alt)) == 0) {
+			if (event.Sym == Keys::X) {
 				_snapX = true;
 				taken = true;
-			} else if (event.sym == Keys::Y) {
+			} else if (event.Sym == Keys::Y) {
 				_snapY = true;
 				taken = true;
 			}
@@ -941,13 +941,13 @@ namespace Jazz2::Editor
 
 	void EventTool::OnKeyReleased(const KeyboardEvent& event)
 	{
-		if (event.sym == Keys::X) {
+		if (event.Sym == Keys::X) {
 			_snapX = false;
-		} else if (event.sym == Keys::Y) {
+		} else if (event.Sym == Keys::Y) {
 			_snapY = false;
 		}
 		if (_mode == Mode::MoveOffGrid) {
-			_offGridPointer.Modifiers = event.mod;
+			_offGridPointer.Modifiers = event.Mod;
 			_offGridTarget = GetOffGridTarget(_offGridPointer);
 		}
 	}

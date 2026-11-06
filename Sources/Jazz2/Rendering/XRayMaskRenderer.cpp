@@ -21,7 +21,7 @@ namespace Jazz2::Rendering
 	XRayMaskRenderer::XRayMaskRenderer(PlayerViewport* owner)
 		: _owner(owner)
 	{
-		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+		SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 
 	bool XRayMaskRenderer::OnDraw(RenderQueue& renderQueue)
@@ -57,12 +57,12 @@ namespace Jazz2::Rendering
 		for (const auto& actor : actors) {
 			const auto& renderer = actor->_renderer;
 			// Only what is behind the frontmost x-ray layer shows through it
-			if (!renderer.isDrawEnabled() || renderer.parent() == nullptr || renderer.absLayer() >= depth) {
+			if (!renderer.IsDrawEnabled() || renderer.GetParent() == nullptr || renderer.GetAbsLayer() >= depth) {
 				continue;
 			}
-			const Texture* texture = renderer.texture();
-			const float alpha = renderer.absAlpha();
-			if (texture == nullptr || alpha <= 0.0f || !renderer.aabb().Overlaps(cullingRect)) {
+			const Texture* texture = renderer.GetTexture();
+			const float alpha = renderer.GetAbsAlpha();
+			if (texture == nullptr || alpha <= 0.0f || !renderer.GetAabb().Overlaps(cullingRect)) {
 				continue;
 			}
 
@@ -91,12 +91,12 @@ namespace Jazz2::Rendering
 			// The quad the sprite vertex stage synthesizes (see the canvas template in ShaderParser.cpp): the
 			// corners of the sprite's size through its model matrix, the flips already folded into the texture
 			// rectangle. Written out column-major, as the vertex stage multiplies them
-			const Matrix4x4f& m = renderer.worldMatrix();
-			const float w = renderer.width(), h = renderer.height();
-			const Recti texRect = renderer.texRect();
+			const Matrix4x4f& m = renderer.GetWorldMatrix();
+			const float w = renderer.GetWidth(), h = renderer.GetHeight();
+			const Recti texRect = renderer.GetTexRect();
 			const float texScaleX = texRect.W / float(texSize.X), texBiasX = texRect.X / float(texSize.X);
 			const float texScaleY = texRect.H / float(texSize.Y), texBiasY = texRect.Y / float(texSize.Y);
-			const float paletteOffset = renderer.paletteOffset();
+			const float paletteOffset = renderer.GetPaletteOffset();
 
 			auto& vertices = _vertices[verticesIndex];
 			const std::size_t base = vertices.size();

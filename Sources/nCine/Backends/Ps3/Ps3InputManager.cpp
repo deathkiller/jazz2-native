@@ -105,22 +105,22 @@ namespace nCine::Backends
 		}
 	}
 
-	bool Ps3JoystickState::isButtonPressed(int buttonId) const
+	bool Ps3JoystickState::IsButtonPressed(int buttonId) const
 	{
 		return (buttonId >= 0 && buttonId < MaxNumButtons ? _buttonsState[buttonId] : false);
 	}
 
-	unsigned char Ps3JoystickState::hatState(int hatId) const
+	unsigned char Ps3JoystickState::GetHatState(int hatId) const
 	{
 		return (hatId == 0 ? _hatState : 0);
 	}
 
-	float Ps3JoystickState::axisValue(int axisId) const
+	float Ps3JoystickState::GetAxisValue(int axisId) const
 	{
 		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
-	void Ps3JoystickState::resetJoystickState(int joyId)
+	void Ps3JoystickState::ResetJoystickState(int joyId)
 	{
 		_joyId = joyId;
 		std::memset(_buttonsState, 0, sizeof(_buttonsState));
@@ -131,39 +131,39 @@ namespace nCine::Backends
 		}
 	}
 
-	void Ps3JoystickState::simulateButtonEvent(int buttonId, bool pressed)
+	void Ps3JoystickState::SimulateButtonEvent(int buttonId, bool pressed)
 	{
 		if (buttonId < 0 || buttonId >= MaxNumButtons || _buttonsState[buttonId] == pressed) {
 			return;
 		}
 		_buttonsState[buttonId] = pressed;
 
-		_joyButtonEvent.joyId = _joyId;
-		_joyButtonEvent.buttonId = buttonId;
+		_joyButtonEvent.JoyId = _joyId;
+		_joyButtonEvent.ButtonId = buttonId;
 		if (pressed) {
 			Ps3InputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
-			IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
+			IInputManager::GetHandler()->OnJoyButtonPressed(_joyButtonEvent);
 		} else {
 			Ps3InputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
-			IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
+			IInputManager::GetHandler()->OnJoyButtonReleased(_joyButtonEvent);
 		}
 	}
 
-	void Ps3JoystickState::simulateHatEvent(unsigned char state)
+	void Ps3JoystickState::SimulateHatEvent(unsigned char state)
 	{
 		if (_hatState == state) {
 			return;
 		}
 		_hatState = state;
 
-		_joyHatEvent.joyId = _joyId;
-		_joyHatEvent.hatId = 0;
-		_joyHatEvent.hatState = state;
+		_joyHatEvent.JoyId = _joyId;
+		_joyHatEvent.HatId = 0;
+		_joyHatEvent.HatState = state;
 		Ps3InputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
-		IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
+		IInputManager::GetHandler()->OnJoyHatMoved(_joyHatEvent);
 	}
 
-	void Ps3JoystickState::simulateAxisEvent(int axisId, float value)
+	void Ps3JoystickState::SimulateAxisEvent(int axisId, float value)
 	{
 		if (axisId < 0 || axisId >= MaxNumAxes ||
 			std::fabs(_axesValuesState[axisId] - value) < AxisEventTolerance) {
@@ -171,11 +171,11 @@ namespace nCine::Backends
 		}
 		_axesValuesState[axisId] = value;
 
-		_joyAxisEvent.joyId = _joyId;
-		_joyAxisEvent.axisId = axisId;
-		_joyAxisEvent.value = value;
+		_joyAxisEvent.JoyId = _joyId;
+		_joyAxisEvent.AxisId = axisId;
+		_joyAxisEvent.Value = value;
 		Ps3InputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
-		IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
+		IInputManager::GetHandler()->OnJoyAxisMoved(_joyAxisEvent);
 	}
 
 	Ps3InputManager::Ps3InputManager()
@@ -193,11 +193,11 @@ namespace nCine::Backends
 		}
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			_pads[i].State.resetJoystickState(i);
+			_pads[i].State.ResetJoystickState(i);
 		}
 
 		// Poll once so an already-connected controller connects before the first frame
-		updateJoystickStates();
+		UpdateJoystickStates();
 	}
 
 	Ps3InputManager::~Ps3InputManager()
@@ -206,62 +206,62 @@ namespace nCine::Backends
 		sysUtilUnregisterCallback(0);
 	}
 
-	const MouseState& Ps3InputManager::mouseState() const
+	const MouseState& Ps3InputManager::GetMouseState() const
 	{
 		static NullInputManager::NullMouseState nullMouseState;
 		return nullMouseState;
 	}
 
-	const KeyboardState& Ps3InputManager::keyboardState() const
+	const KeyboardState& Ps3InputManager::GetKeyboardState() const
 	{
 		static NullInputManager::NullKeyboardState nullKeyboardState;
 		return nullKeyboardState;
 	}
 
-	bool Ps3InputManager::isJoyPresent(int joyId) const
+	bool Ps3InputManager::IsJoyPresent(int joyId) const
 	{
 		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
-	const char* Ps3InputManager::joyName(int joyId) const
+	const char* Ps3InputManager::GetJoyName(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? "PlayStation 3 Controller" : nullptr);
+		return (IsJoyPresent(joyId) ? "PlayStation 3 Controller" : nullptr);
 	}
 
-	const JoystickGuid Ps3InputManager::joyGuid(int joyId) const
+	const JoystickGuid Ps3InputManager::GetJoyGuid(int joyId) const
 	{
 		static_cast<void>(joyId);
 		// The engine's built-in "xinput" mapping is what the button order above targets
 		return JoystickGuidType::Xinput;
 	}
 
-	int Ps3InputManager::joyNumButtons(int joyId) const
+	int Ps3InputManager::GetJoyButtonCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps3JoystickState::MaxNumButtons : -1);
+		return (IsJoyPresent(joyId) ? Ps3JoystickState::MaxNumButtons : -1);
 	}
 
-	int Ps3InputManager::joyNumHats(int joyId) const
+	int Ps3InputManager::GetJoyHatCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps3JoystickState::MaxNumHats : -1);
+		return (IsJoyPresent(joyId) ? Ps3JoystickState::MaxNumHats : -1);
 	}
 
-	int Ps3InputManager::joyNumAxes(int joyId) const
+	int Ps3InputManager::GetJoyAxisCount(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? Ps3JoystickState::MaxNumAxes : -1);
+		return (IsJoyPresent(joyId) ? Ps3JoystickState::MaxNumAxes : -1);
 	}
 
-	const JoystickState& Ps3InputManager::joystickState(int joyId) const
+	const JoystickState& Ps3InputManager::GetJoystickState(int joyId) const
 	{
-		if (isJoyPresent(joyId)) {
+		if (IsJoyPresent(joyId)) {
 			return _pads[joyId].State;
 		}
 		static NullInputManager::NullJoystickState nullJoystickState;
 		return nullJoystickState;
 	}
 
-	bool Ps3InputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
+	bool Ps3InputManager::JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
-		if (!isJoyPresent(joyId)) {
+		if (!IsJoyPresent(joyId)) {
 			return false;
 		}
 
@@ -281,7 +281,7 @@ namespace nCine::Backends
 		return (ioPadSetActDirect(std::uint32_t(joyId), &actParam) == 0);
 	}
 
-	bool Ps3InputManager::joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
+	bool Ps3InputManager::JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs)
 	{
 		// No actuators in the triggers on any PlayStation 3 controller
 		static_cast<void>(joyId);
@@ -296,13 +296,13 @@ namespace nCine::Backends
 		return _sysUtilExitRequested;
 	}
 
-	void Ps3InputManager::handleConnection(std::int32_t joyId, bool connected)
+	void Ps3InputManager::HandleConnection(std::int32_t joyId, bool connected)
 	{
 		if (_pads[joyId].Connected == connected) {
 			return;
 		}
 		_pads[joyId].Connected = connected;
-		_joyConnectionEvent.joyId = joyId;
+		_joyConnectionEvent.JoyId = joyId;
 		if (connected) {
 			_joyMapping.OnJoyConnected(_joyConnectionEvent);
 			if (_inputEventHandler != nullptr) {
@@ -312,7 +312,7 @@ namespace nCine::Backends
 			// A pad that goes away loses its pressure-sensitive mode with the port, so it is re-applied when
 			// (and if) the same port comes back
 			_pads[joyId].PressureMode = false;
-			_pads[joyId].State.resetJoystickState(joyId);
+			_pads[joyId].State.ResetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
@@ -320,7 +320,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void Ps3InputManager::updateJoystickStates()
+	void Ps3InputManager::UpdateJoystickStates()
 	{
 		// Drains the XMB event queue onto SysUtilCallback above. This has to happen every frame: the firmware
 		// treats a title that stops checking as unresponsive.
@@ -331,7 +331,7 @@ namespace nCine::Backends
 			// Without the port table there is no way to tell a disconnected pad from an idle one, so every
 			// port is reported gone rather than left reading its last state forever
 			for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-				handleConnection(i, false);
+				HandleConnection(i, false);
 			}
 			return;
 		}
@@ -339,7 +339,7 @@ namespace nCine::Backends
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
 			// Bit 0 of port_status is the connection flag; the remaining bits report assignment changes
 			if ((info.port_status[i] & 1) == 0) {
-				handleConnection(i, false);
+				HandleConnection(i, false);
 				continue;
 			}
 
@@ -347,10 +347,10 @@ namespace nCine::Backends
 			if (ioPadGetData(std::uint32_t(i), &data) != 0 || data.len == 0) {
 				// A connected port with no fresh report is not an error - the pad simply has not sent a packet
 				// since the last poll - so the previous state stands rather than being cleared
-				handleConnection(i, true);
+				HandleConnection(i, true);
 				continue;
 			}
-			handleConnection(i, true);
+			HandleConnection(i, true);
 
 			// Turn on the analogue button pressures once per connection, and only where the controller says it
 			// has them; without this L2/R2 report zero and the triggers below fall back to their digital bits
@@ -364,16 +364,16 @@ namespace nCine::Backends
 			Ps3JoystickState& joyState = _pads[i].State;
 
 			// Unlike the PS2's active-low word, a padData bit is 1 when the button is pressed
-			joyState.simulateButtonEvent(ButtonA, data.BTN_CROSS != 0);
-			joyState.simulateButtonEvent(ButtonB, data.BTN_CIRCLE != 0);
-			joyState.simulateButtonEvent(ButtonX, data.BTN_SQUARE != 0);
-			joyState.simulateButtonEvent(ButtonY, data.BTN_TRIANGLE != 0);
-			joyState.simulateButtonEvent(ButtonLShoulder, data.BTN_L1 != 0);
-			joyState.simulateButtonEvent(ButtonRShoulder, data.BTN_R1 != 0);
-			joyState.simulateButtonEvent(ButtonBack, data.BTN_SELECT != 0);
-			joyState.simulateButtonEvent(ButtonStart, data.BTN_START != 0);
-			joyState.simulateButtonEvent(ButtonLStick, data.BTN_L3 != 0);
-			joyState.simulateButtonEvent(ButtonRStick, data.BTN_R3 != 0);
+			joyState.SimulateButtonEvent(ButtonA, data.BTN_CROSS != 0);
+			joyState.SimulateButtonEvent(ButtonB, data.BTN_CIRCLE != 0);
+			joyState.SimulateButtonEvent(ButtonX, data.BTN_SQUARE != 0);
+			joyState.SimulateButtonEvent(ButtonY, data.BTN_TRIANGLE != 0);
+			joyState.SimulateButtonEvent(ButtonLShoulder, data.BTN_L1 != 0);
+			joyState.SimulateButtonEvent(ButtonRShoulder, data.BTN_R1 != 0);
+			joyState.SimulateButtonEvent(ButtonBack, data.BTN_SELECT != 0);
+			joyState.SimulateButtonEvent(ButtonStart, data.BTN_START != 0);
+			joyState.SimulateButtonEvent(ButtonLStick, data.BTN_L3 != 0);
+			joyState.SimulateButtonEvent(ButtonRStick, data.BTN_R3 != 0);
 
 			unsigned char hat = 0;
 			if (data.BTN_UP != 0) {
@@ -388,20 +388,20 @@ namespace nCine::Backends
 			if (data.BTN_LEFT != 0) {
 				hat |= HatLeft;
 			}
-			joyState.simulateHatEvent(hat);
+			joyState.SimulateHatEvent(hat);
 
-			joyState.simulateAxisEvent(0, NormalizeStick(data.ANA_L_H));
-			joyState.simulateAxisEvent(1, NormalizeStick(data.ANA_L_V));
-			joyState.simulateAxisEvent(2, NormalizeStick(data.ANA_R_H));
-			joyState.simulateAxisEvent(3, NormalizeStick(data.ANA_R_V));
+			joyState.SimulateAxisEvent(0, NormalizeStick(data.ANA_L_H));
+			joyState.SimulateAxisEvent(1, NormalizeStick(data.ANA_L_V));
+			joyState.SimulateAxisEvent(2, NormalizeStick(data.ANA_R_H));
+			joyState.SimulateAxisEvent(3, NormalizeStick(data.ANA_R_V));
 
 			// Prefer the analogue pressure, but fall back to the digital bit for a pad that has none (the
 			// Bluray remote, and third-party controllers that report no pressure capability). A held trigger
 			// always reads a non-zero pressure, so a zero here with the bit set can only be the latter.
-			joyState.simulateAxisEvent(4, data.PRE_L2 != 0
+			joyState.SimulateAxisEvent(4, data.PRE_L2 != 0
 				? NormalizeTrigger(data.PRE_L2)
 				: (data.BTN_L2 != 0 ? 1.0f : -1.0f));
-			joyState.simulateAxisEvent(5, data.PRE_R2 != 0
+			joyState.SimulateAxisEvent(5, data.PRE_R2 != 0
 				? NormalizeTrigger(data.PRE_R2)
 				: (data.BTN_R2 != 0 ? 1.0f : -1.0f));
 		}

@@ -40,8 +40,8 @@ namespace nCine::Backends
 	EglGfxDevice::EglGfxDevice(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(WindowMode(0, 0, 0, 0, true, false, false), contextInfo, displayMode), _state(state)
 	{
-		updateMonitors();
-		initDevice();
+		UpdateMonitors();
+		InitDevice();
 	}
 
 	EglGfxDevice::~EglGfxDevice()
@@ -65,35 +65,35 @@ namespace nCine::Backends
 		_surface = EGL_NO_SURFACE;
 	}
 
-	void EglGfxDevice::update()
+	void EglGfxDevice::Update()
 	{
 		eglSwapBuffers(_display, _surface);
 	}
 
-	const IGfxDevice::VideoMode& EglGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& EglGfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		if (monitorIndex >= _numMonitors) {
 			monitorIndex = 0;
 		}
 
-		AndroidJniClass_Display display = AndroidJniWrap_DisplayManager::getDisplay(monitorIndex);
-		AndroidJniClass_DisplayMode mode = display.getMode();
-		convertVideoModeInfo(mode, _currentVideoMode);
+		AndroidJniClass_Display display = AndroidJniWrap_DisplayManager::GetDisplay(monitorIndex);
+		AndroidJniClass_DisplayMode mode = display.GetMode();
+		ConvertVideoModeInfo(mode, _currentVideoMode);
 
 		return _currentVideoMode;
 	}
 
-	bool EglGfxDevice::setVideoMode(unsigned int modeIndex)
+	bool EglGfxDevice::SetVideoMode(unsigned int modeIndex)
 	{
-		const int monitorIndex = windowMonitorIndex();
+		const int monitorIndex = GetWindowMonitorIndex();
 		DEATH_ASSERT(monitorIndex >= 0);
 
-		const unsigned int numVideoModes = _monitors[monitorIndex].numVideoModes;
+		const unsigned int numVideoModes = _monitors[monitorIndex].VideoModeCount;
 		DEATH_ASSERT(modeIndex < numVideoModes);
 
 #if defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 30
-		if (modeIndex < _monitors[monitorIndex].numVideoModes) {
-			const float refreshRate = _monitors[monitorIndex].videoModes[modeIndex].refreshRate;
+		if (modeIndex < _monitors[monitorIndex].VideoModeCount) {
+			const float refreshRate = _monitors[monitorIndex].VideoModes[modeIndex].RefreshRate;
 			const int8_t compatibility = ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_DEFAULT;
 #	if __ANDROID_API__ >= 31
 			const int8_t changeFrameRateStrategy = ANATIVEWINDOW_CHANGE_FRAME_RATE_ALWAYS;
@@ -107,7 +107,7 @@ namespace nCine::Backends
 		return false;
 	}
 
-	void EglGfxDevice::createSurface()
+	void EglGfxDevice::CreateSurface()
 	{
 		if (_state->window != nullptr) {
 			_surface = eglCreateWindowSurface(_display, _config, _state->window, nullptr);
@@ -115,19 +115,19 @@ namespace nCine::Backends
 		}
 	}
 
-	void EglGfxDevice::bindContext()
+	void EglGfxDevice::BindContext()
 	{
 		const EGLBoolean ret = eglMakeCurrent(_display, _surface, _surface, _context);
 		FATAL_ASSERT_MSG(ret != EGL_FALSE, "eglMakeCurrent() returned EGL_FALSE");
 	}
 
-	void EglGfxDevice::unbindContext()
+	void EglGfxDevice::UnbindContext()
 	{
 		const EGLBoolean ret = eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 		FATAL_ASSERT_MSG(ret != EGL_FALSE, "eglMakeCurrent() returned EGL_FALSE");
 	}
 
-	Vector2i EglGfxDevice::querySurfaceSize()
+	Vector2i EglGfxDevice::QuerySurfaceSize()
 	{
 		eglQuerySurface(_display, _surface, EGL_WIDTH, &_width);
 		eglQuerySurface(_display, _surface, EGL_HEIGHT, &_height);
@@ -136,19 +136,19 @@ namespace nCine::Backends
 		return Vector2i(_width, _height);
 	}
 
-	bool EglGfxDevice::isModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode)
+	bool EglGfxDevice::IsModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode)
 	{
-		const EGLint renderableTypeBit = (contextInfo.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
+		const EGLint renderableTypeBit = (contextInfo.MajorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 
 		const EGLint attribs[] = {
 			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
 			EGL_RENDERABLE_TYPE, renderableTypeBit,
-			EGL_BLUE_SIZE, static_cast<int>(mode.blueBits()),
-			EGL_GREEN_SIZE, static_cast<int>(mode.greenBits()),
-			EGL_RED_SIZE, static_cast<int>(mode.redBits()),
-			EGL_ALPHA_SIZE, static_cast<int>(mode.alphaBits()),
-			EGL_DEPTH_SIZE, static_cast<int>(mode.depthBits()),
-			EGL_STENCIL_SIZE, static_cast<int>(mode.stencilBits()),
+			EGL_BLUE_SIZE, static_cast<int>(mode.GetBlueBits()),
+			EGL_GREEN_SIZE, static_cast<int>(mode.GetGreenBits()),
+			EGL_RED_SIZE, static_cast<int>(mode.GetRedBits()),
+			EGL_ALPHA_SIZE, static_cast<int>(mode.GetAlphaBits()),
+			EGL_DEPTH_SIZE, static_cast<int>(mode.GetDepthBits()),
+			EGL_STENCIL_SIZE, static_cast<int>(mode.GetStencilBits()),
 			EGL_NONE
 		};
 
@@ -191,43 +191,43 @@ namespace nCine::Backends
 		}
 
 		EglGfxDevice& gfxDevice = static_cast<EglGfxDevice&>(theApplication().GetGfxDevice());
-		gfxDevice.updateMonitors();
+		gfxDevice.UpdateMonitors();
 	}
 #endif
 
-	void EglGfxDevice::initDevice()
+	void EglGfxDevice::InitDevice()
 	{
-		const EGLint renderableTypeBit = (_contextInfo.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
+		const EGLint renderableTypeBit = (_contextInfo.MajorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 
 		const EGLint attribs[] = {
 			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
 			EGL_RENDERABLE_TYPE, renderableTypeBit,
-			EGL_BLUE_SIZE, static_cast<int>(_displayMode.blueBits()),
-			EGL_GREEN_SIZE, static_cast<int>(_displayMode.greenBits()),
-			EGL_RED_SIZE, static_cast<int>(_displayMode.redBits()),
-			EGL_ALPHA_SIZE, static_cast<int>(_displayMode.alphaBits()),
-			EGL_DEPTH_SIZE, static_cast<int>(_displayMode.depthBits()),
-			EGL_STENCIL_SIZE, static_cast<int>(_displayMode.stencilBits()),
+			EGL_BLUE_SIZE, static_cast<int>(_displayMode.GetBlueBits()),
+			EGL_GREEN_SIZE, static_cast<int>(_displayMode.GetGreenBits()),
+			EGL_RED_SIZE, static_cast<int>(_displayMode.GetRedBits()),
+			EGL_ALPHA_SIZE, static_cast<int>(_displayMode.GetAlphaBits()),
+			EGL_DEPTH_SIZE, static_cast<int>(_displayMode.GetDepthBits()),
+			EGL_STENCIL_SIZE, static_cast<int>(_displayMode.GetStencilBits()),
 			EGL_NONE
 		};
 
-		//const EGLint glProfileMaskBit = _contextInfo.coreProfile ? EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR :
+		//const EGLint glProfileMaskBit = _contextInfo.CoreProfile ? EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR :
 		//	EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR; // disabled
 
 		EGLint attribList[] = {
-			EGL_CONTEXT_MAJOR_VERSION_KHR, static_cast<EGLint>(_contextInfo.majorVersion),
-			EGL_CONTEXT_MINOR_VERSION_KHR, static_cast<EGLint>(_contextInfo.minorVersion),
+			EGL_CONTEXT_MAJOR_VERSION_KHR, static_cast<EGLint>(_contextInfo.MajorVersion),
+			EGL_CONTEXT_MINOR_VERSION_KHR, static_cast<EGLint>(_contextInfo.MinorVersion),
 			//EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, glProfileMaskBit, // disabled
 			EGL_NONE, EGL_NONE,
 			EGL_NONE
 		};
 
 #if !defined(DEATH_TARGET_ANDROID) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
-		if (_contextInfo.forwardCompatible || _contextInfo.debugContext) {
+		if (_contextInfo.ForwardCompatible || _contextInfo.DebugContext) {
 			attribList[4] = EGL_CONTEXT_FLAGS_KHR;
 			EGLint contextFlagsMask = 0;
-			contextFlagsMask |= (_contextInfo.forwardCompatible) ? EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR : 0;
-			contextFlagsMask |= (_contextInfo.debugContext) ? EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR : 0;
+			contextFlagsMask |= (_contextInfo.ForwardCompatible) ? EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR : 0;
+			contextFlagsMask |= (_contextInfo.DebugContext) ? EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR : 0;
 			attribList[5] = contextFlagsMask;
 		}
 #endif
@@ -244,15 +244,15 @@ namespace nCine::Backends
 		ANativeWindow_setBuffersGeometry(_state->window, 0, 0, format);
 #endif
 
-		createSurface();
+		CreateSurface();
 		_context = eglCreateContext(_display, _config, nullptr, attribList);
 		FATAL_ASSERT_MSG(_context != EGL_NO_CONTEXT, "eglCreateContext() returned EGL_NO_CONTEXT");
 
-		bindContext();
-		Vector2i size = querySurfaceSize();
+		BindContext();
+		Vector2i size = QuerySurfaceSize();
 
 #if !defined(DEATH_TARGET_ANDROID)
-		const EGLint swapInterval = _mode.hasVSync() ? 1 : 0;
+		const EGLint swapInterval = _mode.HasVSync() ? 1 : 0;
 		eglSwapInterval(_display, swapInterval);
 #endif
 
@@ -268,7 +268,7 @@ namespace nCine::Backends
 		LOGI("Surface configuration is size:{}x{}, RGBA:{}{}{}{}, depth:{}, stencil:{}, samples:{}", size.X, size.Y, red, green, blue, alpha, depth, stencil, samples);
 	}
 
-	void EglGfxDevice::updateMonitors()
+	void EglGfxDevice::UpdateMonitors()
 	{
 		const int32_t densityEnum = AConfiguration_getDensity(_state->config);
 		unsigned int density = ACONFIGURATION_DENSITY_MEDIUM;
@@ -280,38 +280,38 @@ namespace nCine::Backends
 		const float densityScale = density / static_cast<float>(ACONFIGURATION_DENSITY_MEDIUM);
 
 		AndroidJniClass_Display displays[MaxMonitors];
-		const int monitorCount = AndroidJniWrap_DisplayManager::getDisplays(displays, MaxMonitors);
+		const int monitorCount = AndroidJniWrap_DisplayManager::GetDisplays(displays, MaxMonitors);
 		DEATH_ASSERT(monitorCount >= 1);
 		_numMonitors = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
 
 		for (unsigned int i = 0; i < _numMonitors; i++) {
-			displays[i].getName(_monitorNames[i], MaxMonitorNameLength);
-			_monitors[i].name = _monitorNames[i];
+			displays[i].GetName(_monitorNames[i], MaxMonitorNameLength);
+			_monitors[i].Name = _monitorNames[i];
 
-			_monitors[i].position.X = 0;
-			_monitors[i].position.Y = 0;
-			_monitors[i].scale.X = densityScale;
-			_monitors[i].scale.Y = densityScale;
+			_monitors[i].Position.X = 0;
+			_monitors[i].Position.Y = 0;
+			_monitors[i].Scale.X = densityScale;
+			_monitors[i].Scale.Y = densityScale;
 
 			AndroidJniClass_DisplayMode modes[MaxVideoModes];
-			const int modeCount = displays[i].getSupportedModes(modes, MaxVideoModes);
-			_monitors[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
+			const int modeCount = displays[i].GetSupportedModes(modes, MaxVideoModes);
+			_monitors[i].VideoModeCount = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
 
-			for (unsigned int j = 0; j < _monitors[i].numVideoModes; j++) {
-				convertVideoModeInfo(modes[j], _monitors[i].videoModes[j]);
+			for (unsigned int j = 0; j < _monitors[i].VideoModeCount; j++) {
+				ConvertVideoModeInfo(modes[j], _monitors[i].VideoModes[j]);
 			}
 		}
 	}
 
-	void EglGfxDevice::convertVideoModeInfo(const AndroidJniClass_DisplayMode& javaDisplayMode, IGfxDevice::VideoMode& videoMode) const
+	void EglGfxDevice::ConvertVideoModeInfo(const AndroidJniClass_DisplayMode& javaDisplayMode, IGfxDevice::VideoMode& videoMode) const
 	{
-		videoMode.width = static_cast<unsigned int>(javaDisplayMode.getPhysicalWidth());
-		videoMode.height = static_cast<unsigned int>(javaDisplayMode.getPhysicalHeight());
-		videoMode.refreshRate = javaDisplayMode.getRefreshRate();
+		videoMode.Width = static_cast<unsigned int>(javaDisplayMode.GetPhysicalWidth());
+		videoMode.Height = static_cast<unsigned int>(javaDisplayMode.GetPhysicalHeight());
+		videoMode.RefreshRate = javaDisplayMode.GetRefreshRate();
 		// `android.view.Display.getPixelFormat()` has been deprecated in API level 17.
 		// It now always returns `android.graphics.PixelFormat.RGBA_8888`.
-		videoMode.redBits = 8;
-		videoMode.greenBits = 8;
-		videoMode.blueBits = 8;
+		videoMode.RedBits = 8;
+		videoMode.GreenBits = 8;
+		videoMode.BlueBits = 8;
 	}
 }

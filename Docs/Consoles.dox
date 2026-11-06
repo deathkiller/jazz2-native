@@ -885,7 +885,7 @@ Dolphin's TCP socket on port <b>55020</b>. Without the adapter nothing is writte
 
 -   <b>The logical view is 640x480 on a 4:3 set</b> (not 720x405), ~1.4x the pixels. With widescreen
     set in the system settings, the view is fitted to 16:9 (640x360) and the TV stretches it
-    @m_span{m-text m-dim} (@cpp nCine::Backends::OgcGfxDevice::displayAspect() @ce, reads
+    @m_span{m-text m-dim} (@cpp nCine::Backends::OgcGfxDevice::GetDisplayAspect() @ce, reads
     `CONF_GetAspectRatio()`) @m_endspan.
 -   No post-processing tier: no rescale filters, the lightmap is combined on the CPU (skipped in fully
     lit levels, see @ref consoles-common-skips), converted in one pass into the 4x4-tiled RGBA8 GPU
@@ -1705,7 +1705,7 @@ Black        | Never --- none of the executable ran: the loader, the file or the
     failures. The allocator hands out whole 8 KB <b>pages</b>, because the swizzle within a page depends on
     the pixel storage mode.
 -   <b>The picture is composed for 4:3, not for 640x448.</b> An NTSC pixel here is a seventh taller than
-    wide. @cpp Ps2GfxDevice::displayAspect() @ce reports that and the view is fitted to it. The view is
+    wide. @cpp Ps2GfxDevice::GetDisplayAspect() @ce reports that and the view is fitted to it. The view is
     <b>597x448</b>, so nothing is resampled vertically
     @m_span{m-text m-dim} (see @cpp Jazz2::Rendering::UpscaleRenderPass::DefaultViewWidth @ce, which
     raises the bound from the 16:9 720x405 of other platforms) @m_endspan.

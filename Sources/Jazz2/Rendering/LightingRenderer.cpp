@@ -26,7 +26,7 @@ namespace Jazz2::Rendering
 		: _owner(owner)
 	{
 		_emittedLightsCache.reserve(32);
-		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+		SetVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
 
 	bool LightingRenderer::OnDraw(RenderQueue& renderQueue)

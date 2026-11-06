@@ -9,7 +9,7 @@ namespace nCine
 	{
 	}
 
-	void RectAnimation::updateFrame(float timeMult)
+	void RectAnimation::UpdateFrame(float timeMult)
 	{
 		// No frame calculation if the animation is paused or has only one rect
 		if (_isPaused || _rects.size() < 2) {
@@ -51,19 +51,19 @@ namespace nCine
 		}
 	}
 
-	void RectAnimation::setFrame(std::uint32_t frameNum)
+	void RectAnimation::SetFrame(std::uint32_t frameNum)
 	{
 		DEATH_ASSERT(frameNum < _rects.size());
 		_currentFrame = frameNum;
 	}
 
-	void RectAnimation::addRect(const Recti& rect, float frameDuration)
+	void RectAnimation::AddRect(const Recti& rect, float frameDuration)
 	{
 		_rects.push_back(rect);
 		_frameDurations.push_back(frameDuration);
 	}
 
-	void RectAnimation::addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameDuration)
+	void RectAnimation::AddRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameDuration)
 	{
 		_rects.push_back(Recti(x, y, w, h));
 		_frameDurations.push_back(frameDuration);

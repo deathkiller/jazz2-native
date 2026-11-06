@@ -1013,8 +1013,8 @@ namespace
 		fs::MountAsPersistent(configDir);
 		_configPath = "/Persistent/Jazz2.config"_s;
 
-		for (int32_t i = 0; i < config.argc(); i++) {
-			auto arg = config.argv(i);
+		for (int32_t i = 0; i < config.GetArgc(); i++) {
+			auto arg = config.GetArgv(i);
 			if (arg == "/reset-config"_s) {
 				resetConfig = true;
 			}
@@ -1027,11 +1027,11 @@ namespace
 		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
 		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
-		for (std::int32_t i = 0; i < config.argc(); i++) {
-			auto arg = config.argv(i);
+		for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+			auto arg = config.GetArgv(i);
 			if (arg == "/config"_s) {
-				if (i + 1 < config.argc()) {
-					_configPath = config.argv(i + 1);
+				if (i + 1 < config.GetArgc()) {
+					_configPath = config.GetArgv(i + 1);
 					overrideConfigPath = true;
 					i++;
 				}
@@ -1284,8 +1284,8 @@ namespace
 		}
 #		elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 		DEATH_UNUSED bool logFileSpecified = false;
-		for (std::int32_t i = 0; i < config.argc(); i++) {
-			auto arg = config.argv(i);
+		for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+			auto arg = config.GetArgv(i);
 			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
 				fs::CreateDirectories(configDir);
 				if (arg.size() > "/log:file:"_s.size()) {
@@ -1715,8 +1715,8 @@ namespace
 		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 		// Override some settings by command-line arguments
-		for (std::int32_t i = 0; i < config.argc(); i++) {
-			auto arg = config.argv(i);
+		for (std::int32_t i = 0; i < config.GetArgc(); i++) {
+			auto arg = config.GetArgv(i);
 			if (arg == "/bypass-cache"_s) {
 				BypassCache = true;
 			} else if (arg == "/cheats"_s) {
@@ -1757,8 +1757,8 @@ namespace
 #	endif
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (arg == "/gpu-workaround"_s) {
-				if (i + 1 < config.argc() && config.argv(i + 1) == "fixed-batch-size"_s) {
-					config.fixedBatchSize = 10;
+				if (i + 1 < config.GetArgc() && config.GetArgv(i + 1) == "fixed-batch-size"_s) {
+					config.FixedBatchSize = 10;
 				}
 			}
 #	endif
@@ -2005,12 +2005,12 @@ namespace
 		// console, so it stands in if the mode cannot be queried. The vitaGL build has no surface of its own to
 		// resize (it renders straight into the panel's framebuffer), so it takes the generic path instead.
 		auto& gfxDevice = theApplication().GetGfxDevice();
-		const auto& videoMode = gfxDevice.currentVideoMode();
-		Vector2i panel((std::int32_t)videoMode.width, (std::int32_t)videoMode.height);
+		const auto& videoMode = gfxDevice.GetCurrentVideoMode();
+		Vector2i panel((std::int32_t)videoMode.Width, (std::int32_t)videoMode.Height);
 		if (panel.X <= 0 || panel.Y <= 0) {
-			panel = gfxDevice.resolution();
+			panel = gfxDevice.GetResolution();
 		}
-		gfxDevice.setDrawableSize(panel.X * RenderingResolutionPercent / 100, panel.Y * RenderingResolutionPercent / 100);
+		gfxDevice.SetDrawableSize(panel.X * RenderingResolutionPercent / 100, panel.Y * RenderingResolutionPercent / 100);
 #endif
 	}
 
@@ -2124,8 +2124,8 @@ namespace
 		};
 
 		auto sdkVersion = Backends::AndroidJniHelper::SdkVersion();
-		auto deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
-		auto deviceModel = Backends::AndroidJniClass_Version::deviceModel();
+		auto deviceBrand = Backends::AndroidJniClass_Version::GetDeviceBrand();
+		auto deviceModel = Backends::AndroidJniClass_Version::GetDeviceModel();
 
 		char deviceName[64];
 		std::size_t deviceNameLength = 0;

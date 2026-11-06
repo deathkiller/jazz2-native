@@ -16,7 +16,7 @@ namespace nCine::RHI::GL
 	{
 	}
 
-	void GLVertexFormat::Attribute::setVbo(const GLBufferObject* vbo)
+	void GLVertexFormat::Attribute::SetVbo(const GLBufferObject* vbo)
 	{
 		_vbo = vbo;
 		_vboId = (vbo != nullptr ? vbo->GetUniqueId() : 0);

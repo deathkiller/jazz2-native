@@ -17,7 +17,7 @@ namespace nCine
 		@brief Scene node that emits and simulates a pool of textured particles
 		
 		Owns a fixed pool of @ref Particle child nodes that are recycled between alive and dead states.
-		@ref emitParticles() spawns particles from a @ref ParticleInitializer, and each frame the attached
+		@ref EmitParticles() spawns particles from a @ref ParticleInitializer, and each frame the attached
 		@ref ParticleAffector list animates every alive particle before it is drawn as part of the scene graph.
 	*/
 	class ParticleSystem : public SceneNode
@@ -34,61 +34,61 @@ namespace nCine
 		ParticleSystem& operator=(ParticleSystem&&);
 
 		/** @brief Returns a copy of this object */
-		inline ParticleSystem clone() const {
+		inline ParticleSystem Clone() const {
 			return ParticleSystem(*this);
 		}
 
 		/** @brief Adds a particle affector, taking ownership of it */
-		inline void addAffector(std::unique_ptr<ParticleAffector> affector) {
+		inline void AddAffector(std::unique_ptr<ParticleAffector> affector) {
 			_affectors.push_back(affector.release());
 		}
 		/** @brief Deletes all particle affectors */
-		void clearAffectors();
+		void ClearAffectors();
 		/** @brief Emits particles with the specified initialization parameters */
-		void emitParticles(const ParticleInitializer& init);
+		void EmitParticles(const ParticleInitializer& init);
 		/** @brief Kills all alive particles, returning them to the pool */
-		void killParticles();
+		void KillParticles();
 
 		/** @brief Returns whether the system is simulated in local space */
-		inline bool inLocalSpace() const {
+		inline bool IsInLocalSpace() const {
 			return _inLocalSpace;
 		}
 		/** @brief Sets whether the system is simulated in local space */
-		inline void setInLocalSpace(bool inLocalSpace) {
+		inline void SetInLocalSpace(bool inLocalSpace) {
 			_inLocalSpace = inLocalSpace;
 		}
 
 		/** @brief Returns the total number of particles in the pool */
-		inline std::uint32_t numParticles() const {
+		inline std::uint32_t GetParticleCount() const {
 			return std::uint32_t(_particleArray.size());
 		}
 		/** @brief Returns the number of particles currently alive */
-		inline std::uint32_t numAliveParticles() const {
+		inline std::uint32_t GetAliveParticleCount() const {
 			return std::uint32_t(_particleArray.size()) - _poolTop - 1;
 		}
 
 		/** @brief Sets the texture object for every particle */
-		void setTexture(Texture* texture);
+		void SetTexture(Texture* texture);
 		/** @brief Sets the texture source rectangle for every particle */
-		void setTexRect(const Recti& rect);
+		void SetTexRect(const Recti& rect);
 
 		/** @brief Sets the transformation anchor point for every particle */
-		void setAnchorPoint(float xx, float yy);
+		void SetAnchorPoint(float xx, float yy);
 		/** @brief Sets the transformation anchor point for every particle with a `Vector2f` */
-		void setAnchorPoint(Vector2f point);
+		void SetAnchorPoint(Vector2f point);
 
 		/** @brief Flips the texture rect horizontally for every particle */
-		void setFlippedX(bool flippedX);
+		void SetFlippedX(bool flippedX);
 		/** @brief Flips the texture rect vertically for every particle */
-		void setFlippedY(bool flippedY);
+		void SetFlippedY(bool flippedY);
 
 		/** @brief Sets the blending factors preset for every particle */
-		void setBlendingPreset(DrawableNode::BlendingPreset blendingPreset);
+		void SetBlendingPreset(DrawableNode::BlendingPreset blendingPreset);
 		/** @brief Sets the source and destination blending factors for every particle */
-		void setBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor);
+		void SetBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor);
 
 		/** @brief Sets the rendering layer for every particle */
-		void setLayer(uint16_t layer);
+		void SetLayer(uint16_t layer);
 
 		void OnUpdate(float timeMult) override;
 

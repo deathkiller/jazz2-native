@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../RhiTypes.h"
+#include "../RhiAuxiliarySwapchain.h"
 #include "../../../Primitives/Rect.h"
 #include "../../../Primitives/Colorf.h"
 
@@ -188,12 +189,12 @@ namespace nCine::RHI::D3D11
 			is dragged out of the main window. Unlike the main swap chain, an auxiliary one is rendered into and
 			presented directly, with no intermediate present texture.
 
-			@param windowHandle  Native `HWND` of the auxiliary window, passed as a `void*`
-			@param width         Back-buffer width in pixels
-			@param height        Back-buffer height in pixels
+			@param desc    Window to present into, its @ref AuxiliarySwapchainDesc::WindowHandle is the native `HWND`
+			@param width   Back-buffer width in pixels
+			@param height  Back-buffer height in pixels
 			@returns An opaque handle to pass to the other `*Auxiliary*` functions, or `nullptr` on failure
 		*/
-		static void* CreateAuxiliarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
+		static void* CreateAuxiliarySwapchain(AuxiliarySwapchainDesc desc, std::int32_t width, std::int32_t height);
 		/** @brief Releases an auxiliary swap chain created by @ref CreateAuxiliarySwapchain() */
 		static void DestroyAuxiliarySwapchain(void* handle);
 		/** @brief Resizes an auxiliary swap chain's back-buffer */

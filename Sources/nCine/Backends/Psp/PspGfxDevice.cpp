@@ -19,13 +19,13 @@ namespace nCine::Backends
 		_drawableHeight = 272;
 		_isFullscreen = true;
 
-		_currentVideoMode.width = std::uint32_t(_width);
-		_currentVideoMode.height = std::uint32_t(_height);
+		_currentVideoMode.Width = std::uint32_t(_width);
+		_currentVideoMode.Height = std::uint32_t(_height);
 		// The PSP panel is driven at ~59.94 Hz, which is what sceDisplayWaitVblankStart() paces to
-		_currentVideoMode.refreshRate = 59.94f;
+		_currentVideoMode.RefreshRate = 59.94f;
 
-		updateMonitors();
-		initDeviceViewport();
+		UpdateMonitors();
+		InitDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} (GU)", _width, _height);
 	}
@@ -37,7 +37,7 @@ namespace nCine::Backends
 		RHI::Device::ShutdownGu();
 	}
 
-	void PspGfxDevice::update()
+	void PspGfxDevice::Update()
 	{
 		// Close the frame's display list, flip the buffers, and drop any unconsumed lighting entries,
 		// mirroring the Dreamcast backend's present path
@@ -45,62 +45,62 @@ namespace nCine::Backends
 		RHI::Device::EndFrame();
 	}
 
-	void PspGfxDevice::setSwapInterval(int interval)
+	void PspGfxDevice::SetSwapInterval(int interval)
 	{
 		// The present always waits for vblank
 		static_cast<void>(interval);
 	}
 
-	void PspGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void PspGfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		static_cast<void>(fullscreen);
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void PspGfxDevice::setWindowPosition(int x, int y)
+	void PspGfxDevice::SetWindowPosition(int x, int y)
 	{
 		static_cast<void>(x);
 		static_cast<void>(y);
 	}
 
-	void PspGfxDevice::setWindowSize(int width, int height)
+	void PspGfxDevice::SetWindowSize(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void PspGfxDevice::setWindowTitle(StringView windowTitle)
+	void PspGfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		static_cast<void>(windowTitle);
 	}
 
-	void PspGfxDevice::setWindowIcon(StringView windowIconFilename)
+	void PspGfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 		static_cast<void>(windowIconFilename);
 	}
 
-	const IGfxDevice::VideoMode& PspGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& PspGfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
 		return _currentVideoMode;
 	}
 
-	void PspGfxDevice::setResolutionInternal(int width, int height)
+	void PspGfxDevice::SetResolutionInternal(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void PspGfxDevice::updateMonitors()
+	void PspGfxDevice::UpdateMonitors()
 	{
 		// One fixed "monitor" (the built-in panel), so windowScalingFactor() and the monitor queries stay valid
 		_numMonitors = 1;
-		_monitors[0].name = "LCD";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "LCD";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 	}
 }
 

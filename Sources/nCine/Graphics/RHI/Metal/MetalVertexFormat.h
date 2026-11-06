@@ -93,7 +93,7 @@ namespace nCine::RHI::Metal
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const MetalBufferObject* vbo) {
+			inline void SetVbo(const MetalBufferObject* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

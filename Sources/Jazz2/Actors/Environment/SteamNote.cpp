@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Environment
 			if (_cooldown <= 0.0f) {
 				_renderer.AnimTime = 0.0f;
 				_renderer.AnimPaused = false;
-				_renderer.setDrawEnabled(true);
+				_renderer.SetDrawEnabled(true);
 
 				PlaySfx("Appear"_s, 0.4f);
 			}
@@ -66,7 +66,7 @@ namespace Jazz2::Actors::Environment
 	void SteamNote::OnAnimationFinished()
 	{
 		_renderer.AnimPaused = true;
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 		_cooldown = 80.0f;
 	}
 

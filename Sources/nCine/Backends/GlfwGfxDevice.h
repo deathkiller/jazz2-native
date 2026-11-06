@@ -52,43 +52,43 @@ namespace nCine::Backends
 		GlfwGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~GlfwGfxDevice() override;
 
-		void setSwapInterval(int interval) override;
+		void SetSwapInterval(int interval) override;
 
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
 
-		void update() override;
+		void Update() override;
 
-		void setWindowPosition(int x, int y) override;
-		void setWindowSize(int width, int height) override;
+		void SetWindowPosition(int x, int y) override;
+		void SetWindowSize(int width, int height) override;
 
-		inline void setWindowTitle(StringView windowTitle) override {
+		inline void SetWindowTitle(StringView windowTitle) override {
 			glfwSetWindowTitle(_windowHandle, String::nullTerminatedView(windowTitle).data());
 		}
-		void setWindowIcon(StringView windowIconFilename) override;
+		void SetWindowIcon(StringView windowIconFilename) override;
 
-		const Vector2i windowPosition() const override;
+		const Vector2i GetWindowPosition() const override;
 
-		void flashWindow() const override;
+		void FlashWindow() const override;
 
-		unsigned int primaryMonitorIndex() const override;
-		unsigned int windowMonitorIndex() const override;
+		unsigned int GetPrimaryMonitorIndex() const override;
+		unsigned int GetWindowMonitorIndex() const override;
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
-		bool setVideoMode(unsigned int modeIndex) override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
+		bool SetVideoMode(unsigned int modeIndex) override;
 
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
-		bool supportsAuxiliaryWindows() const override;
-		std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
-		bool globalMousePosition(Vector2i& position) const override;
-		float windowContentScale() const override;
-		bool globalMouseButtons(std::uint32_t& buttons) const override;
-		bool desktopWorkArea(Vector2i point, Recti& area) const override;
+		bool SupportsAuxiliaryWindows() const override;
+		std::unique_ptr<AuxiliaryWindow> CreateAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
+		bool GetGlobalMousePosition(Vector2i& position) const override;
+		float GetWindowContentScale() const override;
+		bool GetGlobalMouseButtons(std::uint32_t& buttons) const override;
+		bool GetDesktopWorkArea(Vector2i point, Recti& area) const override;
 #endif
 
 	protected:
-		void setResolutionInternal(int width, int height) override;
+		void SetResolutionInternal(int width, int height) override;
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
 	private:
 		/** @brief GLFW3 window handle */
@@ -115,22 +115,22 @@ namespace nCine::Backends
 		GlfwGfxDevice& operator=(const GlfwGfxDevice&) = delete;
 
 		/** @brief Initializes the video subsystem (GLFW) */
-		void initGraphics();
+		void InitGraphics();
 		/** @brief Initializes the OpenGL graphics context */
-		void initDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling);
+		void InitDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling);
 
-		void updateMonitorScaling(unsigned int monitorIndex);
+		void UpdateMonitorScaling(unsigned int monitorIndex);
 
-		int retrieveMonitorIndex(GLFWmonitor* monitor) const;
-		void convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;
+		int RetrieveMonitorIndex(GLFWmonitor* monitor) const;
+		void ConvertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;
 
 		/** @brief Returns the window handle used by GLFW3 */
-		static GLFWwindow* windowHandle() {
+		static GLFWwindow* GetWindowHandle() {
 			return _windowHandle;
 		}
 
 		/** @brief Callback for `glfwSetErrorCallback()` */
-		static void errorCallback(int error, const char* description);
+		static void ErrorCallback(int error, const char* description);
 	};
 
 }

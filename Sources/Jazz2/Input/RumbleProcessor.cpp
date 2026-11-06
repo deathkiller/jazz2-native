@@ -27,8 +27,8 @@ namespace Jazz2::Input
 
 		auto& inputManager = theApplication().GetInputManager();
 		for (std::int32_t j = 0; j < ControlScheme::MaxConnectedGamepads; j++) {
-			inputManager.joystickRumble(j, 0.0f, 0.0f, 0);
-			inputManager.joystickRumbleTriggers(j, 0.0f, 0.0f, 0);
+			inputManager.JoystickRumble(j, 0.0f, 0.0f, 0);
+			inputManager.JoystickRumbleTriggers(j, 0.0f, 0.0f, 0);
 		}
 	}
 
@@ -40,7 +40,7 @@ namespace Jazz2::Input
 
 		auto& inputManager = theApplication().GetInputManager();
 
-		if (!inputManager.isJoyPresent(joyId)) {
+		if (!inputManager.IsJoyPresent(joyId)) {
 			return;
 		}
 
@@ -68,7 +68,7 @@ namespace Jazz2::Input
 		}
 
 		for (std::int32_t j = 0; j < ControlScheme::MaxConnectedGamepads; j++) {
-			if (!inputManager.isJoyPresent(j)) {
+			if (!inputManager.IsJoyPresent(j)) {
 				// Allow rumble only for connected gamepads
 				for (std::size_t i = 0; i < _activeRumble.size(); i++) {
 					if (_activeRumble[i].JoyId == j) {
@@ -124,10 +124,10 @@ namespace Jazz2::Input
 					}
 
 					if (gains[0] > 0.0f || gains[1] > 0.0f) {
-						inputManager.joystickRumble(j, gains[0], gains[1], timeLeftMs);
+						inputManager.JoystickRumble(j, gains[0], gains[1], timeLeftMs);
 					}
 					if (gains[2] > 0.0f || gains[3] > 0.0f) {
-						inputManager.joystickRumbleTriggers(j, gains[2], gains[3], timeLeftMs);
+						inputManager.JoystickRumbleTriggers(j, gains[2], gains[3], timeLeftMs);
 					}
 				}
 			}

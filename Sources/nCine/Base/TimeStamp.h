@@ -18,8 +18,8 @@ namespace nCine
 		TimeStamp();
 
 		/** @brief Returns a new time stamp initialized to the current clock value */
-		inline static TimeStamp now() {
-			return TimeStamp(clock().now());
+		inline static TimeStamp Now() {
+			return TimeStamp(clock().Now());
 		}
 
 		bool operator>(const TimeStamp& other) const;
@@ -30,36 +30,36 @@ namespace nCine
 		TimeStamp operator-(const TimeStamp& other) const;
 
 		/** @brief Returns a new time stamp holding the duration elapsed since this one */
-		TimeStamp timeSince() const;
+		TimeStamp GetTimeSince() const;
 
 		/** @brief Returns the time elapsed since this time stamp, in seconds */
-		float secondsSince() const;
+		float GetSecondsSince() const;
 
 		/** @brief Returns the time elapsed since this time stamp, in milliseconds */
-		float millisecondsSince() const;
+		float GetMillisecondsSince() const;
 
 		/** @brief Returns the time elapsed since this time stamp, in microseconds */
-		float microsecondsSince() const;
+		float GetMicrosecondsSince() const;
 
 		/** @brief Returns the time elapsed since this time stamp, in nanoseconds */
-		float nanosecondsSince() const;
+		float GetNanosecondsSince() const;
 
 		/** @brief Returns the raw counter value in ticks */
-		inline std::uint64_t ticks() const {
+		inline std::uint64_t GetTicks() const {
 			return _counter;
 		}
 
 		/** @brief Returns the stored counter value as seconds */
-		float seconds() const;
+		float GetSeconds() const;
 
 		/** @brief Returns the stored counter value as milliseconds */
-		float milliseconds() const;
+		float GetMilliseconds() const;
 
 		/** @brief Returns the stored counter value as microseconds */
-		float microseconds() const;
+		float GetMicroseconds() const;
 
 		/** @brief Returns the stored counter value as nanoseconds */
-		float nanoseconds() const;
+		float GetNanoseconds() const;
 
 	private:
 		std::uint64_t _counter;

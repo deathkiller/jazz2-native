@@ -18,11 +18,11 @@ namespace nCine
 		_height = theApplication().GetHeight();
 		_viewportRect.Set(0, 0, _width, _height);
 
-		const DisplayMode displayMode = theApplication().GetGfxDevice().displayMode();
-		if (displayMode.depthBits() == 16) {
+		const DisplayMode displayMode = theApplication().GetGfxDevice().GetDisplayMode();
+		if (displayMode.GetDepthBits() == 16) {
 			_depthStencilFormat = DepthStencilFormat::Depth16;
-		} else if (displayMode.depthBits() == 24) {
-			_depthStencilFormat = (displayMode.stencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
+		} else if (displayMode.GetDepthBits() == 24) {
+			_depthStencilFormat = (displayMode.GetStencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
 		}
 		_rootNode = &theApplication().GetRootNode();
 		_type = Type::Screen;

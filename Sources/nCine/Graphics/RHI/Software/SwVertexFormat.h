@@ -94,7 +94,7 @@ namespace nCine::RHI::Software
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const SwBuffer* vbo) {
+			inline void SetVbo(const SwBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

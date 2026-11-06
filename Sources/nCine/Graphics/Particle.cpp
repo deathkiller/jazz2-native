@@ -8,7 +8,7 @@ namespace nCine
 	{
 		_type = ObjectType::Particle;
 		_renderCommand.SetType(RenderCommand::Type::Particle);
-		setEnabled(false);
+		SetEnabled(false);
 	}
 
 	Particle::Particle(const Particle& other)
@@ -18,32 +18,32 @@ namespace nCine
 		_renderCommand.SetType(RenderCommand::Type::Particle);
 	}
 
-	void Particle::init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace)
+	void Particle::Init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace)
 	{
 		_life = life;
 		startingLife = life;
 		startingRotation = rot;
-		setPosition(pos);
+		SetPosition(pos);
 		_velocity = vel;
-		setRotation(rot);
+		SetRotation(rot);
 		_inLocalSpace = inLocalSpace;
-		setEnabled(true);
+		SetEnabled(true);
 	}
 
 	void Particle::OnUpdate(float timeMult)
 	{
 		if (timeMult >= _life) {
 			_life = 0.0f; // dead particle
-			setEnabled(false);
+			SetEnabled(false);
 		} else {
 			_life -= timeMult;
 			move(_velocity * timeMult);
 		}
 	}
 
-	void Particle::transform()
+	void Particle::Transform()
 	{
-		SceneNode::transform();
+		SceneNode::Transform();
 
 		if (!_inLocalSpace) {
 			_worldMatrix = _localMatrix;

@@ -112,17 +112,17 @@ namespace nCine::Backends
 		UpdateFocusClickThrough();
 
 #if defined(DEATH_TARGET_WINDOWS)
-		_roundedCorners = SetupAuxiliaryWindowWin32(GetNativeWindow(_window), GetNativeWindow(SdlGfxDevice::windowHandle()), desc.Popup, desc.PassThrough);
+		_roundedCorners = SetupAuxiliaryWindowWin32(GetNativeWindow(_window), GetNativeWindow(SdlGfxDevice::GetWindowHandle()), desc.Popup, desc.PassThrough);
 #elif defined(WITH_SDL3)
 		// In front of the main window
-		SDL_SetWindowParent(_window, SdlGfxDevice::windowHandle());
+		SDL_SetWindowParent(_window, SdlGfxDevice::GetWindowHandle());
 #endif
 
-		AuxiliaryWindowNative native;
+		RHI::AuxiliarySwapchainDesc native;
 #if defined(WITH_RHI_GL)
 		// A context of its own sharing the objects of the main one, so the swap interval of the main window stays
-		SDL_Window* mainWindow = SdlGfxDevice::windowHandle();
-		SDL_GLContext mainContext = SdlGfxDevice::glContextHandle();
+		SDL_Window* mainWindow = SdlGfxDevice::GetWindowHandle();
+		SDL_GLContext mainContext = SdlGfxDevice::GetGlContextHandle();
 		SDL_GL_MakeCurrent(mainWindow, mainContext);
 		SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 		_glContext = SDL_GL_CreateContext(_window);
@@ -147,13 +147,13 @@ namespace nCine::Backends
 			SDL_GL_SwapWindow(window);
 		};
 		native.RestoreMain = []() {
-			SDL_GL_MakeCurrent(SdlGfxDevice::windowHandle(), SdlGfxDevice::glContextHandle());
+			SDL_GL_MakeCurrent(SdlGfxDevice::GetWindowHandle(), SdlGfxDevice::GetGlContextHandle());
 		};
 #elif defined(WITH_RHI_D3D11)
-		native.Handle = GetNativeWindow(_window);
+		native.WindowHandle = GetNativeWindow(_window);
 #else
 		// Vulkan and Metal make the surface or the layer of the SDL window itself
-		native.Handle = _window;
+		native.WindowHandle = _window;
 #endif
 		_presenter = AuxiliaryWindowPresenter::Create(Death::move(native), GetPixelSize());
 	}
@@ -169,7 +169,7 @@ namespace nCine::Backends
 #	else
 			SDL_GL_DeleteContext(_glContext);
 #	endif
-			SDL_GL_MakeCurrent(SdlGfxDevice::windowHandle(), SdlGfxDevice::glContextHandle());
+			SDL_GL_MakeCurrent(SdlGfxDevice::GetWindowHandle(), SdlGfxDevice::GetGlContextHandle());
 		}
 #endif
 		if (_window != nullptr) {
@@ -204,7 +204,7 @@ namespace nCine::Backends
 	Vector2i SdlAuxiliaryWindow::GetPixelSize() const
 	{
 		Vector2i size;
-		SdlGfxDevice::queryDrawableSize(_window, _size.X, _size.Y, size.X, size.Y);
+		SdlGfxDevice::QueryDrawableSize(_window, _size.X, _size.Y, size.X, size.Y);
 		return size;
 	}
 

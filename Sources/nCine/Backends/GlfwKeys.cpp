@@ -4,7 +4,7 @@
 
 namespace nCine::Backends
 {
-	Keys GlfwKeys::keySymValueToEnum(int keysym)
+	Keys GlfwKeys::KeySymValueToEnum(int keysym)
 	{
 		// clang-format off
 		switch (keysym) {
@@ -131,7 +131,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int GlfwKeys::keyModMaskToEnumMask(int keymod)
+	int GlfwKeys::KeyModMaskToEnumMask(int keymod)
 	{
 		int result = 0;
 
@@ -145,7 +145,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	int GlfwKeys::enumToKeysValue(Keys keysym)
+	int GlfwKeys::EnumToKeysValue(Keys keysym)
 	{
 		// clang-format off
 		switch (keysym) {

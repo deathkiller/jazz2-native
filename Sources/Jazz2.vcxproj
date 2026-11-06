@@ -830,6 +830,7 @@
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
     <ClInclude Include="nCine\Graphics\RHI\IRhiCapabilities.h" />
     <ClInclude Include="nCine\Graphics\RHI\Rhi.h" />
+    <ClInclude Include="nCine\Graphics\RHI\RhiAuxiliarySwapchain.h" />
     <ClInclude Include="nCine\Graphics\RHI\RhiCapabilitiesBase.h" />
     <ClInclude Include="nCine\Graphics\RHI\RhiFwd.h" />
     <ClInclude Include="nCine\Graphics\RHI\RhiTypes.h" />

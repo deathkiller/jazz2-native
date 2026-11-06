@@ -40,9 +40,9 @@ namespace nCine
 #endif
 
 		/** @brief Reads the KTX header and fills the corresponding structure */
-		bool readHeader(KtxHeader& header);
+		bool ReadHeader(KtxHeader& header);
 		/** @brief Parses the KTX header to determine the texture format */
-		bool parseFormat(const KtxHeader& header);
+		bool ParseFormat(const KtxHeader& header);
 	};
 
 }

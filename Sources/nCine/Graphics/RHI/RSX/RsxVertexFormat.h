@@ -94,7 +94,7 @@ namespace nCine::RHI::RSX
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const RsxBufferObject* vbo) {
+			inline void SetVbo(const RsxBufferObject* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

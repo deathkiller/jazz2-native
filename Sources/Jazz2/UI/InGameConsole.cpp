@@ -41,7 +41,7 @@ namespace Jazz2::UI
 		_historyIndex = _commandHistory.size();
 
 #if defined(DEATH_TARGET_ANDROID)
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 		_initialVisibleSize.X = _currentVisibleBounds.W;
 		_initialVisibleSize.Y = _currentVisibleBounds.H;
 #endif
@@ -87,7 +87,7 @@ namespace Jazz2::UI
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 				_recalcVisibleBoundsTimeLeft = 60.0f;
-				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 			}
 		}
 #endif
@@ -247,7 +247,7 @@ namespace Jazz2::UI
 
 	void InGameConsole::OnKeyPressed(const KeyboardEvent& event)
 	{
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Return:
 			case Keys::NumPadEnter: {
 				ProcessCurrentLine();
@@ -264,7 +264,7 @@ namespace Jazz2::UI
 				if (_textCursor > 0) {
 					std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
 					std::size_t startPos;
-					if ((event.mod & KeyMod::Ctrl) != KeyMod::None) {
+					if ((event.Mod & KeyMod::Ctrl) != KeyMod::None) {
 						auto found = StringView{_currentLine, _textCursor}.findLastOr(' ', _currentLine);
 						startPos = found.begin() - _currentLine;
 					} else {
@@ -281,7 +281,7 @@ namespace Jazz2::UI
 				if (_currentLine[_textCursor] != '\0') {
 					std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
 					std::size_t endPos;
-					if ((event.mod & KeyMod::Ctrl) != KeyMod::None) {
+					if ((event.Mod & KeyMod::Ctrl) != KeyMod::None) {
 						auto found = StringView{&_currentLine[_textCursor]}.findOr(' ', &_currentLine[_textCursor + lengthAfter]);
 						endPos = found.end() - _currentLine;
 					} else {
@@ -310,7 +310,7 @@ namespace Jazz2::UI
 				break;
 			}
 			case Keys::Up: {
-				if (event.mod & KeyMod::Ctrl) {
+				if (event.Mod & KeyMod::Ctrl) {
 					ScrollUp(1);
 				} else {
 					GetPreviousCommandFromHistory();
@@ -318,7 +318,7 @@ namespace Jazz2::UI
 				break;
 			}
 			case Keys::Down: {
-				if (event.mod & KeyMod::Ctrl) {
+				if (event.Mod & KeyMod::Ctrl) {
 					ScrollDown(1);
 				} else {
 					GetNextCommandFromHistory();
@@ -334,7 +334,7 @@ namespace Jazz2::UI
 				break;
 			}
 			case Keys::K: { // Clear line
-				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+				if ((event.Mod & KeyMod::Ctrl) != KeyMod::None && (event.Mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
 					_currentLine[0] = '\0';
 					_textCursor = 0;
 					_carretAnim = 0.0f;
@@ -342,14 +342,14 @@ namespace Jazz2::UI
 				break;
 			}
 			case Keys::L: { // Clear history
-				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+				if ((event.Mod & KeyMod::Ctrl) != KeyMod::None && (event.Mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
 					_logHistory.clear();
 				}
 				break;
 			}
 			case Keys::V: { // Paste
-				if ((event.mod & KeyMod::Ctrl) != KeyMod::None && (event.mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
-					auto text = theApplication().GetInputManager().getClipboardText();
+				if ((event.Mod & KeyMod::Ctrl) != KeyMod::None && (event.Mod & (KeyMod::Alt | KeyMod::Shift)) == KeyMod::None) {
+					auto text = theApplication().GetInputManager().GetClipboardText();
 					if (!text.empty()) {
 						auto trimmedText = text.trimmedPrefix();
 						if (auto firstNewLine = trimmedText.find('\n')) {
@@ -377,14 +377,14 @@ namespace Jazz2::UI
 
 	void InGameConsole::OnTextInput(const TextInputEvent& event)
 	{
-		if (_textCursor + event.length < MaxLineLength) {
+		if (_textCursor + event.Length < MaxLineLength) {
 			std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
 			if (lengthAfter > 0) {
-				std::memmove(&_currentLine[_textCursor + event.length], &_currentLine[_textCursor], lengthAfter);
+				std::memmove(&_currentLine[_textCursor + event.Length], &_currentLine[_textCursor], lengthAfter);
 			}
-			_currentLine[_textCursor + event.length + lengthAfter] = '\0';
-			std::memcpy(&_currentLine[_textCursor], event.text, event.length);
-			_textCursor += event.length;
+			_currentLine[_textCursor + event.Length + lengthAfter] = '\0';
+			std::memcpy(&_currentLine[_textCursor], event.Text, event.Length);
+			_textCursor += event.Length;
 			_carretAnim = 0.0f;
 		}
 	}
@@ -396,11 +396,11 @@ namespace Jazz2::UI
 			return;
 		}
 
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				// The top-left corner toggles the on-screen keyboard (matching the hint drawn in OnDraw)
 				if (x < 0.2f && y < 80.0f) {
 					ToggleScreenKeyboard();
@@ -501,7 +501,7 @@ namespace Jazz2::UI
 	void InGameConsole::RecalcLayoutForScreenKeyboard()
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
 			_recalcVisibleBoundsTimeLeft = 30.0f;

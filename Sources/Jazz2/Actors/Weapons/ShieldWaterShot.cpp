@@ -31,7 +31,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
+		_renderer.SetBlendingPreset(DrawableNode::BlendingPreset::Additive);
 
 		async_return true;
 	}
@@ -55,8 +55,8 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y = sinAngle * baseSpeed;
 
-		_renderer.setAlphaF(0.7f);
-		_renderer.setDrawEnabled(false);
+		_renderer.SetAlphaF(0.7f);
+		_renderer.SetDrawEnabled(false);
 
 		PlaySfx("Fire"_s);
 	}
@@ -83,7 +83,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 	}
 
@@ -95,7 +95,7 @@ namespace Jazz2::Actors::Weapons
 	bool ShieldWaterShot::OnPerish(ActorBase* collider)
 	{
 		if (_timeLeft > 0.0f) {
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
 		}
 
 		return ShotBase::OnPerish(collider);

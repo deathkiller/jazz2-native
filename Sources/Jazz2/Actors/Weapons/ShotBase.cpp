@@ -47,10 +47,10 @@ namespace Jazz2::Actors::Weapons
 
 	void ShotBase::TriggerRicochet(ActorBase* other)
 	{
-		TimeStamp now = TimeStamp::now();
+		TimeStamp now = TimeStamp::Now();
 
 		if (other == nullptr) {
-			if ((now - _lastRicochetTime).seconds() > 1.0f) {
+			if ((now - _lastRicochetTime).GetSeconds() > 1.0f) {
 				_lastRicochet = nullptr;
 				_lastRicochetTime = now;
 				OnRicochet();
@@ -60,7 +60,7 @@ namespace Jazz2::Actors::Weapons
 				_lastRicochet = other;
 				_lastRicochetTime = now;
 				OnRicochet();
-			} else if ((now - _lastRicochetTime).seconds() < 1.0f) {
+			} else if ((now - _lastRicochetTime).GetSeconds() < 1.0f) {
 				DecreaseHealth(INT32_MAX);
 			}
 		}

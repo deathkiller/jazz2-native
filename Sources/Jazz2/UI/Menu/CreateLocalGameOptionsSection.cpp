@@ -126,14 +126,14 @@ namespace Jazz2::UI::Menu
 				// A tap selects the character nearest the touched position (so tapping a name picks that character
 				// directly), but only once the row is selected; the first tap just selects the row (return false so
 				// the container handles selection), matching ChoiceItem/CustomValueItem and the keyboard flow.
-				if (!Selected || PlayerType == nullptr || AvailableCharacters <= 0 || event.type != TouchEventType::Up) {
+				if (!Selected || PlayerType == nullptr || AvailableCharacters <= 0 || event.Type != TouchEventType::Up) {
 					return false;
 				}
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 				if (pointerIndex == -1) {
 					return false;
 				}
-				float x = event.pointers[pointerIndex].x * viewSize.X;
+				float x = event.Pointers[pointerIndex].X * viewSize.X;
 				std::int32_t nearest = 0;
 				float nearestDist = std::abs(x - GetCharacterX(0));
 				for (std::int32_t j = 1; j < AvailableCharacters; j++) {

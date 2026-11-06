@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Environment
 		if (!_active) {
 			if (_timeLeft <= 0.0f) {
 				_active = true;
-				_renderer.setDrawEnabled(true);
+				_renderer.SetDrawEnabled(true);
 			}
 
 			_timeLeft -= timeMult;
@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Environment
 
 		_active = (src.ReadValue<std::uint8_t>() != 0);
 		_timeLeft = src.ReadValueAsLE<float>();
-		_renderer.setDrawEnabled(_active);
+		_renderer.SetDrawEnabled(_active);
 	}
 
 	bool AirboardGenerator::OnHandleCollision(ActorBase* other)
@@ -58,11 +58,11 @@ namespace Jazz2::Actors::Environment
 		if (auto* player = runtime_cast<Player>(other)) {
 			if (_active && player->SetModifier(Player::Modifier::Airboard)) {
 				_active = false;
-				_renderer.setDrawEnabled(false);
+				_renderer.SetDrawEnabled(false);
 
 				_timeLeft = _delay * FrameTimer::FramesPerSecond;
 
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::Generator);
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::Generator);
 			}
 			return true;
 		}

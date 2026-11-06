@@ -33,23 +33,23 @@ namespace nCine::Backends
 		 * @param window			SDL2 window to receive input from
 		 * @param glContextHandle	OpenGL context associated with the window
 		 */
-		static void init(SDL_Window* window, SDL_GLContext glContextHandle);
+		static void Init(SDL_Window* window, SDL_GLContext glContextHandle);
 		/** @brief Shuts down the ImGui SDL2 input backend */
-		static void shutdown();
+		static void Shutdown();
 		/** @brief Begins a new ImGui input frame */
-		static void newFrame();
+		static void NewFrame();
 		/** @brief Ends the current ImGui input frame */
-		static void endFrame();
+		static void EndFrame();
 		/**
 		 * @brief Processes a single SDL2 event for ImGui
 		 *
 		 * @param event		SDL2 event to process
 		 * @return `true` if the event was consumed by ImGui
 		 */
-		static bool processEvent(const SDL_Event* event);
+		static bool ProcessEvent(const SDL_Event* event);
 
 		/** @brief Enables or disables input processing */
-		static inline void setInputEnabled(bool inputEnabled) {
+		static inline void SetInputEnabled(bool inputEnabled) {
 			_inputEnabled = inputEnabled;
 		}
 
@@ -60,7 +60,7 @@ namespace nCine::Backends
 		 * A renderer that has to create a presentation object per platform window (the Vulkan backend needs a
 		 * `VkSurfaceKHR`) gets the window from here; `ImGuiViewport::PlatformHandle` only carries its SDL id.
 		 */
-		static void* getPlatformWindowHandle(ImGuiViewport* viewport);
+		static void* GetPlatformWindowHandle(ImGuiViewport* viewport);
 #endif
 
 	private:
@@ -91,36 +91,36 @@ namespace nCine::Backends
 		static GamepadMode _gamepadMode;
 		static bool _wantUpdateGamepadsList;
 
-		static const char* clipboardText(ImGuiContext* ctx);
-		static void updateMouseData();
-		static void updateMouseCursor();
-		static float getContentScaleForWindow(SDL_Window* window);
-		static float getContentScaleForDisplay(int displayIndex);
-		static void closeGamepads();
-		static void setGamepadMode(GamepadMode mode, SDL_GameController** manualGamepadsArray, unsigned int manualGamepadsCount);
-		static void updateGamepads();
-		static void getWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* outSize, ImVec2* outFramebufferScale);
+		static const char* GetClipboardText(ImGuiContext* ctx);
+		static void UpdateMouseData();
+		static void UpdateMouseCursor();
+		static float GetContentScaleForWindow(SDL_Window* window);
+		static float GetContentScaleForDisplay(int displayIndex);
+		static void CloseGamepads();
+		static void SetGamepadMode(GamepadMode mode, SDL_GameController** manualGamepadsArray, unsigned int manualGamepadsCount);
+		static void UpdateGamepads();
+		static void GetWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* outSize, ImVec2* outFramebufferScale);
 
 #if defined(IMGUI_HAS_DOCK)
-		static void updateMonitors();
+		static void UpdateMonitors();
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		static void onCreateWindow(ImGuiViewport* viewport);
-		static void onDestroyWindow(ImGuiViewport* viewport);
-		static void onShowWindow(ImGuiViewport* viewport);
-		static ImVec2 onGetWindowPos(ImGuiViewport* viewport);
-		static void onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos);
-		static ImVec2 onGetWindowSize(ImGuiViewport* viewport);
-		static ImVec2 onGetWindowFramebufferScale(ImGuiViewport* viewport);
-		static void onSetWindowSize(ImGuiViewport* viewport, ImVec2 size);
-		static void onSetWindowTitle(ImGuiViewport* viewport, const char* title);
-		static bool onGetWindowFocus(ImGuiViewport* viewport);
-		static void onSetWindowFocus(ImGuiViewport* viewport);
-		static bool onGetWindowMinimized(ImGuiViewport* viewport);
-		static void onSetWindowAlpha(ImGuiViewport* viewport, float alpha);
-		static void onRenderWindow(ImGuiViewport* viewport, void*);
-		static void onSwapBuffers(ImGuiViewport* viewport, void*);
+		static void OnCreateWindow(ImGuiViewport* viewport);
+		static void OnDestroyWindow(ImGuiViewport* viewport);
+		static void OnShowWindow(ImGuiViewport* viewport);
+		static ImVec2 OnGetWindowPos(ImGuiViewport* viewport);
+		static void OnSetWindowPos(ImGuiViewport* viewport, ImVec2 pos);
+		static ImVec2 OnGetWindowSize(ImGuiViewport* viewport);
+		static ImVec2 OnGetWindowFramebufferScale(ImGuiViewport* viewport);
+		static void OnSetWindowSize(ImGuiViewport* viewport, ImVec2 size);
+		static void OnSetWindowTitle(ImGuiViewport* viewport, const char* title);
+		static bool OnGetWindowFocus(ImGuiViewport* viewport);
+		static void OnSetWindowFocus(ImGuiViewport* viewport);
+		static bool OnGetWindowMinimized(ImGuiViewport* viewport);
+		static void OnSetWindowAlpha(ImGuiViewport* viewport, float alpha);
+		static void OnRenderWindow(ImGuiViewport* viewport, void*);
+		static void OnSwapBuffers(ImGuiViewport* viewport, void*);
 #endif
 	};
 }

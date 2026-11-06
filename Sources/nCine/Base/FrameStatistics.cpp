@@ -119,7 +119,7 @@ namespace nCine
 			}
 		}
 
-		if (_intervalStart.secondsSince() >= AveragingInterval) {
+		if (_intervalStart.GetSecondsSince() >= AveragingInterval) {
 			PublishSnapshot();
 			ResetAccumulators();
 		}
@@ -127,7 +127,7 @@ namespace nCine
 
 	void FrameStatistics::ResetAccumulators()
 	{
-		_intervalStart = TimeStamp::now();
+		_intervalStart = TimeStamp::Now();
 		_frames = 0;
 		_frameTimeSum = 0.0;
 		_maxFrameTime = 0.0f;

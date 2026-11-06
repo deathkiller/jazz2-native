@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Environment
 		_exitType = (ExitType)details.Params[0];
 
 		SetState(ActorState::CanBeFrozen, false);
-		_renderer.setLayer(_renderer.layer() - 40);
+		_renderer.SetLayer(_renderer.GetLayer() - 40);
 
 		async_await RequestMetadataAsync("Object/SignEol"_s);
 

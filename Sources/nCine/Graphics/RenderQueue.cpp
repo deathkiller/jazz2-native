@@ -85,7 +85,7 @@ namespace nCine
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
 #endif
-		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
+		const bool batchingEnabled = theApplication().GetRenderingSettings().BatchingEnabled;
 #if defined(RHI_CAP_POSTPROCESSING)
 		_drawCallsCounted = false;
 #endif
@@ -194,13 +194,13 @@ namespace nCine
 
 	ArrayView<RenderCommand* const> RenderQueue::GetOpaques() const
 	{
-		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().batchingEnabled ? _opaqueBatchedQueue : _opaqueQueue);
+		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().BatchingEnabled ? _opaqueBatchedQueue : _opaqueQueue);
 		return { queue.data(), queue.size() };
 	}
 
 	ArrayView<RenderCommand* const> RenderQueue::GetTransparents() const
 	{
-		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().batchingEnabled ? _transparentBatchedQueue : _transparentQueue);
+		const SmallVectorImpl<RenderCommand*>& queue = (theApplication().GetRenderingSettings().BatchingEnabled ? _transparentBatchedQueue : _transparentQueue);
 		return { queue.data(), queue.size() };
 	}
 

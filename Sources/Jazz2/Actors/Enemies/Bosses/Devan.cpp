@@ -58,7 +58,7 @@ namespace Jazz2::Actors::Bosses
 		async_await RequestMetadataAsync("Boss/Devan"_s);
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}
@@ -118,7 +118,7 @@ namespace Jazz2::Actors::Bosses
 						SetFacingLeft(targetPos.X < _pos.X);
 					}
 
-					_renderer.setDrawEnabled(true);
+					_renderer.SetDrawEnabled(true);
 
 					_state = State::Transition;
 					SetTransition(AnimState::TransitionWarpIn, false, [this]() {
@@ -156,7 +156,7 @@ namespace Jazz2::Actors::Bosses
 					std::uint8_t gunParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 					gun->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 12 : -12), (std::int32_t)_pos.Y - 8, _renderer.layer() + 40),
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 12 : -12), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 40),
 						gunParams
 					));
 					_levelHandler->AddActor(gun);
@@ -240,7 +240,7 @@ namespace Jazz2::Actors::Bosses
 					std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 					fireball->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 14, _renderer.layer() + 2),
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 14, _renderer.GetLayer() + 2),
 						fireballParams
 					));
 					_levelHandler->AddActor(fireball);
@@ -403,7 +403,7 @@ namespace Jazz2::Actors::Bosses
 			std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 			bullet->OnActivated(ActorActivationDetails(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -24 : 24), (std::int32_t)_pos.Y + 2, _renderer.layer() + 2),
+				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -24 : 24), (std::int32_t)_pos.Y + 2, _renderer.GetLayer() + 2),
 				fireballParams
 			));
 			_levelHandler->AddActor(bullet);
@@ -545,7 +545,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Devan::Bullet::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
 
 		return EnemyBase::OnPerish(collider);
 	}
@@ -607,7 +607,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Devan::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::SmallDark);
 
 		PlaySfx("Flap"_s);
 

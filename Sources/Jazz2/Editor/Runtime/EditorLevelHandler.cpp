@@ -28,9 +28,9 @@ namespace Jazz2::Editor
 	{
 		// A node deletes its children with itself
 		if (SceneNode* frameNode = _upscalePass.GetNode()) {
-			for (SceneNode* child : frameNode->children()) {
+			for (SceneNode* child : frameNode->GetChildren()) {
 				if (child == _frameContent) {
-					child->setParent(nullptr);
+					child->SetParent(nullptr);
 					break;
 				}
 			}
@@ -44,8 +44,8 @@ namespace Jazz2::Editor
 			return;
 		}
 		_frameContent = node;
-		if (node->parent() != frameNode) {
-			node->setParent(frameNode);
+		if (node->GetParent() != frameNode) {
+			node->SetParent(frameNode);
 		}
 	}
 
@@ -89,7 +89,7 @@ namespace Jazz2::Editor
 				return;
 			}
 			_sceneCanvas = std::make_unique<EditorSceneCanvas>();
-			_sceneCanvas->setParent(_rootNode.get());
+			_sceneCanvas->SetParent(_rootNode.get());
 		}
 		_sceneCanvas->DrawContent = Death::move(drawContent);
 	}

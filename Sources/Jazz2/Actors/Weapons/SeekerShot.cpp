@@ -68,8 +68,8 @@ namespace Jazz2::Actors::Weapons
 		}
 		_speed.Y = sinAngle * baseSpeed;
 
-		_renderer.setRotation(angle);
-		_renderer.setDrawEnabled(false);
+		_renderer.SetRotation(angle);
+		_renderer.SetDrawEnabled(false);
 	}
 
 	void SeekerShot::OnUpdate(float timeMult)
@@ -91,7 +91,7 @@ namespace Jazz2::Actors::Weapons
 		_fired++;
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.setDrawEnabled(true);
+			_renderer.SetDrawEnabled(true);
 		}
 
 		ShotBase::OnUpdate(timeMult);
@@ -127,7 +127,7 @@ namespace Jazz2::Actors::Weapons
 			});
 		}
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Large);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Large);
 
 		return ShotBase::OnPerish(collider);
 	}
@@ -172,10 +172,10 @@ namespace Jazz2::Actors::Weapons
 
 		if (_speed.X < 0.0f) {
 			SetFacingLeft(true);
-			_renderer.setRotation(atan2Approx(-_speed.Y, -_speed.X));
+			_renderer.SetRotation(atan2Approx(-_speed.Y, -_speed.X));
 		} else {
 			SetFacingLeft(false);
-			_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
+			_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 		}
 
 		_followRecomputeTime = _defaultRecomputeTime;

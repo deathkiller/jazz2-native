@@ -443,7 +443,7 @@ namespace Jazz2::Editor
 			if (stamp.IsEmpty()) {
 				return;
 			}
-			theApplication().GetInputManager().setClipboardText(EventStampToClipboardText(stamp));
+			theApplication().GetInputManager().SetClipboardText(EventStampToClipboardText(stamp));
 			_eventClipboard = Death::move(stamp);
 			if (cut) {
 				DeleteSelection();
@@ -467,7 +467,7 @@ namespace Jazz2::Editor
 				}
 			}
 		}
-		theApplication().GetInputManager().setClipboardText(StampToClipboardText(stamp, _document));
+		theApplication().GetInputManager().SetClipboardText(StampToClipboardText(stamp, _document));
 		_clipboard = Death::move(stamp);
 
 		if (cut) {
@@ -550,7 +550,7 @@ namespace Jazz2::Editor
 		}
 		// Pasted as copied, the empty tiles too, unlike a block grabbed
 		stamp.EmptyIsTransparent = false;
-		theApplication().GetInputManager().setClipboardText(StampToClipboardText(stamp, _document));
+		theApplication().GetInputManager().SetClipboardText(StampToClipboardText(stamp, _document));
 		_clipboard = Death::move(stamp);
 		// TRANSLATORS: Status message after the selected tiles were copied with the events on them
 		ShowMessage(_x("editor", "Copied with the events"));
@@ -614,7 +614,7 @@ namespace Jazz2::Editor
 	{
 		if (IsEditingEvents()) {
 			EventStamp stamp;
-			String text = theApplication().GetInputManager().getClipboardText();
+			String text = theApplication().GetInputManager().GetClipboardText();
 			if (!ClipboardTextToEventStamp(text, stamp)) {
 				stamp = _eventClipboard;
 			}
@@ -628,7 +628,7 @@ namespace Jazz2::Editor
 		}
 
 		TileStamp stamp;
-		String text = theApplication().GetInputManager().getClipboardText();
+		String text = theApplication().GetInputManager().GetClipboardText();
 		if (!ClipboardTextToStamp(text, stamp, _document)) {
 			stamp = _clipboard;
 		}

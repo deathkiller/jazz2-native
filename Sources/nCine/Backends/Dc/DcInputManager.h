@@ -22,14 +22,14 @@ namespace nCine::Backends
 
 		DcJoystickState();
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
-		void resetJoystickState(int joyId);
-		void simulateButtonEvent(int buttonId, bool pressed);
-		void simulateHatEvent(unsigned char state);
-		void simulateAxisEvent(int axisId, float value);
+		void ResetJoystickState(int joyId);
+		void SimulateButtonEvent(int buttonId, bool pressed);
+		void SimulateHatEvent(unsigned char state);
+		void SimulateAxisEvent(int axisId, float value);
 
 	private:
 		int _joyId;
@@ -43,7 +43,7 @@ namespace nCine::Backends
 	/**
 		@brief The `IInputManager` implementation for the Sega Dreamcast (KallistiOS maple bus)
 
-		Gamepad-only: `updateJoystickStates()` is polled once per frame from
+		Gamepad-only: `UpdateJoystickStates()` is polled once per frame from
 		`MainApplication::ProcessStep()` and diffs each controller's `cont_state_t` into engine joystick
 		events (the same poll-and-dispatch pattern as the Ogc/UWP backends).
 	*/
@@ -53,21 +53,21 @@ namespace nCine::Backends
 		DcInputManager();
 		~DcInputManager() override;
 
-		const MouseState& mouseState() const override;
-		const KeyboardState& keyboardState() const override;
+		const MouseState& GetMouseState() const override;
+		const KeyboardState& GetKeyboardState() const override;
 
-		bool isJoyPresent(int joyId) const override;
-		const char* joyName(int joyId) const override;
-		const JoystickGuid joyGuid(int joyId) const override;
-		int joyNumButtons(int joyId) const override;
-		int joyNumHats(int joyId) const override;
-		int joyNumAxes(int joyId) const override;
-		const JoystickState& joystickState(int joyId) const override;
-		bool joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
-		bool joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
+		bool IsJoyPresent(int joyId) const override;
+		const char* GetJoyName(int joyId) const override;
+		const JoystickGuid GetJoyGuid(int joyId) const override;
+		int GetJoyButtonCount(int joyId) const override;
+		int GetJoyHatCount(int joyId) const override;
+		int GetJoyAxisCount(int joyId) const override;
+		const JoystickState& GetJoystickState(int joyId) const override;
+		bool JoystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs) override;
+		bool JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override;
 
 		/** @brief Polls the maple bus and dispatches the resulting joystick events (once per frame) */
-		static void updateJoystickStates();
+		static void UpdateJoystickStates();
 
 	private:
 		static const std::int32_t MaxJoysticks = 4;
@@ -80,7 +80,7 @@ namespace nCine::Backends
 
 		static PadInfo _pads[MaxJoysticks];
 
-		static void handleConnection(std::int32_t joyId, bool connected);
+		static void HandleConnection(std::int32_t joyId, bool connected);
 
 		// The per-pad state objects dispatch through the protected shared _joyMapping/_inputEventHandler
 		friend class DcJoystickState;

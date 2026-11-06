@@ -35,19 +35,19 @@ namespace nCine::Backends
 		_drawableHeight = 448;
 		_isFullscreen = true;
 
-		_currentVideoMode.width = std::uint32_t(_width);
-		_currentVideoMode.height = std::uint32_t(_height);
-		_currentVideoMode.refreshRate = 60.0f;
+		_currentVideoMode.Width = std::uint32_t(_width);
+		_currentVideoMode.Height = std::uint32_t(_height);
+		_currentVideoMode.RefreshRate = 60.0f;
 
-		updateMonitors();
-		initDeviceViewport();
+		UpdateMonitors();
+		InitDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} (Graphics Synthesizer)", _width, _height);
 	}
 
 	Ps2GfxDevice::~Ps2GfxDevice() = default;
 
-	void Ps2GfxDevice::update()
+	void Ps2GfxDevice::Update()
 	{
 		// Flush the frame's remaining GIF packets, wait for vertical sync and flip; then drop any
 		// unconsumed lighting entries, mirroring the other fixed-function backends' present path
@@ -55,62 +55,62 @@ namespace nCine::Backends
 		RHI::Device::EndFrame();
 	}
 
-	void Ps2GfxDevice::setSwapInterval(int interval)
+	void Ps2GfxDevice::SetSwapInterval(int interval)
 	{
 		// The present path always waits for vertical sync
 		static_cast<void>(interval);
 	}
 
-	void Ps2GfxDevice::setResolution(bool fullscreen, int width, int height)
+	void Ps2GfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		static_cast<void>(fullscreen);
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void Ps2GfxDevice::setWindowPosition(int x, int y)
+	void Ps2GfxDevice::SetWindowPosition(int x, int y)
 	{
 		static_cast<void>(x);
 		static_cast<void>(y);
 	}
 
-	void Ps2GfxDevice::setWindowSize(int width, int height)
+	void Ps2GfxDevice::SetWindowSize(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void Ps2GfxDevice::setWindowTitle(StringView windowTitle)
+	void Ps2GfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		static_cast<void>(windowTitle);
 	}
 
-	void Ps2GfxDevice::setWindowIcon(StringView windowIconFilename)
+	void Ps2GfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 		static_cast<void>(windowIconFilename);
 	}
 
-	const IGfxDevice::VideoMode& Ps2GfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& Ps2GfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
 		return _currentVideoMode;
 	}
 
-	void Ps2GfxDevice::setResolutionInternal(int width, int height)
+	void Ps2GfxDevice::SetResolutionInternal(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void Ps2GfxDevice::updateMonitors()
+	void Ps2GfxDevice::UpdateMonitors()
 	{
 		// One fixed "monitor" (the TV), so windowScalingFactor() and the monitor queries stay valid
 		_numMonitors = 1;
-		_monitors[0].name = "TV";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "TV";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 	}
 }
 

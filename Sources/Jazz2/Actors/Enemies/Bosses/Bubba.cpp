@@ -89,7 +89,7 @@ namespace Jazz2::Actors::Bosses
 								uint8_t fireballParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
 								fireball->OnActivated(ActorActivationDetails(
 									_levelHandler,
-									Vector3i((std::int32_t)(_pos.X + x), (std::int32_t)(_pos.Y + y), _renderer.layer() - 2),
+									Vector3i((std::int32_t)(_pos.X + x), (std::int32_t)(_pos.Y + y), _renderer.GetLayer() - 2),
 									fireballParams
 								));
 								_levelHandler->AddActor(fireball);
@@ -147,7 +147,7 @@ namespace Jazz2::Actors::Bosses
 
 			case State::Dying: {
 				float time = (_renderer.AnimTime / _renderer.AnimDuration);
-				_renderer.setColor(Colorf(1.0f, 1.0f, 1.0f, 1.0f - (time * time * time * time)));
+				_renderer.SetColor(Colorf(1.0f, 1.0f, 1.0f, 1.0f - (time * time * time * time)));
 				break;
 			}
 		}
@@ -337,7 +337,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bubba::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}

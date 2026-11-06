@@ -641,7 +641,7 @@ namespace nCine
 		Array<String> preferred;
 
 #if defined(DEATH_TARGET_ANDROID)
-		String langId = Backends::AndroidJniWrap_Activity::getPreferredLanguage();
+		String langId = Backends::AndroidJniWrap_Activity::GetPreferredLanguage();
 		if (!langId.empty()) {
 			StringUtils::lowercaseInPlace(langId);
 			arrayAppend(preferred, Death::move(langId));

@@ -45,7 +45,7 @@ namespace nCine::RHI::D3D11
 
 		String BlobCachePath(const char* vsSource, const char* fsSource)
 		{
-			const String& base = theApplication().GetAppConfiguration().shaderCachePath;
+			const String& base = theApplication().GetAppConfiguration().ShaderCachePath;
 			if (base.empty()) {
 				return {};
 			}
@@ -562,7 +562,7 @@ namespace nCine::RHI::D3D11
 			for (const D3D11Attribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
 					D3D11VertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
-					attr.setVbo(vbo);
+					attr.SetVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}

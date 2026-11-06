@@ -1189,7 +1189,7 @@ namespace Jazz2::Scripting
 			// In the order the script draws, as in JJ2+ (a bomb drawn behind a pumpkin)
 			_worldCanvas->OrderedDraws = true;
 			_worldCanvas->EffectsOwner = _levelHandler;
-			_worldCanvas->setParent(_levelHandler->_rootNode.get());
+			_worldCanvas->SetParent(_levelHandler->_rootNode.get());
 		}
 		return *_worldCanvas;
 	}

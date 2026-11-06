@@ -64,7 +64,7 @@ namespace Jazz2::Editor
 			// Enter is passed on from the search once it's confirmed, leaving the search confirms it too, but only Enter runs
 			bool OnKeyPressed(const KeyboardEvent& event) override
 			{
-				if ((event.sym == Keys::Return || event.sym == Keys::NumPadEnter) && OnEnter) {
+				if ((event.Sym == Keys::Return || event.Sym == Keys::NumPadEnter) && OnEnter) {
 					OnEnter();
 					return true;
 				}
@@ -159,17 +159,17 @@ namespace Jazz2::Editor
 				if (_listening == nullptr) {
 					return VirtualList::OnKeyPressed(event);
 				}
-				if (IsModifierKey(event.sym)) {
+				if (IsModifierKey(event.Sym)) {
 					// Waits for the key that goes with them
 					return true;
 				}
-				if (event.sym == Keys::Escape) {
+				if (event.Sym == Keys::Escape) {
 					_listening = nullptr;
 					return true;
 				}
 				EditorAction& action = *_listening;
 				_listening = nullptr;
-				if (event.sym == Keys::Backspace) {
+				if (event.Sym == Keys::Backspace) {
 					action.Key = Shortcut();
 					Save();
 					return true;
@@ -320,11 +320,11 @@ namespace Jazz2::Editor
 				if (!_listening) {
 					return Button::OnKeyPressed(event);
 				}
-				if (IsModifierKey(event.sym)) {
+				if (IsModifierKey(event.Sym)) {
 					return true;
 				}
 				_listening = false;
-				if (event.sym != Keys::Escape) {
+				if (event.Sym != Keys::Escape) {
 					String text = Shortcut::FromEvent(event).ToString();
 					if (!text.empty()) {
 						_search->Text = text;

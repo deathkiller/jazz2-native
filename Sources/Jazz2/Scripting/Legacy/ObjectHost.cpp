@@ -856,7 +856,7 @@ namespace Jazz2::Scripting::Legacy
 			if (behavior.behaviorId == aEXPLOSION || behavior.behaviorId == BehaviorExplosion2) {
 				// What ends a collected pickup and the like, as the game ends its own
 				Actors::Explosion::Create(actor->_levelHandler, Vector3i(std::int32_t(_obj->xPos + PositionOffset),
-					std::int32_t(_obj->yPos + PositionOffset), actor->_renderer.layer()),
+					std::int32_t(_obj->yPos + PositionOffset), actor->_renderer.GetLayer()),
 					behavior.behaviorId == aEXPLOSION ? Actors::Explosion::Type::Small : Actors::Explosion::Type::Generator);
 				Delete();
 				return false;
@@ -2307,7 +2307,7 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::TurnUpsideDown(Actors::ActorBase& actor)
 	{
-		actor._renderer.setFlippedY(true);
+		actor._renderer.SetFlippedY(true);
 		if (runtime_cast<Actors::SolidObjectBase>(&actor) == nullptr || actor.GetUpdateOverride() != nullptr) {
 			return;
 		}

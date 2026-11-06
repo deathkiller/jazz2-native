@@ -373,7 +373,7 @@ namespace Jazz2::UI
 
 	Cinematics::~Cinematics()
 	{
-		_canvas->setParent(nullptr);
+		_canvas->SetParent(nullptr);
 		// The reader thread (if any) reads into memory and from a file that are released right after this
 		_videoReader.Shutdown();
 	}
@@ -498,22 +498,22 @@ namespace Jazz2::UI
 		// Viewports must be registered in reverse order
 		_upscalePass.Register();
 
-		_canvas->setParent(_upscalePass.GetNode());
+		_canvas->SetParent(_upscalePass.GetNode());
 	}
 
 	void Cinematics::OnKeyPressed(const KeyboardEvent& event)
 	{
-		_pressedKeys.set((std::size_t)event.sym);
+		_pressedKeys.set((std::size_t)event.Sym);
 	}
 
 	void Cinematics::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_pressedKeys.reset((std::size_t)event.sym);
+		_pressedKeys.reset((std::size_t)event.Sym);
 	}
 
 	void Cinematics::OnTouchEvent(const TouchEvent& event)
 	{
-		if (event.type == TouchEventType::Down) {
+		if (event.Type == TouchEventType::Down) {
 			if (_callback && _callback(_root, false)) {
 				_callback = nullptr;
 				_framesLeft = 0;
@@ -523,7 +523,7 @@ namespace Jazz2::UI
 
 	void Cinematics::Initialize(StringView path)
 	{
-		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		theApplication().GetGfxDevice().SetWindowTitle("Jazz² Resurrection"_s);
 
 		_canvas = std::make_unique<CinematicsCanvas>(this);
 
@@ -1409,8 +1409,8 @@ namespace Jazz2::UI
 		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
 		std::int32_t joyStatesCount = 0;
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[joyStatesCount++] = &input.joyMappedState(i);
+			if (input.IsJoyMapped(i)) {
+				joyStates[joyStatesCount++] = &input.GetJoyMappedState(i);
 			}
 		}
 

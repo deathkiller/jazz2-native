@@ -88,7 +88,7 @@ namespace Jazz2::Actors::Multiplayer
 		// This player is simulated at the position its client reports, but drawn at the interpolated one, so
 		// the generic implementation (which uses the simulated position) must not run for it - it would undo
 		// the smoothing, both here and when the level re-applies every actor's position at the end of a frame
-		_renderer.setPosition(_displayPos);
+		_renderer.SetPosition(_displayPos);
 	}
 
 	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, PlayerFlags flags)
@@ -100,7 +100,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		Flags = flags;
 
-		bool wasVisible = _renderer.isDrawEnabled();
+		bool wasVisible = _renderer.IsDrawEnabled();
 		// Visibility is not synced from the client, because it should be already almost in sync on the server
 		//_renderer.setDrawEnabled((flags & PlayerFlags::IsVisible) == PlayerFlags::IsVisible);
 		SetFacingLeft((flags & PlayerFlags::IsFacingLeft) == PlayerFlags::IsFacingLeft);

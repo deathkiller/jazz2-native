@@ -107,7 +107,7 @@ namespace Jazz2::Actors
 		}
 
 		SetState(ActorState::IsFacingLeft, value);
-		_renderer.setFlippedX(value);
+		_renderer.SetFlippedX(value);
 		
 		// The anchor follows the flip (see ActorRenderer::UpdateAnchor())
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
@@ -118,7 +118,7 @@ namespace Jazz2::Actors
 
 	void ActorBase::SetParent(SceneNode* parent)
 	{
-		_renderer.setParent(parent);
+		_renderer.SetParent(parent);
 	}
 
 	Task<bool> ActorBase::OnActivated(const ActorActivationDetails& details)
@@ -144,7 +144,7 @@ namespace Jazz2::Actors
 		}
 
 		std::uint16_t layer = (std::uint16_t)details.Pos.Z;
-		_renderer.setLayer(layer);
+		_renderer.SetLayer(layer);
 
 		bool success = async_await OnActivatedAsync(details);
 
@@ -154,7 +154,7 @@ namespace Jazz2::Actors
 		// first update overwrites it (see ResetPathTracking())
 		ResetPathTracking();
 
-		_renderer.setPosition(roundFast(_pos.X), roundFast(_pos.Y));
+		_renderer.SetPosition(roundFast(_pos.X), roundFast(_pos.Y));
 
 		OnUpdateHitbox();
 
@@ -213,14 +213,14 @@ namespace Jazz2::Actors
 		dest.WriteValueAsLE<float>(_currentTransition == nullptr ? _renderer.AnimTime : 0.0f);
 
 		std::uint8_t rendererFlags = 0;
-		if (_renderer.isDrawEnabled()) rendererFlags |= 0x01;
+		if (_renderer.IsDrawEnabled()) rendererFlags |= 0x01;
 		if (_renderer.AnimPaused) rendererFlags |= 0x02;
 		dest.WriteValue<std::uint8_t>(rendererFlags);
-		dest.WriteValueAsLE<std::uint16_t>(_renderer.layer());
-		dest.WriteValueAsLE<float>(_renderer.rotation());
-		dest.WriteValueAsLE<float>(_renderer.scale().X);
-		dest.WriteValueAsLE<float>(_renderer.scale().Y);
-		dest.WriteValueAsLE<float>(_renderer.alpha());
+		dest.WriteValueAsLE<std::uint16_t>(_renderer.GetLayer());
+		dest.WriteValueAsLE<float>(_renderer.GetRotation());
+		dest.WriteValueAsLE<float>(_renderer.GetScale().X);
+		dest.WriteValueAsLE<float>(_renderer.GetScale().Y);
+		dest.WriteValueAsLE<float>(_renderer.GetAlpha());
 	}
 
 	void ActorBase::OnDeserializeState(Stream& src)
@@ -261,19 +261,19 @@ namespace Jazz2::Actors
 			}
 		}
 
-		_renderer.setDrawEnabled((rendererFlags & 0x01) != 0);
+		_renderer.SetDrawEnabled((rendererFlags & 0x01) != 0);
 		_renderer.AnimPaused = ((rendererFlags & 0x02) != 0 || _frozenTimeLeft > 0.0f);
-		_renderer.setLayer(layer);
-		_renderer.setRotation(rotation);
-		_renderer.setScale(scaleX, scaleY);
-		_renderer.setAlphaF(alpha);
-		_renderer.setFlippedX(IsFacingLeft());
+		_renderer.SetLayer(layer);
+		_renderer.SetRotation(rotation);
+		_renderer.SetScale(scaleX, scaleY);
+		_renderer.SetAlphaF(alpha);
+		_renderer.SetFlippedX(IsFacingLeft());
 		if (_currentAnimation != nullptr) {
 			_renderer.UpdateAnchor();
 		}
 
 		ResetPathTracking();
-		_renderer.setPosition(roundFast(_pos.X), roundFast(_pos.Y));
+		_renderer.SetPosition(roundFast(_pos.X), roundFast(_pos.Y));
 		OnUpdateHitbox();
 
 		if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
@@ -944,7 +944,7 @@ namespace Jazz2::Actors
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
-					debris.Depth = _renderer.layer();
+					debris.Depth = _renderer.GetLayer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(0.5f, 2.0f) / debrisRect.W,
 						 Random().FastFloat(0.0f, 0.2f));
@@ -990,7 +990,7 @@ namespace Jazz2::Actors
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
-					debris.Depth = _renderer.layer();
+					debris.Depth = _renderer.GetLayer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / debrisRect.W,
 						 ((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / debrisRect.H);
@@ -1040,7 +1040,7 @@ namespace Jazz2::Actors
 
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
-					debris.Depth = _renderer.layer();
+					debris.Depth = _renderer.GetLayer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / debrisRect.W,
 							((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / debrisRect.H);
@@ -1087,7 +1087,7 @@ namespace Jazz2::Actors
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
-					debris.Depth = _renderer.layer();
+					debris.Depth = _renderer.GetLayer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / debrisRect.W,
 						 ((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / debrisRect.H);
@@ -1116,7 +1116,7 @@ namespace Jazz2::Actors
 
 		if (effect == ParticleDebrisEffect::Frozen) {
 			for (std::int32_t i = 0; i < 20; i++) {
-				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel,
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 10), Explosion::Type::IceShrapnel,
 					1.0f, Vector2f(GetFrozenMomentumX(), _speed.Y));
 			}
 
@@ -1126,7 +1126,7 @@ namespace Jazz2::Actors
 
 		float length = speed.Length();
 		Vector2f force = (length > 0.0f ? (speed / length * 1.4f) : Vector2f::Zero);
-		tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), force, _renderer.CurrentFrame, IsFacingLeft());
+		tilemap->CreateParticleDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.GetLayer()), force, _renderer.CurrentFrame, IsFacingLeft());
 	}
 
 	void ActorBase::CreateSpriteDebris(AnimState state, std::int32_t count, float elasticity)
@@ -1142,7 +1142,7 @@ namespace Jazz2::Actors
 		if (tilemap != nullptr && _metadata != nullptr) {
 			auto* res = _metadata->FindAnimation(state);
 			if (res != nullptr) {
-				tilemap->CreateSpriteDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.layer()), count, elasticity);
+				tilemap->CreateSpriteDebris(res, Vector3f(_pos.X, _pos.Y, (float)_renderer.GetLayer()), count, elasticity);
 			}
 		}
 	}
@@ -1298,10 +1298,10 @@ namespace Jazz2::Actors
 		bool perPixel1 = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 		bool perPixel2 = (other->_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 
-		if ((perPixel1 && std::abs(_renderer.rotation()) > 0.1f) || (perPixel2 && std::abs(other->_renderer.rotation()) > 0.1f)) {
-			if (!perPixel1 && std::abs(other->_renderer.rotation()) > 0.1f) {
+		if ((perPixel1 && std::abs(_renderer.GetRotation()) > 0.1f) || (perPixel2 && std::abs(other->_renderer.GetRotation()) > 0.1f)) {
+			if (!perPixel1 && std::abs(other->_renderer.GetRotation()) > 0.1f) {
 				return other->IsCollidingWithAngled(AABBInner);
-			} else if (!perPixel2 && std::abs(_renderer.rotation()) > 0.1f) {
+			} else if (!perPixel2 && std::abs(_renderer.GetRotation()) > 0.1f) {
 				return IsCollidingWithAngled(other->AABBInner);
 			}
 			return IsCollidingWithAngled(other);
@@ -1473,7 +1473,7 @@ namespace Jazz2::Actors
 		bool perPixel = (_state & ActorState::SkipPerPixelCollisions) != ActorState::SkipPerPixelCollisions;
 		if (!perPixel) {
 			return aabb.Overlaps(AABBInner);
-		} else if (std::abs(_renderer.rotation()) > 0.1f) {
+		} else if (std::abs(_renderer.GetRotation()) > 0.1f) {
 			return IsCollidingWithAngled(aabb);
 		}
 
@@ -1555,13 +1555,13 @@ namespace Jazz2::Actors
 		if (GetState(ActorState::IsFacingLeft)) {
 			transform1 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform1;
 		}
-		transform1 = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform1;
+		transform1 = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.GetRotation()) * transform1;
 
 		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-frameAnchor2.X, (float)-frameAnchor2.Y, 0.0f);
 		if (other->GetState(ActorState::IsFacingLeft)) {
 			transform2 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform2;
 		}
-		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.rotation()) * transform2;
+		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.GetRotation()) * transform2;
 
 		std::int32_t width1 = frameRect1.W;
 		std::int32_t height1 = frameRect1.H;
@@ -1660,7 +1660,7 @@ namespace Jazz2::Actors
 		if (GetState(ActorState::IsFacingLeft)) {
 			transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 		}
-		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
+		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.GetRotation()) * transform;
 
 		std::int32_t width = frameRectSelf.W;
 		std::int32_t height = frameRectSelf.H;
@@ -1798,16 +1798,16 @@ namespace Jazz2::Actors
 		// moved after they had already updated themselves - carried by a platform, most visibly. For all the
 		// rest the value is the one that was just assigned, and setting it again would re-dirty the node's
 		// transform and bounding box for a bit-identical result, on every actor, every frame.
-		if (_renderer.position() == pos) {
+		if (_renderer.GetPosition() == pos) {
 			return;
 		}
-		_renderer.setPosition(pos.X, pos.Y);
+		_renderer.SetPosition(pos.X, pos.Y);
 	}
 
 	void ActorBase::RestoreFromInvalidPosition()
 	{
 		// The log gets the raw bits, formatting a NaN as a float would trap there just the same
-		Vector2f fallback = (IsUsablePosition(_frameStartPos) ? _frameStartPos : _renderer.position());
+		Vector2f fallback = (IsUsablePosition(_frameStartPos) ? _frameStartPos : _renderer.GetPosition());
 		LOGE("Actor \"{}\" moved to an invalid position (bits {}, {} with speed bits {}, {}), restored to [{}, {}]",
 			(_metadata != nullptr ? StringView(_metadata->Path) : "<no metadata>"_s), FloatBits(_pos.X), FloatBits(_pos.Y),
 			FloatBits(_speed.X), FloatBits(_speed.Y), fallback.X, fallback.Y);
@@ -1834,12 +1834,12 @@ namespace Jazz2::Actors
 			Vector2i hotspot = res->Base->Hotspot;
 			Vector2i size = res->Base->FrameDimensions;
 
-			if (std::abs(_renderer.rotation()) > 0.1f) {
+			if (std::abs(_renderer.GetRotation()) > 0.1f) {
 				Matrix4x4f transform = Matrix4x4f::Translation((float)-hotspot.X, (float)-hotspot.Y, 0.0f);
 				if (GetState(ActorState::IsFacingLeft)) {
 					transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 				}
-				transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
+				transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.GetRotation()) * transform;
 
 				Vector3f tl = Vector3f::Zero * transform;
 				Vector3f tr = Vector3f((float)size.X, 0.0f, 0.0f) * transform;
@@ -1897,7 +1897,7 @@ namespace Jazz2::Actors
 		_renderer.Hotspot.X = static_cast<float>(res->Base->Hotspot.X);
 		_renderer.Hotspot.Y = static_cast<float>(res->Base->Hotspot.Y);
 
-		_renderer.setTexture(res->Base->TextureDiffuse.get());
+		_renderer.SetTexture(res->Base->TextureDiffuse.get());
 		// Indexed graphics must be drawn through the palette shader (recolored at draw time); plain ones keep the
 		// default sprite path. The animation's palette offset selects the palette region (0 for most, gem rows for
 		// gems); a recolor override set via SetPalette still takes precedence.
@@ -1958,8 +1958,8 @@ namespace Jazz2::Actors
 			_frozenTimeLeft -= timeMult;
 		}
 		if (_frozenTimeLeft > 0.0f) {
-			// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::updateRenderCommand()`,
-			// it would be called before `BaseSprite::updateRenderCommand()` but after `SceneNode::transform()`
+			// Cannot be directly in `ActorBase::HandleFrozenStateChange()` due to bug in `BaseSprite::UpdateRenderCommand()`,
+			// it would be called before `BaseSprite::UpdateRenderCommand()` but after `SceneNode::Transform()`
 			_renderer.Initialize(ActorRendererType::FrozenMask);
 			if (GetState(ActorState::KeepsMomentumWhenFrozen)) {
 				_speed.X *= std::pow(FrozenSpeedKeptPerTick, timeMult * Player::LegacyFrameRateScale);
@@ -1975,11 +1975,11 @@ namespace Jazz2::Actors
 		// The ice flies apart as fast as the object slid in it
 		float scale = GetIceShrapnelScale();
 		for (std::int32_t i = 0; i < 10; i++) {
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 10), Explosion::Type::IceShrapnel,
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 10), Explosion::Type::IceShrapnel,
 				scale, Vector2f(GetFrozenMomentumX(), _speed.Y));
 		}
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 90), Explosion::Type::SmokeWhite, scale);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 90), Explosion::Type::SmokeWhite, scale);
 
 		_levelHandler->PlayCommonSfx("IceBreak"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 		return true;
@@ -2126,14 +2126,14 @@ namespace Jazz2::Actors
 				break;
 		}
 		if (shaderChanged) {
-			shaderHasChanged();
+			ShaderHasChanged();
 			_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;
 				if (_texture != nullptr) {
 					Vector2i texSize = _texture->GetSize();
-					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+					SetColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
 				// Outline and FrozenMask took the whole color above - RGB for the texel size, alpha for their own
@@ -2141,7 +2141,7 @@ namespace Jazz2::Actors
 				// the actor's own fade, and the mask shaders replace the sprite's RGB with a flash colour without
 				// touching its alpha, so a fade already in progress has to survive a switch between any two of them.
 				const bool alphaIsActorFade = (KeepsActorFadeInAlpha(previousType) && KeepsActorFadeInAlpha(type));
-				setColor(Colorf(1.0f, 1.0f, 1.0f, alphaIsActorFade ? color().A : 1.0f));
+				SetColor(Colorf(1.0f, 1.0f, 1.0f, alphaIsActorFade ? GetColor().A : 1.0f));
 			}
 		}
 
@@ -2160,9 +2160,9 @@ namespace Jazz2::Actors
 			}
 			// A recolor override (>= 0) wins; otherwise the sprite samples its own palette region (offset 0 for most
 			// sprites, the gem-gradient rows for gems)
-			setPaletteOffset((float)(_paletteOffset >= 0 ? _paletteOffset : _basePaletteOffset));
+			SetPaletteOffset((float)(_paletteOffset >= 0 ? _paletteOffset : _basePaletteOffset));
 		} else {
-			setPaletteOffset(0.0f);
+			SetPaletteOffset(0.0f);
 		}
 	}
 
@@ -2260,7 +2260,7 @@ namespace Jazz2::Actors
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.06f, 0.8f);
 					if (_texture != nullptr) {
 						Vector2i texSize = _texture->GetSize();
-						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+						SetColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}
 				break;
@@ -2269,7 +2269,7 @@ namespace Jazz2::Actors
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.14f, 1.0f);
 					if (_texture != nullptr) {
 						Vector2i texSize = _texture->GetSize();
-						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+						SetColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}
 				break;
@@ -2294,12 +2294,12 @@ namespace Jazz2::Actors
 		return BaseSprite::OnDraw(renderQueue);
 	}
 
-	void ActorBase::ActorRenderer::textureHasChanged(Texture* newTexture)
+	void ActorBase::ActorRenderer::TextureHasChanged(Texture* newTexture)
 	{
 		if (_rendererType == ActorRendererType::Outline || _rendererType == ActorRendererType::FrozenMask) {
 			if (newTexture != nullptr) {
 				Vector2i texSize = newTexture->GetSize();
-				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
+				SetColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 			}
 		}
 	}
@@ -2348,7 +2348,7 @@ namespace Jazz2::Actors
 		// Set current animation frame rectangle
 		// A tightly packed sheet gives every frame its own area and its own hotspot within it, so both the
 		// sampled rectangle and the anchor follow the frame (setTexRect() sizes the sprite from the rect)
-		setTexRect(FrameSource != nullptr ? FrameSource->GetFrameRect(CurrentFrame)
+		SetTexRect(FrameSource != nullptr ? FrameSource->GetFrameRect(CurrentFrame)
 			: Recti(FrameDimensions.X * (CurrentFrame % FrameConfiguration.X),
 				FrameDimensions.Y * (CurrentFrame / FrameConfiguration.X), FrameDimensions.X, FrameDimensions.Y));
 		UpdateAnchor();
@@ -2361,11 +2361,11 @@ namespace Jazz2::Actors
 		// whole cell, which is why mirroring within FrameDimensions is right there and wrong for a packed
 		// sheet, where the frame keeps only the space its pixels need.
 		if (FrameSource != nullptr) {
-			const Vector2i anchor = FrameSource->GetFrameAnchor(CurrentFrame, isFlippedX(), isFlippedY());
-			setAbsAnchorPoint((float)anchor.X, (float)anchor.Y);
+			const Vector2i anchor = FrameSource->GetFrameAnchor(CurrentFrame, IsFlippedX(), IsFlippedY());
+			SetAbsAnchorPoint((float)anchor.X, (float)anchor.Y);
 		} else {
-			setAbsAnchorPoint(isFlippedX() ? (float)FrameDimensions.X - Hotspot.X : Hotspot.X,
-				isFlippedY() ? (float)FrameDimensions.Y - Hotspot.Y : Hotspot.Y);
+			SetAbsAnchorPoint(IsFlippedX() ? (float)FrameDimensions.X - Hotspot.X : Hotspot.X,
+				IsFlippedY() ? (float)FrameDimensions.Y - Hotspot.Y : Hotspot.Y);
 		}
 	}
 

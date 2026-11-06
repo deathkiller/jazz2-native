@@ -21,27 +21,27 @@ namespace nCine::Backends
 	public:
 		Qt5GfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, Qt5Widget& widget);
 
-		void setSwapInterval(int interval) override;
+		void SetSwapInterval(int interval) override;
 
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
 
 		/** @brief No-op, the widget swaps its own buffers */
-		inline void update() override {}
+		inline void Update() override {}
 
-		void setWindowPosition(int x, int y) override;
-		void setWindowSize(int width, int height) override;
-		void setWindowTitle(StringView windowTitle) override;
-		void setWindowIcon(StringView windowIconFilename) override;
+		void SetWindowPosition(int x, int y) override;
+		void SetWindowSize(int width, int height) override;
+		void SetWindowTitle(StringView windowTitle) override;
+		void SetWindowIcon(StringView windowIconFilename) override;
 
-		const Vector2i windowPosition() const override;
+		const Vector2i GetWindowPosition() const override;
 
-		void flashWindow() const override;
+		void FlashWindow() const override;
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
 
 #if defined(WITH_GLEW)
 		/** @brief Initializes the GLEW OpenGL extension loader */
-		void initGlew();
+		void InitGlew();
 #endif
 		/**
 			@brief Points the engine's "screen" at the widget's framebuffer and re-syncs cached OpenGL state
@@ -51,17 +51,17 @@ namespace nCine::Backends
 			(which changes whenever the widget is resized) is republished and every cached binding dropped,
 			exactly like the libretro backend does for the frontend's framebuffer.
 		*/
-		void adoptWidgetFramebuffer();
+		void AdoptWidgetFramebuffer();
 		/**
 			@brief Adopts a framebuffer size the widget was resized to by Qt5 itself
 
 			To be called from @ref Qt5Widget::resizeGL() only, which is where the OpenGL context is current.
 		*/
-		void updateResolution(int drawableWidth, int drawableHeight);
+		void UpdateResolution(int drawableWidth, int drawableHeight);
 
 	protected:
-		void updateMonitors() override;
-		void setResolutionInternal(int width, int height) override;
+		void UpdateMonitors() override;
+		void SetResolutionInternal(int width, int height) override;
 
 	private:
 		Qt5Widget& _widget;
@@ -73,7 +73,7 @@ namespace nCine::Backends
 		Qt5GfxDevice& operator=(const Qt5GfxDevice&) = delete;
 
 		/** @brief Initializes the OpenGL graphics context */
-		void initDevice(bool isFullscreen);
+		void InitDevice(bool isFullscreen);
 
 		friend class Qt5InputManager;
 	};

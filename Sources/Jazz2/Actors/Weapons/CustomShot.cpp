@@ -76,10 +76,10 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		if (_options.Look == ShotLook::Glow) {
-			_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
+			_renderer.SetBlendingPreset(DrawableNode::BlendingPreset::Additive);
 		}
 		if (flipY) {
-			_renderer.setFlippedY(true);
+			_renderer.SetFlippedY(true);
 			_renderer.UpdateAnchor();
 		}
 		if (_options.Look == ShotLook::Beam) {
@@ -116,24 +116,24 @@ namespace Jazz2::Actors::Weapons
 			// It stays at the muzzle, so it's seen from the first frame
 			_speed = Vector2f::Zero;
 			_farPoint = GetBeamEnd(gunspotPos, angle);
-			_renderer.setRotation(angle);
+			_renderer.SetRotation(angle);
 			MoveInstantly(gunspotPos, MoveType::Absolute | MoveType::Force);
 			OnUpdateHitbox();
 			return;
 		}
 
 		if (_options.RotatesWithSpeed) {
-			_renderer.setRotation(angle);
+			_renderer.SetRotation(angle);
 		}
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 	}
 
 	void CustomShot::TurnTo(bool left)
 	{
 		SetFacingLeft(left);
 		// A shot flipped horizontally shows the other side to where it flies
-		if (_flipX && _renderer.isFlippedX() == left) {
-			_renderer.setFlippedX(!left);
+		if (_flipX && _renderer.IsFlippedX() == left) {
+			_renderer.SetFlippedX(!left);
 			_renderer.UpdateAnchor();
 		}
 	}
@@ -160,7 +160,7 @@ namespace Jazz2::Actors::Weapons
 			Vector3i initialPos; Vector2f gunspotPos; float angle;
 			player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
 			MoveInstantly(gunspotPos, MoveType::Absolute | MoveType::Force);
-			_farPoint = GetBeamEnd(gunspotPos, _renderer.rotation());
+			_farPoint = GetBeamEnd(gunspotPos, _renderer.GetRotation());
 		}
 
 		WeaponType blocksAs = (_options.DestroysBlocksAs != WeaponType::Unknown ? _options.DestroysBlocksAs : _slot);
@@ -177,7 +177,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		if (_lookStep * Thunderbolt::LightProgressSpeed < fPi) {
-			Thunderbolt::CreateSparks(_levelHandler, _metadata, _pos, _farPoint, _renderer.layer(), timeMult);
+			Thunderbolt::CreateSparks(_levelHandler, _metadata, _pos, _farPoint, _renderer.GetLayer(), timeMult);
 		}
 	}
 
@@ -263,7 +263,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		if (_options.RotatesWithSpeed && _fired >= 2 && (_options.Gravity != 0.0f || _options.HomingTurnRate > 0.0f || _options.Bounces > 0)) {
-			_renderer.setRotation(IsFacingLeft() ? atan2Approx(-_speed.Y, -_speed.X) : atan2Approx(_speed.Y, _speed.X));
+			_renderer.SetRotation(IsFacingLeft() ? atan2Approx(-_speed.Y, -_speed.X) : atan2Approx(_speed.Y, _speed.X));
 		}
 
 		_timeLeft -= timeMult;
@@ -276,12 +276,12 @@ namespace Jazz2::Actors::Weapons
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			// Only the sparks of the electro are seen, not the shot
-			_renderer.setDrawEnabled(_options.Look != ShotLook::Electro);
+			_renderer.SetDrawEnabled(_options.Look != ShotLook::Electro);
 		} else if (_fired > 2 && _options.Look == ShotLook::Electro) {
 			_particleSpawnTime -= timeMult;
 			if (_particleSpawnTime <= 0.0f) {
 				_particleSpawnTime += 1.0f;
-				ElectroShot::CreateParticles(_levelHandler, _currentAnimation, _pos, _renderer.layer(), _lookStep, IsFacingLeft(), (_upgrades & 0x01) != 0);
+				ElectroShot::CreateParticles(_levelHandler, _currentAnimation, _pos, _renderer.GetLayer(), _lookStep, IsFacingLeft(), (_upgrades & 0x01) != 0);
 			}
 			_lookStep += timeMult;
 		}
@@ -444,7 +444,7 @@ namespace Jazz2::Actors::Weapons
 	{
 		std::uint8_t shotParams[3] = { 0, std::uint8_t(_slot), IsBubble };
 		std::shared_ptr<CustomShot> bubble = std::make_shared<CustomShot>();
-		bubble->OnActivated(ActorActivationDetails(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()), shotParams));
+		bubble->OnActivated(ActorActivationDetails(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()), shotParams));
 		bubble->OnFire(_owner, _pos, Vector2f::Zero, 0.0f, IsFacingLeft());
 		_levelHandler->AddActor(bubble);
 
@@ -502,7 +502,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		if (_options.Explosion >= 0 && _options.Explosion <= std::int32_t(Explosion::Type::IceShrapnel)) {
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2),
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2),
 				Explosion::Type(_options.Explosion));
 		}
 
@@ -534,7 +534,7 @@ namespace Jazz2::Actors::Weapons
 		ShotBase::OnRicochet();
 
 		if (_options.RotatesWithSpeed) {
-			_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
+			_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 		}
 		PlaySfx("Ricochet"_s);
 	}

@@ -1098,10 +1098,10 @@ namespace nCine::RHI::GX
 		GX_CopyDisp(xfb, GX_TRUE);	// The copy also clears the EFB for the next frame (GX_SetCopyClear)
 		// The GP has drawn out of the FIFO as it filled, so the wait is only what it still had left of the frame
 		const bool timed = FrameStatistics::IsEnabled();
-		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 		GX_DrawDone();
 		if (timed) {
-			FrameStatistics::AddCounter("GP wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("GP wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 		_frameCounter++;
 		// Nothing is assumed applied across the frame boundary - the first draw of the next frame

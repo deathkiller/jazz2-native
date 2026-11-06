@@ -46,7 +46,7 @@ namespace nCine
 		bool AddMappingsFromFile(StringView path);
 
 		/** @brief Returns the current number of loaded mappings */
-		inline std::int32_t numMappings() const {
+		inline std::int32_t GetMappingCount() const {
 			return (std::int32_t)_mappings.size();
 		}
 

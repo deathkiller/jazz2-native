@@ -18,7 +18,7 @@ namespace nCine
 		std::memset(data, 0, sizeof(data));
 	}
 
-	void JoystickGuid::fromType(JoystickGuidType type)
+	void JoystickGuid::FromType(JoystickGuidType type)
 	{
 		uint32_t* guid32 = (uint32_t*)data;
 		switch (type) {
@@ -39,19 +39,19 @@ namespace nCine
 		}
 	}
 
-	void JoystickGuid::fromString(StringView string)
+	void JoystickGuid::FromString(StringView string)
 	{
 		if (string.empty()) {
-			fromType(JoystickGuidType::Unknown);
+			FromType(JoystickGuidType::Unknown);
 		} else if (string == "default"_s) {
-			fromType(JoystickGuidType::Default);
+			FromType(JoystickGuidType::Default);
 		} else if (string == "hidapi"_s) {
-			fromType(JoystickGuidType::Hidapi);
+			FromType(JoystickGuidType::Hidapi);
 		} else if (string == "xinput"_s) {
-			fromType(JoystickGuidType::Xinput);
+			FromType(JoystickGuidType::Xinput);
 		} else {
 			if (string.size() != sizeof(data) * 2) {
-				fromType(JoystickGuidType::Unknown);
+				FromType(JoystickGuidType::Unknown);
 			} else {
 				char component[3];
 				component[2] = '\0';
@@ -64,7 +64,7 @@ namespace nCine
 		}
 	}
 
-	bool JoystickGuid::isValid() const
+	bool JoystickGuid::IsValid() const
 	{
 		uint32_t* guid32 = (uint32_t*)data;
 		return (guid32[0] != 0 || guid32[1] != 0 || guid32[2] != 0 || guid32[3] != 0);
@@ -75,23 +75,23 @@ namespace nCine
 		return std::memcmp(data, guid.data, sizeof(data)) == 0;
 	}
 
-	void IInputManager::setHandler(IInputEventHandler* inputEventHandler)
+	void IInputManager::SetHandler(IInputEventHandler* inputEventHandler)
 	{
 		_inputEventHandler = inputEventHandler;
 		_joyMapping.SetHandler(inputEventHandler);
 	}
 
-	String IInputManager::getClipboardText() const
+	String IInputManager::GetClipboardText() const
 	{
 		return {};
 	}
 
-	bool IInputManager::setClipboardText(StringView text)
+	bool IInputManager::SetClipboardText(StringView text)
 	{
 		return false;
 	}
 
-	StringView IInputManager::getKeyName(Keys key) const
+	StringView IInputManager::GetKeyName(Keys key) const
 	{
 		switch (key) {
 			case Keys::Backspace: return "Backspace"_s;
@@ -210,52 +210,52 @@ namespace nCine
 	}
 
 	/** @note A joystick stays mapped in the `OnJoyConnected()` and `OnJoyDisconnected()` callbacks */
-	bool IInputManager::isJoyMapped(int joyId) const
+	bool IInputManager::IsJoyMapped(int joyId) const
 	{
 		return _joyMapping.IsJoyMapped(joyId);
 	}
 
-	bool IInputManager::joyHasMappedAxis(int joyId, AxisName axis) const
+	bool IInputManager::JoyHasMappedAxis(int joyId, AxisName axis) const
 	{
 		return _joyMapping.HasMappedAxis(joyId, axis);
 	}
 
-	const JoyMappedState& IInputManager::joyMappedState(int joyId) const
+	const JoyMappedState& IInputManager::GetJoyMappedState(int joyId) const
 	{
 		return _joyMapping.GetMappedState(joyId);
 	}
 
-	void IInputManager::deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const
+	void IInputManager::DeadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const
 	{
 		return _joyMapping.DeadZoneNormalize(joyVector, deadZoneValue);
 	}
 
-	void IInputManager::addJoyMappingsFromFile(StringView path)
+	void IInputManager::AddJoyMappingsFromFile(StringView path)
 	{
 		_joyMapping.AddMappingsFromFile(path);
 	}
 
-	void IInputManager::addJoyMappingsFromString(StringView mappingString)
+	void IInputManager::AddJoyMappingsFromString(StringView mappingString)
 	{
 		_joyMapping.AddMappingsFromString(mappingString);
 	}
 
-	unsigned int IInputManager::numJoyMappings() const
+	unsigned int IInputManager::GetJoyMappingCount() const
 	{
-		return _joyMapping.numMappings();
+		return _joyMapping.GetMappingCount();
 	}
 
-	bool IInputManager::hasMappingByGuid(const JoystickGuid& guid) const
+	bool IInputManager::HasMappingByGuid(const JoystickGuid& guid) const
 	{
 		return (_joyMapping.FindMappingByGuid(guid) != -1);
 	}
 
-	bool IInputManager::hasMappingByName(const char* name) const
+	bool IInputManager::HasMappingByName(const char* name) const
 	{
 		return (_joyMapping.FindMappingByName(name) != -1);
 	}
 
-	void IInputManager::setCursor(Cursor cursor)
+	void IInputManager::SetCursor(Cursor cursor)
 	{
 #if defined(WITH_IMGUI)
 		ImGuiIO& io = ImGui::GetIO();

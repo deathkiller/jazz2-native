@@ -100,31 +100,31 @@ namespace nCine
 		struct Pointer
 		{
 			/** @brief Pointer identifier */
-			std::int32_t id;
+			std::int32_t Id;
 			/** @brief Pointer position */
-			float x, y;
+			float X, Y;
 			/** @brief Pointer pressure */
-			float pressure;
+			float Pressure;
 		};
 
 		TouchEvent()
-			: count(0), actionIndex(-1) {}
+			: Count(0), ActionIndex(-1) {}
 
 		/** @brief Type of the event */
-		TouchEventType type;
+		TouchEventType Type;
 		/** @brief Number of active pointers */
-		std::uint32_t count;
+		std::uint32_t Count;
 		/** @brief Index into @ref pointers of the pointer that triggered the event, or -1 */
-		std::int32_t actionIndex;
+		std::int32_t ActionIndex;
 		/** @brief Active pointers */
-		Pointer pointers[MaxPointers];
+		Pointer Pointers[MaxPointers];
 
 		/** @brief Returns the index of the pointer with the specified identifier, or -1 if not found */
-		inline std::int32_t findPointerIndex(std::int32_t pointerId) const
+		inline std::int32_t FindPointerIndex(std::int32_t pointerId) const
 		{
 			std::int32_t pointerIndex = -1;
-			for (std::uint32_t i = 0; i < count && i < MaxPointers; i++) {
-				if (pointers[i].id == pointerId) {
+			for (std::uint32_t i = 0; i < Count && i < MaxPointers; i++) {
+				if (Pointers[i].Id == pointerId) {
 					pointerIndex = i;
 					break;
 				}
@@ -138,10 +138,10 @@ namespace nCine
 	{
 	public:
 		AccelerometerEvent()
-			: x(0.0f), y(0.0f), z(0.0f) {}
+			: X(0.0f), Y(0.0f), Z(0.0f) {}
 
 		/** @brief Acceleration on each axis */
-		float x, y, z;
+		float X, Y, Z;
 	};
 
 	/** @brief Mouse buttons */
@@ -159,19 +159,19 @@ namespace nCine
 	{
 	public:
 		/** @brief Pointer position on the X axis */
-		std::int32_t x;
+		std::int32_t X;
 		/** @brief Pointer position on the Y axis */
-		std::int32_t y;
+		std::int32_t Y;
 		/**
 		 * @brief Window the pointer is over, 0 for the main one
 		 *
-		 * Over an auxiliary window (see @ref IGfxDevice::createAuxiliaryWindow()), the position is still relative to the
+		 * Over an auxiliary window (see @ref IGfxDevice::CreateAuxiliaryWindow()), the position is still relative to the
 		 * main window, so it can be outside of it.
 		 */
-		std::uint32_t windowId = 0;
+		std::uint32_t WindowId = 0;
 
 		/** @brief Returns `true` if the specified button is currently down */
-		virtual bool isButtonDown(MouseButton button) const = 0;
+		virtual bool IsButtonDown(MouseButton button) const = 0;
 
 	protected:
 		static const unsigned int NumButtons = 5;
@@ -182,13 +182,13 @@ namespace nCine
 	{
 	public:
 		/** @brief Pointer position on the X axis */
-		std::int32_t x;
+		std::int32_t X;
 		/** @brief Pointer position on the Y axis */
-		std::int32_t y;
+		std::int32_t Y;
 		/** @brief Button that was pressed or released */
-		MouseButton button;
-		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::windowId */
-		std::uint32_t windowId = 0;
+		MouseButton Button;
+		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::WindowId */
+		std::uint32_t WindowId = 0;
 	};
 
 	/** @brief Scroll event (mouse wheel, touchpad gesture, etc.) */
@@ -196,11 +196,11 @@ namespace nCine
 	{
 	public:
 		/** @brief Scroll offset on the X axis, positive to the right (as SDL reports it, every backend is made to match) */
-		float x;
+		float X;
 		/** @brief Scroll offset on the Y axis, positive away from the user */
-		float y;
-		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::windowId */
-		std::uint32_t windowId = 0;
+		float Y;
+		/** @brief Window the pointer is over, 0 for the main one, see @ref MouseState::WindowId */
+		std::uint32_t WindowId = 0;
 	};
 
 	/** @brief Current state of the keyboard */
@@ -208,7 +208,7 @@ namespace nCine
 	{
 	public:
 		/** @brief Returns `true` if the specified key is currently down */
-		virtual bool isKeyDown(Keys key) const = 0;
+		virtual bool IsKeyDown(Keys key) const = 0;
 	};
 
 	/** @brief Keyboard key event */
@@ -216,14 +216,14 @@ namespace nCine
 	{
 	public:
 		/** @brief Key scan code */
-		std::int32_t scancode;
+		std::int32_t Scancode;
 		/** @brief Key symbol code */
-		Keys sym;
+		Keys Sym;
 		/** @brief Key modifiers mask */
-		std::int32_t mod;
+		std::int32_t Mod;
 
 		KeyboardEvent()
-			: scancode(0), sym(Keys::Unknown), mod(0) {}
+			: Scancode(0), Sym(Keys::Unknown), Mod(0) {}
 	};
 
 	/** @brief Text input event */
@@ -231,14 +231,14 @@ namespace nCine
 	{
 	public:
 		/** @brief Unicode code point encoded in UTF-8 */
-		char text[4];
+		char Text[4];
 		/** @brief Length in bytes of the encoded code point */
-		std::int32_t length;
+		std::int32_t Length;
 
 		TextInputEvent()
-			: length(0)
+			: Length(0)
 		{
-			text[0] = '\0';
+			Text[0] = '\0';
 		}
 	};
 
@@ -249,11 +249,11 @@ namespace nCine
 		virtual ~JoystickState() { }
 
 		/** @brief Returns `true` if the specified button is pressed */
-		virtual bool isButtonPressed(int buttonId) const = 0;
+		virtual bool IsButtonPressed(int buttonId) const = 0;
 		/** @brief Returns the state of the specified hat */
-		virtual unsigned char hatState(int hatId) const = 0;
+		virtual unsigned char GetHatState(int hatId) const = 0;
 		/** @brief Returns the value of the specified axis, normalized between -1.0 and 1.0 */
-		virtual float axisValue(int axisId) const = 0;
+		virtual float GetAxisValue(int axisId) const = 0;
 	};
 
 	/** @brief Joystick button event */
@@ -261,9 +261,9 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 		/** @brief Button identifier */
-		std::int32_t buttonId;
+		std::int32_t ButtonId;
 	};
 
 	/** @brief Joystick hat event */
@@ -271,11 +271,11 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 		/** @brief Hat identifier */
-		std::int32_t hatId;
+		std::int32_t HatId;
 		/** @brief Hat direction state (a combination of @ref HatState flags) */
-		unsigned char hatState;
+		unsigned char HatState;
 	};
 
 	/** @brief Joystick axis event */
@@ -283,11 +283,11 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 		/** @brief Axis identifier */
-		std::int32_t axisId;
+		std::int32_t AxisId;
 		/** @brief Axis value normalized between -1.0f and 1.0f */
-		float value;
+		float Value;
 	};
 
 	/** @brief Joystick connection or disconnection event */
@@ -295,7 +295,7 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 	};
 
 	/** @brief Current state of a joystick translated through its mapping into unified buttons and axes */
@@ -319,7 +319,7 @@ namespace nCine
 		}
 
 		/** @brief Returns `true` if the specified mapped button is pressed */
-		bool isButtonPressed(ButtonName name) const
+		bool IsButtonPressed(ButtonName name) const
 		{
 			bool pressed = false;
 			if (name != ButtonName::Unknown)
@@ -328,7 +328,7 @@ namespace nCine
 		}
 
 		/** @brief Returns the value of the specified mapped axis */
-		float axisValue(AxisName name) const
+		float GetAxisValue(AxisName name) const
 		{
 			float value = 0.0f;
 			if (name != AxisName::Unknown)
@@ -347,9 +347,9 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 		/** @brief Unified button name */
-		ButtonName buttonName;
+		ButtonName ButtonName;
 	};
 
 	/** @brief Mapped joystick axis event */
@@ -357,11 +357,11 @@ namespace nCine
 	{
 	public:
 		/** @brief Joystick identifier */
-		std::int32_t joyId;
+		std::int32_t JoyId;
 		/** @brief Unified axis name */
-		AxisName axisName;
+		AxisName AxisName;
 		/** @brief Axis value normalized between -1.0f and 1.0f */
-		float value;
+		float Value;
 	};
 
 }

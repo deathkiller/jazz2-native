@@ -4,31 +4,31 @@
 namespace nCine
 {
 	Timer::Timer()
-		: _isRunning(false), _startTime(clock().now()), _accumulatedTime(0ULL)
+		: _isRunning(false), _startTime(clock().Now()), _accumulatedTime(0ULL)
 	{
 	}
 
-	void Timer::start()
+	void Timer::Start()
 	{
 		_isRunning = true;
-		_startTime = clock().counter();
+		_startTime = clock().GetCounter();
 	}
 
-	void Timer::stop()
+	void Timer::Stop()
 	{
-		_accumulatedTime += clock().counter() - _startTime;
+		_accumulatedTime += clock().GetCounter() - _startTime;
 		_isRunning = false;
 	}
 
-	float Timer::interval() const
+	float Timer::GetInterval() const
 	{
-		return static_cast<float>(clock().counter() - _startTime) / clock().frequency();
+		return static_cast<float>(clock().GetCounter() - _startTime) / clock().GetFrequency();
 	}
 
-	float Timer::total() const
+	float Timer::GetTotal() const
 	{
 		return _isRunning
-			? static_cast<float>(_accumulatedTime + clock().counter() - _startTime) / clock().frequency()
-			: static_cast<float>(_accumulatedTime) / clock().frequency();
+			? static_cast<float>(_accumulatedTime + clock().GetCounter() - _startTime) / clock().GetFrequency()
+			: static_cast<float>(_accumulatedTime) / clock().GetFrequency();
 	}
 }

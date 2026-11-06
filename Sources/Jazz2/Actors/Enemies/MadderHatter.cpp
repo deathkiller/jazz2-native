@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Enemies
 							bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
 							bulletSpit->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 6, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
 								bulletSpitParams
 							));
 							_levelHandler->AddActor(bulletSpit);
@@ -190,7 +190,7 @@ namespace Jazz2::Actors::Enemies
 			angle -= fRadAngle180;
 		}
 
-		_renderer.setRotation(angle);
+		_renderer.SetRotation(angle);
 	}
 
 	void MadderHatter::BulletSpit::OnUpdateHitbox()
@@ -206,7 +206,7 @@ namespace Jazz2::Actors::Enemies
 	bool MadderHatter::BulletSpit::OnPerish(ActorBase* collider)
 	{
 		if (!_levelHandler->IsReforged()) {
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Small);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
 		}
 
 		return EnemyBase::OnPerish(collider);

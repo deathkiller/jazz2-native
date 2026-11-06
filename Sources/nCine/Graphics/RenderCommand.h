@@ -156,7 +156,7 @@ namespace nCine
 			consoles: `Font::DrawString` rents a command per glyph and wrote three members through it, so a
 			menu frame ran several hundred name lookups over a block whose member names sit in separately
 			allocated strings - all of it recomputing an answer that only a shader change can invalidate.
-			`BaseSprite::updateRenderCommand()` writes the same members (plus the palette offset) for every
+			`BaseSprite::UpdateRenderCommand()` writes the same members (plus the palette offset) for every
 			sprite whose color, size or texture changed, so it goes through this cache as well.
 		*/
 		struct InstanceUniforms

@@ -29,19 +29,19 @@ namespace nCine::Backends
 		_drawableHeight = 480;
 		_isFullscreen = true;
 
-		_currentVideoMode.width = std::uint32_t(_width);
-		_currentVideoMode.height = std::uint32_t(_height);
-		_currentVideoMode.refreshRate = 60.0f;
+		_currentVideoMode.Width = std::uint32_t(_width);
+		_currentVideoMode.Height = std::uint32_t(_height);
+		_currentVideoMode.RefreshRate = 60.0f;
 
-		updateMonitors();
-		initDeviceViewport();
+		UpdateMonitors();
+		InitDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} (PowerVR)", _width, _height);
 	}
 
 	DcGfxDevice::~DcGfxDevice() = default;
 
-	void DcGfxDevice::update()
+	void DcGfxDevice::Update()
 	{
 		// Close the frame's TA scene (pvr_scene_finish paces the display) and drop any unconsumed
 		// lighting entries, mirroring the software backend's present path
@@ -49,62 +49,62 @@ namespace nCine::Backends
 		RHI::Device::EndFrame();
 	}
 
-	void DcGfxDevice::setSwapInterval(int interval)
+	void DcGfxDevice::SetSwapInterval(int interval)
 	{
 		// The scene finish always paces to the display refresh
 		static_cast<void>(interval);
 	}
 
-	void DcGfxDevice::setResolution(bool fullscreen, int width, int height)
+	void DcGfxDevice::SetResolution(bool fullscreen, int width, int height)
 	{
 		static_cast<void>(fullscreen);
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void DcGfxDevice::setWindowPosition(int x, int y)
+	void DcGfxDevice::SetWindowPosition(int x, int y)
 	{
 		static_cast<void>(x);
 		static_cast<void>(y);
 	}
 
-	void DcGfxDevice::setWindowSize(int width, int height)
+	void DcGfxDevice::SetWindowSize(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void DcGfxDevice::setWindowTitle(StringView windowTitle)
+	void DcGfxDevice::SetWindowTitle(StringView windowTitle)
 	{
 		static_cast<void>(windowTitle);
 	}
 
-	void DcGfxDevice::setWindowIcon(StringView windowIconFilename)
+	void DcGfxDevice::SetWindowIcon(StringView windowIconFilename)
 	{
 		static_cast<void>(windowIconFilename);
 	}
 
-	const IGfxDevice::VideoMode& DcGfxDevice::currentVideoMode(unsigned int monitorIndex) const
+	const IGfxDevice::VideoMode& DcGfxDevice::GetCurrentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
 		return _currentVideoMode;
 	}
 
-	void DcGfxDevice::setResolutionInternal(int width, int height)
+	void DcGfxDevice::SetResolutionInternal(int width, int height)
 	{
 		static_cast<void>(width);
 		static_cast<void>(height);
 	}
 
-	void DcGfxDevice::updateMonitors()
+	void DcGfxDevice::UpdateMonitors()
 	{
 		// One fixed "monitor" (the TV), so windowScalingFactor() and the monitor queries stay valid
 		_numMonitors = 1;
-		_monitors[0].name = "TV";
-		_monitors[0].position = Vector2i(0, 0);
-		_monitors[0].scale = Vector2f(1.0f, 1.0f);
-		_monitors[0].numVideoModes = 1;
-		_monitors[0].videoModes[0] = _currentVideoMode;
+		_monitors[0].Name = "TV";
+		_monitors[0].Position = Vector2i(0, 0);
+		_monitors[0].Scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].VideoModeCount = 1;
+		_monitors[0].VideoModes[0] = _currentVideoMode;
 	}
 }
 

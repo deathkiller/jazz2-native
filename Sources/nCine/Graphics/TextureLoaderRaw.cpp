@@ -11,7 +11,7 @@ namespace nCine
 		_texFormat = TextureFormat(format);
 
 		std::int32_t numPixels = width * height;
-		std::int32_t bytesPerPixel = _texFormat.numChannels();
+		std::int32_t bytesPerPixel = _texFormat.GetChannelCount();
 		for (std::int32_t i = 0; i < _mipMapCount; i++) {
 			_dataSize += numPixels * bytesPerPixel;
 			numPixels /= 2;

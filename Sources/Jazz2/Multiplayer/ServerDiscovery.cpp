@@ -1132,8 +1132,8 @@ namespace Jazz2::Multiplayer
 #	endif
 
 		while (_this->_observer != nullptr) {
-			if (_this->_lastLocalRequestTime.secondsSince() > 10) {
-				_this->_lastLocalRequestTime = TimeStamp::now();
+			if (_this->_lastLocalRequestTime.GetSecondsSince() > 10) {
+				_this->_lastLocalRequestTime = TimeStamp::Now();
 				// Asked over every address family the platform has, because a server reachable on one of them
 				// is not reachable on the other - a server that answers both is folded back into one entry by
 				// the observer (see ServerSelectSection::OnServerFound)
@@ -1143,8 +1143,8 @@ namespace Jazz2::Multiplayer
 #	endif
 			}
 
-			if (_this->_lastOnlineRequestTime.secondsSince() > 60) {
-				_this->_lastOnlineRequestTime = TimeStamp::now();
+			if (_this->_lastOnlineRequestTime.GetSecondsSince() > 60) {
+				_this->_lastOnlineRequestTime = TimeStamp::Now();
 				_this->DownloadPublicServerList(observer);
 			}
 
@@ -1215,22 +1215,22 @@ namespace Jazz2::Multiplayer
 				// Each address family is answered on its own, and throttled on its own: a client asking over
 				// one of them must not swallow the answer a client on the other one is waiting for
 				while (_this->_localMulticastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0, false)) {
-					if (_this->_lastLocalRequestTime.secondsSince() > 15) {
-						_this->_lastLocalRequestTime = TimeStamp::now();
+					if (_this->_lastLocalRequestTime.GetSecondsSince() > 15) {
+						_this->_lastLocalRequestTime = TimeStamp::Now();
 						_this->SendLocalDiscoveryResponse(socket, _this->_localMulticastAddress, server, false);
 					}
 				}
 #	if ENET_IPV6
 				while (_this->_localBroadcastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socketV4, 0, true)) {
-					if (_this->_lastLocalRequestTimeV4.secondsSince() > 15) {
-						_this->_lastLocalRequestTimeV4 = TimeStamp::now();
+					if (_this->_lastLocalRequestTimeV4.GetSecondsSince() > 15) {
+						_this->_lastLocalRequestTimeV4 = TimeStamp::Now();
 						_this->SendLocalDiscoveryResponse(socketV4, _this->_localBroadcastAddress, server, true);
 					}
 				}
 #	endif
 
-				if (_this->_lastOnlineRequestTime.secondsSince() > 300) {
-					_this->_lastOnlineRequestTime = TimeStamp::now();
+				if (_this->_lastOnlineRequestTime.GetSecondsSince() > 300) {
+					_this->_lastOnlineRequestTime = TimeStamp::Now();
 					_this->PublishToPublicServerList(server);
 				}
 			}

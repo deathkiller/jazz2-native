@@ -577,8 +577,8 @@ namespace Jazz2::Editor::ToolTests
 			}
 			auto keyEvent = [](Keys key, std::int32_t mod) {
 				KeyboardEvent event;
-				event.sym = key;
-				event.mod = mod;
+				event.Sym = key;
+				event.Mod = mod;
 				return event;
 			};
 
@@ -773,7 +773,7 @@ namespace Jazz2::Editor::ToolTests
 
 	std::int32_t TestTools()
 	{
-		TimeStamp start = TimeStamp::now();
+		TimeStamp start = TimeStamp::Now();
 		std::int32_t problems = TestBrush();
 		problems += TestRectangle();
 		problems += TestFill();
@@ -786,7 +786,7 @@ namespace Jazz2::Editor::ToolTests
 		problems += TestShape();
 		problems += TestStampClipboard();
 		if (problems == 0) {
-			LOGI("Tools test passed in {:.1f} ms", start.millisecondsSince());
+			LOGI("Tools test passed in {:.1f} ms", start.GetMillisecondsSince());
 		}
 		return problems;
 	}

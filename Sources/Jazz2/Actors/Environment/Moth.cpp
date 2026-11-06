@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Moth::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetState(ActorState::CanBeFrozen, false);
-		_renderer.setLayer(_renderer.layer() + 20);
+		_renderer.SetLayer(_renderer.GetLayer() + 20);
 
 		uint8_t theme = details.Params[0];
 

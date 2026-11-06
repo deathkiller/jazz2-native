@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Enemies
 		copterParams[0] = 1;
 		_copter->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2),
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2),
 			copterParams
 		));
 		_levelHandler->AddActor(_copter);
@@ -127,7 +127,7 @@ namespace Jazz2::Actors::Enemies
 					bombParams[1] = (IsFacingLeft() ? 1 : 0);
 					bomb->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -30 : 30), (std::int32_t)_pos.Y - 10, _renderer.layer() + 2),
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -30 : 30), (std::int32_t)_pos.Y - 10, _renderer.GetLayer() + 2),
 						bombParams
 					));
 					_levelHandler->AddActor(bomb);
@@ -210,7 +210,7 @@ namespace Jazz2::Actors::Enemies
 			lizardParams[2] = (IsFacingLeft() ? 1 : 0);
 			ActorActivationDetails details(
 				_levelHandler,
-				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()),
 				lizardParams
 			);
 			// The lizard is a regular event object, so it can be spawned again from a level state snapshot
@@ -218,7 +218,7 @@ namespace Jazz2::Actors::Enemies
 			lizard->OnActivated(details);
 			_levelHandler->AddActor(lizard);
 
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);
+			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::SmokeGray);
 		}
 
 		return EnemyBase::OnPerish(collider);

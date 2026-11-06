@@ -145,13 +145,13 @@ namespace nCine::Backends
 				LOGE("JNIEnv pointer is nullptr");
 			} else {
 				InitializeClasses();
-				AndroidJniWrap_Activity::init(state);
-				AndroidJniWrap_InputMethodManager::init(state);
-				AndroidJniWrap_DisplayManager::init(state);
-				AndroidJniWrap_Secure::init(state);
+				AndroidJniWrap_Activity::Init(state);
+				AndroidJniWrap_InputMethodManager::Init(state);
+				AndroidJniWrap_DisplayManager::Init(state);
+				AndroidJniWrap_Secure::Init(state);
 
 				// Cache the value of SDK version to avoid going through JNI in the future
-				_sdkVersion = AndroidJniClass_Version::sdkInt();
+				_sdkVersion = AndroidJniClass_Version::GetSdkInt();
 			}
 		}
 	}
@@ -159,7 +159,7 @@ namespace nCine::Backends
 	void AndroidJniHelper::DetachJVM()
 	{
 		if (_javaVM) {
-			AndroidJniWrap_DisplayManager::shutdown();
+			AndroidJniWrap_DisplayManager::Shutdown();
 
 			_javaVM->DetachCurrentThread();
 			LOGI("Thread detached");
@@ -170,15 +170,15 @@ namespace nCine::Backends
 
 	void AndroidJniHelper::InitializeClasses()
 	{
-		AndroidJniClass_MotionRange::init();
-		AndroidJniClass_VibrationEffect::init();
-		AndroidJniClass_Vibrator::init();
-		AndroidJniClass_VibratorManager::init();
-		AndroidJniClass_InputDevice::init();
-		AndroidJniClass_KeyCharacterMap::init();
-		AndroidJniClass_KeyEvent::init();
-		AndroidJniClass_Display::init();
-		AndroidJniClass_DisplayMode::init();
+		AndroidJniClass_MotionRange::Init();
+		AndroidJniClass_VibrationEffect::Init();
+		AndroidJniClass_Vibrator::Init();
+		AndroidJniClass_VibratorManager::Init();
+		AndroidJniClass_InputDevice::Init();
+		AndroidJniClass_KeyCharacterMap::Init();
+		AndroidJniClass_KeyEvent::Init();
+		AndroidJniClass_Display::Init();
+		AndroidJniClass_DisplayMode::Init();
 	}
 
 	String AndroidJniHelper::ExceptionToString(JNIEnv* env, jthrowable exception)
@@ -253,7 +253,7 @@ namespace nCine::Backends
 		return *this;
 	}
 
-	jclass AndroidJniClass::findClass(const char* name)
+	jclass AndroidJniClass::FindClass(const char* name)
 	{
 		DEATH_ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
@@ -264,7 +264,7 @@ namespace nCine::Backends
 		return javaClass;
 	}
 
-	jmethodID AndroidJniClass::getStaticMethodID(jclass javaClass, const char* name, const char* signature)
+	jmethodID AndroidJniClass::GetStaticMethodID(jclass javaClass, const char* name, const char* signature)
 	{
 		jmethodID mid = nullptr;
 
@@ -281,7 +281,7 @@ namespace nCine::Backends
 		return mid;
 	}
 
-	jmethodID AndroidJniClass::getMethodID(jclass javaClass, const char* name, const char* signature)
+	jmethodID AndroidJniClass::GetMethodID(jclass javaClass, const char* name, const char* signature)
 	{
 		jmethodID mid = nullptr;
 
@@ -298,7 +298,7 @@ namespace nCine::Backends
 		return mid;
 	}
 
-	jfieldID AndroidJniClass::getStaticFieldID(jclass javaClass, const char* name, const char* signature)
+	jfieldID AndroidJniClass::GetStaticFieldID(jclass javaClass, const char* name, const char* signature)
 	{
 		jfieldID fid = nullptr;
 
@@ -317,7 +317,7 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_Version ──────────────────────────────────────────────────────────────────
 
-	int AndroidJniClass_Version::sdkInt()
+	int AndroidJniClass_Version::GetSdkInt()
 	{
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.build.version.sdk", buffer);
@@ -327,7 +327,7 @@ namespace nCine::Backends
 		return atoi(buffer);
 	}
 	
-	String AndroidJniClass_Version::deviceBrand()
+	String AndroidJniClass_Version::GetDeviceBrand()
 	{
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.brand", buffer);
@@ -337,7 +337,7 @@ namespace nCine::Backends
 		return String(buffer, (std::size_t)length);
 	}
 	
-	String AndroidJniClass_Version::deviceManufacturer()
+	String AndroidJniClass_Version::GetDeviceManufacturer()
 	{
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.manufacturer", buffer);
@@ -347,7 +347,7 @@ namespace nCine::Backends
 		return String(buffer, (std::size_t)length);
 	}
 	
-	String AndroidJniClass_Version::deviceModel()
+	String AndroidJniClass_Version::GetDeviceModel()
 	{
 		char buffer[PROP_VALUE_MAX];
 		int length = __system_property_get("ro.product.model", buffer);
@@ -359,11 +359,11 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_MotionRange ──────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_MotionRange::init()
+	void AndroidJniClass_MotionRange::Init()
 	{
-		_javaClass = findClass("android/view/InputDevice$MotionRange");
-		_midGetMin = getMethodID(_javaClass, "getMin", "()F");
-		_midGetRange = getMethodID(_javaClass, "getRange", "()F");
+		_javaClass = FindClass("android/view/InputDevice$MotionRange");
+		_midGetMin = GetMethodID(_javaClass, "getMin", "()F");
+		_midGetRange = GetMethodID(_javaClass, "getRange", "()F");
 	}
 
 	AndroidJniClass_MotionRange::AndroidJniClass_MotionRange(jobject javaObject)
@@ -371,13 +371,13 @@ namespace nCine::Backends
 	{
 	}
 
-	float AndroidJniClass_MotionRange::getMin() const
+	float AndroidJniClass_MotionRange::GetMin() const
 	{
 		const jfloat minValue = AndroidJniHelper::jniEnv->CallFloatMethod(_javaObject, _midGetMin);
 		return float(minValue);
 	}
 
-	float AndroidJniClass_MotionRange::getRange() const
+	float AndroidJniClass_MotionRange::GetRange() const
 	{
 		const jfloat rangeValue = AndroidJniHelper::jniEnv->CallFloatMethod(_javaObject, _midGetRange);
 		return float(rangeValue);
@@ -385,13 +385,13 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_VibrationEffect ──────────────────────────────────────────────────────────
 
-	void AndroidJniClass_VibrationEffect::init()
+	void AndroidJniClass_VibrationEffect::Init()
 	{
-		_javaClass = findClass("android/os/VibrationEffect");
-		_midCreateOneShot = getStaticMethodID(_javaClass, "createOneShot", "(JI)Landroid/os/VibrationEffect;");
+		_javaClass = FindClass("android/os/VibrationEffect");
+		_midCreateOneShot = GetStaticMethodID(_javaClass, "createOneShot", "(JI)Landroid/os/VibrationEffect;");
 	}
 
-	AndroidJniClass_VibrationEffect AndroidJniClass_VibrationEffect::createOneShot(long milliseconds, int amplitude)
+	AndroidJniClass_VibrationEffect AndroidJniClass_VibrationEffect::CreateOneShot(long milliseconds, int amplitude)
 	{
 		jobject vibrationEffect = AndroidJniHelper::jniEnv->CallStaticObjectMethod(_javaClass, _midCreateOneShot, milliseconds, amplitude);
 		return AndroidJniClass_VibrationEffect(vibrationEffect);
@@ -399,31 +399,31 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_Vibrator ─────────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_Vibrator::init()
+	void AndroidJniClass_Vibrator::Init()
 	{
-		_javaClass = findClass("android/os/Vibrator");
-		_midCancel = getMethodID(_javaClass, "cancel", "()V");
-		_midVibrate = getMethodID(_javaClass, "vibrate", "(Landroid/os/VibrationEffect;)V");
+		_javaClass = FindClass("android/os/Vibrator");
+		_midCancel = GetMethodID(_javaClass, "cancel", "()V");
+		_midVibrate = GetMethodID(_javaClass, "vibrate", "(Landroid/os/VibrationEffect;)V");
 	}
 
-	void AndroidJniClass_Vibrator::cancel() const
+	void AndroidJniClass_Vibrator::Cancel() const
 	{
 		AndroidJniHelper::jniEnv->CallVoidMethod(_javaObject, _midCancel);
 	}
 
-	void AndroidJniClass_Vibrator::vibrate(const AndroidJniClass_VibrationEffect& vibe) const
+	void AndroidJniClass_Vibrator::Vibrate(const AndroidJniClass_VibrationEffect& vibe) const
 	{
-		AndroidJniHelper::jniEnv->CallVoidMethod(_javaObject, _midVibrate, vibe.javaObject());
+		AndroidJniHelper::jniEnv->CallVoidMethod(_javaObject, _midVibrate, vibe.GetJavaObject());
 	}
 
 	// ── AndroidJniClass_VibratorManager ──────────────────────────────────────────────────────────
 
-	void AndroidJniClass_VibratorManager::init()
+	void AndroidJniClass_VibratorManager::Init()
 	{
-		_javaClass = findClass("android/os/VibratorManager");
-		_midCancel = getMethodID(_javaClass, "cancel", "()V");
-		_midGetVibratorIds = getMethodID(_javaClass, "getVibratorIds", "()[I");
-		_midGetVibrator = getMethodID(_javaClass, "getVibrator", "(I)Landroid/os/Vibrator;");
+		_javaClass = FindClass("android/os/VibratorManager");
+		_midCancel = GetMethodID(_javaClass, "cancel", "()V");
+		_midGetVibratorIds = GetMethodID(_javaClass, "getVibratorIds", "()[I");
+		_midGetVibrator = GetMethodID(_javaClass, "getVibrator", "(I)Landroid/os/Vibrator;");
 	}
 
 	AndroidJniClass_VibratorManager::AndroidJniClass_VibratorManager(jobject javaObject)
@@ -431,12 +431,12 @@ namespace nCine::Backends
 	{
 	}
 
-	void AndroidJniClass_VibratorManager::cancel() const
+	void AndroidJniClass_VibratorManager::Cancel() const
 	{
 		AndroidJniHelper::jniEnv->CallVoidMethod(_javaObject, _midCancel);
 	}
 
-	int AndroidJniClass_VibratorManager::getVibratorIds(int* destination, int maxSize) const
+	int AndroidJniClass_VibratorManager::GetVibratorIds(int* destination, int maxSize) const
 	{
 		jintArray arrVibratorIds = static_cast<jintArray>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetVibratorIds));
 		const jint length = AndroidJniHelper::jniEnv->GetArrayLength(arrVibratorIds);
@@ -452,7 +452,7 @@ namespace nCine::Backends
 		return int(length);
 	}
 
-	AndroidJniClass_Vibrator AndroidJniClass_VibratorManager::getVibrator(int vibratorId) const
+	AndroidJniClass_Vibrator AndroidJniClass_VibratorManager::GetVibrator(int vibratorId) const
 	{
 		jobject vibratorObject = AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetVibrator, vibratorId);
 		return AndroidJniClass_Vibrator(vibratorObject);
@@ -460,28 +460,28 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_InputDevice ──────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_InputDevice::init()
+	void AndroidJniClass_InputDevice::Init()
 	{
-		_javaClass = findClass("android/view/InputDevice");
-		_midGetDevice = getStaticMethodID(_javaClass, "getDevice", "(I)Landroid/view/InputDevice;");
-		_midGetDeviceIds = getStaticMethodID(_javaClass, "getDeviceIds", "()[I");
-		_midGetName = getMethodID(_javaClass, "getName", "()Ljava/lang/String;");
-		_midGetDescriptor = getMethodID(_javaClass, "getDescriptor", "()Ljava/lang/String;");
-		_midGetProductId = getMethodID(_javaClass, "getProductId", "()I");
-		_midGetVendorId = getMethodID(_javaClass, "getVendorId", "()I");
-		_midGetMotionRange = getMethodID(_javaClass, "getMotionRange", "(I)Landroid/view/InputDevice$MotionRange;");
-		_midGetSources = getMethodID(_javaClass, "getSources", "()I");
-		_midHasKeys = getMethodID(_javaClass, "hasKeys", "([I)[Z");
-		_midGetVibratorManager = getMethodID(_javaClass, "getVibratorManager", "()Landroid/os/VibratorManager;");
+		_javaClass = FindClass("android/view/InputDevice");
+		_midGetDevice = GetStaticMethodID(_javaClass, "getDevice", "(I)Landroid/view/InputDevice;");
+		_midGetDeviceIds = GetStaticMethodID(_javaClass, "getDeviceIds", "()[I");
+		_midGetName = GetMethodID(_javaClass, "getName", "()Ljava/lang/String;");
+		_midGetDescriptor = GetMethodID(_javaClass, "getDescriptor", "()Ljava/lang/String;");
+		_midGetProductId = GetMethodID(_javaClass, "getProductId", "()I");
+		_midGetVendorId = GetMethodID(_javaClass, "getVendorId", "()I");
+		_midGetMotionRange = GetMethodID(_javaClass, "getMotionRange", "(I)Landroid/view/InputDevice$MotionRange;");
+		_midGetSources = GetMethodID(_javaClass, "getSources", "()I");
+		_midHasKeys = GetMethodID(_javaClass, "hasKeys", "([I)[Z");
+		_midGetVibratorManager = GetMethodID(_javaClass, "getVibratorManager", "()Landroid/os/VibratorManager;");
 	}
 
-	AndroidJniClass_InputDevice AndroidJniClass_InputDevice::getDevice(int deviceId)
+	AndroidJniClass_InputDevice AndroidJniClass_InputDevice::GetDevice(int deviceId)
 	{
 		jobject inputDeviceObject = AndroidJniHelper::jniEnv->CallStaticObjectMethod(_javaClass, _midGetDevice, deviceId);
 		return AndroidJniClass_InputDevice(inputDeviceObject);
 	}
 
-	int AndroidJniClass_InputDevice::getDeviceIds(int* destination, int maxSize)
+	int AndroidJniClass_InputDevice::GetDeviceIds(int* destination, int maxSize)
 	{
 		jintArray arrDeviceIds = static_cast<jintArray>(AndroidJniHelper::jniEnv->CallStaticObjectMethod(_javaClass, _midGetDeviceIds));
 		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrDeviceIds);
@@ -499,7 +499,7 @@ namespace nCine::Backends
 		return length;
 	}
 
-	int AndroidJniClass_InputDevice::getName(char* destination, int maxStringSize) const
+	int AndroidJniClass_InputDevice::GetName(char* destination, int maxStringSize) const
 	{
 		jstring strDeviceName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetName));
 		int length;
@@ -516,7 +516,7 @@ namespace nCine::Backends
 		return length;
 	}
 
-	int AndroidJniClass_InputDevice::getDescriptor(char* destination, int maxStringSize) const
+	int AndroidJniClass_InputDevice::GetDescriptor(char* destination, int maxStringSize) const
 	{
 		jstring strDeviceDescriptor = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetDescriptor));
 		int length;
@@ -536,7 +536,7 @@ namespace nCine::Backends
 		return length;
 	}
 
-	int AndroidJniClass_InputDevice::getProductId() const
+	int AndroidJniClass_InputDevice::GetProductId() const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 19) {
@@ -546,7 +546,7 @@ namespace nCine::Backends
 		return int(productId);
 	}
 
-	int AndroidJniClass_InputDevice::getVendorId() const
+	int AndroidJniClass_InputDevice::GetVendorId() const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 19) {
@@ -556,19 +556,19 @@ namespace nCine::Backends
 		return int(vendorID);
 	}
 
-	AndroidJniClass_MotionRange AndroidJniClass_InputDevice::getMotionRange(int axis) const
+	AndroidJniClass_MotionRange AndroidJniClass_InputDevice::GetMotionRange(int axis) const
 	{
 		jobject motionRangeObject = AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetMotionRange, axis);
 		return AndroidJniClass_MotionRange(motionRangeObject);
 	}
 
-	int AndroidJniClass_InputDevice::getSources() const
+	int AndroidJniClass_InputDevice::GetSources() const
 	{
 		const jint sources = AndroidJniHelper::jniEnv->CallIntMethod(_javaObject, _midGetSources);
 		return int(sources);
 	}
 
-	void AndroidJniClass_InputDevice::hasKeys(const int* buttons, const int length, bool* bools) const
+	void AndroidJniClass_InputDevice::HasKeys(const int* buttons, const int length, bool* bools) const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 19) {
@@ -593,7 +593,7 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->DeleteLocalRef(arrBooleans);
 	}
 
-	AndroidJniClass_VibratorManager AndroidJniClass_InputDevice::getVibratorManager() const
+	AndroidJniClass_VibratorManager AndroidJniClass_InputDevice::GetVibratorManager() const
 	{
 		// Minimum SDK version should be 31 but early-out has not been implemented
 
@@ -603,13 +603,13 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_KeyCharacterMap ──────────────────────────────────────────────────────────
 
-	void AndroidJniClass_KeyCharacterMap::init()
+	void AndroidJniClass_KeyCharacterMap::Init()
 	{
-		_javaClass = findClass("android/view/KeyCharacterMap");
-		_midDeviceHasKey = getStaticMethodID(_javaClass, "deviceHasKey", "(I)Z");
+		_javaClass = FindClass("android/view/KeyCharacterMap");
+		_midDeviceHasKey = GetStaticMethodID(_javaClass, "deviceHasKey", "(I)Z");
 	}
 
-	bool AndroidJniClass_KeyCharacterMap::deviceHasKey(int button)
+	bool AndroidJniClass_KeyCharacterMap::DeviceHasKey(int button)
 	{
 		const jboolean hasKey = AndroidJniHelper::jniEnv->CallStaticBooleanMethod(_javaClass, _midDeviceHasKey, button);
 		return (hasKey == JNI_TRUE);
@@ -617,15 +617,15 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_KeyEvent ─────────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_KeyEvent::init()
+	void AndroidJniClass_KeyEvent::Init()
 	{
-		_javaClass = findClass("android/view/KeyEvent");
-		_midConstructor = getMethodID(_javaClass, "<init>", "(II)V");
-		_midConstructor2 = getMethodID(_javaClass, "<init>", "(JJIIIIIIII)V");
-		_midGetUnicodeCharMetaState = getMethodID(_javaClass, "getUnicodeChar", "(I)I");
-		_midGetUnicodeChar = getMethodID(_javaClass, "getUnicodeChar", "()I");
-		_midGetCharacters = getMethodID(_javaClass, "getCharacters", "()Ljava/lang/String;");
-		_midIsPrintingKey = getMethodID(_javaClass, "isPrintingKey", "()Z");
+		_javaClass = FindClass("android/view/KeyEvent");
+		_midConstructor = GetMethodID(_javaClass, "<init>", "(II)V");
+		_midConstructor2 = GetMethodID(_javaClass, "<init>", "(JJIIIIIIII)V");
+		_midGetUnicodeCharMetaState = GetMethodID(_javaClass, "getUnicodeChar", "(I)I");
+		_midGetUnicodeChar = GetMethodID(_javaClass, "getUnicodeChar", "()I");
+		_midGetCharacters = GetMethodID(_javaClass, "getCharacters", "()Ljava/lang/String;");
+		_midIsPrintingKey = GetMethodID(_javaClass, "isPrintingKey", "()Z");
 	}
 
 	AndroidJniClass_KeyEvent::AndroidJniClass_KeyEvent(int action, int code)
@@ -640,7 +640,7 @@ namespace nCine::Backends
 		_javaObject = AndroidJniHelper::jniEnv->NewGlobalRef(javaObject);
 	}
 
-	int AndroidJniClass_KeyEvent::getUnicodeChar(int metaState) const
+	int AndroidJniClass_KeyEvent::GetUnicodeChar(int metaState) const
 	{
 		if (metaState != 0) {
 			return AndroidJniHelper::jniEnv->CallIntMethod(_javaObject, _midGetUnicodeCharMetaState, metaState);
@@ -649,7 +649,7 @@ namespace nCine::Backends
 		}
 	}
 
-	int AndroidJniClass_KeyEvent::getCharacters(char* destination, int maxStringSize) const
+	int AndroidJniClass_KeyEvent::GetCharacters(char* destination, int maxStringSize) const
 	{
 		jstring strCharacters = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetCharacters));
 		int length;
@@ -667,22 +667,22 @@ namespace nCine::Backends
 		return length;
 	}
 
-	bool AndroidJniClass_KeyEvent::isPrintingKey() const
+	bool AndroidJniClass_KeyEvent::IsPrintingKey() const
 	{
 		return AndroidJniHelper::jniEnv->CallBooleanMethod(_javaObject, _midIsPrintingKey);
 	}
 
 	// ── AndroidJniClass_DisplayMode ──────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_DisplayMode::init()
+	void AndroidJniClass_DisplayMode::Init()
 	{
-		_javaClass = findClass("android/view/Display$Mode");
-		_midGetPhysicalHeight = getMethodID(_javaClass, "getPhysicalHeight", "()I");
-		_midGetPhysicalWidth = getMethodID(_javaClass, "getPhysicalWidth", "()I");
-		_midGetRefreshRate = getMethodID(_javaClass, "getRefreshRate", "()F");
+		_javaClass = FindClass("android/view/Display$Mode");
+		_midGetPhysicalHeight = GetMethodID(_javaClass, "getPhysicalHeight", "()I");
+		_midGetPhysicalWidth = GetMethodID(_javaClass, "getPhysicalWidth", "()I");
+		_midGetRefreshRate = GetMethodID(_javaClass, "getRefreshRate", "()F");
 	}
 
-	int AndroidJniClass_DisplayMode::getPhysicalHeight() const
+	int AndroidJniClass_DisplayMode::GetPhysicalHeight() const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 23) {
@@ -692,7 +692,7 @@ namespace nCine::Backends
 		return int(physicalHeight);
 	}
 
-	int AndroidJniClass_DisplayMode::getPhysicalWidth() const
+	int AndroidJniClass_DisplayMode::GetPhysicalWidth() const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 23) {
@@ -702,7 +702,7 @@ namespace nCine::Backends
 		return int(physicalWidth);
 	}
 
-	float AndroidJniClass_DisplayMode::getRefreshRate() const
+	float AndroidJniClass_DisplayMode::GetRefreshRate() const
 	{
 		// Early-out if SDK version requirements are not met
 		if (AndroidJniHelper::SdkVersion() < 23) {
@@ -714,21 +714,21 @@ namespace nCine::Backends
 
 	// ── AndroidJniClass_Display ──────────────────────────────────────────────────────────────────
 
-	void AndroidJniClass_Display::init()
+	void AndroidJniClass_Display::Init()
 	{
-		_javaClass = findClass("android/view/Display");
-		_midGetMode = getMethodID(_javaClass, "getMode", "()Landroid/view/Display$Mode;");
-		_midGetName = getMethodID(_javaClass, "getName", "()Ljava/lang/String;");
-		_midGetSupportedModes = getMethodID(_javaClass, "getSupportedModes", "()[Landroid/view/Display$Mode;");
+		_javaClass = FindClass("android/view/Display");
+		_midGetMode = GetMethodID(_javaClass, "getMode", "()Landroid/view/Display$Mode;");
+		_midGetName = GetMethodID(_javaClass, "getName", "()Ljava/lang/String;");
+		_midGetSupportedModes = GetMethodID(_javaClass, "getSupportedModes", "()[Landroid/view/Display$Mode;");
 	}
 
-	AndroidJniClass_DisplayMode AndroidJniClass_Display::getMode() const
+	AndroidJniClass_DisplayMode AndroidJniClass_Display::GetMode() const
 	{
 		jobject modeObject = static_cast<jobject>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetMode));
 		return AndroidJniClass_DisplayMode(modeObject);
 	}
 
-	int AndroidJniClass_Display::getName(char* destination, int maxStringSize) const
+	int AndroidJniClass_Display::GetName(char* destination, int maxStringSize) const
 	{
 		jstring strDisplayName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetName));
 		int length;
@@ -745,7 +745,7 @@ namespace nCine::Backends
 		return length;
 	}
 
-	int AndroidJniClass_Display::getSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const
+	int AndroidJniClass_Display::GetSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const
 	{
 		jobjectArray arrModes = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetSupportedModes));
 		if (AndroidJniHelper::CheckAndClearExceptions() || arrModes == nullptr) {
@@ -769,38 +769,38 @@ namespace nCine::Backends
 
 	// ── AndroidJniWrap_Activity ──────────────────────────────────────────────────────────────────
 
-	void AndroidJniWrap_Activity::init(struct android_app* state)
+	void AndroidJniWrap_Activity::Init(struct android_app* state)
 	{
 		// Retrieve `NativeActivity`
 		_activityObject = state->activity->clazz;
 		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(_activityObject);
 
-		_midFinishAndRemoveTask = AndroidJniClass::getMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
-		_midGetPackageName = AndroidJniClass::getMethodID(nativeActivityClass, "getPackageName", "()Ljava/lang/String;");
-		_midGetPreferredLanguage = AndroidJniClass::getMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
-		_midIsScreenRound = AndroidJniClass::getMethodID(nativeActivityClass, "isScreenRound", "()Z");
-		_midHasExternalStoragePermission = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
-		_midRequestExternalStoragePermission = AndroidJniClass::getMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
-		_midSetActivityEnabled = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
-		_midSetActivityEnabled = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
-		_midOpenUrl = AndroidJniClass::getMethodID(nativeActivityClass, "openUrl", "(Ljava/lang/String;)Z");
-		_midGetWindow = AndroidJniClass::getMethodID(nativeActivityClass, "getWindow", "()Landroid/view/Window;");
-		_midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		_midFinishAndRemoveTask = AndroidJniClass::GetMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
+		_midGetPackageName = AndroidJniClass::GetMethodID(nativeActivityClass, "getPackageName", "()Ljava/lang/String;");
+		_midGetPreferredLanguage = AndroidJniClass::GetMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
+		_midIsScreenRound = AndroidJniClass::GetMethodID(nativeActivityClass, "isScreenRound", "()Z");
+		_midHasExternalStoragePermission = AndroidJniClass::GetMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
+		_midRequestExternalStoragePermission = AndroidJniClass::GetMethodID(nativeActivityClass, "requestExternalStoragePermission", "()V");
+		_midSetActivityEnabled = AndroidJniClass::GetMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
+		_midSetActivityEnabled = AndroidJniClass::GetMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
+		_midOpenUrl = AndroidJniClass::GetMethodID(nativeActivityClass, "openUrl", "(Ljava/lang/String;)Z");
+		_midGetWindow = AndroidJniClass::GetMethodID(nativeActivityClass, "getWindow", "()Landroid/view/Window;");
+		_midGetSystemService = AndroidJniClass::GetMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
 
-		jclass windowClass = AndroidJniClass::findClass("android/view/Window");
-		_midGetDecorView = AndroidJniClass::getMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
+		jclass windowClass = AndroidJniClass::FindClass("android/view/Window");
+		_midGetDecorView = AndroidJniClass::GetMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
 
-		_rectClass = AndroidJniClass::findClass("android/graphics/Rect");
-		_midRectInit = AndroidJniClass::getMethodID(_rectClass, "<init>", "()V");
+		_rectClass = AndroidJniClass::FindClass("android/graphics/Rect");
+		_midRectInit = AndroidJniClass::GetMethodID(_rectClass, "<init>", "()V");
 		_fidRectLeft = AndroidJniHelper::jniEnv->GetFieldID(_rectClass, "left", "I");
 		_fidRectTop = AndroidJniHelper::jniEnv->GetFieldID(_rectClass, "top", "I");
 		_fidRectRight = AndroidJniHelper::jniEnv->GetFieldID(_rectClass, "right", "I");
 		_fidRectBottom = AndroidJniHelper::jniEnv->GetFieldID(_rectClass, "bottom", "I");
 
-		jclass viewClass = AndroidJniClass::findClass("android/view/View");
-		_midGetWindowVisibleDisplayFrame = AndroidJniClass::getMethodID(viewClass, "getWindowVisibleDisplayFrame", "(Landroid/graphics/Rect;)V");
+		jclass viewClass = AndroidJniClass::FindClass("android/view/View");
+		_midGetWindowVisibleDisplayFrame = AndroidJniClass::GetMethodID(viewClass, "getWindowVisibleDisplayFrame", "(Landroid/graphics/Rect;)V");
 
-		_midGetVisibleBounds = AndroidJniClass::getMethodID(nativeActivityClass, "getVisibleBounds", "()[I");
+		_midGetVisibleBounds = AndroidJniClass::GetMethodID(nativeActivityClass, "getVisibleBounds", "()[I");
 
 		// Cache the device vibrator for reuse
 		{
@@ -820,19 +820,19 @@ namespace nCine::Backends
 				jclass windowClass = AndroidJniHelper::jniEnv->GetObjectClass(windowObj);
 
 				// Edge-to-edge: content draws behind system bars
-				jmethodID midSetDecorFitsSystemWindows = AndroidJniClass::getMethodID(windowClass, "setDecorFitsSystemWindows", "(Z)V");
+				jmethodID midSetDecorFitsSystemWindows = AndroidJniClass::GetMethodID(windowClass, "setDecorFitsSystemWindows", "(Z)V");
 				if (midSetDecorFitsSystemWindows != nullptr) {
 					AndroidJniHelper::jniEnv->CallVoidMethod(windowObj, midSetDecorFitsSystemWindows, JNI_FALSE);
 				}
 
 				// Fully transparent status bar color
-				jmethodID midSetStatusBarColor = AndroidJniClass::getMethodID(windowClass, "setStatusBarColor", "(I)V");
+				jmethodID midSetStatusBarColor = AndroidJniClass::GetMethodID(windowClass, "setStatusBarColor", "(I)V");
 				if (midSetStatusBarColor != nullptr) {
 					AndroidJniHelper::jniEnv->CallVoidMethod(windowObj, midSetStatusBarColor, (jint)0x00000000);
 				}
 
 				// Cache WindowInsetsController
-				jmethodID midGetInsetsController = AndroidJniClass::getMethodID(windowClass, "getInsetsController", "()Landroid/view/WindowInsetsController;");
+				jmethodID midGetInsetsController = AndroidJniClass::GetMethodID(windowClass, "getInsetsController", "()Landroid/view/WindowInsetsController;");
 				if (midGetInsetsController != nullptr) {
 					jobject controller = AndroidJniHelper::jniEnv->CallObjectMethod(windowObj, midGetInsetsController);
 					if (controller != nullptr) {
@@ -840,8 +840,8 @@ namespace nCine::Backends
 						AndroidJniHelper::jniEnv->DeleteLocalRef(controller);
 
 						jclass controllerClass = AndroidJniHelper::jniEnv->GetObjectClass(_insetsControllerObject);
-						_midInsetsShow = AndroidJniClass::getMethodID(controllerClass, "show", "(I)V");
-						_midInsetsHide = AndroidJniClass::getMethodID(controllerClass, "hide", "(I)V");
+						_midInsetsShow = AndroidJniClass::GetMethodID(controllerClass, "show", "(I)V");
+						_midInsetsHide = AndroidJniClass::GetMethodID(controllerClass, "hide", "(I)V");
 						AndroidJniHelper::jniEnv->DeleteLocalRef(controllerClass);
 					}
 				}
@@ -852,7 +852,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void AndroidJniWrap_Activity::finishAndRemoveTask()
+	void AndroidJniWrap_Activity::FinishAndRemoveTask()
 	{
 		// Check if SDK version requirements are met
 		if (AndroidJniHelper::SdkVersion() >= 21) {
@@ -860,7 +860,7 @@ namespace nCine::Backends
 		}
 	}
 
-	String AndroidJniWrap_Activity::getPackageName()
+	String AndroidJniWrap_Activity::GetPackageName()
 	{
 		jstring strPackageName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_activityObject, _midGetPackageName));
 		if (!strPackageName) {
@@ -876,7 +876,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	String AndroidJniWrap_Activity::getPreferredLanguage()
+	String AndroidJniWrap_Activity::GetPreferredLanguage()
 	{
 		jstring strLanguage = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(_activityObject, _midGetPreferredLanguage));
 		if (!strLanguage) {
@@ -892,7 +892,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	bool AndroidJniWrap_Activity::isScreenRound()
+	bool AndroidJniWrap_Activity::IsScreenRound()
 	{
 		if (AndroidJniHelper::SdkVersion() >= 23) {
 			const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midIsScreenRound);
@@ -902,7 +902,7 @@ namespace nCine::Backends
 		}
 	}
 
-	bool AndroidJniWrap_Activity::hasExternalStoragePermission()
+	bool AndroidJniWrap_Activity::HasExternalStoragePermission()
 	{
 		if (AndroidJniHelper::SdkVersion() >= 30) {
 			const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midHasExternalStoragePermission);
@@ -912,14 +912,14 @@ namespace nCine::Backends
 		}
 	}
 
-	void AndroidJniWrap_Activity::requestExternalStoragePermission()
+	void AndroidJniWrap_Activity::RequestExternalStoragePermission()
 	{
 		if (AndroidJniHelper::SdkVersion() >= 30) {
 			AndroidJniHelper::jniEnv->CallVoidMethod(_activityObject, _midRequestExternalStoragePermission);
 		}
 	}
 	
-	void AndroidJniWrap_Activity::setActivityEnabled(StringView activity, bool enable)
+	void AndroidJniWrap_Activity::SetActivityEnabled(StringView activity, bool enable)
 	{
 		if (_midSetActivityEnabled == nullptr || activity.empty()) {
 			return;
@@ -936,7 +936,7 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strName);
 	}
 
-	bool AndroidJniWrap_Activity::openUrl(StringView url)
+	bool AndroidJniWrap_Activity::OpenUrl(StringView url)
 	{
 		if (_midOpenUrl == nullptr || url.empty()) {
 			return false;
@@ -953,7 +953,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	jobject AndroidJniWrap_Activity::getDecorView()
+	jobject AndroidJniWrap_Activity::GetDecorView()
 	{
 		if (_midGetWindow == nullptr || _midGetDecorView == nullptr) {
 			return nullptr;
@@ -969,7 +969,7 @@ namespace nCine::Backends
 		return decorViewObject;
 	}
 
-	Recti AndroidJniWrap_Activity::getVisibleBounds()
+	Recti AndroidJniWrap_Activity::GetVisibleBounds()
 	{
 		// Prefer the activity of the Java bridge, because it also accounts for the screen keyboard, which
 		// the visible display frame doesn't report for a window drawn edge-to-edge
@@ -993,7 +993,7 @@ namespace nCine::Backends
 		}
 
 		Recti result;
-		jobject decorViewObject = getDecorView();
+		jobject decorViewObject = GetDecorView();
 		if (decorViewObject != nullptr) {
 			jobject rectObject = AndroidJniHelper::jniEnv->NewObject(_rectClass, _midRectInit);
 			if (rectObject != nullptr) {
@@ -1017,7 +1017,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	void AndroidJniWrap_Activity::vibrate(std::int32_t milliseconds)
+	void AndroidJniWrap_Activity::Vibrate(std::int32_t milliseconds)
 	{
 		if (_vibratorObject == nullptr || milliseconds <= 0) {
 			return;
@@ -1025,17 +1025,17 @@ namespace nCine::Backends
 
 		if (AndroidJniHelper::SdkVersion() >= 26) {
 			// Android 8+ - use VibrationEffect::createOneShot
-			const AndroidJniClass_VibrationEffect effect = AndroidJniClass_VibrationEffect::createOneShot(
+			const AndroidJniClass_VibrationEffect effect = AndroidJniClass_VibrationEffect::CreateOneShot(
 				static_cast<long>(milliseconds), -1 /* DEFAULT_AMPLITUDE */);
 			// _vibratorObject is a global ref; wrap it via a local ref so AndroidJniClass ctor can DeleteLocalRef safely
 			jobject localRef = AndroidJniHelper::jniEnv->NewLocalRef(_vibratorObject);
 			AndroidJniClass_Vibrator vibrator(localRef);
-			vibrator.vibrate(effect);
+			vibrator.Vibrate(effect);
 		}
 		AndroidJniHelper::CheckAndClearExceptions();
 	}
 
-	void AndroidJniWrap_Activity::showStatusBar()
+	void AndroidJniWrap_Activity::ShowStatusBar()
 	{
 		if (_insetsControllerObject == nullptr || _midInsetsShow == nullptr) {
 			return;
@@ -1046,7 +1046,7 @@ namespace nCine::Backends
 		AndroidJniHelper::CheckAndClearExceptions();
 	}
 
-	void AndroidJniWrap_Activity::hideStatusBar()
+	void AndroidJniWrap_Activity::HideStatusBar()
 	{
 		if (_insetsControllerObject == nullptr || _midInsetsHide == nullptr) {
 			return;
@@ -1059,22 +1059,22 @@ namespace nCine::Backends
 
 	// ── AndroidJniWrap_InputMethodManager ────────────────────────────────────────────────────────
 
-	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
+	void AndroidJniWrap_InputMethodManager::Init(struct android_app* state)
 	{
 		// The activity of the Java bridge owns the text editor the keyboard attaches to, so everything is
 		// delegated to it - it also takes care of running the requests on the UI thread
 		_activityObject = state->activity->clazz;
 		jclass activityClass = AndroidJniHelper::jniEnv->GetObjectClass(_activityObject);
 
-		_midIsSoftInputAvailable = AndroidJniClass::getMethodID(activityClass, "isSoftInputAvailable", "()Z");
-		_midIsSoftInputVisible = AndroidJniClass::getMethodID(activityClass, "isSoftInputVisible", "()Z");
-		_midShowSoftInput = AndroidJniClass::getMethodID(activityClass, "showSoftInput", "()Z");
-		_midHideSoftInput = AndroidJniClass::getMethodID(activityClass, "hideSoftInput", "()Z");
+		_midIsSoftInputAvailable = AndroidJniClass::GetMethodID(activityClass, "isSoftInputAvailable", "()Z");
+		_midIsSoftInputVisible = AndroidJniClass::GetMethodID(activityClass, "isSoftInputVisible", "()Z");
+		_midShowSoftInput = AndroidJniClass::GetMethodID(activityClass, "showSoftInput", "()Z");
+		_midHideSoftInput = AndroidJniClass::GetMethodID(activityClass, "hideSoftInput", "()Z");
 
 		AndroidJniHelper::jniEnv->DeleteLocalRef(activityClass);
 	}
 
-	bool AndroidJniWrap_InputMethodManager::isSoftInputAvailable()
+	bool AndroidJniWrap_InputMethodManager::IsSoftInputAvailable()
 	{
 		if (_midIsSoftInputAvailable == nullptr) {
 			return false;
@@ -1085,7 +1085,7 @@ namespace nCine::Backends
 		return (result == JNI_TRUE);
 	}
 
-	bool AndroidJniWrap_InputMethodManager::isSoftInputVisible()
+	bool AndroidJniWrap_InputMethodManager::IsSoftInputVisible()
 	{
 		if (_midIsSoftInputVisible == nullptr) {
 			return false;
@@ -1096,7 +1096,7 @@ namespace nCine::Backends
 		return (result == JNI_TRUE);
 	}
 
-	bool AndroidJniWrap_InputMethodManager::showSoftInput()
+	bool AndroidJniWrap_InputMethodManager::ShowSoftInput()
 	{
 		if (_midShowSoftInput == nullptr) {
 			return false;
@@ -1107,7 +1107,7 @@ namespace nCine::Backends
 		return (result == JNI_TRUE);
 	}
 
-	bool AndroidJniWrap_InputMethodManager::hideSoftInput()
+	bool AndroidJniWrap_InputMethodManager::HideSoftInput()
 	{
 		if (_midHideSoftInput == nullptr) {
 			return false;
@@ -1120,43 +1120,43 @@ namespace nCine::Backends
 
 	// ── AndroidJniWrap_DisplayManager ────────────────────────────────────────────────────────────
 
-	void AndroidJniWrap_DisplayManager::init(struct android_app* state)
+	void AndroidJniWrap_DisplayManager::Init(struct android_app* state)
 	{
 		// Retrieve `NativeActivity`
 		jobject nativeActivityObject = state->activity->clazz;
 		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(nativeActivityObject);
 
 		// Retrieve `Context.DISPLAY_SERVICE`
-		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
-		jfieldID fidDisplayService = AndroidJniClass::getStaticFieldID(contextClass, "DISPLAY_SERVICE", "Ljava/lang/String;");
+		jclass contextClass = AndroidJniClass::FindClass("android/content/Context");
+		jfieldID fidDisplayService = AndroidJniClass::GetStaticFieldID(contextClass, "DISPLAY_SERVICE", "Ljava/lang/String;");
 		jobject displayServiceObject = AndroidJniHelper::jniEnv->GetStaticObjectField(contextClass, fidDisplayService);
 
 		// Run `getSystemService(Context.DISPLAY_SERVICE)`
-		jclass displayManagerClass = AndroidJniClass::findClass("android/hardware/display/DisplayManager");
-		jmethodID midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		jclass displayManagerClass = AndroidJniClass::FindClass("android/hardware/display/DisplayManager");
+		jmethodID midGetSystemService = AndroidJniClass::GetMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
 		jobject displayManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(nativeActivityObject, midGetSystemService, displayServiceObject);
 		_displayManagerObject = AndroidJniHelper::jniEnv->NewGlobalRef(displayManagerObject);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(displayManagerObject);
 
-		_midGetDisplay = AndroidJniClass::getMethodID(displayManagerClass, "getDisplay", "(I)Landroid/view/Display;");
-		_midGetDisplays = AndroidJniClass::getMethodID(displayManagerClass, "getDisplays", "()[Landroid/view/Display;");
+		_midGetDisplay = AndroidJniClass::GetMethodID(displayManagerClass, "getDisplay", "(I)Landroid/view/Display;");
+		_midGetDisplays = AndroidJniClass::GetMethodID(displayManagerClass, "getDisplays", "()[Landroid/view/Display;");
 	}
 
-	void AndroidJniWrap_DisplayManager::shutdown()
+	void AndroidJniWrap_DisplayManager::Shutdown()
 	{
 		if (_displayManagerObject) {
 			AndroidJniHelper::jniEnv->DeleteGlobalRef(_displayManagerObject);
 		}
 	}
 
-	AndroidJniClass_Display AndroidJniWrap_DisplayManager::getDisplay(int displayId)
+	AndroidJniClass_Display AndroidJniWrap_DisplayManager::GetDisplay(int displayId)
 	{
 		jobject displayObject = static_cast<jobject>(AndroidJniHelper::jniEnv->CallObjectMethod(_displayManagerObject, _midGetDisplay, displayId));
 		AndroidJniClass_Display display(displayObject);
 		return display;
 	}
 
-	int AndroidJniWrap_DisplayManager::getDisplays(AndroidJniClass_Display* destination, int maxSize)
+	int AndroidJniWrap_DisplayManager::GetDisplays(AndroidJniClass_Display* destination, int maxSize)
 	{
 		jobjectArray arrDisplays = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(_displayManagerObject, _midGetDisplays));
 		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrDisplays);
@@ -1176,17 +1176,17 @@ namespace nCine::Backends
 	
 	// ── AndroidJniWrap_Secure ────────────────────────────────────────────────────────────────────
 
-	void AndroidJniWrap_Secure::init(struct android_app* state)
+	void AndroidJniWrap_Secure::Init(struct android_app* state)
 	{
-		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
-		jclass settingsSecureClass = AndroidJniClass::findClass("android/provider/Settings$Secure");
+		jclass contextClass = AndroidJniClass::FindClass("android/content/Context");
+		jclass settingsSecureClass = AndroidJniClass::FindClass("android/provider/Settings$Secure");
 		if (contextClass == nullptr || settingsSecureClass == nullptr) {
 			return;
 		}
 
-		jmethodID midGetContentResolver = AndroidJniClass::getMethodID(contextClass, "getContentResolver", "()Landroid/content/ContentResolver;");
-		jmethodID midGetString = AndroidJniClass::getStaticMethodID(settingsSecureClass, "getString", "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;");
-		jfieldID fidAndroidId = AndroidJniClass::getStaticFieldID(settingsSecureClass, "ANDROID_ID", "Ljava/lang/String;");
+		jmethodID midGetContentResolver = AndroidJniClass::GetMethodID(contextClass, "getContentResolver", "()Landroid/content/ContentResolver;");
+		jmethodID midGetString = AndroidJniClass::GetStaticMethodID(settingsSecureClass, "getString", "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;");
+		jfieldID fidAndroidId = AndroidJniClass::GetStaticFieldID(settingsSecureClass, "ANDROID_ID", "Ljava/lang/String;");
 		if (midGetContentResolver == nullptr || midGetString == nullptr || fidAndroidId == nullptr) {
 			return;
 		}
@@ -1211,7 +1211,7 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strAndroidId);
 	}
 
-	StringView AndroidJniWrap_Secure::getAndroidId()
+	StringView AndroidJniWrap_Secure::GetAndroidId()
 	{
 		return _androidId;
 	}

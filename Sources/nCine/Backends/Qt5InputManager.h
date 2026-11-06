@@ -26,9 +26,9 @@ namespace nCine::Backends
 	{
 	public:
 		/** @brief Maps a Qt5 key symbol to the matching engine @ref Keys value */
-		static Keys keySymValueToEnum(int keysym);
+		static Keys KeySymValueToEnum(int keysym);
 		/** @brief Maps Qt5 keyboard modifier flags to the engine modifier mask */
-		static int keyModMaskToEnumMask(Qt::KeyboardModifiers keymod);
+		static int KeyModMaskToEnumMask(Qt::KeyboardModifiers keymod);
 	};
 
 	/**
@@ -42,7 +42,7 @@ namespace nCine::Backends
 		Qt5MouseState()
 			: _buttons(Qt::NoButton) {}
 
-		bool isButtonDown(MouseButton button) const override;
+		bool IsButtonDown(MouseButton button) const override;
 
 	private:
 		Qt::MouseButtons _buttons;
@@ -78,7 +78,7 @@ namespace nCine::Backends
 			}
 		}
 
-		inline bool isKeyDown(Keys key) const override
+		inline bool IsKeyDown(Keys key) const override
 		{
 			if (key == Keys::Unknown) {
 				return false;
@@ -106,13 +106,13 @@ namespace nCine::Backends
 	public:
 		Qt5JoystickState();
 
-		bool isButtonPressed(int buttonId) const override;
-		unsigned char hatState(int hatId) const override;
-		float axisValue(int axisId) const override;
+		bool IsButtonPressed(int buttonId) const override;
+		unsigned char GetHatState(int hatId) const override;
+		float GetAxisValue(int axisId) const override;
 
 	private:
 		static constexpr std::int32_t MaxNameLength = 256;
-		/** @brief Number of buttons reported in the order @ref isButtonPressed() polls them */
+		/** @brief Number of buttons reported in the order @ref IsButtonPressed() polls them */
 		static constexpr std::int32_t NumButtons = 12;
 		static constexpr std::int32_t NumAxes = 6;
 		/** @brief Minimum difference between two axis readings in order to trigger an event */
@@ -132,13 +132,13 @@ namespace nCine::Backends
 	public:
 		Qt5JoystickState() {}
 
-		inline bool isButtonPressed(int buttonId) const override {
+		inline bool IsButtonPressed(int buttonId) const override {
 			return false;
 		}
-		inline unsigned char hatState(int hatId) const override {
+		inline unsigned char GetHatState(int hatId) const override {
 			return HatState::Centered;
 		}
-		inline float axisValue(int axisId) const override {
+		inline float GetAxisValue(int axisId) const override {
 			return 0.0f;
 		}
 
@@ -164,11 +164,11 @@ namespace nCine::Backends
 
 #if defined(WITH_QT5GAMEPAD)
 		/** @brief Polls every connected gamepad and emits state-change events */
-		void updateJoystickStates();
+		void UpdateJoystickStates();
 #endif
 
 		/** @brief Returns `true` if the application should quit on a close request */
-		bool shouldQuitOnRequest();
+		bool ShouldQuitOnRequest();
 		/** @brief Handles a generic Qt5 event, returning `true` if it was consumed */
 		bool event(QEvent* event);
 		/** @brief Handles a Qt5 key press event */
@@ -190,63 +190,63 @@ namespace nCine::Backends
 		/** @brief Handles a Qt5 mouse wheel event */
 		void wheelEvent(QWheelEvent* event);
 
-		inline const MouseState& mouseState() const override {
+		inline const MouseState& GetMouseState() const override {
 			return _mouseState;
 		}
-		inline const KeyboardState& keyboardState() const override {
+		inline const KeyboardState& GetKeyboardState() const override {
 			return _keyboardState;
 		}
 
 #if defined(WITH_QT5GAMEPAD)
-		bool isJoyPresent(int joyId) const override;
-		const char* joyName(int joyId) const override;
+		bool IsJoyPresent(int joyId) const override;
+		const char* GetJoyName(int joyId) const override;
 		/** @brief Qt5Gamepad exposes no device identity, so joysticks are never matched by GUID (see @ref JoyMapping) */
-		inline const JoystickGuid joyGuid(int joyId) const override {
+		inline const JoystickGuid GetJoyGuid(int joyId) const override {
 			return {};
 		}
-		inline int joyNumButtons(int joyId) const override {
+		inline int GetJoyButtonCount(int joyId) const override {
 			return Qt5JoystickState::NumButtons;
 		}
-		inline int joyNumHats(int joyId) const override {
+		inline int GetJoyHatCount(int joyId) const override {
 			return 1;
 		}
-		inline int joyNumAxes(int joyId) const override {
+		inline int GetJoyAxisCount(int joyId) const override {
 			return Qt5JoystickState::NumAxes;
 		}
-		const JoystickState& joystickState(int joyId) const override;
+		const JoystickState& GetJoystickState(int joyId) const override;
 #else
-		inline bool isJoyPresent(int joyId) const override {
+		inline bool IsJoyPresent(int joyId) const override {
 			return false;
 		}
-		inline const char* joyName(int joyId) const override {
+		inline const char* GetJoyName(int joyId) const override {
 			return nullptr;
 		}
-		inline const JoystickGuid joyGuid(int joyId) const override {
+		inline const JoystickGuid GetJoyGuid(int joyId) const override {
 			return {};
 		}
-		inline int joyNumButtons(int joyId) const override {
+		inline int GetJoyButtonCount(int joyId) const override {
 			return 0;
 		}
-		inline int joyNumHats(int joyId) const override {
+		inline int GetJoyHatCount(int joyId) const override {
 			return 0;
 		}
-		inline int joyNumAxes(int joyId) const override {
+		inline int GetJoyAxisCount(int joyId) const override {
 			return 0;
 		}
-		inline const JoystickState& joystickState(int joyId) const override {
+		inline const JoystickState& GetJoystickState(int joyId) const override {
 			return _nullJoystickState;
 		}
 #endif
 		/** @brief Qt5Gamepad exposes no rumble interface */
-		inline bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, std::uint32_t durationMs) override {
+		inline bool JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, std::uint32_t durationMs) override {
 			return false;
 		}
 		/** @brief Qt5Gamepad exposes no rumble interface */
-		inline bool joystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override {
+		inline bool JoystickRumbleTriggers(int joyId, float left, float right, std::uint32_t durationMs) override {
 			return false;
 		}
 
-		void setCursor(Cursor cursor) override;
+		void SetCursor(Cursor cursor) override;
 
 	private:
 		static constexpr std::int32_t MaxNumJoysticks = 4;
@@ -269,7 +269,7 @@ namespace nCine::Backends
 
 		Qt5Widget& _widget;
 
-		void updateTouchEvent(const QTouchEvent* event, TouchEventType type);
+		void UpdateTouchEvent(const QTouchEvent* event, TouchEventType type);
 
 		/** @brief Deleted copy constructor */
 		Qt5InputManager(const Qt5InputManager&) = delete;

@@ -23,32 +23,32 @@
 //// PUBLIC FUNCTIONS
 /////////////////////////////////////////////////////////////
 //
-//bool RenderDocCapture::isAvailable()
+//bool RenderDocCapture::IsAvailable()
 //{
 //	return (rdocApi != nullptr);
 //}
 //
-//bool RenderDocCapture::isTargetControlConnected()
+//bool RenderDocCapture::IsTargetControlConnected()
 //{
 //	if (rdocApi)
 //		return rdocApi->IsTargetControlConnected();
 //	return false;
 //}
 //
-//bool RenderDocCapture::isFrameCapturing()
+//bool RenderDocCapture::IsFrameCapturing()
 //{
 //	if (rdocApi)
 //		return rdocApi->IsFrameCapturing();
 //	return false;
 //}
 //
-//void RenderDocCapture::apiVersion(int *major, int *minor, int *patch)
+//void RenderDocCapture::GetApiVersion(int *major, int *minor, int *patch)
 //{
 //	if (rdocApi)
 //		rdocApi->GetAPIVersion(major, minor, patch);
 //}
 //
-//bool RenderDocCapture::isOverlayEnabled()
+//bool RenderDocCapture::IsOverlayEnabled()
 //{
 //	unsigned int overlayBits = 0;
 //	if (rdocApi)
@@ -57,7 +57,7 @@
 //	return overlayBits & (1 << RENDERDOC_OverlayBits::eRENDERDOC_Overlay_Enabled);
 //}
 //
-//void RenderDocCapture::enableOverlay(bool enabled)
+//void RenderDocCapture::EnableOverlay(bool enabled)
 //{
 //	if (rdocApi)
 //	{
@@ -75,73 +75,73 @@
 //	}
 //}
 //
-//void RenderDocCapture::triggerCapture()
+//void RenderDocCapture::TriggerCapture()
 //{
 //	if (rdocApi)
 //		rdocApi->TriggerCapture();
 //}
 //
-//void RenderDocCapture::triggerMultiFrameCapture(uint32_t numFrames)
+//void RenderDocCapture::TriggerMultiFrameCapture(uint32_t numFrames)
 //{
 //	if (rdocApi)
 //		rdocApi->TriggerMultiFrameCapture(numFrames);
 //}
 //
-//bool RenderDocCapture::endFrameCapture()
+//bool RenderDocCapture::EndFrameCapture()
 //{
 //	if (rdocApi)
 //		return rdocApi->EndFrameCapture(nullptr, nullptr);
 //	return false;
 //}
 //
-//bool RenderDocCapture::discardFrameCapture()
+//bool RenderDocCapture::DiscardFrameCapture()
 //{
 //	if (rdocApi)
 //		return rdocApi->DiscardFrameCapture(nullptr, nullptr);
 //	return false;
 //}
 //
-//uint32_t RenderDocCapture::numCaptures()
+//uint32_t RenderDocCapture::GetCaptureCount()
 //{
 //	if (rdocApi)
 //		return rdocApi->GetNumCaptures();
 //	return 0;
 //}
 //
-//uint32_t RenderDocCapture::captureInfo(uint32_t idx, char *filename, uint32_t *pathlength, uint64_t *timestamp)
+//uint32_t RenderDocCapture::GetCaptureInfo(uint32_t idx, char *filename, uint32_t *pathlength, uint64_t *timestamp)
 //{
 //	if (rdocApi)
 //		return rdocApi->GetCapture(idx, filename, pathlength, timestamp);
 //	return 0;
 //}
 //
-//const char *RenderDocCapture::captureFilePathTemplate()
+//const char *RenderDocCapture::GetCaptureFilePathTemplate()
 //{
 //	if (rdocApi)
 //		return rdocApi->GetCaptureFilePathTemplate();
 //	return nullptr;
 //}
 //
-//void RenderDocCapture::setCaptureFilePathTemplate(const char *pathTemplate)
+//void RenderDocCapture::SetCaptureFilePathTemplate(const char *pathTemplate)
 //{
 //	if (rdocApi)
 //		rdocApi->SetCaptureFilePathTemplate(pathTemplate);
 //}
 //
-//void RenderDocCapture::setCaptureFileComments(const char *filePath, const char *comments)
+//void RenderDocCapture::SetCaptureFileComments(const char *filePath, const char *comments)
 //{
 //	if (rdocApi)
 //		rdocApi->SetCaptureFileComments(filePath, comments);
 //}
 //
-//uint32_t RenderDocCapture::launchReplayUI(uint32_t connectTargetControl, const char *cmdLine)
+//uint32_t RenderDocCapture::LaunchReplayUI(uint32_t connectTargetControl, const char *cmdLine)
 //{
 //	if (rdocApi)
 //		return rdocApi->LaunchReplayUI(connectTargetControl, cmdLine);
 //	return 0;
 //}
 //
-//void RenderDocCapture::unloadCrashHandler()
+//void RenderDocCapture::UnloadCrashHandler()
 //{
 //	if (rdocApi)
 //		rdocApi->UnloadCrashHandler();
@@ -151,7 +151,7 @@
 //// PRIVATE FUNCTIONS
 /////////////////////////////////////////////////////////////
 //
-//void RenderDocCapture::init()
+//void RenderDocCapture::Init()
 //{
 //#if defined(_WIN32)
 //	if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
@@ -181,13 +181,13 @@
 //	}
 //}
 //
-//void RenderDocCapture::removeHooks()
+//void RenderDocCapture::RemoveHooks()
 //{
 //	if (rdocApi)
 //		rdocApi->RemoveHooks();
 //}
 //
-//void RenderDocCapture::startFrameCapture()
+//void RenderDocCapture::StartFrameCapture()
 //{
 //	if (rdocApi)
 //		rdocApi->StartFrameCapture(nullptr, nullptr);

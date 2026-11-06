@@ -321,7 +321,7 @@ namespace Jazz2::Actors::Solid
 
 					auto pos = _pieces[i].Pos;
 					command->SetTransformation(Matrix4x4f::Translation(pos.X - frameRect.W / 2, pos.Y - frameRect.H / 2, 0.0f));
-					command->SetLayer(_renderer.layer() - 2);
+					command->SetLayer(_renderer.GetLayer() - 2);
 					resolver.BindSpritePalette(*command, *chainAnim->Base->TextureDiffuse.get(), chainIndexed, chainAnim->PaletteOffset);
 
 					renderQueue.AddCommand(command);

@@ -965,7 +965,7 @@ namespace nCine
 						// The caller can take the whole string, which is what the dialog actually collected - the
 						// field is replaced rather than appended to
 						_imeOnCompleted(text);
-					} else if (IInputEventHandler* handler = IInputManager::handler()) {
+					} else if (IInputEventHandler* handler = IInputManager::GetHandler()) {
 						// Nobody asked for the string, so it is delivered as the text input events a
 						// keystroke-feeding keyboard would have produced. That appends, which is the best this
 						// fallback can do.
@@ -973,8 +973,8 @@ namespace nCine
 						for (std::size_t i = 0; i < text.size(); ) {
 							auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
 							i = nextI;
-							textInputEvent.length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.text);
-							if (textInputEvent.length > 0) {
+							textInputEvent.Length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.Text);
+							if (textInputEvent.Length > 0) {
 								handler->OnTextInput(textInputEvent);
 							}
 						}
@@ -1018,15 +1018,15 @@ namespace nCine
 				// The caller can take the whole string, which is what the dialog actually collected - the
 				// field is replaced rather than appended to
 				_imeOnCompleted(text);
-			} else if (IInputEventHandler* handler = IInputManager::handler()) {
+			} else if (IInputEventHandler* handler = IInputManager::GetHandler()) {
 				// Nobody asked for the string, so it is delivered as the text input events a keystroke-feeding
 				// keyboard would have produced. That appends, which is the best this fallback can do.
 				TextInputEvent textInputEvent;
 				for (std::size_t i = 0; i < text.size(); ) {
 					auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
 					i = nextI;
-					textInputEvent.length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.text);
-					if (textInputEvent.length > 0) {
+					textInputEvent.Length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.Text);
+					if (textInputEvent.Length > 0) {
 						handler->OnTextInput(textInputEvent);
 					}
 				}
@@ -1064,7 +1064,7 @@ namespace nCine
 		char buffer[ImeMaxTextLength * 4 + 1] {};
 		const SwkbdButton button = swkbdInputText(&swkbd, buffer, sizeof(buffer));
 		// The applet read the pad itself, and the press that closed it is usually still held
-		Backends::CtrInputManager::discardInputUntilReleased();
+		Backends::CtrInputManager::DiscardInputUntilReleased();
 
 		if (button == SWKBD_BUTTON_CONFIRM) {
 			const StringView text = buffer;
@@ -1072,15 +1072,15 @@ namespace nCine
 				// The caller can take the whole string, which is what the dialog actually collected - the
 				// field is replaced rather than appended to
 				_imeOnCompleted(text);
-			} else if (IInputEventHandler* handler = IInputManager::handler()) {
+			} else if (IInputEventHandler* handler = IInputManager::GetHandler()) {
 				// Nobody asked for the string, so it is delivered as the text input events a keystroke-feeding
 				// keyboard would have produced. That appends, which is the best this fallback can do.
 				TextInputEvent textInputEvent;
 				for (std::size_t i = 0; i < text.size(); ) {
 					auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
 					i = nextI;
-					textInputEvent.length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.text);
-					if (textInputEvent.length > 0) {
+					textInputEvent.Length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.Text);
+					if (textInputEvent.Length > 0) {
 						handler->OnTextInput(textInputEvent);
 					}
 				}
@@ -1116,7 +1116,7 @@ namespace nCine
 		return _swkbdPending;
 #elif defined(DEATH_TARGET_IOS)
 		// SDL tracks UIKit's keyboard through its view controller
-		SDL_Window* window = SdlGfxDevice::windowHandle();
+		SDL_Window* window = SdlGfxDevice::GetWindowHandle();
 		return (window != nullptr && SDL_IsScreenKeyboardShown(window) == SDL_TRUE);
 #elif defined(DEATH_TARGET_WINDOWS)
 		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
@@ -1148,7 +1148,7 @@ namespace nCine
 			return 0;
 		}
 		// The drawable may be larger than the client area with DPI scaling
-		return std::int32_t(std::int64_t(covered) * _gfxDevice->drawableHeight() / clientHeight);
+		return std::int32_t(std::int64_t(covered) * _gfxDevice->GetDrawableHeight() / clientHeight);
 #else
 		return 0;
 #endif
@@ -1413,7 +1413,7 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 #if defined(NCINE_PROFILING)
-		_profileStartTime = TimeStamp::now();
+		_profileStartTime = TimeStamp::Now();
 #endif
 		_wasSuspended = ShouldSuspend();
 
@@ -1492,14 +1492,14 @@ namespace nCine
 #	define LOG_INIT_MESSAGE(backend) LOGI(NCINE_APP_NAME " v" NCINE_VERSION backend " initializing" INIT_MESSAGE_SUFFIX "...")
 #endif
 
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 			LOG_INIT_MESSAGE(INIT_MESSAGE_BACKEND);
 
 			LOGB("Initializing graphics device and input manager...");
 
 			// Graphics device should always be created before the input manager
 			IGfxDevice::ContextInfo contextInfo(_appCfg);
-			const DisplayMode::VSync vSyncMode = (_appCfg.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
+			const DisplayMode::VSync vSyncMode = (_appCfg.WithVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 #if defined(RHI_USE_FB16) && defined(WITH_RHI_GL)
 			// 16-bit screen framebuffer (`NCINE_RHI_USE_FB16`): ask the window system for a 5/6/5 visual with no
 			// destination alpha, halving the memory and the present bandwidth of the default framebuffer. The
@@ -1511,8 +1511,8 @@ namespace nCine
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 #endif
 
-			const IGfxDevice::WindowMode windowMode(_appCfg.resolution.X, _appCfg.resolution.Y, _appCfg.windowPosition.X,
-				_appCfg.windowPosition.Y, _appCfg.fullscreen, _appCfg.resizable, _appCfg.windowScaling);
+			const IGfxDevice::WindowMode windowMode(_appCfg.Resolution.X, _appCfg.Resolution.Y, _appCfg.WindowPosition.X,
+				_appCfg.WindowPosition.Y, _appCfg.Fullscreen, _appCfg.Resizable, _appCfg.WindowScaling);
 
 #if (defined(WITH_SDL2) || defined(WITH_SDL3))
 			_gfxDevice = std::make_unique<SdlGfxDevice>(windowMode, contextInfo, displayMode);
@@ -1549,11 +1549,11 @@ namespace nCine
 			_gfxDevice = std::make_unique<Ps3GfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<Ps3InputManager>();
 #endif
-			_gfxDevice->setWindowTitle(_appCfg.windowTitle.data());
-			if (!_appCfg.windowIconFilename.empty()) {
-				String windowIconFilePath = fs::CombinePath(GetDataPath(), _appCfg.windowIconFilename);
+			_gfxDevice->SetWindowTitle(_appCfg.WindowTitle.data());
+			if (!_appCfg.WindowIconFilename.empty()) {
+				String windowIconFilePath = fs::CombinePath(GetDataPath(), _appCfg.WindowIconFilename);
 				if (fs::IsReadableFile(windowIconFilePath)) {
-					_gfxDevice->setWindowIcon(windowIconFilePath);
+					_gfxDevice->SetWindowIcon(windowIconFilePath);
 				}
 			}
 		} else {
@@ -1564,7 +1564,7 @@ namespace nCine
 		}
 
 #if defined(NCINE_PROFILING)
-		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.secondsSince();
+		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.GetSecondsSince();
 #endif
 #if !defined(WITH_QT5)
 		// Common initialization on Qt5 is performed later, when OpenGL can be used
@@ -1574,38 +1574,38 @@ namespace nCine
 
 	void MainApplication::ProcessStep()
 	{
-		if (_appCfg.withGraphics) {
+		if (_appCfg.WithGraphics) {
 #if defined(WITH_GLFW) || (defined(WITH_SDL2) || defined(WITH_SDL3))
 			ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
-			static_cast<Qt5InputManager&>(*_inputManager).updateJoystickStates();
+			static_cast<Qt5InputManager&>(*_inputManager).UpdateJoystickStates();
 #elif defined(WITH_N64)
 			// No window events on a console; polling the joypad ports is the whole event pump
-			N64InputManager::updateJoystickStates();
+			N64InputManager::UpdateJoystickStates();
 #elif defined(WITH_AMIGA)
 			// The whole event pump: the game window's IDCMP queue (keyboard, mouse) plus the joyports
-			AmigaInputManager::updateJoystickStates();
+			AmigaInputManager::UpdateJoystickStates();
 #elif defined(WITH_OGC)
 			// No window events on a console; polling the controller ports is the whole event pump
-			OgcInputManager::updateJoystickStates();
+			OgcInputManager::UpdateJoystickStates();
 #elif defined(WITH_CTR)
 			// No window events on a console; polling the HID service is the whole event pump (the APT events that
 			// ask the game to quit are drained from the main loop in Run() instead)
-			CtrInputManager::updateJoystickStates();
+			CtrInputManager::UpdateJoystickStates();
 #elif defined(WITH_DC)
 			// No window events on a console; polling the maple bus is the whole event pump
-			DcInputManager::updateJoystickStates();
+			DcInputManager::UpdateJoystickStates();
 #elif defined(WITH_PSP)
 			// No window events on a console; polling the controller service is the whole event pump
-			PspInputManager::updateJoystickStates();
+			PspInputManager::UpdateJoystickStates();
 #elif defined(WITH_PS2)
 			// No window events on a console; polling the pad ports is the whole event pump
-			Ps2InputManager::updateJoystickStates();
+			Ps2InputManager::UpdateJoystickStates();
 #elif defined(WITH_PS3)
 			// The one console here that DOES have window events: the XMB can ask the game to quit or tell it
 			// that the user opened the in-game menu, and those arrive on the sysutil callback queue that
 			// updateJoystickStates() drains alongside polling the pads
-			Ps3InputManager::updateJoystickStates();
+			Ps3InputManager::UpdateJoystickStates();
 #endif
 		}
 
@@ -1646,34 +1646,34 @@ namespace nCine
 			// so the sub-events are dispatched directly off event.type here instead of event.window.event
 			switch (event.type) {
 				case SDL_EVENT_QUIT:
-					if (SdlInputManager::shouldQuitOnRequest()) {
+					if (SdlInputManager::ShouldQuitOnRequest()) {
 						_shouldQuit = true;
 					}
 					break;
 				case SDL_EVENT_WINDOW_FOCUS_GAINED:
-					if (SdlGfxDevice::isOwnWindow(event.window.windowID)) {
+					if (SdlGfxDevice::IsOwnWindow(event.window.windowID)) {
 						SetFocus(true);
 					}
 					break;
 				case SDL_EVENT_WINDOW_FOCUS_LOST:
 					// The focus going over to an auxiliary window of the application isn't a loss of it
-					if (SdlGfxDevice::isOwnWindow(event.window.windowID)) {
+					if (SdlGfxDevice::IsOwnWindow(event.window.windowID)) {
 						SDL_Window* focused = SDL_GetKeyboardFocus();
-						SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
+						SetFocus(focused != nullptr && SdlGfxDevice::IsOwnWindow(SDL_GetWindowID(focused)));
 					}
 					break;
 				case SDL_EVENT_WINDOW_RESIZED:
 				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+					if (SdlGfxDevice::IsMainWindow(event.window.windowID)) {
 						SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
 						int logicalWidth = 0, logicalHeight = 0;
 						SDL_GetWindowSize(windowHandle, &logicalWidth, &logicalHeight);
 						_gfxDevice->_width = logicalWidth;
 						_gfxDevice->_height = logicalHeight;
-						static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
+						static_cast<SdlGfxDevice*>(_gfxDevice.get())->SyncFullscreenState();
 						// Query the pixel size the way the active backend measures it, then resize the backend
 						// swap chain to match (no-op on OpenGL / software); see the SDL2 branch for the rationale
-						SdlGfxDevice::queryDrawableSize(windowHandle, logicalWidth, logicalHeight,
+						SdlGfxDevice::QueryDrawableSize(windowHandle, logicalWidth, logicalHeight,
 							_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 						RHI::Device::ResizeSwapchain(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 						ResizeScreenViewport(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
@@ -1683,11 +1683,11 @@ namespace nCine
 				case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
 					// The confirmation of an asynchronous request can arrive after the resize it caused - it has to be
 					// recorded here, or the next resize would take it for a change the window system made by itself
-					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
-						static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
+					if (SdlGfxDevice::IsMainWindow(event.window.windowID)) {
+						static_cast<SdlGfxDevice*>(_gfxDevice.get())->SyncFullscreenState();
 					}
-					if (_appCfg.withGraphics) {
-						SdlInputManager::parseEvent(event);
+					if (_appCfg.WithGraphics) {
+						SdlInputManager::ParseEvent(event);
 					}
 					break;
 				case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -1695,15 +1695,15 @@ namespace nCine
 					// stops being true as soon as another window exists (ImGui opens one per panel dragged out of the
 					// main window), so the main window's close button is honored here. The event still falls through
 					// to the input manager below, which is how ImGui closes a window of its own.
-					if (SdlGfxDevice::isMainWindow(event.window.windowID) && SdlInputManager::shouldQuitOnRequest()) {
+					if (SdlGfxDevice::IsMainWindow(event.window.windowID) && SdlInputManager::ShouldQuitOnRequest()) {
 						_shouldQuit = true;
 					}
 					DEATH_FALLTHROUGH
 				default:
 					if (event.type >= SDL_EVENT_DISPLAY_FIRST && event.type <= SDL_EVENT_DISPLAY_LAST) {
-						_gfxDevice->updateMonitors();
-					} else if (_appCfg.withGraphics) {
-						SdlInputManager::parseEvent(event);
+						_gfxDevice->UpdateMonitors();
+					} else if (_appCfg.WithGraphics) {
+						SdlInputManager::ParseEvent(event);
 					}
 					break;
 			}
@@ -1729,7 +1729,7 @@ namespace nCine
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 				case SDL_QUIT:
-					if (SdlInputManager::shouldQuitOnRequest()) {
+					if (SdlInputManager::ShouldQuitOnRequest()) {
 						_shouldQuit = true;
 					}
 					break;
@@ -1741,32 +1741,32 @@ namespace nCine
 					LOGW("The system is running low on memory");
 					break;
 				case SDL_DISPLAYEVENT:
-					_gfxDevice->updateMonitors();
+					_gfxDevice->UpdateMonitors();
 					break;
 				case SDL_WINDOWEVENT: {
-					if (SdlGfxDevice::isAuxiliaryWindow(event.window.windowID)) {
+					if (SdlGfxDevice::IsAuxiliaryWindow(event.window.windowID)) {
 						// The focus going over between the windows of the application isn't a loss of it
 						if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
 							SetFocus(true);
 						} else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
 							SDL_Window* focused = SDL_GetKeyboardFocus();
-							SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
+							SetFocus(focused != nullptr && SdlGfxDevice::IsOwnWindow(SDL_GetWindowID(focused)));
 						}
-					} else if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+					} else if (SdlGfxDevice::IsMainWindow(event.window.windowID)) {
 						switch (event.window.event) {
 							case SDL_WINDOWEVENT_FOCUS_GAINED:
 								SetFocus(true);
 								break;
 							case SDL_WINDOWEVENT_FOCUS_LOST: {
 								SDL_Window* focused = SDL_GetKeyboardFocus();
-								SetFocus(focused != nullptr && SdlGfxDevice::isOwnWindow(SDL_GetWindowID(focused)));
+								SetFocus(focused != nullptr && SdlGfxDevice::IsOwnWindow(SDL_GetWindowID(focused)));
 								break;
 							}
 							case SDL_WINDOWEVENT_CLOSE:
 								// SDL only turns a close into SDL_QUIT when the closed window is the LAST one, which
 								// stops being true as soon as another window exists (ImGui opens one per panel
 								// dragged out of the main window), so the main window's close button is honored here
-								if (SdlInputManager::shouldQuitOnRequest()) {
+								if (SdlInputManager::ShouldQuitOnRequest()) {
 									_shouldQuit = true;
 								}
 								break;
@@ -1774,14 +1774,14 @@ namespace nCine
 								_gfxDevice->_width = event.window.data1;
 								_gfxDevice->_height = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
-								static_cast<SdlGfxDevice*>(_gfxDevice.get())->syncFullscreenState();
+								static_cast<SdlGfxDevice*>(_gfxDevice.get())->SyncFullscreenState();
 								// Query the pixel size the way the active backend measures it, then resize the
 								// backend swap chain to match (no-op on OpenGL / software). The explicit resize
 								// is deterministic on Vulkan: some drivers never report OUT_OF_DATE for a
 								// window/swap-chain size mismatch, so relying on the present path alone would
 								// leave the swap chain stuck at the old size; ResizeSwapchain re-queries the
 								// surface caps for the authoritative extent (this value is the hint/fallback).
-								SdlGfxDevice::queryDrawableSize(windowHandle, event.window.data1, event.window.data2,
+								SdlGfxDevice::QueryDrawableSize(windowHandle, event.window.data1, event.window.data2,
 									_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 								RHI::Device::ResizeSwapchain(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 								ResizeScreenViewport(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
@@ -1792,14 +1792,14 @@ namespace nCine
 					// Unlike every other event type, these were not reaching the input manager at all - and ImGui
 					// drives its platform windows off them (closing, moving, focusing, entering one), so a window
 					// it owns could not even be closed. Nothing in the engine's own input handling reads them.
-					if (_appCfg.withGraphics) {
-						SdlInputManager::parseEvent(event);
+					if (_appCfg.WithGraphics) {
+						SdlInputManager::ParseEvent(event);
 					}
 					break;
 				}
 				default:
-					if (_appCfg.withGraphics) {
-						SdlInputManager::parseEvent(event);
+					if (_appCfg.WithGraphics) {
+						SdlInputManager::ParseEvent(event);
 					}
 					break;
 			}
@@ -1810,7 +1810,7 @@ namespace nCine
 	{
 		// GLFW does not seem to correctly handle Emscripten focus and blur events
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		SetFocus(GlfwInputManager::hasFocus());
+		SetFocus(GlfwInputManager::HasFocus());
 #	endif
 
 		if (ShouldSuspend()) {
@@ -1819,8 +1819,8 @@ namespace nCine
 			glfwPollEvents();
 		}
 
-		if (_appCfg.withGraphics) {
-			GlfwInputManager::updateJoystickStates();
+		if (_appCfg.WithGraphics) {
+			GlfwInputManager::UpdateJoystickStates();
 		}
 	}
 #endif

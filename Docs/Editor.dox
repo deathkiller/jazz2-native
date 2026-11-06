@@ -1033,8 +1033,8 @@ A failed save, such as on a full disk, never damages the file that was there.
 
 @subsection editor-files-recovery Recovery
 
-While a level has unsaved changes, a recovery copy is written every minute into @cpp "Editor/Recovery/" @ce in the
-configuration directory, with the undo history. When a level with a newer copy is opened, the editor offers to restore
+While a level has unsaved changes, a recovery copy is written every minute into @cpp "Editor/Recovery/" @ce of the
+user content (or of the configuration directory where no content can be written to), with the undo history. When a level with a newer copy is opened, the editor offers to restore
 it. <b>Recovery Copies</b> in the <b>File</b> menu lists all copies, also of levels that were never saved.
 
 @subsection editor-files-package Export Package

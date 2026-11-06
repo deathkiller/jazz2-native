@@ -83,11 +83,11 @@ namespace Jazz2::Actors::Enemies
 					std::shared_ptr<MagicBullet> magicBullet = std::make_shared<MagicBullet>(this);
 					magicBullet->OnActivated(ActorActivationDetails(
 						_levelHandler,
-						Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.layer() + 1)
+						Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 1)
 					));
 					_levelHandler->AddActor(magicBullet);
 
-					Explosion::Create(_levelHandler, Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.layer() + 2), Explosion::Type::TinyDark);
+					Explosion::Create(_levelHandler, Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 2), Explosion::Type::TinyDark);
 				});
 			} else if (length > 20.0f && length < 500.0f) {
 				direction.Normalize();
@@ -233,7 +233,7 @@ namespace Jazz2::Actors::Enemies
 			Vector2f diff = (targetPos - _pos).Normalized();
 			Vector2f speed = (_speed + diff * 0.8f).Normalized();
 			_speed = speed * 5.0f;
-			_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
+			_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 		}
 	}
 }

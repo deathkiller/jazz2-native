@@ -24,14 +24,14 @@ namespace nCine
 		 */
 		struct DisplaySettings
 		{
-			DisplaySettings() : showProfilerGraphs(true), showInfoText(true), showInterface(false) {}
+			DisplaySettings() : ShowProfilerGraphs(true), ShowInfoText(true), ShowInterface(false) {}
 
 			/** @brief Whether to show the profiler graphs */
-			bool showProfilerGraphs;
+			bool ShowProfilerGraphs;
 			/** @brief Whether to show the information text */
-			bool showInfoText;
+			bool ShowInfoText;
 			/** @brief Whether to show the debug interface */
-			bool showInterface;
+			bool ShowInterface;
 		};
 
 		explicit IDebugOverlay(float profileTextUpdateTime);

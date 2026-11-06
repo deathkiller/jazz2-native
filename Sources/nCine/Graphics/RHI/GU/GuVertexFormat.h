@@ -94,7 +94,7 @@ namespace nCine::RHI::GU
 				_stride = stride;
 				_pointer = pointer;
 			}
-			inline void setVbo(const GuBuffer* vbo) {
+			inline void SetVbo(const GuBuffer* vbo) {
 				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {

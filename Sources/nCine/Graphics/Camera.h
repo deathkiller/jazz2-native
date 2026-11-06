@@ -20,18 +20,18 @@ namespace nCine
 		 */
 		struct ProjectionValues
 		{
-			float left;
-			float right;
-			float top;
-			float bottom;
-			float nearClip;
-			float farClip;
+			float Left;
+			float Right;
+			float Top;
+			float Bottom;
+			float NearClip;
+			float FarClip;
 
 			ProjectionValues()
-				: left(0.0f), right(0.0f), top(0.0f), bottom(0.0f), nearClip(-1.0f), farClip(1.0f) {}
+				: Left(0.0f), Right(0.0f), Top(0.0f), Bottom(0.0f), NearClip(-1.0f), FarClip(1.0f) {}
 
 			ProjectionValues(float ll, float rr, float tt, float bb)
-				: left(ll), right(rr), top(tt), bottom(bb), nearClip(-1.0f), farClip(1.0f) {}
+				: Left(ll), Right(rr), Top(tt), Bottom(bb), NearClip(-1.0f), FarClip(1.0f) {}
 		};
 
 		/**
@@ -39,15 +39,15 @@ namespace nCine
 		 */
 		struct ViewValues
 		{
-			Vector2f position;
-			float rotation;
-			float scale;
+			Vector2f Position;
+			float Rotation;
+			float Scale;
 
 			ViewValues()
-				: position(0.0f, 0.0f), rotation(0.0f), scale(1.0f) {}
+				: Position(0.0f, 0.0f), Rotation(0.0f), Scale(1.0f) {}
 
 			ViewValues(float xx, float yy, float rr, float ss)
-				: position(xx, yy), rotation(rr), scale(ss) {}
+				: Position(xx, yy), Rotation(rr), Scale(ss) {}
 		};
 
 		/** @brief Creates a camera with default (identity-like) matrices */

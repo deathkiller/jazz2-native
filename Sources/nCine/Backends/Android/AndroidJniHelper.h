@@ -76,14 +76,14 @@ namespace nCine::Backends
 		inline bool IsNull() const {
 			return _javaObject == nullptr;
 		}
-		inline jobject javaObject() const {
+		inline jobject GetJavaObject() const {
 			return _javaObject;
 		}
 
-		static jclass findClass(const char* name);
-		static jmethodID getStaticMethodID(jclass javaClass, const char* name, const char* signature);
-		static jmethodID getMethodID(jclass javaClass, const char* name, const char* signature);
-		static jfieldID getStaticFieldID(jclass javaClass, const char* name, const char* signature);
+		static jclass FindClass(const char* name);
+		static jmethodID GetStaticMethodID(jclass javaClass, const char* name, const char* signature);
+		static jmethodID GetMethodID(jclass javaClass, const char* name, const char* signature);
+		static jfieldID GetStaticFieldID(jclass javaClass, const char* name, const char* signature);
 
 	protected:
 		jobject _javaObject;
@@ -95,20 +95,20 @@ namespace nCine::Backends
 	class AndroidJniClass_Version
 	{
 	public:
-		static int sdkInt();
-		static String deviceBrand();
-		static String deviceManufacturer();
-		static String deviceModel();
+		static int GetSdkInt();
+		static String GetDeviceBrand();
+		static String GetDeviceManufacturer();
+		static String GetDeviceModel();
 	};
 
 	/** @brief Wraps JNI access to `android.view.InputDevice.MotionRange` */
 	class AndroidJniClass_MotionRange : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		explicit AndroidJniClass_MotionRange(jobject javaObject);
-		float getMin() const;
-		float getRange() const;
+		float GetMin() const;
+		float GetRange() const;
 		
 	private:
 		static jclass _javaClass;
@@ -120,10 +120,10 @@ namespace nCine::Backends
 	class AndroidJniClass_VibrationEffect : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		explicit AndroidJniClass_VibrationEffect(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
-		static AndroidJniClass_VibrationEffect createOneShot(long milliseconds, int amplitude);
+		static AndroidJniClass_VibrationEffect CreateOneShot(long milliseconds, int amplitude);
 
 	private:
 		static jclass _javaClass;
@@ -134,14 +134,14 @@ namespace nCine::Backends
 	class AndroidJniClass_Vibrator : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		AndroidJniClass_Vibrator()
 			: AndroidJniClass() {}
 		explicit AndroidJniClass_Vibrator(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
 
-		void cancel() const;
-		void vibrate(const AndroidJniClass_VibrationEffect& vibe) const;
+		void Cancel() const;
+		void Vibrate(const AndroidJniClass_VibrationEffect& vibe) const;
 
 	private:
 		static jclass _javaClass;
@@ -153,12 +153,12 @@ namespace nCine::Backends
 	class AndroidJniClass_VibratorManager : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		explicit AndroidJniClass_VibratorManager(jobject javaObject);
 
-		void cancel() const;
-		int getVibratorIds(int* destination, int maxSize) const;
-		AndroidJniClass_Vibrator getVibrator(int vibratorId) const;
+		void Cancel() const;
+		int GetVibratorIds(int* destination, int maxSize) const;
+		AndroidJniClass_Vibrator GetVibrator(int vibratorId) const;
 
 	private:
 		static jclass _javaClass;
@@ -171,19 +171,19 @@ namespace nCine::Backends
 	class AndroidJniClass_InputDevice : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		explicit AndroidJniClass_InputDevice(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
-		static AndroidJniClass_InputDevice getDevice(int deviceId);
-		static int getDeviceIds(int* destination, int maxSize);
-		int getName(char* destination, int maxStringSize) const;
-		int getDescriptor(char* destination, int maxStringSize) const;
-		int getProductId() const;
-		int getVendorId() const;
-		AndroidJniClass_MotionRange getMotionRange(int axis) const;
-		int getSources() const;
-		void hasKeys(const int* buttons, const int length, bool* bools) const;
-		AndroidJniClass_VibratorManager getVibratorManager() const;
+		static AndroidJniClass_InputDevice GetDevice(int deviceId);
+		static int GetDeviceIds(int* destination, int maxSize);
+		int GetName(char* destination, int maxStringSize) const;
+		int GetDescriptor(char* destination, int maxStringSize) const;
+		int GetProductId() const;
+		int GetVendorId() const;
+		AndroidJniClass_MotionRange GetMotionRange(int axis) const;
+		int GetSources() const;
+		void HasKeys(const int* buttons, const int length, bool* bools) const;
+		AndroidJniClass_VibratorManager GetVibratorManager() const;
 
 	private:
 		static jclass _javaClass;
@@ -203,10 +203,10 @@ namespace nCine::Backends
 	class AndroidJniClass_KeyCharacterMap : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 		explicit AndroidJniClass_KeyCharacterMap(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
-		static bool deviceHasKey(int button);
+		static bool DeviceHasKey(int button);
 
 	private:
 		static jclass _javaClass;
@@ -217,15 +217,15 @@ namespace nCine::Backends
 	class AndroidJniClass_KeyEvent : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 
 		AndroidJniClass_KeyEvent(int action, int code);
 		AndroidJniClass_KeyEvent(long long int downTime, long long int eventTime, int action, int code, int repeat, int metaState, int deviceId, int scancode, int flags, int source);
 
-		int getUnicodeChar(int metaState) const;
-		inline int getUnicodeChar() const { return getUnicodeChar(0); }
-		int getCharacters(char* destination, int maxStringSize) const;
-		bool isPrintingKey() const;
+		int GetUnicodeChar(int metaState) const;
+		inline int GetUnicodeChar() const { return GetUnicodeChar(0); }
+		int GetCharacters(char* destination, int maxStringSize) const;
+		bool IsPrintingKey() const;
 
 	private:
 		static jclass _javaClass;
@@ -241,16 +241,16 @@ namespace nCine::Backends
 	class AndroidJniClass_DisplayMode : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 
 		AndroidJniClass_DisplayMode()
 			: AndroidJniClass() {}
 		explicit AndroidJniClass_DisplayMode(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
 
-		int getPhysicalHeight() const;
-		int getPhysicalWidth() const;
-		float getRefreshRate() const;
+		int GetPhysicalHeight() const;
+		int GetPhysicalWidth() const;
+		float GetRefreshRate() const;
 
 	private:
 		static jclass _javaClass;
@@ -263,16 +263,16 @@ namespace nCine::Backends
 	class AndroidJniClass_Display : public AndroidJniClass
 	{
 	public:
-		static void init();
+		static void Init();
 
 		AndroidJniClass_Display()
 			: AndroidJniClass() {}
 		explicit AndroidJniClass_Display(jobject javaObject)
 			: AndroidJniClass(javaObject) {}
 
-		AndroidJniClass_DisplayMode getMode() const;
-		int getName(char* destination, int maxStringSize) const;
-		int getSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const;
+		AndroidJniClass_DisplayMode GetMode() const;
+		int GetName(char* destination, int maxStringSize) const;
+		int GetSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const;
 
 	private:
 		static jclass _javaClass;
@@ -285,20 +285,20 @@ namespace nCine::Backends
 	class AndroidJniWrap_Activity
 	{
 	public:
-		static void init(struct android_app* state);
-		static void finishAndRemoveTask();
-		static String getPackageName();
-		static String getPreferredLanguage();
-		static bool isScreenRound();
-		static bool hasExternalStoragePermission();
-		static void requestExternalStoragePermission();
-		static void setActivityEnabled(StringView activity, bool enable);
-		static bool openUrl(StringView url);
-		static jobject getDecorView();
-		static Recti getVisibleBounds();
-		static void vibrate(std::int32_t milliseconds);
-		static void showStatusBar();
-		static void hideStatusBar();
+		static void Init(struct android_app* state);
+		static void FinishAndRemoveTask();
+		static String GetPackageName();
+		static String GetPreferredLanguage();
+		static bool IsScreenRound();
+		static bool HasExternalStoragePermission();
+		static void RequestExternalStoragePermission();
+		static void SetActivityEnabled(StringView activity, bool enable);
+		static bool OpenUrl(StringView url);
+		static jobject GetDecorView();
+		static Recti GetVisibleBounds();
+		static void Vibrate(std::int32_t milliseconds);
+		static void ShowStatusBar();
+		static void HideStatusBar();
 
 	private:
 		static jobject _activityObject;
@@ -340,16 +340,16 @@ namespace nCine::Backends
 	class AndroidJniWrap_InputMethodManager
 	{
 	public:
-		static void init(struct android_app* state);
+		static void Init(struct android_app* state);
 
 		/** @brief Returns `true` if any input method that can provide a software keyboard is enabled */
-		static bool isSoftInputAvailable();
+		static bool IsSoftInputAvailable();
 		/** @brief Returns `true` if the software keyboard is currently shown */
-		static bool isSoftInputVisible();
+		static bool IsSoftInputVisible();
 		/** @brief Requests the software keyboard to be shown */
-		static bool showSoftInput();
+		static bool ShowSoftInput();
 		/** @brief Requests the software keyboard to be hidden */
-		static bool hideSoftInput();
+		static bool HideSoftInput();
 
 	private:
 		static jobject _activityObject;
@@ -363,11 +363,11 @@ namespace nCine::Backends
 	class AndroidJniWrap_DisplayManager
 	{
 	public:
-		static void init(struct android_app* state);
-		static void shutdown();
+		static void Init(struct android_app* state);
+		static void Shutdown();
 
-		static AndroidJniClass_Display getDisplay(int displayId);
-		static int getDisplays(AndroidJniClass_Display* destination, int maxSize);
+		static AndroidJniClass_Display GetDisplay(int displayId);
+		static int GetDisplays(AndroidJniClass_Display* destination, int maxSize);
 
 	private:
 		static jobject _displayManagerObject;
@@ -379,9 +379,9 @@ namespace nCine::Backends
 	class AndroidJniWrap_Secure
 	{
 	public:
-		static void init(struct android_app* state);
+		static void Init(struct android_app* state);
 
-		static StringView getAndroidId();
+		static StringView GetAndroidId();
 
 	private:
 		static String _androidId;

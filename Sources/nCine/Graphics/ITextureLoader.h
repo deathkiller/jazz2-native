@@ -15,7 +15,7 @@ namespace nCine
 		
 		Common base for all texture file loaders. Decodes a texture file into raw pixel data together with
 		its dimensions, pixel format and MIP map chain, ready to be uploaded to the GPU by @ref Texture.
-		Concrete subclasses handle individual file formats and are instantiated through the @ref createFromFile()
+		Concrete subclasses handle individual file formats and are instantiated through the @ref CreateFromFile()
 		factory according to the file extension.
 	*/
 	class ITextureLoader
@@ -26,38 +26,38 @@ namespace nCine
 		/**
 		 * @brief Returns `true` if the texture has been correctly loaded
 		 */
-		inline bool hasLoaded() const {
+		inline bool HasLoaded() const {
 			return _hasLoaded;
 		}
 
 		/**
 		 * @brief Returns texture width in pixels
 		 */
-		inline std::int32_t width() const {
+		inline std::int32_t GetWidth() const {
 			return _width;
 		}
 		/**
 		 * @brief Returns texture height in pixels
 		 */
-		inline std::int32_t height() const {
+		inline std::int32_t GetHeight() const {
 			return _height;
 		}
 		/**
 		 * @brief Returns texture size as a `Vector2i`
 		 */
-		inline Vector2i size() const {
+		inline Vector2i GetSize() const {
 			return Vector2i(_width, _height);
 		}
 		/**
 		 * @brief Returns the number of MIP maps stored in the texture file
 		 */
-		inline std::int32_t mipMapCount() const {
+		inline std::int32_t GetMipMapCount() const {
 			return _mipMapCount;
 		}
 		/**
 		 * @brief Returns texture data size in bytes
 		 */
-		inline std::uint32_t dataSize() const {
+		inline std::uint32_t GetDataSize() const {
 			return _dataSize;
 		}
 		/**
@@ -65,17 +65,17 @@ namespace nCine
 		 *
 		 * @param mipMapLevel  Zero-based MIP map level
 		 */
-		std::int32_t dataSize(std::uint32_t mipMapLevel) const;
+		std::int32_t GetDataSize(std::uint32_t mipMapLevel) const;
 		/**
 		 * @brief Returns the texture format object
 		 */
-		inline const TextureFormat& texFormat() const {
+		inline const TextureFormat& GetTexFormat() const {
 			return _texFormat;
 		}
 		/**
 		 * @brief Returns the pointer to pixel data
 		 */
-		inline const std::uint8_t* pixels() const {
+		inline const std::uint8_t* GetPixels() const {
 			return _pixels.get();
 		}
 		/**
@@ -83,7 +83,7 @@ namespace nCine
 		 *
 		 * @param mipMapLevel  Zero-based MIP map level
 		 */
-		const std::uint8_t* pixels(std::uint32_t mipMapLevel) const;
+		const std::uint8_t* GetPixels(std::uint32_t mipMapLevel) const;
 
 		//static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/**
@@ -91,7 +91,7 @@ namespace nCine
 		 *
 		 * @param filename  Path of the texture file to load
 		 */
-		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView filename);
+		static std::unique_ptr<ITextureLoader> CreateFromFile(const Death::Containers::StringView filename);
 		/**
 		 * @brief Returns the proper texture loader for a texture that is already open
 		 *
@@ -99,9 +99,9 @@ namespace nCine
 		 * @param path        Path the stream was opened from, only its extension is used
 		 *
 		 * For a texture that has no file of its own to open --- one inside a `.pak` container above all,
-		 * where @ref createFromFile() has no path that would reach it.
+		 * where @ref CreateFromFile() has no path that would reach it.
 		 */
-		static std::unique_ptr<ITextureLoader> createFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
+		static std::unique_ptr<ITextureLoader> CreateFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -125,13 +125,13 @@ namespace nCine
 		ITextureLoader();
 		explicit ITextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
-		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
+		static std::unique_ptr<ITextureLoader> CreateLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
 		/**
 		 * @brief Loads pixel data from a texture file holding either compressed or uncompressed data
 		 *
 		 * @param format  Backend-neutral pixel format describing the decoded pixels
 		 */
-		void loadPixels(PixelFormat format);
+		void LoadPixels(PixelFormat format);
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

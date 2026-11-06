@@ -65,12 +65,12 @@ namespace Jazz2::UI::Menu
 		_previewPaletteColor = 0;
 
 #if defined(DEATH_TARGET_ANDROID)
-		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
+		auto androidId = Backends::AndroidJniWrap_Secure::GetAndroidId();
 		if (!androidId.empty()) {
 			_deviceId = "A:"_s + androidId;
 		}
 
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 		_initialVisibleSize.X = _currentVisibleBounds.W;
 		_initialVisibleSize.Y = _currentVisibleBounds.H;
 #endif
@@ -228,7 +228,7 @@ namespace Jazz2::UI::Menu
 			char uniquePlayerId[128];
 			std::size_t length = formatInto(uniquePlayerId, "{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
 				uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
-			if (theApplication().GetInputManager().setClipboardText({ uniquePlayerId, length })) {
+			if (theApplication().GetInputManager().SetClipboardText({ uniquePlayerId, length })) {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 			}
 		};
@@ -279,7 +279,7 @@ namespace Jazz2::UI::Menu
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 				_recalcVisibleBoundsTimeLeft = 60.0f;
-				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 			}
 #endif
 			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
@@ -429,20 +429,20 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		if (_nameInput != nullptr && _nameInput->IsActive()) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				float x = event.Pointers[pointerIndex].X;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				// The top-left corner toggles the on-screen keyboard (matching the icon drawn in OnDrawOverlay)
 				bool keyboardCorner = (x < 0.2f && y < 80.0f);
 
-				if (event.type == TouchEventType::Down) {
+				if (event.Type == TouchEventType::Down) {
 					if (keyboardCorner && theApplication().CanShowScreenKeyboard()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_nameInput->ShowScreenKeyboard();
 						RecalcLayoutForScreenKeyboard();
 					}
-				} else if (event.type == TouchEventType::Up && !keyboardCorner) {
+				} else if (event.Type == TouchEventType::Up && !keyboardCorner) {
 					// A tap finishes editing - the touch equivalent of Enter/Escape, since taps are otherwise swallowed
 					// below. The top bar cancels (discards, like the back action); a tap on the field/list area commits
 					// the typed name. An empty field can't be committed, so it cancels too.
@@ -473,7 +473,7 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::RecalcLayoutForScreenKeyboard()
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::GetVisibleBounds();
 
 		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
 			_recalcVisibleBoundsTimeLeft = 30.0f;

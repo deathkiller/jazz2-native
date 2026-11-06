@@ -3,7 +3,7 @@
 
 namespace nCine
 {
-	bool TextureFormat::isCompressed() const
+	bool TextureFormat::IsCompressed() const
 	{
 		switch (_pixelFormat) {
 			case PixelFormat::DXT1RGB:
@@ -43,7 +43,7 @@ namespace nCine
 		}
 	}
 
-	std::uint32_t TextureFormat::numChannels() const
+	std::uint32_t TextureFormat::GetChannelCount() const
 	{
 		switch (_pixelFormat) {
 			case PixelFormat::R8:
@@ -68,12 +68,12 @@ namespace nCine
 		}
 	}
 
-	void TextureFormat::bgrFormat()
+	void TextureFormat::BgrFormat()
 	{
 		_bgr = true;
 	}
 
-	std::uint32_t TextureFormat::calculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
+	std::uint32_t TextureFormat::CalculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
 	{
 		std::uint32_t blockWidth = 1; // Compression block width in pixels
 		std::uint32_t blockHeight = 1; // Compression block height in pixels

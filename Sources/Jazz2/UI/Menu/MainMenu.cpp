@@ -38,7 +38,7 @@ namespace Jazz2::UI::Menu
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
 			_pressedKeys(ValueInit, (std::size_t)Keys::Count)
 	{
-		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
+		theApplication().GetGfxDevice().SetWindowTitle("Jazz² Resurrection"_s);
 
 		_texturedBackgroundLayer.Visible = false;
 		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
@@ -86,9 +86,9 @@ namespace Jazz2::UI::Menu
 
 	MainMenu::~MainMenu()
 	{
-		_canvasBackground->setParent(nullptr);
-		_canvasClipped->setParent(nullptr);
-		_canvasOverlay->setParent(nullptr);
+		_canvasBackground->SetParent(nullptr);
+		_canvasClipped->SetParent(nullptr);
+		_canvasOverlay->SetParent(nullptr);
 	}
 
 	void MainMenu::Reset()
@@ -200,9 +200,9 @@ namespace Jazz2::UI::Menu
 		// Viewports must be registered in reverse order
 		_upscalePass.Register();
 
-		_canvasBackground->setParent(_upscalePass.GetNode());
-		_canvasClipped->setParent(_upscalePass.GetClippedNode());
-		_canvasOverlay->setParent(_upscalePass.GetOverlayNode());
+		_canvasBackground->SetParent(_upscalePass.GetNode());
+		_canvasClipped->SetParent(_upscalePass.GetClippedNode());
+		_canvasOverlay->SetParent(_upscalePass.GetOverlayNode());
 
 		if (SupportsTexturedBackground) {
 			// Skipped entirely when unsupported, which also saves the pass's render target
@@ -212,7 +212,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::OnKeyPressed(const KeyboardEvent& event)
 	{
-		_pressedKeys.set((std::size_t)event.sym);
+		_pressedKeys.set((std::size_t)event.Sym);
 
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
@@ -222,7 +222,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::OnKeyReleased(const KeyboardEvent& event)
 	{
-		_pressedKeys.reset((std::size_t)event.sym);
+		_pressedKeys.reset((std::size_t)event.Sym);
 
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();

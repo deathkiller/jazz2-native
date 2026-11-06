@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetFacingLeft(true);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}
@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Bosses
 	{
 		SetHealthByDifficulty(100);
 
-		_renderer.setDrawEnabled(true);
+		_renderer.SetDrawEnabled(true);
 		_state = StateCopter;
 
 		MoveInstantly(_originPos, MoveType::Absolute);
@@ -48,7 +48,7 @@ namespace Jazz2::Actors::Bosses
 
 	void Robot::Deactivate()
 	{
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 		_state = StateWaiting;
 	}
 
@@ -177,7 +177,7 @@ namespace Jazz2::Actors::Bosses
 		uint8_t spikeBallParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
 		spikeBall->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y - 32, _renderer.layer() + 2),
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y - 32, _renderer.GetLayer() + 2),
 			spikeBallParams
 		));
 		_levelHandler->AddActor(spikeBall);
@@ -242,7 +242,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Robot::SpikeBall::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::SmallDark);
 
 		return EnemyBase::OnPerish(collider);
 	}

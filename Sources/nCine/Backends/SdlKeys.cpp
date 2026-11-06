@@ -63,7 +63,7 @@
 
 namespace nCine::Backends
 {
-	Keys SdlKeys::keySymValueToEnum(int keysym)
+	Keys SdlKeys::KeySymValueToEnum(int keysym)
 	{
 		// clang-format off
 		switch (keysym) {
@@ -211,7 +211,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int SdlKeys::keyModMaskToEnumMask(int keymod)
+	int SdlKeys::KeyModMaskToEnumMask(int keymod)
 	{
 		int result = 0;
 
@@ -232,7 +232,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	int SdlKeys::enumToKeysValue(Keys keysym)
+	int SdlKeys::EnumToKeysValue(Keys keysym)
 	{
 		// clang-format off
 		switch (keysym) {
@@ -380,7 +380,7 @@ namespace nCine::Backends
 		// clang-format on
 	}
 
-	int SdlKeys::enumToScancode(Keys keysym)
+	int SdlKeys::EnumToScancode(Keys keysym)
 	{
 		// clang-format off
 		switch (keysym) {

@@ -37,28 +37,28 @@ namespace nCine::Backends
 		static void SetCurrentFramebufferCallback(retro_hw_get_current_framebuffer_t callback);
 
 		/** @brief Repoints the engine at the current framebuffer of the frontend and resyncs the cached state */
-		void beginFrame();
+		void BeginFrame();
 
-		void setSwapInterval(int interval) override {}
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override {}
-		void setWindowPosition(int x, int y) override {}
-		void setWindowTitle(StringView windowTitle) override {}
-		void setWindowIcon(StringView iconFilename) override {}
-		void setWindowSize(int width, int height) override {}
+		void SetSwapInterval(int interval) override {}
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override {}
+		void SetWindowPosition(int x, int y) override {}
+		void SetWindowTitle(StringView windowTitle) override {}
+		void SetWindowIcon(StringView iconFilename) override {}
+		void SetWindowSize(int width, int height) override {}
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override {
 			return _currentVideoMode;
 		}
 
 	protected:
-		void setResolutionInternal(int width, int height) override {}
+		void SetResolutionInternal(int width, int height) override {}
 
 	private:
 		std::int32_t _lastWidth;
 		std::int32_t _lastHeight;
 		std::vector<std::uint32_t> _converted;
 
-		void update() override;
+		void Update() override;
 	};
 }
 

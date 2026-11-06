@@ -266,9 +266,9 @@ namespace nCine
 		DEATH_ASSERT(_vaoPool == nullptr);
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
-		_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
-		_vaoPool = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.ShaderCachePath);
+		_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.UseBufferMapping, appCfg.UseBufferStorage, appCfg.VboSize, appCfg.IboSize);
+		_vaoPool = std::make_unique<RenderVaoPool>(appCfg.VaoPoolSize);
 	}
 
 	void RenderResources::Create()
@@ -277,10 +277,10 @@ namespace nCine
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (_binaryShaderCache == nullptr) {
-			_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+			_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.ShaderCachePath);
 		}
 		if (_buffersManager == nullptr) {
-			_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
+			_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.UseBufferMapping, appCfg.UseBufferStorage, appCfg.VboSize, appCfg.IboSize);
 		}
 		// The backend places committed uniform blocks into the streaming uniform buffer through this hook,
 		// so it doesn't have to know the pipeline's buffer suballocator
@@ -288,9 +288,9 @@ namespace nCine
 			return _buffersManager->AcquireMemory(RenderBuffersManager::BufferTypes::Uniform, bytes);
 		});
 		if (_vaoPool == nullptr) {
-			_vaoPool = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+			_vaoPool = std::make_unique<RenderVaoPool>(appCfg.VaoPoolSize);
 		}
-		_renderCommandPool = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
+		_renderCommandPool = std::make_unique<RenderCommandPool>(appCfg.RenderCommandPoolSize);
 		_renderBatcher = std::make_unique<RenderBatcher>();
 		_defaultCamera = std::make_unique<Camera>();
 		_currentCamera = _defaultCamera.get();
@@ -359,8 +359,8 @@ namespace nCine
 			std::int32_t batchSize = 0;
 			bool hasBatchSizeDefine = false;
 			if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks) {
-				if (appCfg.fixedBatchSize > 0) {
-					batchSize = appCfg.fixedBatchSize;
+				if (appCfg.FixedBatchSize > 0) {
+					batchSize = appCfg.FixedBatchSize;
 					hasBatchSizeDefine = true;
 				} else if (maxUniformBlockSize < 64 * 1024) {
 					std::int32_t instanceStride = 0;

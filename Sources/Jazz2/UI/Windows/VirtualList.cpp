@@ -267,7 +267,7 @@ namespace Jazz2::UI::Windows
 				break;
 			}
 		}
-		switch (event.sym) {
+		switch (event.Sym) {
 			case Keys::Up: Select(std::max<std::int32_t>(_selected - 1, 0)); return true;
 			case Keys::Down: Select(std::min<std::int32_t>(_selected + 1, count - 1)); return true;
 			case Keys::PageUp: Select(std::max<std::int32_t>(_selected - page, 0)); return true;
@@ -296,7 +296,7 @@ namespace Jazz2::UI::Windows
 			return false;
 		}
 		// Letters typed in a row are looked for together, the same letter again goes on to the next row with it
-		String typed = StringUtils::lowercase(StringView(event.text, std::size_t(event.length)));
+		String typed = StringUtils::lowercase(StringView(event.Text, std::size_t(event.Length)));
 		bool repeated = (_typed.size() == typed.size() && _typed == typed);
 		_typed = (repeated || _typedTime <= 0.0f ? typed : String(_typed + typed));
 		_typedTime = TypeAheadFrames;

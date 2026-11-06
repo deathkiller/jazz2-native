@@ -38,45 +38,45 @@ namespace nCine::Backends
 		SdlGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~SdlGfxDevice() override;
 
-		void setSwapInterval(int interval) override;
+		void SetSwapInterval(int interval) override;
 
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
 
-		void update() override;
+		void Update() override;
 
-		void setWindowPosition(int x, int y) override;
-		void setWindowSize(int width, int height) override;
-		void setDrawableSize(int width, int height) override;
+		void SetWindowPosition(int x, int y) override;
+		void SetWindowSize(int width, int height) override;
+		void SetDrawableSize(int width, int height) override;
 
-		void setWindowTitle(StringView windowTitle) override;
-		void setWindowIcon(StringView windowIconFilename) override;
+		void SetWindowTitle(StringView windowTitle) override;
+		void SetWindowIcon(StringView windowIconFilename) override;
 
-		const Vector2i windowPosition() const override;
+		const Vector2i GetWindowPosition() const override;
 
-		void flashWindow() const override;
+		void FlashWindow() const override;
 
-		unsigned int windowMonitorIndex() const override;
+		unsigned int GetWindowMonitorIndex() const override;
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
-		bool setVideoMode(unsigned int modeIndex) override;
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override;
+		bool SetVideoMode(unsigned int modeIndex) override;
 
 		/**
 		 * @brief Returns `true` if the specified window ID refers to the main window
 		 *
 		 * @param windowId	SDL2 window identifier to compare against the main window
 		 */
-		static inline bool isMainWindow(std::uint32_t windowId) {
+		static inline bool IsMainWindow(std::uint32_t windowId) {
 			SDL_Window* windowHandle = SDL_GetWindowFromID(windowId);
 			return (windowHandle == _windowHandle);
 		}
 
 		/** @brief Returns the SDL2 handle of the main window */
-		static inline SDL_Window* windowHandle() {
+		static inline SDL_Window* GetWindowHandle() {
 			return _windowHandle;
 		}
 
 		/** @brief Returns the SDL2 OpenGL context handle */
-		static inline SDL_GLContext glContextHandle() {
+		static inline SDL_GLContext GetGlContextHandle() {
 			return _glContextHandle;
 		}
 
@@ -87,36 +87,36 @@ namespace nCine::Backends
 		 * `SDL_GL_GetDrawableSize` elsewhere) to one place; @p fallbackWidth / @p fallbackHeight are used
 		 * when the query returns a non-positive size.
 		 */
-		static void queryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height);
+		static void QueryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height);
 
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
-		bool supportsAuxiliaryWindows() const override;
-		std::unique_ptr<AuxiliaryWindow> createAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
-		bool globalMousePosition(Vector2i& position) const override;
-		float windowContentScale() const override;
-		bool globalMouseButtons(std::uint32_t& buttons) const override;
-		bool desktopWorkArea(Vector2i point, Recti& area) const override;
+		bool SupportsAuxiliaryWindows() const override;
+		std::unique_ptr<AuxiliaryWindow> CreateAuxiliaryWindow(const AuxiliaryWindowDesc& desc) override;
+		bool GetGlobalMousePosition(Vector2i& position) const override;
+		float GetWindowContentScale() const override;
+		bool GetGlobalMouseButtons(std::uint32_t& buttons) const override;
+		bool GetDesktopWorkArea(Vector2i point, Recti& area) const override;
 
-		/** @brief Returns `true` if the SDL window ID is one of the auxiliary windows of the application, see @ref createAuxiliaryWindow() */
-		static bool isAuxiliaryWindow(std::uint32_t windowId);
+		/** @brief Returns `true` if the SDL window ID is one of the auxiliary windows of the application, see @ref CreateAuxiliaryWindow() */
+		static bool IsAuxiliaryWindow(std::uint32_t windowId);
 		/**
 		 * @brief Converts a position over a window of the application to one relative to the main window
 		 *
 		 * A position over an auxiliary window can be outside of the main window then. A position over the main window
 		 * stays as it is.
 		 */
-		static Vector2i toMainWindowPosition(std::uint32_t windowId, Vector2i position);
+		static Vector2i ToMainWindowPosition(std::uint32_t windowId, Vector2i position);
 #else
-		static bool isAuxiliaryWindow(std::uint32_t windowId) {
+		static bool IsAuxiliaryWindow(std::uint32_t windowId) {
 			return false;
 		}
-		static Vector2i toMainWindowPosition(std::uint32_t windowId, Vector2i position) {
+		static Vector2i ToMainWindowPosition(std::uint32_t windowId, Vector2i position) {
 			return position;
 		}
 #endif
 		/** @brief Returns `true` if the SDL window ID is the main window or an auxiliary window of the application */
-		static bool isOwnWindow(std::uint32_t windowId) {
-			return (isMainWindow(windowId) || isAuxiliaryWindow(windowId));
+		static bool IsOwnWindow(std::uint32_t windowId) {
+			return (IsMainWindow(windowId) || IsAuxiliaryWindow(windowId));
 		}
 
 		/**
@@ -125,12 +125,12 @@ namespace nCine::Backends
 		 * Only a change of the reported state is taken over, so a request still pending in the window system
 		 * is not undone by an event that arrives before it was confirmed.
 		 */
-		void syncFullscreenState();
+		void SyncFullscreenState();
 
 	protected:
-		void setResolutionInternal(int width, int height) override;
+		void SetResolutionInternal(int width, int height) override;
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
 	private:
 		/** @brief SDL2 window handle */
@@ -141,7 +141,7 @@ namespace nCine::Backends
 		/** @brief Color renderbuffer of SDL's GL view, which must be bound when a frame is presented (see @ref update()) */
 		static unsigned int _iosColorRenderbuffer;
 #endif
-		/** @brief Fullscreen state of the main window as the window system last reported it (see @ref syncFullscreenState()) */
+		/** @brief Fullscreen state of the main window as the window system last reported it (see @ref SyncFullscreenState()) */
 		bool _isWindowFullscreen = false;
 
 		/** @brief Deleted copy constructor */
@@ -150,9 +150,9 @@ namespace nCine::Backends
 		SdlGfxDevice& operator=(const SdlGfxDevice&) = delete;
 
 		/** @brief Initializes the SDL2 video subsystem */
-		void initGraphics(bool enableWindowScaling);
+		void InitGraphics(bool enableWindowScaling);
 		/** @brief Initializes the OpenGL graphics context */
-		void initDevice(int windowPosX, int windowPosY, bool isResizable);
+		void InitDevice(int windowPosX, int windowPosY, bool isResizable);
 
 #if defined(WITH_RHI_SOFTWARE)
 		/** @brief SDL2 renderer used to present the CPU framebuffer (software backend, no GL context) */
@@ -165,14 +165,14 @@ namespace nCine::Backends
 		std::int32_t _softwareTextureHeight = 0;
 
 		/** @brief Creates the SDL2 renderer and the initial streaming target for the software present path */
-		void initSoftwarePresent(bool hasVSync);
+		void InitSoftwarePresent(bool hasVSync);
 		/** @brief (Re)creates the streaming texture and resizes the backend screen framebuffer to match */
-		void resizeSoftwareTarget(int width, int height);
+		void ResizeSoftwareTarget(int width, int height);
 		/** @brief Uploads and blits the backend screen framebuffer to the window (replaces the GL buffer swap) */
-		void presentSoftware();
+		void PresentSoftware();
 #endif
 
-		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
+		void ConvertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 
 		friend class SdlInputManager;
 	};

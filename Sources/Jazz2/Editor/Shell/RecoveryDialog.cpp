@@ -9,7 +9,6 @@
 #include "../../UI/Windows/Dialogs.h"
 #include "../../UI/Windows/Surface.h"
 #include "../UI/EditorUi.h"
-#include "../../PreferencesCache.h"
 
 #include "../../../nCine/I18n.h"
 
@@ -47,15 +46,10 @@ namespace Jazz2::Editor
 			std::uint32_t Generation = 0;
 		};
 
-		String GetRecoveryDirectory()
-		{
-			return fs::CombinePath({ PreferencesCache::GetDirectory(), "Editor"_s, "Recovery"_s });
-		}
-
 		void ReadCopies(RecoveryState& state)
 		{
 			state.Copies.clear();
-			String directory = GetRecoveryDirectory();
+			String directory = AutosaveService::GetRecoveryDirectory();
 			if (fs::DirectoryExists(directory)) {
 				for (auto item : fs::Directory(directory, fs::EnumerationOptions::SkipDirectories)) {
 					// Temporary files of a copy being written are left out

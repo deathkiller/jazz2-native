@@ -626,7 +626,7 @@ namespace nCine::RHI::GXM
 				continue;
 			}
 			if (GxmVertexFormat::Attribute* formatAttribute = GetAttribute(stageAttribute.Name)) {
-				formatAttribute->setVbo(vbo);
+				formatAttribute->SetVbo(vbo);
 				formatAttribute->SetBaseOffset(vboOffset);
 				_usesGeometryStream = true;
 				if (formatAttribute->GetStride() > 0) {

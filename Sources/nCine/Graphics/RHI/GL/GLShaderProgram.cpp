@@ -262,12 +262,12 @@ namespace nCine::RHI::GL
 		for (std::int32_t location : _attributeLocations) {
 			if (location == cornerLocation) {
 				if (cornerVbo != nullptr) {
-					_vertexFormat[location].setVbo(cornerVbo);
+					_vertexFormat[location].SetVbo(cornerVbo);
 					_vertexFormat[location].SetBaseOffset(0);
 					hasBoundAttribute = true;
 				}
 			} else if (vbo != nullptr) {
-				_vertexFormat[location].setVbo(vbo);
+				_vertexFormat[location].SetVbo(vbo);
 				_vertexFormat[location].SetBaseOffset(vboOffset);
 				hasBoundAttribute = true;
 			}
@@ -279,7 +279,7 @@ namespace nCine::RHI::GL
 #else
 		if (vbo != nullptr) {
 			for (std::int32_t location : _attributeLocations) {
-				_vertexFormat[location].setVbo(vbo);
+				_vertexFormat[location].SetVbo(vbo);
 				_vertexFormat[location].SetBaseOffset(vboOffset);
 			}
 			_vertexFormat.SetIbo(ibo);

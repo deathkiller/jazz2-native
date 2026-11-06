@@ -36,24 +36,24 @@ namespace nCine
 	public:
 		JoystickGuid();
 		inline JoystickGuid(JoystickGuidType type) {
-			fromType(type);
+			FromType(type);
 		}
 		inline JoystickGuid(StringView string) {
-			fromString(string);
+			FromString(string);
 		}
 		/** @brief Fills the GUID for a well-known layout type */
-		void fromType(JoystickGuidType type);
+		void FromType(JoystickGuidType type);
 		/** @brief Parses the GUID from its hexadecimal string representation */
-		void fromString(StringView string);
+		void FromString(StringView string);
 		/** @brief Returns `true` if the GUID is not all zeros */
-		bool isValid() const;
+		bool IsValid() const;
 
 		bool operator==(const JoystickGuid& guid) const;
 
 		/**
 		 * @brief Raw GUID bytes
 		 *
-		 * Over-aligned deliberately: `fromType()`, `isValid()` and @relativeref{nCine,JoyMapping::CreateJoystickGuid()}
+		 * Over-aligned deliberately: `FromType()`, `isValid()` and @relativeref{nCine,JoyMapping::CreateJoystickGuid()}
 		 * all read and write these bytes four or two at a time through a `std::uint32_t*` / `std::uint16_t*`,
 		 * which a plain byte array does not guarantee is legal --- its own alignment is 1, so wherever the
 		 * compiler happened to place a GUID could leave those accesses unaligned. That costs nothing on x86
@@ -111,42 +111,42 @@ namespace nCine
 		IInputManager() {}
 		virtual ~IInputManager() {}
 		/** @brief Returns the current input event handler */
-		static inline IInputEventHandler* handler() {
+		static inline IInputEventHandler* GetHandler() {
 			return _inputEventHandler;
 		}
 		/** @brief Sets the input event handler */
-		static void setHandler(IInputEventHandler* inputEventHandler);
+		static void SetHandler(IInputEventHandler* inputEventHandler);
 
 		/** @brief Returns the current mouse state */
-		virtual const MouseState& mouseState() const = 0;
+		virtual const MouseState& GetMouseState() const = 0;
 		/** @brief Returns the current keyboard state */
-		virtual const KeyboardState& keyboardState() const = 0;
+		virtual const KeyboardState& GetKeyboardState() const = 0;
 
 		/** @brief Returns the clipboard text, or empty if none */
-		virtual String getClipboardText() const;
+		virtual String GetClipboardText() const;
 		/** @brief Sets the clipboard text */
-		virtual bool setClipboardText(StringView text);
+		virtual bool SetClipboardText(StringView text);
 		/** @brief Returns the display name of the specified key */
-		virtual StringView getKeyName(Keys key) const;
+		virtual StringView GetKeyName(Keys key) const;
 
 		/** @brief Returns `true` if the specified joystick is connected */
-		virtual bool isJoyPresent(int joyId) const = 0;
+		virtual bool IsJoyPresent(int joyId) const = 0;
 		/** @brief Returns the name of the specified joystick */
-		virtual const char* joyName(int joyId) const = 0;
+		virtual const char* GetJoyName(int joyId) const = 0;
 		/** @brief Returns the GUID of the specified joystick */
-		virtual const JoystickGuid joyGuid(int joyId) const = 0;
+		virtual const JoystickGuid GetJoyGuid(int joyId) const = 0;
 		/** @brief Returns the number of buttons of the specified joystick */
-		virtual int joyNumButtons(int joyId) const = 0;
+		virtual int GetJoyButtonCount(int joyId) const = 0;
 		/** @brief Returns the number of hats of the specified joystick */
-		virtual int joyNumHats(int joyId) const = 0;
+		virtual int GetJoyHatCount(int joyId) const = 0;
 		/** @brief Returns the number of axes of the specified joystick */
-		virtual int joyNumAxes(int joyId) const = 0;
+		virtual int GetJoyAxisCount(int joyId) const = 0;
 		/** @brief Returns the raw state of the specified joystick */
-		virtual const JoystickState& joystickState(int joyId) const = 0;
+		virtual const JoystickState& GetJoystickState(int joyId) const = 0;
 		/** @brief Starts a low/high frequency rumble effect for the specified duration in milliseconds */
-		virtual bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) = 0;
+		virtual bool JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) = 0;
 		/** @brief Starts a left/right trigger rumble effect for the specified duration in milliseconds */
-		virtual bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) = 0;
+		virtual bool JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) = 0;
 
 		/**
 			@brief Returns `true` if the joystick has a valid mapping configuration
@@ -154,31 +154,31 @@ namespace nCine
 			@note A joystick stays mapped in the @ref IInputEventHandler::OnJoyConnected() and
 			@ref IInputEventHandler::OnJoyDisconnected() callbacks.
 		*/
-		bool isJoyMapped(int joyId) const;
+		bool IsJoyMapped(int joyId) const;
 		/** @brief Returns `true` if the mapping of the joystick drives the axis by something the joystick has */
-		bool joyHasMappedAxis(int joyId, AxisName axis) const;
+		bool JoyHasMappedAxis(int joyId, AxisName axis) const;
 		/** @brief Returns the unified mapped state of the specified joystick */
-		const JoyMappedState& joyMappedState(int joyId) const;
+		const JoyMappedState& GetJoyMappedState(int joyId) const;
 		/** @brief Normalizes a joystick axis vector, clamping values within the dead zone to zero */
-		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
+		void DeadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 
 		/** @brief Adds joystick mapping configurations from a text file */
-		void addJoyMappingsFromFile(StringView path);
+		void AddJoyMappingsFromFile(StringView path);
 		/** @brief Adds joystick mapping configurations from a string */
-		void addJoyMappingsFromString(StringView mappingStrings);
+		void AddJoyMappingsFromString(StringView mappingStrings);
 		/** @brief Returns the current number of valid joystick mappings */
-		unsigned int numJoyMappings() const;
+		unsigned int GetJoyMappingCount() const;
 		/** @brief Returns `true` if a mapping exists for the specified joystick GUID */
-		bool hasMappingByGuid(const JoystickGuid& guid) const;
+		bool HasMappingByGuid(const JoystickGuid& guid) const;
 		/** @brief Returns `true` if a mapping exists for the specified joystick name */
-		bool hasMappingByName(const char* name) const;
+		bool HasMappingByName(const char* name) const;
 
 		/** @brief Returns the current mouse cursor mode */
-		inline Cursor cursor() const {
+		inline Cursor GetCursor() const {
 			return _cursor;
 		}
 		/** @brief Sets the mouse cursor mode */
-		virtual void setCursor(Cursor cursor);
+		virtual void SetCursor(Cursor cursor);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -196,44 +196,44 @@ namespace nCine
 	public:
 		NullInputManager() : _mouseState{}, _keyState{}, _joyState{} {}
 
-		virtual const MouseState& mouseState() const override { return _mouseState; }
-		virtual const KeyboardState& keyboardState() const override { return _keyState; }
+		virtual const MouseState& GetMouseState() const override { return _mouseState; }
+		virtual const KeyboardState& GetKeyboardState() const override { return _keyState; }
 
-		String getClipboardText() const override { return {}; }
-		StringView getKeyName(Keys key) const override { return {}; }
+		String GetClipboardText() const override { return {}; }
+		StringView GetKeyName(Keys key) const override { return {}; }
 
-		bool isJoyPresent(int joyId) const override { return false; }
-		const char* joyName(int joyId) const override { return nullptr; }
-		const JoystickGuid joyGuid(int joyId) const override { return {}; }
-		int joyNumButtons(int joyId) const override { return 0; }
-		int joyNumHats(int joyId) const override { return 0; }
-		int joyNumAxes(int joyId) const override { return 0; }
+		bool IsJoyPresent(int joyId) const override { return false; }
+		const char* GetJoyName(int joyId) const override { return nullptr; }
+		const JoystickGuid GetJoyGuid(int joyId) const override { return {}; }
+		int GetJoyButtonCount(int joyId) const override { return 0; }
+		int GetJoyHatCount(int joyId) const override { return 0; }
+		int GetJoyAxisCount(int joyId) const override { return 0; }
 
-		const JoystickState& joystickState(int joyId) const override { return _joyState; }
-		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override { return false; }
-		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override { return false; }
+		const JoystickState& GetJoystickState(int joyId) const override { return _joyState; }
+		bool JoystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override { return false; }
+		bool JoystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override { return false; }
 
-		void setCursor(Cursor cursor) override {}
+		void SetCursor(Cursor cursor) override {}
 
 	public:
 		class NullMouseState : public MouseState
 		{
 		public:
-			bool isButtonDown(MouseButton button) const override { return false; }
+			bool IsButtonDown(MouseButton button) const override { return false; }
 		};
 
 		class NullKeyboardState : public KeyboardState
 		{
 		public:
-			bool isKeyDown(Keys key) const override { return false; }
+			bool IsKeyDown(Keys key) const override { return false; }
 		};
 
 		class NullJoystickState : public JoystickState
 		{
 		public:
-			bool isButtonPressed(int buttonId) const override { return false; }
-			unsigned char hatState(int hatId) const override { return 0; }
-			float axisValue(int axisId) const override { return 0.0f; }
+			bool IsButtonPressed(int buttonId) const override { return false; }
+			unsigned char GetHatState(int hatId) const override { return 0; }
+			float GetAxisValue(int axisId) const override { return 0.0f; }
 		};
 
 	private:

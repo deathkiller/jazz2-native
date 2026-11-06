@@ -34,7 +34,7 @@ namespace nCine
 		Sprite& operator=(Sprite&&) = default;
 
 		/** @brief Returns a copy of this object */
-		inline Sprite clone() const {
+		inline Sprite Clone() const {
 			return Sprite(*this);
 		}
 
@@ -46,10 +46,10 @@ namespace nCine
 		/** @brief Protected copy constructor used to clone objects */
 		Sprite(const Sprite& other);
 
-		void textureHasChanged(Texture* newTexture) override;
+		void TextureHasChanged(Texture* newTexture) override;
 
 	private:
 		/** @brief Common initialization for the constructors and the copy constructor */
-		void init();
+		void Init();
 	};
 }

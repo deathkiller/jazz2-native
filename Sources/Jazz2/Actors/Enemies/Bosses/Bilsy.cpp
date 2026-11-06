@@ -49,7 +49,7 @@ namespace Jazz2::Actors::Bosses
 
 		SetAnimation(AnimState::Idle);
 
-		_renderer.setDrawEnabled(false);
+		_renderer.SetDrawEnabled(false);
 
 		async_return true;
 	}
@@ -104,7 +104,7 @@ namespace Jazz2::Actors::Bosses
 							uint8_t fireballParams[2] = { _theme, (uint8_t)(IsFacingLeft() ? 1 : 0) };
 							fireball->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 20, _renderer.layer() + 2),
+								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 20, _renderer.GetLayer() + 2),
 								fireballParams
 							));
 							_levelHandler->AddActor(fireball);
@@ -198,7 +198,7 @@ namespace Jazz2::Actors::Bosses
 			SetFacingLeft(targetPos.X < _pos.X);
 		}
 
-		_renderer.setDrawEnabled(true);
+		_renderer.SetDrawEnabled(true);
 
 		_state = StateTransition;
 		SetTransition((AnimState)1073741824, false, [this]() {
@@ -287,7 +287,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bilsy::Fireball::OnPerish(ActorBase* collider)
 	{
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::RF);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::RF);
 
 		return EnemyBase::OnPerish(collider);
 	}
@@ -318,10 +318,10 @@ namespace Jazz2::Actors::Bosses
 
 			if (_speed.X < 0.0f) {
 				SetFacingLeft(true);
-				_renderer.setRotation(atan2Approx(-_speed.Y, -_speed.X));
+				_renderer.SetRotation(atan2Approx(-_speed.Y, -_speed.X));
 			} else {
 				SetFacingLeft(false);
-				_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
+				_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 			}
 		}
 	}

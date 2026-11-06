@@ -47,25 +47,25 @@ namespace nCine::Backends
 		UwpGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window);
 		~UwpGfxDevice();
 
-		void update() override;
+		void Update() override;
 
-		void setSwapInterval(int interval) override { }
-		void setResolution(bool fullscreen, int width = 0, int height = 0) override;
+		void SetSwapInterval(int interval) override { }
+		void SetResolution(bool fullscreen, int width = 0, int height = 0) override;
 
-		void setWindowPosition(int x, int y) override { };
-		void setWindowSize(int width, int height) override;
+		void SetWindowPosition(int x, int y) override { };
+		void SetWindowSize(int width, int height) override;
 
-		void setWindowTitle(StringView windowTitle) override;
-		void setWindowIcon(StringView iconFilename) override { }
+		void SetWindowTitle(StringView windowTitle) override;
+		void SetWindowIcon(StringView iconFilename) override { }
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
+		const VideoMode& GetCurrentVideoMode(unsigned int monitorIndex) const override {
 			return _currentViewMode;
 		};
 
 	protected:
-		void setResolutionInternal(int width, int height) override { }
+		void SetResolutionInternal(int width, int height) override { }
 
-		void updateMonitors() override;
+		void UpdateMonitors() override;
 
 	private:
 		void Initialize();

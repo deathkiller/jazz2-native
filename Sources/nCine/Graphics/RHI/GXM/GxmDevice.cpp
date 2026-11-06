@@ -748,10 +748,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	void GxmDevice::CompletePendingScene(PendingScene& scene)
 	{
 		const bool timed = FrameStatistics::IsEnabled();
-		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 		sceGxmNotificationWait(&scene.Notification);
 		if (timed) {
-			FrameStatistics::AddCounter("Scene wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("Scene wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 		scene.Active = false;
 	}
@@ -1863,7 +1863,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// invocations, which is what the console's startup time is. The cache below is what keeps that to the
 		// first run; the compiler itself is not brought up here but on the first stage that misses it (see
 		// EnsureShaderCompiler()), so a run with a complete cache never loads "libshacccg.suprx" at all.
-		GxmShaderCache::Initialize(theApplication().GetAppConfiguration().shaderCachePath,
+		GxmShaderCache::Initialize(theApplication().GetAppConfiguration().ShaderCachePath,
 			GetShaderCompilerFingerprint());
 
 		// A scene's completion notification has to be written into the driver's own notification region, one word
@@ -2215,10 +2215,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// many copies as there are frames in flight and cycling them with the display queue, which is a
 		// pipeline-wide change rather than a backend one. The wait is reported, since it is exactly that cost.
 		const bool timed = FrameStatistics::IsEnabled();
-		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		const TimeStamp waitStart = (timed ? TimeStamp::Now() : TimeStamp());
 		sceGxmFinish(_context);
 		if (timed) {
-			FrameStatistics::AddCounter("GPU wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("GPU wait", waitStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 
 		// Everything recorded this frame has been consumed, so no scene is pending any more and anything a

@@ -95,7 +95,7 @@ namespace Jazz2::Actors
 
 				_renderer.Initialize(ActorRendererType::FrozenMask);
 				_renderer.CurrentFrame = _renderer.FirstFrame + Random().Fast(0, _renderer.FrameCount);
-				_renderer.setAlphaF(1.0f);
+				_renderer.SetAlphaF(1.0f);
 				float speedX = Random().FastFloat(0.5f, 2.0f);
 				_renderer.AnimDuration /= speedX * 0.7f;
 				_speed = Vector2f(speedX * _scale * (Random().NextBool() ? -1.0f : 1.0f), _scale * Random().FastFloat(-4.0f, -1.0f));
@@ -106,13 +106,13 @@ namespace Jazz2::Actors
 			}
 			case Type::Generator: {
 				// Apply random orientation
-				_renderer.setRotation(Random().NextFloat(0.0f, 4.0f * fPiOver2));
+				_renderer.SetRotation(Random().NextFloat(0.0f, 4.0f * fPiOver2));
 				SetFacingLeft(Random().NextFloat() < 0.5f);
 				break;
 			}
 		}
 
-		_renderer.setScale(_scale);
+		_renderer.SetScale(_scale);
 
 		async_return true;
 	}
@@ -150,10 +150,10 @@ namespace Jazz2::Actors
 			case Type::IceShrapnel: {
 				ActorBase::OnUpdate(timeMult);
 
-				float newAlpha = _renderer.alpha() - (0.014f * timeMult);
+				float newAlpha = _renderer.GetAlpha() - (0.014f * timeMult);
 				if (newAlpha > 0.0f) {
-					_renderer.setAlphaF(newAlpha);
-					_renderer.setScale(std::min(_scale * newAlpha * 2.0f, _scale));
+					_renderer.SetAlphaF(newAlpha);
+					_renderer.SetScale(std::min(_scale * newAlpha * 2.0f, _scale));
 				} else {
 					DecreaseHealth(INT32_MAX);
 				}

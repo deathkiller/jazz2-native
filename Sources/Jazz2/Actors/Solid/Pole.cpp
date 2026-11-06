@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Solid
 
 		_pos.X += x;
 		_pos.Y += y;
-		_renderer.setLayer(_renderer.layer() - 20);
+		_renderer.SetLayer(_renderer.GetLayer() - 20);
 
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
@@ -90,7 +90,7 @@ namespace Jazz2::Actors::Solid
 				}
 			} else {
 				_angleVel += FallMultiplier * timeMult;
-				_renderer.setRotation(_renderer.rotation() + _angleVel * timeMult);
+				_renderer.SetRotation(_renderer.GetRotation() + _angleVel * timeMult);
 				SetState(ActorState::IsDirty, true);
 			}
 		} else if (_fall == FallDirection::Left) {
@@ -111,7 +111,7 @@ namespace Jazz2::Actors::Solid
 				}
 			} else {
 				_angleVel -= FallMultiplier * timeMult;
-				_renderer.setRotation(_renderer.rotation() + _angleVel * timeMult);
+				_renderer.SetRotation(_renderer.GetRotation() + _angleVel * timeMult);
 				SetState(ActorState::IsDirty, true);
 			}
 		}
@@ -195,7 +195,7 @@ namespace Jazz2::Actors::Solid
 		constexpr float Ratio3 = 0.6f;
 		constexpr float Ratio4 = 0.3f;
 
-		float angle = _renderer.rotation() - fPiOver2;
+		float angle = _renderer.GetRotation() - fPiOver2;
 		float rx, ry;
 		sincosApprox(angle, ry, rx);
 		float radius = (float)_currentAnimation->Base->FrameDimensions.Y;

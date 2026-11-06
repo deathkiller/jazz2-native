@@ -82,7 +82,7 @@ namespace Jazz2::Actors::Bosses
 						_mace = std::make_shared<Mace>();
 						_mace->OnActivated(ActorActivationDetails(
 							_levelHandler,
-							Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2)
+							Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2)
 						));
 						_levelHandler->AddActor(_mace);
 
@@ -157,12 +157,12 @@ namespace Jazz2::Actors::Bosses
 		writer.SetUint8(8, 2);
 		shell->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer()),
 			shellParams
 		));
 		_levelHandler->AddActor(shell);
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 2), Explosion::Type::SmokeGray);
 
 		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));

@@ -1010,7 +1010,7 @@ namespace Jazz2::Scripting
 	{
 		auto _this = static_cast<ScriptLoader*>(param);
 		if (FrameStatistics::IsEnabled() && _this->_timedContextDepth++ == 0) {
-			_this->_timedContextStart = TimeStamp::now();
+			_this->_timedContextStart = TimeStamp::Now();
 		}
 
 		// Check if there is a free context available in the pool
@@ -1035,7 +1035,7 @@ namespace Jazz2::Scripting
 
 		// Calls within one frame add up into the same counter
 		if (_this->_timedContextDepth > 0 && --_this->_timedContextDepth == 0) {
-			FrameStatistics::AddCounter("Script", _this->_timedContextStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("Script", _this->_timedContextStart.GetMillisecondsSince(), FrameStatistics::Unit::Milliseconds);
 			FrameStatistics::AddCounter("Script calls", 1.0f, FrameStatistics::Unit::Number);
 		}
 	}

@@ -89,7 +89,7 @@ namespace nCine::RHI::PVR
 			: _uniformBlock(nullptr), _dataPointer(nullptr), _usedSize(0) {}
 		explicit PvrUniformBlockCache(PvrUniformBlock* uniformBlock);
 
-		inline const PvrUniformBlock* uniformBlock() const {
+		inline const PvrUniformBlock* GetUniformBlock() const {
 			return _uniformBlock;
 		}
 		std::uint32_t GetIndex() const;
@@ -105,7 +105,7 @@ namespace nCine::RHI::PVR
 		}
 		void SetDataPointer(std::uint8_t* dataPointer);
 
-		inline std::int32_t usedSize() const {
+		inline std::int32_t GetUsedSize() const {
 			return _usedSize;
 		}
 		void SetUsedSize(std::int32_t usedSize);

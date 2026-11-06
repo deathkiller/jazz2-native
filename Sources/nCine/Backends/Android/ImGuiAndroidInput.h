@@ -11,12 +11,12 @@ namespace nCine::Backends
 	class ImGuiAndroidInput
 	{
 	public:
-		static void init(ANativeWindow* window);
-		static void shutdown();
-		static void newFrame();
-		static bool processEvent(const AInputEvent* event);
+		static void Init(ANativeWindow* window);
+		static void Shutdown();
+		static void NewFrame();
+		static bool ProcessEvent(const AInputEvent* event);
 
-		static inline void setInputEnabled(bool inputEnabled) {
+		static inline void SetInputEnabled(bool inputEnabled) {
 			_inputEnabled = inputEnabled;
 		}
 

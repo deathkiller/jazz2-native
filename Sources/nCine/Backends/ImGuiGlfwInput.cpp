@@ -99,12 +99,12 @@ namespace nCine::Backends
 #	endif
 #endif
 
-		const char* clipboardText(ImGuiContext* ctx)
+		const char* GetClipboardText(ImGuiContext* ctx)
 		{
 			return glfwGetClipboardString(static_cast<GLFWwindow*>(ImGui::GetPlatformIO().Platform_ClipboardUserData));
 		}
 
-		void setClipboardText(ImGuiContext* ctx, const char* text)
+		void SetClipboardText(ImGuiContext* ctx, const char* text)
 		{
 			glfwSetClipboardString(static_cast<GLFWwindow*>(ImGui::GetPlatformIO().Platform_ClipboardUserData), text);
 		}
@@ -363,7 +363,7 @@ namespace nCine::Backends
 	bool ImGuiGlfwInput::_wantUpdateMonitors = false;
 	GLFWwindow* ImGuiGlfwInput::_keyOwnerWindows[GLFW_KEY_LAST] = {};
 
-	void ImGuiGlfwInput::init(GLFWwindow* window, bool withCallbacks)
+	void ImGuiGlfwInput::Init(GLFWwindow* window, bool withCallbacks)
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -388,8 +388,8 @@ namespace nCine::Backends
 		_time = 0.0;
 		_wantUpdateMonitors = true;
 
-		pio.Platform_SetClipboardTextFn = setClipboardText;
-		pio.Platform_GetClipboardTextFn = clipboardText;
+		pio.Platform_SetClipboardTextFn = SetClipboardText;
+		pio.Platform_GetClipboardTextFn = GetClipboardText;
 		pio.Platform_ClipboardUserData = _window;
 
 		// Create mouse cursors
@@ -420,11 +420,11 @@ namespace nCine::Backends
 
 		// Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
 		if (withCallbacks) {
-			installCallbacks(window);
+			InstallCallbacks(window);
 		}
 
 		// Update monitors the first time (note: monitor callback are broken in GLFW 3.2 and earlier, see https://github.com/glfw/glfw/issues/784)
-		updateMonitors();
+		UpdateMonitors();
 
 		// Register Emscripten Wheel callback to workaround issue in Emscripten GLFW Emulation (#6096)
 		// We intentionally do not check 'if (install_callbacks)' here, as some users may set it to false and call GLFW callback themselves.
@@ -459,21 +459,21 @@ namespace nCine::Backends
 #if defined(IMGUI_HAS_VIEWPORT)
 		// Register platform interface (will be coupled with a renderer interface)
 		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
-		platformIo.Platform_CreateWindow = onCreateWindow;
-		platformIo.Platform_DestroyWindow = onDestroyWindow;
-		platformIo.Platform_ShowWindow = onShowWindow;
-		platformIo.Platform_SetWindowPos = onSetWindowPos;
-		platformIo.Platform_GetWindowPos = onGetWindowPos;
-		platformIo.Platform_SetWindowSize = onSetWindowSize;
-		platformIo.Platform_GetWindowSize = onGetWindowSize;
-		platformIo.Platform_SetWindowFocus = onSetWindowFocus;
-		platformIo.Platform_GetWindowFocus = onGetWindowFocus;
-		platformIo.Platform_GetWindowMinimized = onGetWindowMinimized;
-		platformIo.Platform_SetWindowTitle = onSetWindowTitle;
-		platformIo.Platform_RenderWindow = onRenderWindow;
-		platformIo.Platform_SwapBuffers = onSwapBuffers;
+		platformIo.Platform_CreateWindow = OnCreateWindow;
+		platformIo.Platform_DestroyWindow = OnDestroyWindow;
+		platformIo.Platform_ShowWindow = OnShowWindow;
+		platformIo.Platform_SetWindowPos = OnSetWindowPos;
+		platformIo.Platform_GetWindowPos = OnGetWindowPos;
+		platformIo.Platform_SetWindowSize = OnSetWindowSize;
+		platformIo.Platform_GetWindowSize = OnGetWindowSize;
+		platformIo.Platform_SetWindowFocus = OnSetWindowFocus;
+		platformIo.Platform_GetWindowFocus = OnGetWindowFocus;
+		platformIo.Platform_GetWindowMinimized = OnGetWindowMinimized;
+		platformIo.Platform_SetWindowTitle = OnSetWindowTitle;
+		platformIo.Platform_RenderWindow = OnRenderWindow;
+		platformIo.Platform_SwapBuffers = OnSwapBuffers;
 #	if GLFW_HAS_WINDOW_ALPHA
-		platformIo.Platform_SetWindowAlpha = onSetWindowAlpha;
+		platformIo.Platform_SetWindowAlpha = OnSetWindowAlpha;
 #	endif
 
 		// Register main window handle (which is owned by the main application, not by us)
@@ -499,7 +499,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::shutdown()
+	void ImGuiGlfwInput::Shutdown()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -519,7 +519,7 @@ namespace nCine::Backends
 #endif
 
 		if (_installedCallbacks) {
-			restoreCallbacks(_window);
+			RestoreCallbacks(_window);
 		}
 
 		for (ImGuiMouseCursor i = 0; i < ImGuiMouseCursor_COUNT; i++) {
@@ -542,12 +542,12 @@ namespace nCine::Backends
 		ImGui::DestroyContext();
 	}
 
-	void ImGuiGlfwInput::newFrame()
+	void ImGuiGlfwInput::NewFrame()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Setup main viewport size (every frame to accommodate for window resizing)
-		getWindowSizeAndFramebufferScale(_window, &io.DisplaySize, &io.DisplayFramebufferScale);
+		GetWindowSizeAndFramebufferScale(_window, &io.DisplaySize, &io.DisplayFramebufferScale);
 
 		// Setup display size (every frame to accommodate for window resizing)
 		int w, h;
@@ -560,7 +560,7 @@ namespace nCine::Backends
 		}
 #if defined(IMGUI_HAS_DOCK)
 		if (_wantUpdateMonitors) {
-			updateMonitors();
+			UpdateMonitors();
 		}
 #endif
 
@@ -573,14 +573,14 @@ namespace nCine::Backends
 		io.DeltaTime = (_time > 0.0 ? static_cast<float>(currentTime - _time) : static_cast<float>(1.0f / 60.0f));
 		_time = currentTime;
 
-		updateMouseData();
-		updateMouseCursor();
+		UpdateMouseData();
+		UpdateMouseCursor();
 
 		// Update game controllers (if enabled and available)
-		updateGamepads();
+		UpdateGamepads();
 	}
 
-	void ImGuiGlfwInput::endFrame()
+	void ImGuiGlfwInput::EndFrame()
 	{
 #if defined(IMGUI_HAS_VIEWPORT)
 		// Update and render additional Platform Windows
@@ -595,7 +595,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+	void ImGuiGlfwInput::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 	{
 		if (prevUserCallbackMousebutton != nullptr && window == _window) {
 			prevUserCallbackMousebutton(window, button, action, mods);
@@ -612,7 +612,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiGlfwInput::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+	void ImGuiGlfwInput::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 	{
 		if (prevUserCallbackScroll != nullptr && window == _window) {
 			prevUserCallbackScroll(window, xoffset, yoffset);
@@ -629,7 +629,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::keyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods)
+	void ImGuiGlfwInput::KeyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods)
 	{
 		if (prevUserCallbackKey != nullptr && window == _window) {
 			prevUserCallbackKey(window, keycode, scancode, action, mods);
@@ -653,7 +653,7 @@ namespace nCine::Backends
 		io.SetKeyEventNativeData(imguiKey, keycode, scancode); // To support legacy indexing (<1.87 user code)
 	}
 
-	void ImGuiGlfwInput::windowFocusCallback(GLFWwindow* window, int focused)
+	void ImGuiGlfwInput::WindowFocusCallback(GLFWwindow* window, int focused)
 	{
 		if (prevUserCallbackWindowFocus != nullptr && window == _window) {
 			prevUserCallbackWindowFocus(window, focused);
@@ -663,7 +663,7 @@ namespace nCine::Backends
 		io.AddFocusEvent(focused != 0);
 	}
 
-	void ImGuiGlfwInput::cursorPosCallback(GLFWwindow* window, double x, double y)
+	void ImGuiGlfwInput::CursorPosCallback(GLFWwindow* window, double x, double y)
 	{
 		if (prevUserCallbackCursorPos != nullptr && window == _window) {
 			prevUserCallbackCursorPos(window, x, y);
@@ -686,7 +686,7 @@ namespace nCine::Backends
 		_lastValidMousePos = ImVec2(static_cast<float>(x), static_cast<float>(y));
 	}
 
-	void ImGuiGlfwInput::cursorEnterCallback(GLFWwindow* window, int entered)
+	void ImGuiGlfwInput::CursorEnterCallback(GLFWwindow* window, int entered)
 	{
 		if (prevUserCallbackCursorEnter != nullptr && window == _window) {
 			prevUserCallbackCursorEnter(window, entered);
@@ -703,7 +703,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiGlfwInput::charCallback(GLFWwindow* window, unsigned int c)
+	void ImGuiGlfwInput::CharCallback(GLFWwindow* window, unsigned int c)
 	{
 		if (prevUserCallbackChar != nullptr && window == _window) {
 			prevUserCallbackChar(window, c);
@@ -717,7 +717,7 @@ namespace nCine::Backends
 		io.AddInputCharacter(c);
 	}
 
-	void ImGuiGlfwInput::monitorCallback(GLFWmonitor* monitor, int event)
+	void ImGuiGlfwInput::MonitorCallback(GLFWmonitor* monitor, int event)
 	{
 		if (prevUserCallbackMonitor != nullptr) {
 			prevUserCallbackMonitor(monitor, event);
@@ -727,7 +727,7 @@ namespace nCine::Backends
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
-	void ImGuiGlfwInput::windowCloseCallback(GLFWwindow* window)
+	void ImGuiGlfwInput::WindowCloseCallback(GLFWwindow* window)
 	{
 		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window)) {
 			viewport->PlatformRequestClose = true;
@@ -740,7 +740,7 @@ namespace nCine::Backends
 	// - on Linux it is queued and invoked during glfwPollEvents()
 	// Because the event doesn't always fire on glfwSetWindowXXX() we use a frame counter tag to only
 	// ignore recent glfwSetWindowXXX() calls.
-	void ImGuiGlfwInput::windowPosCallback(GLFWwindow* window, int, int)
+	void ImGuiGlfwInput::WindowPosCallback(GLFWwindow* window, int, int)
 	{
 		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window)) {
 			if (ViewportData* vd = (ViewportData*)viewport->PlatformUserData) {
@@ -753,7 +753,7 @@ namespace nCine::Backends
 		}
 	}
 
-	void ImGuiGlfwInput::windowSizeCallback(GLFWwindow* window, int, int)
+	void ImGuiGlfwInput::WindowSizeCallback(GLFWwindow* window, int, int)
 	{
 		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window)) {
 			if (ViewportData* vd = (ViewportData*)viewport->PlatformUserData) {
@@ -767,23 +767,23 @@ namespace nCine::Backends
 	}
 #endif
 
-	void ImGuiGlfwInput::installCallbacks(GLFWwindow* window)
+	void ImGuiGlfwInput::InstallCallbacks(GLFWwindow* window)
 	{
 		IM_ASSERT(!_installedCallbacks && "Callbacks already installed!");
 		IM_ASSERT(_window == window);
 
-		prevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, windowFocusCallback);
-		prevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, cursorEnterCallback);
-		prevUserCallbackCursorPos = glfwSetCursorPosCallback(window, cursorPosCallback);
-		prevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, mouseButtonCallback);
-		prevUserCallbackScroll = glfwSetScrollCallback(window, scrollCallback);
-		prevUserCallbackKey = glfwSetKeyCallback(window, keyCallback);
-		prevUserCallbackChar = glfwSetCharCallback(window, charCallback);
-		prevUserCallbackMonitor = glfwSetMonitorCallback(monitorCallback);
+		prevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, WindowFocusCallback);
+		prevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, CursorEnterCallback);
+		prevUserCallbackCursorPos = glfwSetCursorPosCallback(window, CursorPosCallback);
+		prevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, MouseButtonCallback);
+		prevUserCallbackScroll = glfwSetScrollCallback(window, ScrollCallback);
+		prevUserCallbackKey = glfwSetKeyCallback(window, KeyCallback);
+		prevUserCallbackChar = glfwSetCharCallback(window, CharCallback);
+		prevUserCallbackMonitor = glfwSetMonitorCallback(MonitorCallback);
 		_installedCallbacks = true;
 	}
 
-	void ImGuiGlfwInput::restoreCallbacks(GLFWwindow* window)
+	void ImGuiGlfwInput::RestoreCallbacks(GLFWwindow* window)
 	{
 		IM_ASSERT(_installedCallbacks && "Callbacks not installed!");
 		IM_ASSERT(_window == window);
@@ -808,7 +808,7 @@ namespace nCine::Backends
 		prevUserCallbackMonitor = nullptr;
 	}
 
-	void ImGuiGlfwInput::updateMouseData()
+	void ImGuiGlfwInput::UpdateMouseData()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -899,7 +899,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::updateMouseCursor()
+	void ImGuiGlfwInput::UpdateMouseCursor()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(_window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
@@ -934,14 +934,14 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::updateGamepads()
+	void ImGuiGlfwInput::UpdateGamepads()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0) { // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
 			return;
 		}
 
-		const bool joyMappedInput = imGuiJoyMappedInput();
+		const bool joyMappedInput = ImGuiJoyMappedInput();
 
 		if (!joyMappedInput) {
 			io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
@@ -1005,7 +1005,7 @@ namespace nCine::Backends
 	// - On Windows the process needs to be marked DPI-aware!! SDL2 doesn't do it by default. You can call ::SetProcessDPIAware() or call ImGui_ImplWin32_EnableDpiAwareness() from Win32 backend.
 	// - Apple platforms use FramebufferScale so we always return 1.0f.
 	// - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
-	float ImGuiGlfwInput::getContentScaleForWindow(GLFWwindow* window)
+	float ImGuiGlfwInput::GetContentScaleForWindow(GLFWwindow* window)
 	{
 #if GLFW_HAS_PER_MONITOR_DPI && !(defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_ANDROID))
 		float xScale, yScale;
@@ -1017,7 +1017,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	float ImGuiGlfwInput::getContentScaleForMonitor(GLFWmonitor* monitor)
+	float ImGuiGlfwInput::GetContentScaleForMonitor(GLFWmonitor* monitor)
 	{
 #if GLFW_HAS_PER_MONITOR_DPI && !(defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_ANDROID))
 		float xScale, yScale;
@@ -1029,7 +1029,7 @@ namespace nCine::Backends
 #endif
 	}
 
-	void ImGuiGlfwInput::getWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale)
+	void ImGuiGlfwInput::GetWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale)
 	{
 		int w, h;
 		int displayW, displayH;
@@ -1045,7 +1045,7 @@ namespace nCine::Backends
 	}
 
 #if defined(IMGUI_HAS_DOCK)
-	void ImGuiGlfwInput::updateMonitors()
+	void ImGuiGlfwInput::UpdateMonitors()
 	{
 		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
 		_wantUpdateMonitors = false;
@@ -1091,19 +1091,19 @@ namespace nCine::Backends
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
-	ImGuiViewport* ImGuiGlfwInput::getParentViewport(ImGuiViewport* viewport)
+	ImGuiViewport* ImGuiGlfwInput::GetParentViewport(ImGuiViewport* viewport)
 	{
 		return (viewport->ParentViewportId ? ImGui::FindViewportByID(viewport->ParentViewportId) : nullptr);
 	}
 
-	void ImGuiGlfwInput::addParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport)
+	void ImGuiGlfwInput::AddParentToView(ImGuiViewport* viewport, ImGuiViewport* parentViewport)
 	{
 #	if defined(DEATH_TARGET_WINDOWS)
 		::SetWindowLongPtr(reinterpret_cast<HWND>(viewport->PlatformHandleRaw), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(parentViewport->PlatformHandleRaw));
 #	endif
 	}
 
-	void ImGuiGlfwInput::onCreateWindow(ImGuiViewport* viewport)
+	void ImGuiGlfwInput::OnCreateWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = new ViewportData();
 		viewport->PlatformUserData = vd;
@@ -1141,22 +1141,22 @@ namespace nCine::Backends
 		//}
 
 		// Install GLFW callbacks for secondary viewports
-		glfwSetWindowFocusCallback(vd->Window, windowFocusCallback);
-		glfwSetCursorEnterCallback(vd->Window, cursorEnterCallback);
-		glfwSetCursorPosCallback(vd->Window, cursorPosCallback);
-		glfwSetMouseButtonCallback(vd->Window, mouseButtonCallback);
-		glfwSetScrollCallback(vd->Window, scrollCallback);
-		glfwSetKeyCallback(vd->Window, keyCallback);
-		glfwSetCharCallback(vd->Window, charCallback);
-		glfwSetWindowCloseCallback(vd->Window, windowCloseCallback);
-		glfwSetWindowPosCallback(vd->Window, windowPosCallback);
-		glfwSetWindowSizeCallback(vd->Window, windowSizeCallback);
+		glfwSetWindowFocusCallback(vd->Window, WindowFocusCallback);
+		glfwSetCursorEnterCallback(vd->Window, CursorEnterCallback);
+		glfwSetCursorPosCallback(vd->Window, CursorPosCallback);
+		glfwSetMouseButtonCallback(vd->Window, MouseButtonCallback);
+		glfwSetScrollCallback(vd->Window, ScrollCallback);
+		glfwSetKeyCallback(vd->Window, KeyCallback);
+		glfwSetCharCallback(vd->Window, CharCallback);
+		glfwSetWindowCloseCallback(vd->Window, WindowCloseCallback);
+		glfwSetWindowPosCallback(vd->Window, WindowPosCallback);
+		glfwSetWindowSizeCallback(vd->Window, WindowSizeCallback);
 
 		glfwMakeContextCurrent(vd->Window);
 		glfwSwapInterval(0);
 	}
 
-	void ImGuiGlfwInput::onDestroyWindow(ImGuiViewport* viewport)
+	void ImGuiGlfwInput::OnDestroyWindow(ImGuiViewport* viewport)
 	{
 		if (ViewportData* vd = (ViewportData*)viewport->PlatformUserData) {
 			if (vd->WindowOwned) {
@@ -1168,7 +1168,7 @@ namespace nCine::Backends
 				// because we will not receive any release events after window is destroyed.
 				for (int i = 0; i < IM_ARRAYSIZE(_keyOwnerWindows); i++) {
 					if (_keyOwnerWindows[i] == vd->Window) {
-						keyCallback(vd->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
+						KeyCallback(vd->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
 					}
 				}
 
@@ -1181,7 +1181,7 @@ namespace nCine::Backends
 		viewport->PlatformHandle = nullptr;
 	}
 
-	void ImGuiGlfwInput::onShowWindow(ImGuiViewport* viewport)
+	void ImGuiGlfwInput::OnShowWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 
@@ -1217,7 +1217,7 @@ namespace nCine::Backends
 		glfwShowWindow(vd->Window);
 	}
 
-	ImVec2 ImGuiGlfwInput::onGetWindowPos(ImGuiViewport* viewport)
+	ImVec2 ImGuiGlfwInput::OnGetWindowPos(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int x = 0, y = 0;
@@ -1225,14 +1225,14 @@ namespace nCine::Backends
 		return ImVec2(static_cast<float>(x), static_cast<float>(y));
 	}
 
-	void ImGuiGlfwInput::onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
+	void ImGuiGlfwInput::OnSetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
 		glfwSetWindowPos(vd->Window, static_cast<std::int32_t>(pos.x), static_cast<std::int32_t>(pos.y));
 	}
 
-	ImVec2 ImGuiGlfwInput::onGetWindowSize(ImGuiViewport* viewport)
+	ImVec2 ImGuiGlfwInput::OnGetWindowSize(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		int w = 0, h = 0;
@@ -1240,7 +1240,7 @@ namespace nCine::Backends
 		return ImVec2(static_cast<float>(w), static_cast<float>(h));
 	}
 
-	void ImGuiGlfwInput::onSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+	void ImGuiGlfwInput::OnSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 #	if defined(DEATH_TARGET_APPLE) && !GLFW_HAS_OSX_WINDOW_POS_FIX
@@ -1257,21 +1257,21 @@ namespace nCine::Backends
 		glfwSetWindowSize(vd->Window, static_cast<std::int32_t>(size.x), static_cast<std::int32_t>(size.y));
 	}
 
-	ImVec2 ImGuiGlfwInput::onGetWindowFramebufferScale(ImGuiViewport* viewport)
+	ImVec2 ImGuiGlfwInput::OnGetWindowFramebufferScale(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		ImVec2 framebufferScale;
-		getWindowSizeAndFramebufferScale(vd->Window, nullptr, &framebufferScale);
+		GetWindowSizeAndFramebufferScale(vd->Window, nullptr, &framebufferScale);
 		return framebufferScale;
 	}
 
-	void ImGuiGlfwInput::onSetWindowTitle(ImGuiViewport* viewport, const char* title)
+	void ImGuiGlfwInput::OnSetWindowTitle(ImGuiViewport* viewport, const char* title)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		glfwSetWindowTitle(vd->Window, title);
 	}
 
-	void ImGuiGlfwInput::onSetWindowFocus(ImGuiViewport* viewport)
+	void ImGuiGlfwInput::OnSetWindowFocus(ImGuiViewport* viewport)
 	{
 #	if GLFW_HAS_FOCUS_WINDOW
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
@@ -1282,19 +1282,19 @@ namespace nCine::Backends
 #	endif
 	}
 
-	bool ImGuiGlfwInput::onGetWindowFocus(ImGuiViewport* viewport)
+	bool ImGuiGlfwInput::OnGetWindowFocus(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		return glfwGetWindowAttrib(vd->Window, GLFW_FOCUSED) != 0;
 	}
 
-	bool ImGuiGlfwInput::onGetWindowMinimized(ImGuiViewport* viewport)
+	bool ImGuiGlfwInput::OnGetWindowMinimized(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		return glfwGetWindowAttrib(vd->Window, GLFW_ICONIFIED) != 0;
 	}
 
-	void ImGuiGlfwInput::onSetWindowAlpha(ImGuiViewport* viewport, float alpha)
+	void ImGuiGlfwInput::OnSetWindowAlpha(ImGuiViewport* viewport, float alpha)
 	{
 #	if GLFW_HAS_WINDOW_ALPHA
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
@@ -1302,13 +1302,13 @@ namespace nCine::Backends
 #	endif
 	}
 
-	void ImGuiGlfwInput::onRenderWindow(ImGuiViewport* viewport, void*)
+	void ImGuiGlfwInput::OnRenderWindow(ImGuiViewport* viewport, void*)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		glfwMakeContextCurrent(vd->Window);
 	}
 
-	void ImGuiGlfwInput::onSwapBuffers(ImGuiViewport* viewport, void*)
+	void ImGuiGlfwInput::OnSwapBuffers(ImGuiViewport* viewport, void*)
 	{
 		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
 		glfwMakeContextCurrent(vd->Window);

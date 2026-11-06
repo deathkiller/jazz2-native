@@ -39,12 +39,12 @@ namespace nCine
 		Object& operator=(Object&& other) noexcept;
 
 		/** @brief Returns the unique object identifier */
-		inline unsigned int id() const {
+		inline unsigned int GetId() const {
 			return _id;
 		}
 
 		/** @brief Returns the run-time object type */
-		inline ObjectType type() const {
+		inline ObjectType GetType() const {
 			return _type;
 		}
 		/** @brief Returns the static type of this class */
