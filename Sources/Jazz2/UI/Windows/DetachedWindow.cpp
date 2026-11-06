@@ -51,8 +51,8 @@ namespace Jazz2::UI::Windows
 		bool popup, bool passThrough, DrawFunc&& draw)
 	{
 		AuxiliaryWindowDesc desc;
-		desc.Bounds = Recti(desktopPosition.X, desktopPosition.Y, std::max(std::int32_t(std::round(bounds.W * toDesktop)), 1),
-			std::max(std::int32_t(std::round(bounds.H * toDesktop)), 1));
+		desc.Bounds = Recti(desktopPosition.X, desktopPosition.Y, std::max<std::int32_t>(std::int32_t(std::round(bounds.W * toDesktop)), 1),
+			std::max<std::int32_t>(std::int32_t(std::round(bounds.H * toDesktop)), 1));
 		desc.Popup = popup;
 		desc.PassThrough = passThrough;
 		std::unique_ptr<AuxiliaryWindow> window = theApplication().GetGfxDevice().CreateAuxiliaryWindow(desc);
@@ -64,7 +64,7 @@ namespace Jazz2::UI::Windows
 		detached->_window = Death::move(window);
 		detached->_lines = std::make_unique<Rendering::PolylineRenderer>(1 << 16);
 		detached->_canvas = std::make_unique<WindowCanvas>(*detached);
-		std::int32_t width = std::max(std::int32_t(bounds.W), 1), height = std::max(std::int32_t(bounds.H), 1);
+		std::int32_t width = std::max<std::int32_t>(std::int32_t(bounds.W), 1), height = std::max<std::int32_t>(std::int32_t(bounds.H), 1);
 		detached->_target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, width, height);
 		detached->_targetSize = Vector2i(width, height);
 		detached->_target->SetMinFiltering(SamplerFilter::Nearest);
@@ -98,8 +98,8 @@ namespace Jazz2::UI::Windows
 		// be in the main window there
 		float mainScale = RoundContentScale(theApplication().GetGfxDevice().GetWindowContentScale());
 		float raster = std::clamp(RoundContentScale(_window->GetContentScale()) / mainScale, 0.25f, 4.0f);
-		std::int32_t width = std::max(std::int32_t(bounds.W), 1), height = std::max(std::int32_t(bounds.H), 1);
-		Vector2i target(std::max(std::int32_t(std::round(float(width) * raster)), 1), std::max(std::int32_t(std::round(float(height) * raster)), 1));
+		std::int32_t width = std::max<std::int32_t>(std::int32_t(bounds.W), 1), height = std::max<std::int32_t>(std::int32_t(bounds.H), 1);
+		Vector2i target(std::max<std::int32_t>(std::int32_t(std::round(float(width) * raster)), 1), std::max<std::int32_t>(std::int32_t(std::round(float(height) * raster)), 1));
 		if (target != _targetSize) {
 			_view->RemoveAllTextures();
 			_target->Init(nullptr, Texture::Format::RGBA8, target.X, target.Y);
@@ -114,8 +114,9 @@ namespace Jazz2::UI::Windows
 		Recti current = _window->GetBounds();
 		Vector2i pixels = _window->GetPixelSize();
 		_unitsPerPixel = (current.W > 0 && pixels.X > 0 ? float(current.W) / float(pixels.X) : toDesktop / raster);
-		_window->SetInputScale(toDesktop / (_unitsPerPixel * raster));		_window->SetBounds(Recti(desktopPosition.X, desktopPosition.Y, std::max(std::int32_t(std::round(float(target.X) * _unitsPerPixel)), 1),
-			std::max(std::int32_t(std::round(float(target.Y) * _unitsPerPixel)), 1)));
+		_window->SetInputScale(toDesktop / (_unitsPerPixel * raster));
+		_window->SetBounds(Recti(desktopPosition.X, desktopPosition.Y, std::max<std::int32_t>(std::int32_t(std::round(float(target.X) * _unitsPerPixel)), 1),
+			std::max<std::int32_t>(std::int32_t(std::round(float(target.Y) * _unitsPerPixel)), 1)));
 
 		// Drawn in positions relative to the main window, as everything else of the interface
 		_camera.SetOrthoProjection(_bounds.X, _bounds.X + _bounds.W, _bounds.Y, _bounds.Y + _bounds.H);

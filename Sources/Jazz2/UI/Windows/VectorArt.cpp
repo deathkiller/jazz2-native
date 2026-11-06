@@ -99,12 +99,12 @@ namespace Jazz2::UI::Windows
 		// Segments of a whole circle of a radius in pixels, its edge is then never more than about 0.08 pixel off
 		std::int32_t GetCircleSegments(float radius)
 		{
-			return std::clamp(std::int32_t(std::ceil(std::sqrt(std::max(radius, 0.0f)) * 8.0f)), 12, 512);
+			return std::clamp<std::int32_t>(std::int32_t(std::ceil(std::sqrt(std::max(radius, 0.0f)) * 8.0f)), 12, 512);
 		}
 
 		void AddArc(SmallVectorImpl<Vector2f>& out, Vector2f center, float radius, float startAngle, float sweep, bool withStart)
 		{
-			std::int32_t n = std::max(1, std::int32_t(std::ceil(float(GetCircleSegments(radius)) * std::abs(sweep) / (2.0f * Pi))));
+			std::int32_t n = std::max<std::int32_t>(1, std::int32_t(std::ceil(float(GetCircleSegments(radius)) * std::abs(sweep) / (2.0f * Pi))));
 			for (std::int32_t i = (withStart ? 0 : 1); i <= n; i++) {
 				float angle = startAngle + sweep * float(i) / float(n);
 				out.push_back(center + Vector2f(std::cos(angle), std::sin(angle)) * radius);
@@ -831,7 +831,7 @@ namespace Jazz2::UI::Windows
 			void AddCubic(SubPath& path, Vector2f p0, Vector2f c1, Vector2f c2, Vector2f p1)
 			{
 				float length = ((c1 - p0).Length() + (c2 - c1).Length() + (p1 - c2).Length()) * _scale;
-				std::int32_t n = std::clamp(std::int32_t(std::ceil(std::sqrt(length) * 2.5f)), 2, 128);
+				std::int32_t n = std::clamp<std::int32_t>(std::int32_t(std::ceil(std::sqrt(length) * 2.5f)), 2, 128);
 				for (std::int32_t i = 1; i <= n; i++) {
 					float t = float(i) / float(n), u = 1.0f - t;
 					Vector2f p = p0 * (u * u * u) + c1 * (3.0f * u * u * t) + c2 * (3.0f * u * t * t) + p1 * (t * t * t);
@@ -842,7 +842,7 @@ namespace Jazz2::UI::Windows
 			void AddQuadratic(SubPath& path, Vector2f p0, Vector2f c, Vector2f p1)
 			{
 				float length = ((c - p0).Length() + (p1 - c).Length()) * _scale;
-				std::int32_t n = std::clamp(std::int32_t(std::ceil(std::sqrt(length) * 2.5f)), 2, 128);
+				std::int32_t n = std::clamp<std::int32_t>(std::int32_t(std::ceil(std::sqrt(length) * 2.5f)), 2, 128);
 				for (std::int32_t i = 1; i <= n; i++) {
 					float t = float(i) / float(n), u = 1.0f - t;
 					Vector2f p = p0 * (u * u) + c * (2.0f * u * t) + p1 * (t * t);
@@ -889,7 +889,7 @@ namespace Jazz2::UI::Windows
 				} else if (!sweep && delta > 0.0f) {
 					delta -= 2.0f * Pi;
 				}
-				std::int32_t n = std::max(1, std::int32_t(std::ceil(float(GetCircleSegments(std::max(rx, ry) * _scale)) * std::abs(delta) / (2.0f * Pi))));
+				std::int32_t n = std::max<std::int32_t>(1, std::int32_t(std::ceil(float(GetCircleSegments(std::max(rx, ry) * _scale)) * std::abs(delta) / (2.0f * Pi))));
 				for (std::int32_t i = 1; i <= n; i++) {
 					float t = start + delta * float(i) / float(n);
 					float ex = rx * std::cos(t), ey = ry * std::sin(t);

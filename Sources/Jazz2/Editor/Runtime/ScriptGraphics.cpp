@@ -419,7 +419,7 @@ namespace Jazz2::Editor
 			cellSize.X > MaxSheetWidth) {
 			return nullptr;
 		}
-		std::int32_t shownFrames = std::clamp(MaxSheetWidth / cellSize.X, 1, look.FrameCount);
+		std::int32_t shownFrames = std::clamp<std::int32_t>(MaxSheetWidth / cellSize.X, 1, look.FrameCount);
 		std::int32_t width = cellSize.X * shownFrames;
 		if (shownFrames < look.FrameCount) {
 			std::int32_t stride = cellSize.X * look.FrameCount;

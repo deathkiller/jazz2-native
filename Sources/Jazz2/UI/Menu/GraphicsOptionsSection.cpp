@@ -173,7 +173,7 @@ namespace Jazz2::UI::Menu
 				// Disabled, then each scope wider than the one before, clamped at the ends - a press goes around
 				constexpr std::int32_t Count = (std::int32_t)DitheringScope::Screen + 1;
 				std::int32_t index = (std::int32_t)PreferencesCache::Dithering;
-				index = (direction == 0 ? (index + 1) % Count : std::clamp(index + (direction < 0 ? -1 : 1), 0, Count - 1));
+				index = (direction == 0 ? (index + 1) % Count : std::clamp<std::int32_t>(index + (direction < 0 ? -1 : 1), 0, Count - 1));
 				PreferencesCache::Dithering = (DitheringScope)index;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
