@@ -97,7 +97,7 @@ namespace Jazz2::Editor
 		}
 #if defined(DEATH_TARGET_APPLE)
 		// Cmd is what Ctrl is elsewhere
-		if ((event.mod & KeyMod::Super) != 0) {
+		if ((event.Mod & KeyMod::Super) != 0) {
 			shortcut.Modifiers |= KeyMod::Ctrl;
 		}
 #endif

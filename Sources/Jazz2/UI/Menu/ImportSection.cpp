@@ -95,10 +95,10 @@ namespace Jazz2::UI::Menu
 
 	void ImportSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.FindPointerIndex(event.actionIndex);
+		if (event.Type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.FindPointerIndex(event.ActionIndex);
 			if (pointerIndex != -1) {
-				float y = event.pointers[pointerIndex].Y * (float)viewSize.Y;
+				float y = event.Pointers[pointerIndex].Y * (float)viewSize.Y;
 				if (y < 80.0f) {
 					if (_state != State::Loading) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);

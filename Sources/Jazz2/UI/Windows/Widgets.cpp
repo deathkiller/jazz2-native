@@ -1219,7 +1219,7 @@ namespace Jazz2::UI::Windows
 		bool ctrl = (event.Mod & KeyMod::Ctrl) != 0;
 #if defined(DEATH_TARGET_APPLE)
 		// Cmd is what Ctrl is elsewhere
-		ctrl = ctrl || (event.mod & KeyMod::Super) != 0;
+		ctrl = ctrl || (event.Mod & KeyMod::Super) != 0;
 #endif
 		_blinkTime = 0.0f;
 

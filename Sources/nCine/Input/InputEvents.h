@@ -349,7 +349,7 @@ namespace nCine
 		/** @brief Joystick identifier */
 		std::int32_t JoyId;
 		/** @brief Unified button name */
-		ButtonName ButtonName;
+		nCine::ButtonName ButtonName;
 	};
 
 	/** @brief Mapped joystick axis event */
@@ -359,7 +359,7 @@ namespace nCine
 		/** @brief Joystick identifier */
 		std::int32_t JoyId;
 		/** @brief Unified axis name */
-		AxisName AxisName;
+		nCine::AxisName AxisName;
 		/** @brief Axis value normalized between -1.0f and 1.0f */
 		float Value;
 	};

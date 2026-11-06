@@ -295,7 +295,7 @@ namespace nCine
 	void JoyMapping::OnJoyButtonPressed(const JoyButtonEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Button pressed - joyId: {}, buttonId: {}", event.joyId, event.buttonId);
+		LOGI("Button pressed - joyId: {}, buttonId: {}", event.JoyId, event.ButtonId);
 #endif
 
 		if (_inputEventHandler == nullptr || event.JoyId >= MaxNumJoysticks) {
@@ -342,7 +342,7 @@ namespace nCine
 	void JoyMapping::OnJoyButtonReleased(const JoyButtonEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Button released - joyId: {}, buttonId: {}", event.joyId, event.buttonId);
+		LOGI("Button released - joyId: {}, buttonId: {}", event.JoyId, event.ButtonId);
 #endif
 
 		if (_inputEventHandler == nullptr || event.JoyId >= MaxNumJoysticks) {
@@ -390,7 +390,7 @@ namespace nCine
 	void JoyMapping::OnJoyHatMoved(const JoyHatEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Hat moved - joyId: {}, hatId: {}, hatState: 0x{:.2x}", event.joyId, event.hatId, event.hatState);
+		LOGI("Hat moved - joyId: {}, hatId: {}, hatState: 0x{:.2x}", event.JoyId, event.HatId, event.HatState);
 #endif
 
 		if (_inputEventHandler == nullptr || event.JoyId >= MaxNumJoysticks) {
@@ -446,7 +446,7 @@ namespace nCine
 			_mappedJoyStates[event.JoyId]._lastHatState = event.HatState;
 		} else {
 #if defined(NCINE_INPUT_DEBUGGING)
-			if (!mapping.isValid || event.hatId != 0) {
+			if (!mapping.isValid || event.HatId != 0) {
 				LOGW("Hat move has no mapping");
 			}
 #endif
@@ -456,7 +456,7 @@ namespace nCine
 	void JoyMapping::OnJoyAxisMoved(const JoyAxisEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Axis moved - joyId: {}, axisId: {}, value: {}", event.joyId, event.axisId, event.value);
+		LOGI("Axis moved - joyId: {}, axisId: {}, value: {}", event.JoyId, event.AxisId, event.Value);
 #endif
 
 		if (_inputEventHandler == nullptr || event.JoyId >= MaxNumJoysticks) {
@@ -546,7 +546,7 @@ namespace nCine
 	bool JoyMapping::OnJoyConnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Gamepad connected - joyId: {}", event.joyId);
+		LOGI("Gamepad connected - joyId: {}", event.JoyId);
 #endif
 
 		if (event.JoyId >= MaxNumJoysticks) {
@@ -581,7 +581,7 @@ namespace nCine
 			}
 
 			const std::uint8_t * g = joyGuid.data;
-			LOGI("Gamepad mapping not found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			LOGI("Gamepad mapping not found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.JoyId);
 
 			mapping.isValid = true;
 
@@ -614,7 +614,7 @@ namespace nCine
 		// Qt5Gamepad has already mapped the device, and reports neither a GUID nor a name that could be
 		// matched against the database, so its fixed layout is assigned to every gamepad it reports
 		if (!mapping.isValid) {
-			LOGI("Gamepad mapping not found for \"{}\" ({}), using Qt5Gamepad default mapping", joyName, event.joyId);
+			LOGI("Gamepad mapping not found for \"{}\" ({}), using Qt5Gamepad default mapping", joyName, event.JoyId);
 
 			mapping.isValid = true;
 
@@ -686,7 +686,7 @@ namespace nCine
 	void JoyMapping::OnJoyDisconnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Gamepad disconnected - joyId: {}", event.joyId);
+		LOGI("Gamepad disconnected - joyId: {}", event.JoyId);
 #endif
 
 		if (event.JoyId >= MaxNumJoysticks) {
