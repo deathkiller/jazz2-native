@@ -829,6 +829,8 @@ namespace Jazz2::Compatibility
 		Add(JJ2Event::ENEMY_DEMON, NoParamList(EventType::EnemyDemon));
 		Add(JJ2Event::ENEMY_BEE, NoParamList(EventType::EnemyBee));
 		Add(JJ2Event::ENEMY_BEE_SWARM, NoParamList(EventType::EnemyBeeSwarm));
+		// Moves exactly as the bumbling bee in JJ2+
+		Add(JJ2Event::ENEMY_BEEBOY, NoParamList(EventType::EnemyBee));
 		Add(JJ2Event::ENEMY_CATERPILLAR, NoParamList(EventType::EnemyCaterpillar));
 		Add(JJ2Event::ENEMY_CRAB, NoParamList(EventType::EnemyCrab));
 		Add(JJ2Event::ENEMY_DOGGY_DOGG, ConstantParamList(EventType::EnemyDoggy, { 0 }));

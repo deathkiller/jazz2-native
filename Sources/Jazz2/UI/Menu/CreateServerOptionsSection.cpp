@@ -257,6 +257,27 @@ namespace Jazz2::UI::Menu
 					case MpGameMode::CaptureTheFlag: gameModeString = _("Capture The Flag"); break;
 					// TRANSLATORS: Option for Game Mode item in Create Server section
 					case MpGameMode::Cooperation: gameModeString = _("Cooperation"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::RoastTag: gameModeString = _("Roast Tag"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::LastRabbitStanding: gameModeString = _("Last Rabbit Standing"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::ExtendedLastRabbitStanding: gameModeString = _("Extended Last Rabbit Standing"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::Pestilence: gameModeString = _("Pestilence"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::TeamLastRabbitStanding: gameModeString = _("Team Last Rabbit Standing"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::Jailbreak: gameModeString = _("Jailbreak"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::DeathCaptureTheFlag: gameModeString = _("Death Capture The Flag"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::FlagRun: gameModeString = _("Flag Run"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::Domination: gameModeString = _("Domination"); break;
+					// TRANSLATORS: Option for Game Mode item in Create Server section
+					case MpGameMode::HeadHunters: gameModeString = _("Head Hunters"); break;
+					default: break;
 				}
 
 				_root->DrawStringShadow(gameModeString, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,

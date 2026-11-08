@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
@@ -12,7 +12,8 @@ namespace Jazz2::Multiplayer::GameModes
 		Every player fights for themselves. A kill increments the killer's score and the victim's death
 		count; players respawn at a fresh spawn point with brief invulnerability. The round ends when a
 		player reaches the kill target, or --- with elimination enabled --- when only one player is still
-		within their death limit.
+		within their death limit. If the time runs out with overtime enabled, the first player to reach the
+		best score + 2 (never more than the kill target) wins.
 	*/
 	class BattleMode : public IGameMode
 	{
@@ -45,6 +46,15 @@ namespace Jazz2::Multiplayer::GameModes
 		void AssignTeams(IGameModeContext& ctx) override;
 		std::uint32_t GetRoundScore(IGameModeContext& ctx, Actors::Player* player) override;
 		void OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view) override;
+		bool HasDamageAmplifierInOvertime() const override {
+			return true;
+		}
+		GameEndResult OnTimeOut(IGameModeContext& ctx) override;
+		void OnOvertimeStarted(IGameModeContext& ctx) override;
+
+	protected:
+		/** @brief Returns the kills to reach, the cap of the overtime if there's one */
+		static std::uint32_t GetKillTarget(IGameModeContext& ctx);
 	};
 }
 

@@ -832,6 +832,43 @@ namespace Jazz2::Editor
 		}
 	}
 
+	Formats::LevelSettingsChunk::Settings LevelDocument::GetLevelSettings() const
+	{
+		Formats::LevelSettingsChunk::Settings settings;
+		if (const Formats::ChunkRecord* chunk = FindChunk(Formats::LevelSettingsChunk::Tag)) {
+			Formats::LevelSettingsChunk::Read(chunk->Data, settings);
+		}
+		return settings;
+	}
+
+	void LevelDocument::SetLevelSettings(const Formats::LevelSettingsChunk::Settings& settings)
+	{
+		SmallVector<std::uint8_t, 0> data;
+		Formats::LevelSettingsChunk::Write(settings, data);
+		ReplaceChunk(Formats::LevelSettingsChunk::Tag, Death::move(data));
+	}
+
+	void LevelDocument::RemapLevelSettingsLayers(ArrayView<const std::int32_t> newIndices)
+	{
+		Formats::LevelSettingsChunk::Settings settings = GetLevelSettings();
+		std::int32_t layer = settings.WaterLayer;
+		if (layer < 0 || layer >= std::int32_t(newIndices.size())) {
+			return;
+		}
+		std::int32_t newLayer = Formats::LevelSettingsChunk::WaterInFront;
+		for (std::int32_t i = layer; i < std::int32_t(newIndices.size()); i++) {
+			if (newIndices[i] >= 0) {
+				newLayer = newIndices[i];
+				break;
+			}
+		}
+		// Index 0 isn't folded into WaterInFront, so the opposite move restores the water layer
+		if (newLayer != layer) {
+			settings.WaterLayer = newLayer;
+			SetLevelSettings(settings);
+		}
+	}
+
 	const Formats::ChunkRecord* LevelDocument::FindChunk(std::uint32_t tag) const
 	{
 		for (const Formats::ChunkRecord& chunk : Chunks) {

@@ -41,6 +41,11 @@ namespace Jazz2::Actors::Enemies
 		}
 
 	protected:
+		/** @brief Number of original 70 Hz game ticks in one 60 Hz frame, converts measured per-tick values */
+		static constexpr float TicksPerFrame = 70.0f / 60.0f;
+		/** @brief Default distance in front of the enemy's middle where it checks for a reason to turn */
+		static constexpr float DefaultTurnLookAhead = 21.0f;
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
 		bool _canHurtPlayer;
@@ -61,6 +66,14 @@ namespace Jazz2::Actors::Enemies
 		void PlaceOnGround();
 		/** @brief Returns whether the enemy can move to the specified relative offset */
 		bool CanMoveToPosition(float x, float y);
+		/** @brief Returns `true` if the enemy turns around at @ref EventType::AreaStopEnemy, as measured in JJ2+ */
+		virtual bool StopsAtStopEnemy() const {
+			return true;
+		}
+		/** @brief Returns the distance in front of the enemy's middle where the floor and @ref EventType::AreaStopEnemy are checked */
+		virtual float GetTurnLookAhead() const {
+			return DefaultTurnLookAhead;
+		}
 		/** @brief Randomly spawns a drop (collectible) at the enemy's position */
 		void TryGenerateRandomDrop();
 		/** @brief Starts the white-mask blinking effect */

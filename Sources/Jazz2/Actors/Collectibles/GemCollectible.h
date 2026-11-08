@@ -26,6 +26,8 @@ namespace Jazz2::Actors::Collectibles
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		float _ignoreTime;
 		std::uint8_t _gemType;
+		// Player index + 1 of the player who dropped the gem and can't pick it up again, 0 for nobody
+		std::uint8_t _ownerPlayerId;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

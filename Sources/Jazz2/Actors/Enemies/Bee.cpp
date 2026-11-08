@@ -5,19 +5,28 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <float.h>
+
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr float AttackDistance = 256.0f;
+		constexpr float Acceleration = 1.0f / 16.0f;
+		constexpr float MaxSpeedX = 3.0f;
+		constexpr float MaxSpeedY = 1.5f;
+		constexpr std::int32_t AttackTicks = 142;
+		constexpr std::int32_t ReturnTicks = 64;
+	}
+
 	Bee::Bee()
-		: _anglePhase(0.0f), _attackTime(80.0f), _attacking(false), _returning(false)
+		: _counter(0), _tickTime(0.0f), _beeState(BeeState::Idle)
 	{
 	}
 
 	Bee::~Bee()
 	{
-		if (_noise != nullptr) {
-			_noise->Stop();
-			_noise = nullptr;
-		}
+		StopNoise();
 	}
 
 	void Bee::Preload(const ActorActivationDetails& details)
@@ -32,7 +41,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 
-		_originPos = _lastPos = _targetPos = _pos;
+		_originPos = _returnFrom = _pos;
 
 		async_await RequestMetadataAsync("Enemy/Bee"_s);
 		SetAnimation(AnimState::Idle);
@@ -53,100 +62,108 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_attackTime > 0.0f) {
-			_attackTime -= timeMult;
-		} else {
-			if (_attacking) {
-				_targetPos = _originPos;
-
-				_attackTime = 90.0f;
-				_attacking = false;
-				_returning = true;
-			} else {
-				if (_noise != nullptr) {
-					// TODO: Fade-out
-					_noise->Stop();
-					_noise = nullptr;
-				}
-
-				AttackNearestPlayer();
-			}
+		_tickTime += timeMult * TicksPerFrame;
+		while (_tickTime >= 1.0f) {
+			_tickTime -= 1.0f;
+			AdvanceTick();
 		}
+
 		if (_noise != nullptr) {
 			_noise->Play();
 		}
+	}
 
-		_anglePhase += timeMult * 0.05f;
+	void Bee::AdvanceTick()
+	{
+		switch (_beeState) {
+			case BeeState::Idle: {
+				Vector2f targetPos;
+				if (FindTarget(targetPos, AttackDistance)) {
+					_beeState = BeeState::Attacking;
+					_counter = 0;
+					StartNoise();
+					// Measured in JJ2+: each attack starts a bit lower, which makes it swing up and down
+					MoveInstantly(Vector2f(0.0f, (float)Random().Next(16, 20)), MoveType::Relative | MoveType::Force);
+				}
+				break;
+			}
 
-		Vector2f speed = ((_targetPos - _lastPos) * (_returning ? 0.01f : 0.002f) + _lastSpeed * 1.4f) / 2.4f;
-		_lastPos.X += speed.X;
-		_lastPos.Y += speed.Y;
-		_lastSpeed = speed;
+			case BeeState::Attacking: {
+				Vector2f targetPos;
+				if (!FindTarget(targetPos, FLT_MAX)) {
+					targetPos = _originPos;
+				}
 
-		bool willFaceLeft = (speed.X < 0.0f);
-		if (IsFacingLeft() != willFaceLeft) {
-			SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
-				SetFacingLeft(willFaceLeft);
-			});
+				// Can't fly into the water
+				float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
+				if (targetPos.Y > waterLevel) {
+					targetPos.Y = waterLevel;
+				}
+
+				_speedPerTick.X = std::clamp(_speedPerTick.X + (targetPos.X > _pos.X ? Acceleration : -Acceleration), -MaxSpeedX, MaxSpeedX);
+				_speedPerTick.Y = std::clamp(_speedPerTick.Y + (targetPos.Y > _pos.Y ? Acceleration : -Acceleration), -MaxSpeedY, MaxSpeedY);
+				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
+				if (_speedPerTick.X != 0.0f) {
+					SetFacingLeft(_speedPerTick.X < 0.0f);
+				}
+
+				_counter++;
+				if (_counter >= AttackTicks) {
+					_beeState = BeeState::Returning;
+					_counter = 0;
+					_returnFrom = _pos;
+					SetFacingLeft(_originPos.X < _pos.X);
+				}
+				break;
+			}
+
+			case BeeState::Returning: {
+				_counter++;
+				float t = std::min((float)_counter / ReturnTicks, 1.0f);
+				MoveInstantly(_returnFrom + (_originPos - _returnFrom) * t, MoveType::Absolute | MoveType::Force);
+				if (_counter >= ReturnTicks) {
+					_beeState = BeeState::Idle;
+					_counter = 0;
+					StopNoise();
+				}
+				break;
+			}
 		}
-
-		float sinPhase, cosPhase;
-		sincosApprox(_anglePhase, sinPhase, cosPhase);
-		MoveInstantly(_lastPos + Vector2f(cosPhase * 16.0f, sinPhase * -16.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	void Bee::OnSerializeState(Stream& dest)
 	{
 		EnemyBase::OnSerializeState(dest);
 
-		dest.WriteValueAsLE<float>(_lastPos.X);
-		dest.WriteValueAsLE<float>(_lastPos.Y);
-		dest.WriteValueAsLE<float>(_targetPos.X);
-		dest.WriteValueAsLE<float>(_targetPos.Y);
-		dest.WriteValueAsLE<float>(_lastSpeed.X);
-		dest.WriteValueAsLE<float>(_lastSpeed.Y);
-		dest.WriteValueAsLE<float>(_anglePhase);
-		dest.WriteValueAsLE<float>(_attackTime);
-
-		std::uint8_t flags = 0;
-		if (_attacking) flags |= 0x01;
-		if (_returning) flags |= 0x02;
-		if (_noise != nullptr) flags |= 0x04;
-		dest.WriteValue<std::uint8_t>(flags);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_beeState);
+		dest.WriteVariableInt32(_counter);
+		dest.WriteValueAsLE<float>(_speedPerTick.X);
+		dest.WriteValueAsLE<float>(_speedPerTick.Y);
+		dest.WriteValueAsLE<float>(_returnFrom.X);
+		dest.WriteValueAsLE<float>(_returnFrom.Y);
 	}
 
 	void Bee::OnDeserializeState(Stream& src)
 	{
 		EnemyBase::OnDeserializeState(src);
 
-		_lastPos.X = src.ReadValueAsLE<float>();
-		_lastPos.Y = src.ReadValueAsLE<float>();
-		_targetPos.X = src.ReadValueAsLE<float>();
-		_targetPos.Y = src.ReadValueAsLE<float>();
-		_lastSpeed.X = src.ReadValueAsLE<float>();
-		_lastSpeed.Y = src.ReadValueAsLE<float>();
-		_anglePhase = src.ReadValueAsLE<float>();
-		_attackTime = src.ReadValueAsLE<float>();
+		std::uint8_t state = src.ReadValue<std::uint8_t>();
+		_beeState = (state <= (std::uint8_t)BeeState::Returning ? (BeeState)state : BeeState::Idle);
+		_counter = src.ReadVariableInt32();
+		_speedPerTick.X = src.ReadValueAsLE<float>();
+		_speedPerTick.Y = src.ReadValueAsLE<float>();
+		_returnFrom.X = src.ReadValueAsLE<float>();
+		_returnFrom.Y = src.ReadValueAsLE<float>();
 
-		std::uint8_t flags = src.ReadValue<std::uint8_t>();
-		_attacking = ((flags & 0x01) != 0);
-		_returning = ((flags & 0x02) != 0);
-
-		// The looping buzz lasts until the next attack starts
-		if ((flags & 0x04) != 0 && _noise == nullptr) {
-			_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
-			if (_noise != nullptr) {
-				_noise->SetLooping(true);
-			}
+		// The looping buzz lasts until the bee is back at its origin
+		if (_beeState != BeeState::Idle) {
+			StartNoise();
 		}
 	}
 
 	bool Bee::OnPerish(ActorBase* collider)
 	{
-		if (_noise != nullptr) {
-			_noise->Stop();
-			_noise = nullptr;
-		}
+		StopNoise();
 
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
@@ -156,48 +173,39 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void Bee::AttackNearestPlayer()
+	bool Bee::FindTarget(Vector2f& targetPos, float maxDistance) const
 	{
+		float nearest = maxDistance;
 		bool found = false;
-		float targetDistance = 300.0f;
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
+		for (auto* player : _levelHandler->GetPlayers()) {
 			if (player->GetHealth() <= 0) {
 				continue;
 			}
-
-			Vector2f newPos = player->GetPos();
-			float distance = (_lastPos - newPos).Length();
-			if (distance < targetDistance) {
-				_targetPos = newPos;
-				targetDistance = distance;
+			float distance = (player->GetPos() - _pos).Length();
+			if (distance < nearest) {
+				nearest = distance;
+				targetPos = player->GetPos();
 				found = true;
 			}
 		}
+		return found;
+	}
 
-		if (found) {
-			_targetPos.X += (_targetPos.X - _originPos.X) * 1.6f;
-			_targetPos.Y += (_targetPos.Y - _originPos.Y) * 1.6f;
-
-			// Can't fly into the water
-			float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
-			if (_targetPos.Y > waterLevel) {
-				_targetPos.Y = waterLevel;
+	void Bee::StartNoise()
+	{
+		if (_noise == nullptr) {
+			_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
+			if (_noise != nullptr) {
+				_noise->SetLooping(true);
 			}
+		}
+	}
 
-			_attackTime = 110.0f;
-			_attacking = true;
-			_returning = false;
-
-			if (_noise == nullptr) {
-				_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
-				if (_noise != nullptr) {
-					_noise->SetLooping(true);
-				}
-			}
-		} else {
-			_targetPos = _originPos;
-			_returning = true;
+	void Bee::StopNoise()
+	{
+		if (_noise != nullptr) {
+			_noise->Stop();
+			_noise = nullptr;
 		}
 	}
 }

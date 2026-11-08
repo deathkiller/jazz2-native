@@ -938,7 +938,7 @@ namespace Jazz2::AssetPacker
 		void AppendCraftedChunks(FuzzRandom& random, Bytes& body)
 		{
 			const std::uint32_t Tags[] = {
-				LevelFile::PreviewChunk, LayerPropertiesChunk::Tag, ScriptDataChunk::Tag, LevelTextsChunk::Tag, WeaponsChunk::Tag,
+				LevelFile::PreviewChunk, LayerPropertiesChunk::Tag, LevelSettingsChunk::Tag, ScriptDataChunk::Tag, LevelTextsChunk::Tag, WeaponsChunk::Tag,
 				LevelFile::MakeChunkTag('e', 'd', 'o', 'c'),
 				LevelFile::MakeChunkTag('a', 'n', 'n', 'o'), LevelFile::MakeChunkTag('s', 'p', 'l', 'n'),
 				LevelFile::MakeChunkTag('e', 'l', 'a', 'y'), LevelFile::MakeChunkTag('r', 'c', 'o', 'v'),
@@ -1347,6 +1347,29 @@ namespace Jazz2::AssetPacker
 										break;
 									}
 								}
+							}
+						}
+					}
+					// The settings of the level, the same - the writer drops the defaults
+					for (const ChunkRecord& chunk : level->Chunks) {
+						if (chunk.Tag != LevelSettingsChunk::Tag) {
+							continue;
+						}
+						LevelSettingsChunk::Settings settings;
+						if (LevelSettingsChunk::Read(chunk.Data, settings)) {
+							Bytes written;
+							LevelSettingsChunk::Write(settings, written);
+							LevelSettingsChunk::Settings settingsAgain;
+							if (!LevelSettingsChunk::Read(written, settingsAgain)) {
+								outcome.RoundTripDifference = "level settings reading again"_s;
+							} else if (settingsAgain.HasWaterColors != settings.HasWaterColors ||
+								(settings.HasWaterColors && (std::memcmp(settingsAgain.WaterColorTop, settings.WaterColorTop, 3) != 0 ||
+									std::memcmp(settingsAgain.WaterColorBottom, settings.WaterColorBottom, 3) != 0)) ||
+								settingsAgain.Movement != settings.Movement || settingsAgain.Lighting != settings.Lighting ||
+								settingsAgain.WaterLayer != settings.WaterLayer || settingsAgain.WaterChangeSpeed != settings.WaterChangeSpeed ||
+								settingsAgain.WarpsTransmuteCoins != settings.WarpsTransmuteCoins ||
+								settingsAgain.DelayGeneratedCrateOrigins != settings.DelayGeneratedCrateOrigins) {
+								outcome.RoundTripDifference = "level settings"_s;
 							}
 						}
 					}

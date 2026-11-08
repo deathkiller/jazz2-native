@@ -41,6 +41,7 @@ namespace Jazz2::Actors::Enemies
 
 		float _attackTime;
 		float _moveTime;
+		bool _awake;
 		uint8_t _theme;
 		uint8_t _copterDuration;
 		std::shared_ptr<Environment::Copter> _copter;

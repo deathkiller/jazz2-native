@@ -6,22 +6,34 @@ namespace Jazz2::Actors::Enemies
 {
 	/**
 		@brief Bee
-		
-		Floating insect that bobs in a small circular pattern near its origin and periodically darts out
-		to lunge at the nearest player within range, buzzing as it attacks, before drifting back to its
-		starting point. Defeated by a single hit.
+
+		Floating insect that waits at its origin until a player comes within range, then swarms around them,
+		accelerating toward their position and overshooting, before flying straight back to its starting
+		point and attacking again. Buzzes while attacking. Defeated by a single hit.
 	*/
 	class Bee : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief State of the bee */
+		enum class BeeState : std::uint8_t {
+			Idle,			/**< Waiting at its origin */
+			Attacking,		/**< Swarming around the nearest player */
+			Returning		/**< Flying straight back to its origin */
+		};
+
 		/** @brief Creates a new instance */
 		Bee();
 		~Bee();
 
 		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
+
+		/** @brief Returns the current state */
+		BeeState GetBeeState() const {
+			return _beeState;
+		}
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -31,12 +43,15 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		Vector2f _originPos, _lastPos, _targetPos, _lastSpeed;
-		float _anglePhase;
-		float _attackTime;
-		bool _attacking, _returning;
 		std::shared_ptr<AudioBufferPlayer> _noise;
+		Vector2f _originPos, _returnFrom, _speedPerTick;
+		std::int32_t _counter;
+		float _tickTime;
+		BeeState _beeState;
 
-		void AttackNearestPlayer();
+		void AdvanceTick();
+		bool FindTarget(Vector2f& targetPos, float maxDistance) const;
+		void StartNoise();
+		void StopNoise();
 	};
 }

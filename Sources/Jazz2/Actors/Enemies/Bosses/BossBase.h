@@ -28,6 +28,9 @@ namespace Jazz2::Actors::Bosses
 		// so it's spawned again by the event map instead
 		bool IsSerializable() const override { return false; }
 		bool OnTileDeactivated() override;
+		float GetTurnLookAhead() const override {
+			return 0.0f;
+		}
 		void SetHealthByDifficulty(std::int32_t health) override;
 	};
 }

@@ -28,6 +28,99 @@ scores, rounds) and clients send input, so the level has to be present on the se
 both game and server unless built with `DEDICATED_SERVER`. Multiplayer requires threads
 @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan, see @ref building-config-params-game.
 
+@section multiplayer-modes Game modes
+
+@m_class{m-noindent}
+
+The mode is set by @cpp "GameMode" @ce or `/set mode`, using the name or the short form in brackets. Unless a
+mode says otherwise, the round is won by reaching the target score (@cpp "TotalKills" @ce). If the time runs
+out first (@cpp "MaxGameTimeSecs" @ce), the best score wins. In team modes the players are split into 2 to 4
+teams and play for a shared team score.
+
+@subsection multiplayer-modes-ffa Every player for themselves
+
+-   <b>Battle</b> @m_span{m-text m-dim} (`battle`, `b`) @m_endspan --- Roast other players, each roast is a
+    point. With @cpp "Elimination" @ce on, a player who died @cpp "TotalKills" @ce times is out, and the last
+    player left wins.
+-   <b>Race</b> @m_span{m-text m-dim} (`race`, `r`) @m_endspan --- The first player to finish all the laps
+    (@cpp "TotalLaps" @ce) wins.
+-   <b>Treasure Hunt</b> @m_span{m-text m-dim} (`treasurehunt`, `th`) @m_endspan --- Collect gems, then reach the
+    level exit with enough treasure (@cpp "TotalTreasureCollected" @ce). Getting hurt costs some of it, dying at
+    least half.
+-   <b>Roast Tag</b> @m_span{m-text m-dim} (`roasttag`, `rt`) @m_endspan --- The first roast wins the ring. From
+    then on, only the ring holder and the player with the fewest points (the <em>bottom feeder</em>) can roast or
+    be roasted. Every roast in a row earns the holder more points, and whoever roasts the holder takes the ring.
+    A holder who roasts nobody for 90 seconds loses it.
+-   <b>Last Rabbit Standing</b> @m_span{m-text m-dim} (`lastrabbitstanding`, `lrs`) @m_endspan --- Everyone has a
+    few lives (@cpp "PlayerLives" @ce). Lose them all and you're out. The last player left wins, roasts don't score.
+-   <b>Extended Last Rabbit Standing</b> @m_span{m-text m-dim} (`extendedlastrabbitstanding`, `xlrs`) @m_endspan ---
+    Like Last Rabbit Standing, but every roast is a point. The last three players left get their points
+    multiplied by 1.5, 1.25 and 1.125, and the most points win.
+-   <b>Pestilence</b> @m_span{m-text m-dim} (`pestilence`, `pest`) @m_endspan --- The first player to die becomes
+    a zombie, and so does everyone who dies after. Zombies and humans can only hurt each other, and zombies hit
+    harder. A zombie scores 1 point per roast, a human 1 point per zombie in the game (up to 3). When the last
+    human falls, the round is over. The last human gets 5 bonus points and starts the next round as a zombie.
+
+@subsection multiplayer-modes-team Teams
+
+-   <b>Team Battle</b> @m_span{m-text m-dim} (`teambattle`, `tb`) @m_endspan --- Battle in teams, the roasts of
+    all team members add up.
+-   <b>Team Race</b> @m_span{m-text m-dim} (`teamrace`, `tr`) @m_endspan --- Race in teams. A team wins when all
+    its players have finished.
+-   <b>Team Treasure Hunt</b> @m_span{m-text m-dim} (`teamtreasurehunt`, `tth`) @m_endspan --- Treasure Hunt in
+    teams.
+-   <b>Capture The Flag</b> @m_span{m-text m-dim} (`capturetheflag`, `ctf`) @m_endspan --- Steal the enemy flag
+    and bring it to your own base.
+-   <b>Death Capture The Flag</b> @m_span{m-text m-dim} (`deathcapturetheflag`, `dctf`) @m_endspan --- Capture The
+    Flag where every roast scores too. A capture is worth 1 point plus 1 for every enemy player, then everybody
+    dies and starts over.
+-   <b>Flag Run</b> @m_span{m-text m-dim} (`flagrun`, `fr`) @m_endspan --- One flag, which can be picked up at
+    any capture point. Carry it into an enemy base within 45 seconds, or you blow up. A quick delivery scores 3
+    points, a slower one 2 or 1, plus a bonus for roasts on the way. Roasting a carrier with under 16 seconds left
+    steals the flag.
+-   <b>Jailbreak</b> @m_span{m-text m-dim} (`jailbreak`, `jb`) @m_endspan --- Roasted players go to their team's
+    jail. Teammates free them by freezing a spring of the jail. Put the whole enemy team in jail to score a
+    point, then everybody is released.
+-   <b>Team Last Rabbit Standing</b> @m_span{m-text m-dim} (`teamlastrabbitstanding`, `tlrs`) @m_endspan --- Each
+    team shares a pool of lives (@cpp "TeamLives" @ce). A player who runs out gets more from the team's
+    reserve while there are any. The last team with lives wins.
+-   <b>Domination</b> @m_span{m-text m-dim} (`domination`, `dom`) @m_endspan --- Touch a control point for a
+    second to capture it for your team. Every point your team holds scores again every few seconds.
+-   <b>Head Hunters</b> @m_span{m-text m-dim} (`headhunters`, `head`) @m_endspan --- A roasted player drops all
+    their gems plus one, which they can't pick up again. Bring at least 2 gems to your own base to score. More
+    gems at once are worth much more: 2 gems score 1 point, 3 score 3, 4 score 5, 5 score 8.
+
+@subsection multiplayer-modes-coop Together
+
+-   <b>Cooperation</b> @m_span{m-text m-dim} (`cooperation`, `coop`, `c`) @m_endspan --- Play the story levels
+    together, with no scores. Reaching the exit takes everyone to the next level.
+
+@subsection multiplayer-modes-options Options
+
+@m_class{m-noindent}
+
+These properties change the rules of the modes above. Like all properties, they can be set for the whole server
+or per playlist entry (see @ref Jazz2::Multiplayer::ServerConfiguration).
+
+Property | Effect
+-------- | ------
+@cpp "OvertimeSecs" @ce | When the time runs out without a winner, the round goes on this many seconds, and in most modes the HUD shows the score that wins it. In a race, the time left after the first player finishes. Left out, it's 60 seconds in races and no overtime elsewhere
+@cpp "PlayerLives" @ce | Lives of every player in the Last Rabbit Standing modes, 5 by default
+@cpp "TeamLives" @ce, @cpp "MaxTeamPlayersWithLives" @ce | Lives of a team and how many of its players can have lives at once, in Team Last Rabbit Standing
+@cpp "LateJoinersCanPlay" @ce | Lets players who join a running round play. Otherwise they're out (Last Rabbit Standing modes) or zombies (Pestilence)
+@cpp "AmplifyDamage" @ce | Every shot does 1 more heart of damage. Some modes turn it on in overtime by themselves
+@cpp "ResetAllTeams" @ce | After a capture in Death Capture The Flag or a point in Jailbreak, all teams start over, not just the losing ones
+@cpp "AllowPassing" @ce | An injured player hands the flag or the gems to a nearby teammate with full health
+@cpp "FlagPickupCooldownSecs" @ce | How long after spawning a player can't pick up a flag, 5 seconds by default
+@cpp "ExtraDroppedGems" @ce, @cpp "TransferDroppedGems" @ce | How many extra gems a roasted player drops, and whether they go straight to the killer, in Head Hunters
+@cpp "PunishSelfDeaths" @ce, @cpp "SelfDeathCostsTeamPoint" @ce, @cpp "FriendlyFireCostsTeamPoint" @ce | How the score changes when you die by your own fault (a pit, spikes) or roast a teammate
+
+@m_class{m-noindent}
+
+Capture points and control points are events the level marks as <em>Easy</em> or <em>Hard</em> only. The jails of
+Jailbreak are the areas between two <em>Area ID</em> events. A level without them falls back to spawn points or
+team bases, so any level can be played, just not as well.
+
 @section multiplayer-hosting Running a server
 
 @subsection multiplayer-hosting-listen Hosting from the game
@@ -40,7 +133,7 @@ In the main menu choose <b>Play Multiplayer</b> and then:
 
 @m_class{m-noindent}
 
-Then pick the level (or the configured playlist) and the game mode. The host plays as a normal player but
+Then pick the level (or the configured playlist) and the game mode (see @ref multiplayer-modes). The host plays as a normal player but
 must be reachable (see @ref multiplayer-visibility for the port to forward). All other settings come from
 @cpp "Jazz2.Server.config" @ce (see @ref multiplayer-config), the same file a dedicated server reads. A port that is
 taken already, such as by another server on the same machine, makes creating the server fail.
@@ -119,7 +212,7 @@ Group | Properties
 ----- | ----------
 Identity and reachability | @cpp "ServerName" @ce, @cpp "ServerPort" @ce, @cpp "ServerAddressOverride" @ce, @cpp "IsPrivate" @ce, WebSocket: @cpp "WsPort" @ce, @cpp "WsCertPath" @ce, @cpp "WsKeyPath" @ce
 Access control | @cpp "ServerPassword" @ce, @cpp "MaxPlayerCount" @ce, @cpp "AllowedPlayerTypes" @ce, @cpp "RequiresDiscordAuth" @ce, player ID lists (see @ref multiplayer-config-access)
-Round rules | @cpp "GameMode" @ce, @cpp "InitialPlayerHealth" @ce, @cpp "TotalKills" @ce, @cpp "TotalLaps" @ce, @cpp "TotalTreasureCollected" @ce, @cpp "MaxGameTimeSecs" @ce, @cpp "Elimination" @ce, team properties, gameplay switches such as @cpp "ReforgedGameplay" @ce, @cpp "AllowLedgeClimb" @ce, @cpp "PlayerStacking" @ce
+Round rules | @cpp "GameMode" @ce, @cpp "InitialPlayerHealth" @ce, @cpp "TotalKills" @ce, @cpp "TotalLaps" @ce, @cpp "TotalTreasureCollected" @ce, @cpp "MaxGameTimeSecs" @ce, @cpp "Elimination" @ce, game mode options (see @ref multiplayer-modes-options), team properties, gameplay switches such as @cpp "ReforgedGameplay" @ce, @cpp "AllowLedgeClimb" @ce, @cpp "PlayerStacking" @ce
 Session flow | @cpp "MinPlayerCount" @ce and @cpp "PreGameSecs" @ce (when a round starts), @cpp "TotalPlayerPoints" @ce (championship length), @cpp "AllowJoinDuringRound" @ce, @cpp "JoinCooldownSecs" @ce, @cpp "ReconnectWindowSecs" @ce, @cpp "IdleKickTimeSecs" @ce
 Operations | @cpp "AllowAssetStreaming" @ce (clients download missing levels from the server), @cpp "WebhookUrl" @ce and @cpp "WebhookEvents" @ce (post selected events to a <b>Discord</b> channel)
 

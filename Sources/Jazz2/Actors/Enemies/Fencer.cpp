@@ -3,8 +3,6 @@
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
 
-#include "../../../nCine/Base/Random.h"
-
 namespace Jazz2::Actors::Enemies
 {
 	Fencer::Fencer()
@@ -39,15 +37,11 @@ namespace Jazz2::Actors::Enemies
 				SetFacingLeft(_pos.X > targetPos.X);
 
 				if (_stateTime <= 0.0f) {
-					if (Random().NextFloat() < 0.3f) {
-						_speed.X = (IsFacingLeft() ? -1 : 1) * 1.8f;
-					} else {
-						_speed.X = (IsFacingLeft() ? -1 : 1) * -1.2f;
-					}
+					// Measured in JJ2+: a small hop back from the player at 1 px/tick, every 150 ticks
+					_speed.X = (IsFacingLeft() ? 1.0f : -1.0f) * TicksPerFrame;
 
 					MoveInstantly(Vector2f(0.0f, -4.0f), MoveType::Relative);
-					_speed.Y = (_levelHandler->IsReforged() ? -3.0f : -2.0f);
-					_internalForceY = -0.5f;
+					_speed.Y = -1.75f * TicksPerFrame;
 
 					PlaySfx("Attack"_s);
 
@@ -55,7 +49,7 @@ namespace Jazz2::Actors::Enemies
 						_speed.X = 0.0f;
 					});
 
-					_stateTime = Random().NextFloat(160.0f, 300.0f);
+					_stateTime = 150.0f / TicksPerFrame;
 				} else {
 					_stateTime -= timeMult;
 				}

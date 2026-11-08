@@ -73,9 +73,9 @@ namespace Jazz2
 
 	namespace
 	{
-		// Version of the level state snapshot format, snapshots are also stored in resumable states. Version 2 added
-		// the special levels completed from the level at the end, version 1 is read the same way without them.
-		constexpr std::uint16_t LevelStateVersion = 2;
+		// Version of the level state snapshot format, snapshots are also stored in resumable states. Object states
+		// aren't versioned, so only the current version is accepted.
+		constexpr std::uint16_t LevelStateVersion = 3;
 		// Flag of a level state left through a secret exit, the secret level returns to it from any level exit
 		constexpr std::uint8_t LevelStateLeftBySecretExit = 0x08;
 
@@ -129,7 +129,7 @@ namespace Jazz2
 
 		bool IsLevelStateVersionSupported(std::uint16_t version)
 		{
-			return (version >= 1 && version <= LevelStateVersion);
+			return (version == LevelStateVersion);
 		}
 
 		String ReadLevelStateName(const LevelStateSnapshot& state)
@@ -520,6 +520,16 @@ namespace Jazz2
 		return PreferencesCache::EnableLedgeClimb;
 	}
 
+	std::uint32_t LevelHandler::GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const
+	{
+		return furColor;
+	}
+
+	bool LevelHandler::IsPlayerColorForced(const Actors::Player* player) const
+	{
+		return false;
+	}
+
 	CharacterProfile LevelHandler::GetCharacterProfile(PlayerType type) const
 	{
 #if defined(WITH_ANGELSCRIPT)
@@ -537,7 +547,29 @@ namespace Jazz2
 			return _scripts->WarpsTransmuteCoins();
 		}
 #endif
-		return true;
+		return _levelSettings.WarpsTransmuteCoins;
+	}
+
+	void LevelHandler::ApplyLevelSettings(const Formats::LevelSettingsChunk::Settings& settings)
+	{
+		using Formats::LevelSettingsChunk;
+
+		_levelSettings = settings;
+		if (settings.HasWaterColors) {
+			_waterColorTop = Vector3f(settings.WaterColorTop[0], settings.WaterColorTop[1], settings.WaterColorTop[2]) / 255.0f;
+			_waterColorBottom = Vector3f(settings.WaterColorBottom[0], settings.WaterColorBottom[1], settings.WaterColorBottom[2]) / 255.0f;
+		} else {
+			_waterColorTop = DefaultWaterColor;
+			_waterColorBottom = DefaultWaterColor;
+		}
+		_waterInteraction = (settings.Movement == LevelSettingsChunk::WaterMovement::LowGravity ? WaterInteraction::LowGravity : WaterInteraction::Swim);
+		_waterLighting = settings.Lighting;
+		_waterHidden = (settings.WaterLayer == LevelSettingsChunk::WaterHidden);
+	}
+
+	WaterInteraction LevelHandler::GetWaterInteraction() const
+	{
+		return _waterInteraction;
 	}
 
 	bool LevelHandler::CanActivateSugarRush() const
@@ -546,6 +578,11 @@ namespace Jazz2
 	}
 
 	bool LevelHandler::CanEventDisappear(EventType eventType) const
+	{
+		return true;
+	}
+
+	bool LevelHandler::CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter)
 	{
 		return true;
 	}
@@ -607,6 +644,12 @@ namespace Jazz2
 			return false;
 #endif
 		}
+
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr && _scripts->HidesNativeBossMeter()) {
+			return false;
+		}
+#endif
 
 		health = _activeBoss->GetHealth();
 		maxHealth = _activeBoss->GetMaxHealth();
@@ -821,6 +864,7 @@ namespace Jazz2
 		_tileDiffuseOverrides = Death::move(descriptor.TileDiffuseOverrides);
 		_spriteRecolors = Death::move(descriptor.SpriteRecolors);
 #endif
+		ApplyLevelSettings(descriptor.Settings);
 
 		LoadLevelScripts(descriptor.FullPath);
 
@@ -1900,6 +1944,11 @@ namespace Jazz2
 		}
 	}
 
+	void LevelHandler::HandlePlayerPushed(Actors::Player* player)
+	{
+		// Only a non-local session has a client to tell
+	}
+
 	void LevelHandler::HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
 	{
 		// Coins are shared in cooperation, add it also to all other local players
@@ -2711,9 +2760,7 @@ namespace Jazz2
 			_returnLevelState = std::make_shared<LevelStateSnapshot>(Death::move(returnLevelState));
 		}
 
-		if (version >= 2) {
-			ReadSnapshotStrings(src, _completedSpecialLevels);
-		}
+		ReadSnapshotStrings(src, _completedSpecialLevels);
 
 		if (!_players.empty() && (levelBoundsLeft != _levelBounds.X || levelBoundsWidth != _levelBounds.W)) {
 			LimitCameraView(_players[0], _players[0]->GetPos(), levelBoundsLeft, levelBoundsWidth);
@@ -3714,7 +3761,17 @@ namespace Jazz2
 
 	bool LevelHandler::TryInvokeCheat(StringView line)
 	{
-		if (!ApplyCheat(line, {})) {
+		bool isKnown = ApplyCheat(line, {});
+#if defined(WITH_ANGELSCRIPT)
+		// A level script of JJ2+ is told of every cheat code, also of its own ones, and may replace what it does
+		if (_scripts != nullptr && line.hasPrefix("jj"_s) && !line.containsAny(" \t"_s) &&
+			IsCheatingAllowed(nullptr) && !_players.empty() && _scripts->OnCheat(line)) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
+			_cheatsUsed = true;
+			return true;
+		}
+#endif
+		if (!isKnown) {
 			return false;
 		}
 
@@ -3739,7 +3796,7 @@ namespace Jazz2
 		static const CheatCommand CheatCommands[] = {
 			{ "jjkill"_s, "jjk"_s, &LevelHandler::CheatKill },
 			{ "jjgod"_s, {}, &LevelHandler::CheatGod },
-			{ "jjnext"_s, {}, &LevelHandler::CheatNext },
+			{ "jjnext"_s, "jjnxt"_s, &LevelHandler::CheatNext },
 			{ "jjguns"_s, "jjammo"_s, &LevelHandler::CheatGuns },
 			{ "jjrush"_s, {}, &LevelHandler::CheatRush },
 			{ "jjgems"_s, {}, &LevelHandler::CheatGems },

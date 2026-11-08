@@ -75,7 +75,7 @@ namespace Jazz2::Actors::Enemies
 
 							SetAnimation(AnimState::Walk);
 							SetTransition((AnimState)1073741825, false, [this]() {
-								_attackTime = Random().NextFloat(120.0f, 160.0f);
+								_attackTime = WalkTicks / TicksPerFrame;
 								_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
 							});
 						});
@@ -125,7 +125,7 @@ namespace Jazz2::Actors::Enemies
 		if ((flags & 0x02) != 0) {
 			// The attack was interrupted, continue walking as the last transition callback would
 			SetAnimation(AnimState::Walk);
-			_attackTime = Random().NextFloat(120.0f, 160.0f);
+			_attackTime = WalkTicks / TicksPerFrame;
 			_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
 		}
 	}

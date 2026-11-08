@@ -97,6 +97,8 @@ namespace Jazz2
 		WeaponsDescription Weapons;
 		/** @brief Sprites the level recolors for its script, empty if it has none (see @ref Formats::ScriptDataChunk) */
 		SmallVector<std::uint8_t, 0> SpriteRecolors;
+		/** @brief Settings the properties of the level have no room for (see @ref Formats::LevelSettingsChunk) */
+		Formats::LevelSettingsChunk::Settings Settings;
 		/** @brief Tile images the level replaces, which scripts read instead of those of the tile sets */
 		SmallVector<Formats::TileDiffuseOverride, 0> TileDiffuseOverrides;
 	};

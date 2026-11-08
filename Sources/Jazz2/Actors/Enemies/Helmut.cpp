@@ -7,7 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Helmut::Helmut()
-		: _idling(false), _stateTime(0.0f), _stuck(false), _turnCooldown(0.0f)
+		: _stateTime(0.0f), _originX(0.0f), _idling(false), _stuck(false)
 	{
 	}
 
@@ -28,6 +28,7 @@ namespace Jazz2::Actors::Enemies
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 
 		PlaceOnGround();
+		_originX = _pos.X;
 
 		async_return true;
 	}
@@ -50,28 +51,21 @@ namespace Jazz2::Actors::Enemies
 				_stateTime = Random().NextFloat(280.0f, 360.0f);
 			}
 		} else {
-			if (_stateTime <= 0.0f) {
-				_speed.X = 0;
-				_idling = true;
-				SetAnimation(AnimState::Idle);
-
-				_stateTime = Random().NextFloat(70.0f, 190.0f);
-			} else if (GetState(ActorState::CanJump)) {
+			if (GetState(ActorState::CanJump)) {
 				if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
 					if (_stuck) {
 						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
-					} else if (_turnCooldown <= 0.0f) {
-						SetFacingLeft(!IsFacingLeft());
-						_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
-						_turnCooldown = 90.0f;
-						_stuck = true;
-					} else {
+					} else if (Random().NextFloat() < 0.25f) {
+						// Measured in JJ2+: it sometimes stands at an edge for a while before turning
 						_speed.X = 0;
 						_idling = true;
 						SetAnimation(AnimState::Idle);
 
-						_stateTime = Random().NextFloat(90.0f, 190.0f) - _turnCooldown;
-						_turnCooldown = 0.0f;
+						_stateTime = 50.0f / TicksPerFrame;
+					} else {
+						SetFacingLeft(!IsFacingLeft());
+						_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+						_stuck = true;
 					}
 				} else {
 					_stuck = false;
@@ -80,7 +74,6 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		_stateTime -= timeMult;
-		_turnCooldown -= timeMult;
 	}
 
 	void Helmut::OnSerializeState(Stream& dest)
@@ -88,7 +81,7 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteValueAsLE<float>(_stateTime);
-		dest.WriteValueAsLE<float>(_turnCooldown);
+		dest.WriteValueAsLE<float>(0.0f);	// Unused
 
 		std::uint8_t flags = 0;
 		if (_idling) flags |= 0x01;
@@ -101,7 +94,7 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_stateTime = src.ReadValueAsLE<float>();
-		_turnCooldown = src.ReadValueAsLE<float>();
+		src.ReadValueAsLE<float>();	// Unused
 
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 		_idling = ((flags & 0x01) != 0);

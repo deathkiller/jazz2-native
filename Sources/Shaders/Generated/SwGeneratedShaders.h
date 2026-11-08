@@ -337,6 +337,8 @@ struct CombineWithWaterLow_Uniforms
 	float uTime;
 	nCine::RHI::Software::sw::vec2 uCameraPos;
 	float uWaterLevel;
+	nCine::RHI::Software::sw::vec4 uWaterColorTop;
+	nCine::RHI::Software::sw::vec4 uWaterColorBottom;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -377,8 +379,8 @@ void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInpu
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	vec3 waterColor = vec3(0.4f, 0.6f, 0.8f);
 	vec2 uvLocal = vec2(in.u, in.v);
+	vec3 waterColor = mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((uvLocal.y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
 	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
@@ -413,6 +415,8 @@ struct CombineWithWaterLow_DITHER_Uniforms
 	float uTime;
 	nCine::RHI::Software::sw::vec2 uCameraPos;
 	float uWaterLevel;
+	nCine::RHI::Software::sw::vec4 uWaterColorTop;
+	nCine::RHI::Software::sw::vec4 uWaterColorBottom;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -453,8 +457,8 @@ void CombineWithWaterLow_DITHER_Fragment(const nCine::RHI::Software::FragmentSha
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	vec3 waterColor = vec3(0.4f, 0.6f, 0.8f);
 	vec2 uvLocal = vec2(in.u, in.v);
+	vec3 waterColor = mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((uvLocal.y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
 	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
@@ -3432,12 +3436,16 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "uTime", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uTime), 1 },
 			{ "uCameraPos", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uCameraPos), 2 },
 			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterLevel), 1 },
+			{ "uWaterColorTop", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterColorTop), 4 },
+			{ "uWaterColorBottom", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterColorBottom), 4 },
 		};
 		const SwGeneratedUniformField CombineWithWaterLow_DITHER_Fields[] = {
 			{ "uAmbientColor", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uAmbientColor), 4 },
 			{ "uTime", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uTime), 1 },
 			{ "uCameraPos", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uCameraPos), 2 },
 			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterLevel), 1 },
+			{ "uWaterColorTop", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterColorTop), 4 },
+			{ "uWaterColorBottom", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterColorBottom), 4 },
 		};
 		const SwGeneratedUniformField Downsample_Fields[] = {
 			{ "uPixelOffset", (std::uint32_t)offsetof(Downsample_Uniforms, uPixelOffset), 2 },
@@ -3615,8 +3623,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "BatchedColorized", &BatchedColorized_Fragment, (std::uint32_t)sizeof(BatchedColorized_Uniforms), nullptr, 0, nullptr },
 			{ "Combine", &Combine_Fragment, (std::uint32_t)sizeof(Combine_Uniforms), Combine_Fields, 2, &Combine_ComputeVaryings },
 			{ "Combine_DITHER", &Combine_DITHER_Fragment, (std::uint32_t)sizeof(Combine_DITHER_Uniforms), Combine_DITHER_Fields, 2, &Combine_DITHER_ComputeVaryings },
-			{ "CombineWithWaterLow", &CombineWithWaterLow_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_Uniforms), CombineWithWaterLow_Fields, 4, &CombineWithWaterLow_ComputeVaryings },
-			{ "CombineWithWaterLow_DITHER", &CombineWithWaterLow_DITHER_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_DITHER_Uniforms), CombineWithWaterLow_DITHER_Fields, 4, &CombineWithWaterLow_DITHER_ComputeVaryings },
+			{ "CombineWithWaterLow", &CombineWithWaterLow_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_Uniforms), CombineWithWaterLow_Fields, 6, &CombineWithWaterLow_ComputeVaryings },
+			{ "CombineWithWaterLow_DITHER", &CombineWithWaterLow_DITHER_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_DITHER_Uniforms), CombineWithWaterLow_DITHER_Fields, 6, &CombineWithWaterLow_DITHER_ComputeVaryings },
 			{ "DefaultBatchedMeshSprites", &DefaultBatchedMeshSprites_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSprites_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedMeshSpritesNoTexture", &DefaultBatchedMeshSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSpritesNoTexture_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedSpritesNoTexture", &DefaultBatchedSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedSpritesNoTexture_Uniforms), nullptr, 0, nullptr },

@@ -107,8 +107,8 @@ namespace Jazz2::Formats
 		  (@ref Tiles::LayerRendererType::PaletteMapping), which 3.9.0 draws as an ordinary layer of its tiles, a reflection
 		  and a cylinder modulated by the color, and a tile may have the heat modifier (@ref TileRecord::ModifierHeat),
 		  which 3.9.0 draws as an ordinary tile. Since 4.0.0 the properties the records of the layers have no room for are
-		  in @ref LayerPropertiesChunk, the data of the script of a level in @ref ScriptDataChunk and its weapons in
-		  @ref WeaponsChunk, which 3.9.0 ignores.
+		  in @ref LayerPropertiesChunk, the settings its properties have no room for in @ref LevelSettingsChunk, the data
+		  of the script of a level in @ref ScriptDataChunk and its weapons in @ref WeaponsChunk, which 3.9.0 ignores.
 	*/
 	struct LevelFile
 	{
@@ -763,6 +763,94 @@ namespace Jazz2::Formats
 		static StringView ReadText(ArrayView<const std::uint8_t> texts, std::int32_t index);
 		/** @brief Writes all texts in order as @ref Section::Texts, nothing if all are empty */
 		static void WriteTexts(ArrayView<const StringView> texts, SmallVectorImpl<std::uint8_t>& data);
+	};
+
+	/**
+		@brief Chunk with the settings of a level that its properties have no room for
+
+		The water beyond its level and a few rules of the game, in fields of @cpp u8 @ce @ref Field, @cpp varuint @ce size
+		and its bytes:
+
+		- @ref Field::WaterColors --- 3× @cpp u8 @ce @ref Settings::WaterColorTop and 3× @cpp u8 @ce
+		  @ref Settings::WaterColorBottom, RGB
+		- @ref Field::WaterMovement --- @cpp u8 @ce @ref Settings::WaterMovement
+		- @ref Field::WaterLighting --- @cpp u8 @ce @ref Settings::WaterLighting
+		- @ref Field::WaterLayer --- @cpp varuint @ce @ref Settings::WaterLayer plus one, 0 for @ref WaterHidden
+		- @ref Field::WaterChangeSpeed --- @cpp f32 @ce @ref Settings::WaterChangeSpeed
+		- @ref Field::Rules --- @cpp u8 @ce bits of @ref Rules
+
+		A field of a kind this version doesn't know is skipped, and so are the bytes a newer version adds after a value; a field
+		shorter than its value is ignored. A setting without a field has its default, only those that differ are written.
+	*/
+	struct LevelSettingsChunk
+	{
+		/** @brief Tag of the chunk */
+		static constexpr std::uint32_t Tag = LevelFile::MakeChunkTag('L', 'S', 'E', 'T');
+		/** @brief @ref Settings::WaterLayer of the water drawn in front of all layers */
+		static constexpr std::int32_t WaterInFront = -1;
+		/** @brief @ref Settings::WaterLayer of the water that isn't drawn, it's still there for the actors */
+		static constexpr std::int32_t WaterHidden = -2;
+
+		/** @brief Kind of a field */
+		enum class Field : std::uint8_t {
+			WaterColors = 1,		/**< Colors of the water */
+			WaterMovement,			/**< How players move under water */
+			WaterLighting,			/**< How the ambient lighting goes with the water */
+			WaterLayer,				/**< Layer the water is drawn in front of */
+			WaterChangeSpeed,		/**< Speed the water moves to a new level at */
+			Rules					/**< Rules of the game */
+		};
+
+		/** @brief How players move under water */
+		enum class WaterMovement : std::uint8_t {
+			Default,		/**< Swimming or a lower gravity, chosen by how deep the water is */
+			Swim,			/**< Swimming */
+			LowGravity		/**< Walking and jumping with a lower gravity, no swimming */
+		};
+
+		/** @brief How the ambient lighting goes with the water */
+		enum class WaterLighting : std::uint8_t {
+			None,			/**< Full light while the water is in view, the ambient lighting is ignored, as in the original game */
+			Global,			/**< The ambient lighting of the level above and below the water */
+			Depth			/**< Full light above the water, darker the deeper under it the player is */
+		};
+
+		/** @brief Bits of @ref Field::Rules */
+		enum class Rules : std::uint8_t {
+			None = 0,
+			NoWarpsTransmuteCoins = 0x01,			/**< @ref Settings::WarpsTransmuteCoins is `false` */
+			DelayGeneratedCrateOrigins = 0x02		/**< @ref Settings::DelayGeneratedCrateOrigins is `true` */
+		};
+
+		/** @brief Settings of a level */
+		struct Settings
+		{
+			/** @brief Index of the layer the water is drawn in front of, @ref WaterInFront or @ref WaterHidden */
+			std::int32_t WaterLayer = WaterInFront;
+			/** @brief Pixels per second the water moves by towards a new level */
+			float WaterChangeSpeed = 70.0f;
+			/** @brief Color of the water at its surface, RGB */
+			std::uint8_t WaterColorTop[3] = {};
+			/** @brief Color of the water at the bottom of the view, RGB */
+			std::uint8_t WaterColorBottom[3] = {};
+			/** @brief Whether the water has colors of its own, the default ones of the game are used otherwise */
+			bool HasWaterColors = false;
+			/** @brief How players move under water */
+			WaterMovement Movement = WaterMovement::Default;
+			/** @brief How the ambient lighting goes with the water */
+			WaterLighting Lighting = WaterLighting::None;
+			/** @brief Whether a bonus warp turns the remaining coins into gems */
+			bool WarpsTransmuteCoins = true;
+			/** @brief Whether objects of generators take their parameters from where they first land */
+			bool DelayGeneratedCrateOrigins = false;
+		};
+
+		LevelSettingsChunk() = delete;
+
+		/** @brief Reads the payload, what's missing keeps its default, returns `false` if it's damaged */
+		static bool Read(ArrayView<const std::uint8_t> data, Settings& settings);
+		/** @brief Writes the payload, nothing if every setting has its default */
+		static void Write(const Settings& settings, SmallVectorImpl<std::uint8_t>& data);
 	};
 
 	/**

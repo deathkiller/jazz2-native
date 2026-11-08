@@ -45,6 +45,13 @@ namespace Jazz2
 		Fix			/**< Fixed at the given position */
 	};
 
+	/** @brief How players move under water, see @ref ILevelHandler::GetWaterInteraction() */
+	enum class WaterInteraction : std::uint8_t
+	{
+		Swim,		/**< Players swim */
+		LowGravity	/**< Players walk and jump as on land, but fall more slowly */
+	};
+
 	/**
 		@brief Base interface of a level handler
 
@@ -96,6 +103,8 @@ namespace Jazz2
 		virtual bool CanActivateSugarRush() const = 0;
 		/** @brief Returns `true` if event can be safely despawned */
 		virtual bool CanEventDisappear(EventType eventType) const = 0;
+		/** @brief Returns `true` if a shot of @p shooter (may be `nullptr`) can freeze @p actor */
+		virtual bool CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter) = 0;
 		/** @brief Returns `true` if players can collide with each other */
 		virtual bool CanPlayersCollide() const = 0;
 		/** @brief Returns level bounds including camera limits */
@@ -112,9 +121,7 @@ namespace Jazz2
 		 * The same as @ref GetWaterLevel(), unless a level script changes the water in its ticks - the water as the script
 		 * left it for the players then, before its objects (see @ref LevelHandler::GetPlayerWaterLevel()).
 		 */
-		virtual float GetPlayerWaterLevel() const {
-			return GetWaterLevel();
-		}
+		virtual float GetPlayerWaterLevel() const = 0;
 		/** @brief Returns default invulnerable time when a player is hurt */
 		virtual float GetHurtInvulnerableTime() const = 0;
 		/**
@@ -140,31 +147,26 @@ namespace Jazz2
 		 * @brief Returns the fur color a player should actually be recolored with
 		 *
 		 * Lets the level handler override a player's configured color; multiplayer team modes use this to force
-		 * the team color. The default returns @p furColor unchanged.
+		 * the team color.
 		 */
-		virtual std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const {
-			return furColor;
-		}
+		virtual std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const = 0;
 
 		/**
 		 * @brief Returns whether the level handler forces a fur color on the player, overriding local color preferences
 		 *
 		 * Multiplayer team modes force the team color on every player so teams stay distinguishable; such a forced
-		 * color applies regardless of the cosmetic "Apply Colors" preference. The default returns `false`.
+		 * color applies regardless of the cosmetic "Apply Colors" preference.
 		 */
-		virtual bool IsPlayerColorForced(const Actors::Player* player) const {
-			return false;
-		}
+		virtual bool IsPlayerColorForced(const Actors::Player* player) const = 0;
 
-		/** @brief Returns the abilities of a character, the default returns @ref CharacterProfile::GetDefault() */
-		virtual CharacterProfile GetCharacterProfile(PlayerType type) const {
-			return CharacterProfile::GetDefault(type);
-		}
+		/** @brief Returns the abilities of a character */
+		virtual CharacterProfile GetCharacterProfile(PlayerType type) const = 0;
 
 		/** @brief Returns `true` if a bonus warp turns the remaining coins of a player into gems */
-		virtual bool WarpsTransmuteCoins() const {
-			return true;
-		}
+		virtual bool WarpsTransmuteCoins() const = 0;
+
+		/** @brief Returns how players move under water */
+		virtual WaterInteraction GetWaterInteraction() const = 0;
 
 		/** @brief Returns default ambient light intensity */
 		virtual float GetDefaultAmbientLight() const = 0;
@@ -233,12 +235,11 @@ namespace Jazz2
 		/**
 		 * @brief Called after a server-side force/knockback is applied to a player
 		 *
-		 * Allows the change to be synchronized to the owning client in a non-local session (no-op in
-		 * local/single-player sessions).
+		 * Allows the change to be synchronized to the owning client in a non-local session.
 		 */
-		virtual void HandlePlayerPushed(Actors::Player* player) {}
+		virtual void HandlePlayerPushed(Actors::Player* player) = 0;
 		/** @brief Called when a player fires a weapon, returns `true` if its shots were fired by something else (a level script) */
-		virtual bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) { return false; }
+		virtual bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) = 0;
 		/** @brief Returns what the level makes of a weapon (see @ref Formats::WeaponsChunk) */
 		virtual const WeaponDefinition& GetWeaponDefinition(WeaponType weaponType) const = 0;
 		/** @brief Returns the weapons of the level with the images they use */

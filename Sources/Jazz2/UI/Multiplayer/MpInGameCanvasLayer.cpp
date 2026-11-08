@@ -27,6 +27,15 @@ namespace Jazz2::UI::Multiplayer
 		Canvas::OnDraw(renderQueue);
 
 		bool teamMode = IsTeamGameMode(_levelHandler->_networkManager->GetServerConfiguration().GameMode);
+		auto* gameMode = _levelHandler->GetActiveGameMode();
+		auto drawRole = [this, gameMode](std::uint8_t modeFlags, Vector2f pos) {
+			if (gameMode != nullptr && modeFlags != 0) {
+				StringView label = gameMode->GetRoleLabel(modeFlags);
+				if (!label.empty()) {
+					DrawStringShadow(label, pos.X, pos.Y - 52.0f, Colorf(0.62f, 0.56f, 0.34f));
+				}
+			}
+		};
 
 		if (_levelHandler->_isServer) {
 			for (auto& [peer, peerDesc] : *_levelHandler->_networkManager->GetPeers()) {
@@ -46,6 +55,7 @@ namespace Jazz2::UI::Multiplayer
 					}
 
 					DrawStringShadow(peerDesc->PlayerName, pos.X, pos.Y - 42.0f, color);
+					drawRole(peerDesc->ModeFlags, pos);
 				}
 			}
 		} else {
@@ -59,6 +69,7 @@ namespace Jazz2::UI::Multiplayer
 						color = Colorf(0.6f, 0.42f, 0.42f);
 					}
 					DrawStringShadow(playerName.Name, pos.X, pos.Y - 42.0f, color);
+					drawRole(playerName.ModeFlags, pos);
 				}
 			}
 		}

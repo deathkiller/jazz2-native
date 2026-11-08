@@ -88,6 +88,8 @@ namespace Jazz2::Editor
 		void SetMusicPaused(bool paused);
 		/** @brief Shows level properties that don't need the level loaded again, such as the water level, starts other music */
 		void ApplyLevelProperties(const Formats::LevelProperties& properties);
+		/** @brief Shows the settings the properties have no room for, the water, as the level loader sets them */
+		using LevelHandler::ApplyLevelSettings;
 		/** @brief Returns `true` if the level has to be loaded again to show the document as it is now */
 		bool NeedsReload(const LevelDocument& document) const;
 		/** @brief Returns the last image of the level as shown, it stays while the rendering is suspended */

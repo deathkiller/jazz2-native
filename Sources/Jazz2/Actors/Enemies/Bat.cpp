@@ -1,6 +1,5 @@
 ﻿#include "Bat.h"
 #include "../../ILevelHandler.h"
-#include "../../Tiles/TileMap.h"
 
 #include "../Player.h"
 
@@ -8,8 +7,14 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr AnimState AnimTakeoff = (AnimState)1073741824;
+		constexpr AnimState AnimTakeoffEnd = (AnimState)1073741825;
+	}
+
 	Bat::Bat()
-		: _attacking(false), _noiseCooldown(0.0f)
+		: _speedPerTickY(0.0f), _tickTime(0.0f), _noiseCooldown(0.0f), _counter(0), _frame(0), _batState(BatState::Hanging)
 	{
 	}
 
@@ -29,6 +34,7 @@ namespace Jazz2::Actors::Enemies
 
 		async_await RequestMetadataAsync("Enemy/Bat"_s);
 		SetAnimation(AnimState::Idle);
+		SetAnimationFrame(0);
 
 		async_return true;
 	}
@@ -41,74 +47,108 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		SetState(ActorState::CanJump, false);
+		_tickTime += timeMult * TicksPerFrame;
+		while (_tickTime >= 1.0f) {
+			_tickTime -= 1.0f;
+			AdvanceTick();
+		}
 
-		Vector2f targetPos;
-		if (FindNearestPlayer(targetPos)) {
-			if (_attacking) {
+		if (_batState == BatState::Flying) {
+			if (_noiseCooldown > 0.0f) {
+				_noiseCooldown -= timeMult;
+			} else {
+				_noiseCooldown = 60.0f;
+				PlaySfx("Noise"_s);
+			}
+		}
+	}
+
+	void Bat::AdvanceTick()
+	{
+		switch (_batState) {
+			case BatState::Hanging: {
+				Vector2f targetPos;
+				if (FindTarget(targetPos, WakeDistance, _pos)) {
+					_batState = BatState::Waking;
+					_counter = 0;
+					SetAnimation(AnimTakeoffEnd);
+					SetAnimationFrame(0);
+					break;
+				}
+
+				_counter++;
+				if (_counter >= TwitchCycle) {
+					_counter = 0;
+				}
+				// The original counts past its single hanging frame into the take-off, so it twitches in the last ticks of the cycle
+				std::int32_t frame = _counter / TicksPerAnimFrame - (TwitchCycle / TicksPerAnimFrame - TwitchFrames - 1);
+				if (frame > 0) {
+					if (_currentAnimation == nullptr || _currentAnimation->State != AnimTakeoff) {
+						SetAnimation(AnimTakeoff);
+					}
+					SetAnimationFrame(frame - 1);
+				} else {
+					if (_currentAnimation == nullptr || _currentAnimation->State != AnimState::Idle) {
+						SetAnimation(AnimState::Idle);
+					}
+					SetAnimationFrame(0);
+				}
+				break;
+			}
+
+			case BatState::Waking: {
+				_counter++;
+				if (_counter >= WakeTicks) {
+					_batState = BatState::Flying;
+					_counter = 0;
+					_frame = 0;
+					_speedPerTickY = 0.0f;
+					_noiseCooldown = 0.0f;
+					SetAnimation(AnimState::Walk);
+					SetAnimationFrame(0);
+				} else {
+					SetAnimationFrame(1);
+				}
+				break;
+			}
+
+			case BatState::Flying: {
+				Vector2f targetPos;
+				if (!FindTarget(targetPos, ChaseDistance, _originPos)) {
+					targetPos = _originPos;
+					if ((_pos - _originPos).Length() < RoostDistance) {
+						_batState = BatState::Hanging;
+						_counter = -7;
+						MoveInstantly(Vector2f(_pos.X, _originPos.Y), MoveType::Absolute | MoveType::Force);
+						SetAnimation(AnimState::Idle);
+						SetAnimationFrame(0);
+						break;
+					}
+				}
+
 				// Can't fly into the water
 				float waterLevel = _levelHandler->GetWaterLevel();
 				if (targetPos.Y > waterLevel - 20.0f) {
 					targetPos.Y = waterLevel - 20.0f;
 				}
 
-				Vector2f direction = (_pos - targetPos);
-				if (direction.Length() > 20.0f) {
-					direction.Normalize();
-					_speed.X = direction.X * DefaultSpeed;
-					_speed.Y = direction.Y * DefaultSpeed;
-
-					SetFacingLeft(_speed.X < 0.0f);
+				float stepX = Random().FastFloat(0.0f, MaxStepX);
+				if (targetPos.X < _pos.X) {
+					stepX = -stepX;
 				}
+				MoveInstantly(Vector2f(stepX, _speedPerTickY), MoveType::Relative | MoveType::Force);
+				SetFacingLeft(targetPos.X < _pos.X);
 
-				if (_noiseCooldown > 0.0f) {
-					_noiseCooldown -= timeMult;
-				} else {
-					_noiseCooldown = 60.0f;
-					PlaySfx("Noise"_s);
+				// A new speed up or down each wing beat
+				_counter++;
+				if (_counter >= TicksPerAnimFrame) {
+					_counter = 0;
+					_frame = (_frame + 1) % std::max(_renderer.FrameCount, 1);
+					float speedY = Random().FastFloat(0.0f, MaxSpeedY);
+					_speedPerTickY = (_pos.Y > targetPos.Y ? -speedY : speedY);
 				}
-			} else {
-				if (_currentTransition != nullptr) {
-					return;
-				}
-
-				_speed.X = 0;
-				_speed.Y = 0;
-				_noiseCooldown = 0.0f;
-
-				SetAnimation(AnimState::Walk);
-
-				SetTransition((AnimState)1073741824, false, [this]() {
-					_attacking = true;
-					SetTransition((AnimState)1073741825, false);
-				});
-			}
-		} else {
-			if (_attacking && _currentTransition == nullptr) {
-				Vector2f direction = (_pos - _originPos);
-				float length = direction.Length();
-				if (length < 2.0f) {
-					_attacking = false;
-					MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-					_speed.X = 0.0f;
-					_speed.Y = 0.0f;
-					_noiseCooldown = 210.0f;
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741826, false);
-				} else {
-					direction.Normalize();
-					_speed.X = direction.X * DefaultSpeed;
-					_speed.Y = direction.Y * DefaultSpeed;
-
-					SetFacingLeft(_speed.X < 0.0f);
-				}
-			} else {
-				if (_noiseCooldown > 0.0f) {
-					_noiseCooldown -= timeMult;
-				} else {
-					_noiseCooldown = 210.0f;
-					SetTransition((AnimState)1073741827, true);
-				}
+				SetAnimationFrame(_frame);
+				break;
 			}
 		}
 	}
@@ -117,21 +157,25 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnSerializeState(dest);
 
-		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
-		dest.WriteValueAsLE<float>(_noiseCooldown);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_batState);
+		dest.WriteValueAsLE<float>((float)_counter);
 	}
 
 	void Bat::OnDeserializeState(Stream& src)
 	{
 		EnemyBase::OnDeserializeState(src);
 
-		_attacking = (src.ReadValue<std::uint8_t>() != 0);
-		_noiseCooldown = src.ReadValueAsLE<float>();
-
-		// Waking up was interrupted, its transition callback would start the attack
-		if (!_attacking && _currentAnimation != nullptr && _currentAnimation->State != AnimState::Idle) {
-			_attacking = true;
+		std::uint8_t state = src.ReadValue<std::uint8_t>();
+		_batState = (state <= (std::uint8_t)BatState::Flying ? (BatState)state : BatState::Hanging);
+		_counter = (std::int32_t)src.ReadValueAsLE<float>();
+		_frame = 0;
+		_speedPerTickY = 0.0f;
+		switch (_batState) {
+			case BatState::Hanging: SetAnimation(AnimState::Idle); break;
+			case BatState::Waking: SetAnimation(AnimTakeoffEnd); break;
+			case BatState::Flying: SetAnimation(AnimState::Walk); break;
 		}
+		SetAnimationFrame(_batState == BatState::Waking ? 1 : 0);
 	}
 
 	void Bat::OnUpdateHitbox()
@@ -149,24 +193,21 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	bool Bat::FindNearestPlayer(Vector2f& targetPos)
+	bool Bat::FindTarget(Vector2f& targetPos, float maxDistance, const Vector2f& from) const
 	{
-		constexpr float VisionDistanceIdle = 120.0f;
-		constexpr float VisionDistanceAttacking = 320.0f;
-
+		float nearest = maxDistance;
+		bool found = false;
 		for (auto& player : _levelHandler->GetPlayers()) {
 			if (player->GetHealth() <= 0) {
 				continue;
 			}
-
-			targetPos = player->GetPos();
-			float visionDistance = (_currentAnimation->State == AnimState::Idle ? VisionDistanceIdle : VisionDistanceAttacking);
-			if ((_originPos - targetPos).Length() < visionDistance) {
-				return true;
+			float distance = (player->GetPos() - from).Length();
+			if (distance < nearest) {
+				nearest = distance;
+				targetPos = player->GetPos();
+				found = true;
 			}
 		}
-
-		targetPos = Vector2f::Zero;
-		return false;
+		return found;
 	}
 }

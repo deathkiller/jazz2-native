@@ -90,10 +90,16 @@ namespace Jazz2::Actors::Enemies
 
 	bool EnemyBase::CanMoveToPosition(float x, float y)
 	{
-		uint8_t* eventParams;
-		auto events = _levelHandler->EventMap();
-		if (events != nullptr && events->GetEventByPosition(_pos.X + x, _pos.Y + y, &eventParams) == EventType::AreaStopEnemy) {
-			return false;
+		// Measured in JJ2+: each walker checks a point a fixed distance in front of its middle for both the area and the floor
+		float lookAhead = GetTurnLookAhead();
+		float checkX = _pos.X + (x < 0.0f ? -lookAhead : lookAhead);
+
+		if (StopsAtStopEnemy() && x != 0.0f) {
+			uint8_t* eventParams;
+			auto events = _levelHandler->EventMap();
+			if (events != nullptr && events->GetEventByPosition(checkX, _pos.Y + y, &eventParams) == EventType::AreaStopEnemy) {
+				return false;
+			}
 		}
 
 		ActorState prevState = GetState();
@@ -106,6 +112,18 @@ namespace Jazz2::Actors::Enemies
 		if (_levelHandler->IsPositionEmpty(this, aabbAbove, params)) {
 			AABBf aabbBelow = AABBf(x < 0.0f ? AABBInner.L - 8.0f + x : AABBInner.R + 2.0f, AABBInner.B, x < 0.0f ? AABBInner.L - 2.0f : AABBInner.R + 8.0f + x, AABBInner.B + 8.0f);
 			success = !_levelHandler->IsPositionEmpty(this, aabbBelow, params);
+			if (success && lookAhead > 0.0f && x != 0.0f) {
+				// Measured in JJ2+: a drop of 2 px or more at that point counts as a ledge, so it doesn't walk down slopes
+				float floorY = AABBInner.B + 8.0f;
+				for (float probeY = AABBInner.B - 4.0f; probeY < AABBInner.B + 8.0f; probeY += 1.0f) {
+					if (!_levelHandler->IsPositionEmpty(this, AABBf(_pos.X - 0.5f, probeY, _pos.X + 0.5f, probeY + 1.0f), params)) {
+						floorY = probeY;
+						break;
+					}
+				}
+				AABBf floorAhead = AABBf(checkX - 0.5f, floorY - 4.0f, checkX + 0.5f, floorY + 2.0f);
+				success = !_levelHandler->IsPositionEmpty(this, floorAhead, params);
+			}
 		} else {
 			success = false;
 		}

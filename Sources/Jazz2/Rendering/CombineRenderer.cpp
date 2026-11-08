@@ -345,6 +345,15 @@ namespace Jazz2::Rendering
 		if (viewHasWater) {
 			command.GetMaterial().Uniform("uWaterLevel")->SetFloatValue(viewWaterLevel / _bounds.H);
 			command.GetMaterial().Uniform("uCameraPos")->SetFloatValue(_owner->_cameraPos.X * _owner->_cameraScale, _owner->_cameraPos.Y * _owner->_cameraScale);
+			// A program built before the colors were added has none of them (the table of the RSX)
+			const Vector3f& top = _owner->_levelHandler->_waterColorTop;
+			const Vector3f& bottom = _owner->_levelHandler->_waterColorBottom;
+			if (auto* uniform = command.GetMaterial().Uniform("uWaterColorTop")) {
+				uniform->SetFloatValue(top.X, top.Y, top.Z, 1.0f);
+			}
+			if (auto* uniform = command.GetMaterial().Uniform("uWaterColorBottom")) {
+				uniform->SetFloatValue(bottom.X, bottom.Y, bottom.Z, 1.0f);
+			}
 		}
 
 		renderQueue.AddCommand(&command);

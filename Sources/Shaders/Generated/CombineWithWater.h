@@ -136,6 +136,8 @@ uniform vec4 uAmbientColor;
 uniform float uTime;
 uniform vec2 uCameraPos;
 uniform float uWaterLevel;
+uniform vec4 uWaterColorTop;
+uniform vec4 uWaterColorBottom;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -191,9 +193,8 @@ float snoise(vec2 v) {
 out vec4 COLOR;
 
 void main() {
-	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-
 	vec2 uvLocal = vTexCoords;
+	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
 	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 
@@ -280,6 +281,9 @@ uniform sampler2D uTextureBlurQuarter;
 uniform sampler2D uTextureNoise;
 
 uniform vec4 uAmbientColor;
+uniform float uWaterLevel;
+uniform vec4 uWaterColorTop;
+uniform vec4 uWaterColorBottom;
 
 float interleavedGradientNoise(vec2 p) {
 	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
@@ -305,9 +309,8 @@ vec4 sinCycles(vec4 cycles) {
 
 void main() {
 	vec4 COLOR;
-	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-
 	vec2 uvLocal = vTexCoords;
+	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
 	float waveHeight = dot(sinCycles(vWavePhases), vec4(0.004, 0.008, 0.01, 0.001) * 0.4);
 	float belowWaterLine = vWaterLine.y - waveHeight;
 	float aaSlope = vConstants.y;
@@ -367,6 +370,8 @@ void main() {
 		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
 		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uWaterLevel", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWaterColorTop", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uWaterColorBottom", ShaderCompiler::UniformType::Vec4, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember CombineWithWater_Block0_Members[] = {
@@ -511,6 +516,8 @@ uniform vec4 uAmbientColor;
 uniform float uTime;
 uniform vec2 uCameraPos;
 uniform float uWaterLevel;
+uniform vec4 uWaterColorTop;
+uniform vec4 uWaterColorBottom;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -581,9 +588,8 @@ vec3 reduceColors(vec3 rgb, vec2 pixel) {
 out vec4 COLOR;
 
 void main() {
-	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-
 	vec2 uvLocal = vTexCoords;
+	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
 	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 
@@ -671,6 +677,9 @@ uniform sampler2D uTextureBlurQuarter;
 uniform sampler2D uTextureNoise;
 
 uniform vec4 uAmbientColor;
+uniform float uWaterLevel;
+uniform vec4 uWaterColorTop;
+uniform vec4 uWaterColorBottom;
 
 float interleavedGradientNoise(vec2 p) {
 	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
@@ -696,9 +705,8 @@ vec4 sinCycles(vec4 cycles) {
 
 void main() {
 	vec4 COLOR;
-	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-
 	vec2 uvLocal = vTexCoords;
+	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
 	float waveHeight = dot(sinCycles(vWavePhases), vec4(0.004, 0.008, 0.01, 0.001) * 0.4);
 	float belowWaterLine = vWaterLine.y - waveHeight;
 	float aaSlope = vConstants.y;
@@ -758,6 +766,8 @@ void main() {
 		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
 		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uWaterLevel", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWaterColorTop", ShaderCompiler::UniformType::Vec4, 0 },
+		{ "uWaterColorBottom", ShaderCompiler::UniformType::Vec4, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember CombineWithWater_DITHER_Block0_Members[] = {
@@ -786,7 +796,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			6, CombineWithWater_Uniforms, 1, CombineWithWater_Blocks, 5, CombineWithWater_Textures, 0, nullptr,
+			8, CombineWithWater_Uniforms, 1, CombineWithWater_Blocks, 5, CombineWithWater_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			CombineWithWater_Vs100, CombineWithWater_Fs100,
 #else
@@ -815,7 +825,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			6, CombineWithWater_DITHER_Uniforms, 1, CombineWithWater_DITHER_Blocks, 5, CombineWithWater_DITHER_Textures, 0, nullptr,
+			8, CombineWithWater_DITHER_Uniforms, 1, CombineWithWater_DITHER_Blocks, 5, CombineWithWater_DITHER_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			CombineWithWater_DITHER_Vs100, CombineWithWater_DITHER_Fs100,
 #else

@@ -367,6 +367,37 @@ namespace Jazz2::Scripting
 		}
 	}
 
+	void LevelScriptLoader::ReleaseMappingPalette(SpriteModeMapping& mapping)
+	{
+		if (mapping.PaletteOffset > 0) {
+			ContentResolver::Get().ReleasePaletteOffset(mapping.PaletteOffset);
+		}
+		mapping.PaletteOffset = -1;
+	}
+
+	std::int32_t LevelScriptLoader::GetMappingPaletteOffset(std::uint8_t index)
+	{
+		if (_spriteModeMappings != nullptr && _spriteModeMappings[index].Used) {
+			// A mapping of the script: its own colors, or those of the palette its indices point to
+			SpriteModeMapping& mapping = _spriteModeMappings[index];
+			if (mapping.PaletteOffset < 0) {
+				std::uint32_t colors[256];
+				for (std::int32_t i = 0; i < 256; i++) {
+					const jjPALCOLOR& color = (mapping.HasPalette ? mapping.Colors[i] : jjPalette.getColor(mapping.Indices[i]));
+					colors[i] = std::uint32_t(color.red) | (std::uint32_t(color.green) << 8) | (std::uint32_t(color.blue) << 16) | 0xFF000000u;
+				}
+				// Without a free row it isn't tried again for every sprite, it's drawn in the sprite palette
+				mapping.PaletteOffset = std::max<std::int32_t>(ContentResolver::Get().AcquireFixedPaletteOffset(colors), 0);
+			}
+			return mapping.PaletteOffset;
+		}
+
+		// The additional palettes of the level, as layers of the mapping are drawn through them (MLLE defines its palettes
+		// as the mappings from 0, see Tiles::LayerRendererType::PaletteMapping)
+		auto tileMap = _levelHandler->TileMap();
+		return (tileMap != nullptr ? tileMap->AcquireLayerPalette(Tiles::LayerRendererType::PaletteMapping, index) : 0);
+	}
+
 	LevelScriptLoader::SpriteModeMapping& LevelScriptLoader::GetSpriteModeMapping(std::uint8_t index)
 	{
 		if (_spriteModeMappings == nullptr) {
@@ -388,10 +419,11 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjSpriteModeSetIndexMapping(std::uint8_t index, const CScriptArray& indexMapping)
 	{
-		// Nothing is drawn by it yet, the mapping is kept for the scripts that read it back; the indices it doesn't have map
+		// Sprites of SPRITE::MAPPING are drawn through it (see GetMappingPaletteOffset()), the indices it doesn't have map
 		// to themselves
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		SpriteModeMapping& mapping = _this->GetSpriteModeMapping(index);
+		ReleaseMappingPalette(mapping);
 		mapping.Used = true;
 		mapping.HasPalette = false;
 		for (std::uint32_t i = 0; i < 256; i++) {
@@ -544,8 +576,8 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Mode", "BLEND_EXCLUSION", spriteType_BLENDEXCLUSION);	///< Exclusion blending, `param` is the opacity @partialsupport Sprites and rectangles are drawn as `BLEND_DIFFERENCE`, text only takes the opacity.
 		engine->RegisterEnumValue("Mode", "TRANSLUCENTTILE", spriteType_TRANSLUCENTTILE);	///< Translucent the way translucent tiles are
 		engine->RegisterEnumValue("Mode", "CHROMAKEY", spriteType_CHROMAKEY);	///< Drawn only over pixels of the palette color `param` @partialsupport Only sprites drawn into the level by the `jjDraw*` functions are keyed, and not by every renderer; elsewhere they're drawn as `NORMAL`, as are text and rectangles.
-		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);	///< Colors remapped by mapping `param`, see @ref jjSpriteModeSetMapping() @partialsupport Only layers are remapped, sprites, text and rectangles are drawn as `NORMAL`.
-		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);	///< Translucent variant of @ref MAPPING @partialsupport Only layers are remapped, sprites, text and rectangles are drawn as `NORMAL`.
+		engine->RegisterEnumValue("Mode", "MAPPING", spriteType_MAPPING);	///< Colors remapped by mapping `param`, see @ref jjSpriteModeSetMapping(), a mapping the script didn't define is the additional palette of the level with that index @partialsupport Text and rectangles are drawn as `NORMAL`, sprites stored in true color too; a mapping of indices follows the palette as it was when it was first drawn.
+		engine->RegisterEnumValue("Mode", "TRANSLUCENTMAPPING", spriteType_TRANSLUCENTMAPPING);	///< Translucent variant of @ref MAPPING @partialsupport As @ref MAPPING.
 		engine->RegisterEnumValue("Mode", "INVERSE", spriteType_INVERSE);	///< Inverted colors @partialsupport Drawn as `NORMAL`.
 		/** @brief How a sprite is flipped, used as the `direction` of drawing functions */
 		engine->RegisterEnum("Direction");

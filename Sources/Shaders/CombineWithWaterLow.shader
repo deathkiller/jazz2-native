@@ -12,6 +12,9 @@ uniform vec4 uAmbientColor;
 uniform float uTime;
 uniform vec2 uCameraPos;
 uniform float uWaterLevel;
+// Colors of the water at its surface and at the bottom of the view
+uniform vec4 uWaterColorTop;
+uniform vec4 uWaterColorBottom;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -48,9 +51,8 @@ float sinCycles(float cycles) {
 #endif
 
 void fragment() {
-	vec3 waterColor = vec3(0.4, 0.6, 0.8);
-
 	vec2 uvLocal = vTexCoords;
+	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
 	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
 	vec2 uvWorld = uvLocal + uvWorldCenter;
 

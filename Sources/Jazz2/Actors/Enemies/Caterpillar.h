@@ -34,6 +34,8 @@ namespace Jazz2::Actors::Enemies
 		static constexpr std::int32_t StateIdle = 0;
 		static constexpr std::int32_t StateAttacking = 1;
 		static constexpr std::int32_t StateDisoriented = 2;
+		// Measured in JJ2+: 6 smoke rings 70 ticks apart each time
+		static constexpr std::int32_t SmokeCount = 6;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't

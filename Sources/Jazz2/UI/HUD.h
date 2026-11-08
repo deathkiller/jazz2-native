@@ -181,6 +181,8 @@ namespace Jazz2::UI
 		virtual void OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
 		/** @brief Called when score of the player needs to be drawn */
 		virtual void OnDrawScore(const Rectf& view, Actors::Player* player);
+		/** @brief Called when the timer a level script started for the player needs to be drawn */
+		virtual void OnDrawPlayerTimer(const Rectf& view, Actors::Player* player);
 		/**
 		 * @brief Called instead of health/score/ammo when the player is in @ref PlayerType::Spectate mode
 		 *

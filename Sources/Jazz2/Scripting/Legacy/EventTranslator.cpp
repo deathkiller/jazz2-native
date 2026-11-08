@@ -11,6 +11,12 @@
 
 namespace Jazz2::Scripting
 {
+	namespace
+	{
+		// The 2 bits of the difficulty in an event word of the original game (0 all, 1 easy, 2 hard, 3 multiplayer)
+		constexpr std::int32_t DifficultyShift = 8;
+	}
+
 	Legacy::EventTranslator& LevelScriptLoader::GetEventTranslator()
 	{
 		if (_eventTranslator == nullptr) {
@@ -77,6 +83,7 @@ namespace Jazz2::Scripting
 		if (tile.IsEventActive) {
 			word |= Legacy::EventTranslator::ActiveBit;
 		}
+		word |= std::uint32_t(eventMap->GetEventDifficulty(x, y)) << DifficultyShift;
 		return word;
 	}
 

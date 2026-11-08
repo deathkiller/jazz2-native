@@ -57,11 +57,27 @@ namespace Jazz2::Multiplayer
 		/** @brief Distance travelled along the race track in the current lap, in pixels */
 		float RaceProgress;
 
+		/** @brief Score defined by the game mode, e.g. tag points or banked heads (synced to all peers) */
+		std::uint32_t ModePoints;
+		/** @brief Amount of something the player carries in the game mode, e.g. heads (synced to all peers) */
+		std::uint32_t ModeCarried;
+		/** @brief Lives left in modes that count them (synced to all peers) */
+		std::int32_t ModeLives;
+		/** @brief Countdown in frames used by the game mode, e.g. until a zombie returns to life */
+		float ModeTimer;
+		/** @brief Elapsed frames when the player last spawned or joined */
+		float SpawnedFrames;
+		/** @brief Role of the player defined by the game mode, see @ref GameModes::PlayerModeFlags (synced to all peers) */
+		std::uint8_t ModeFlags;
+		/** @brief Flags the game mode carries over to the next round (not reset), e.g. the first zombie of the next round */
+		std::uint8_t ModeCarryOverFlags;
+
 		MpPlayerState()
 			: Team(0), PreferredTeam(0xFF), TeamLocked(false), TeamSwitchCooldown(0.0f),
 				PointsInRound(0), PositionInRound(0), Deaths(0), Kills(0), Laps(0), TreasureCollected(0),
 				RaceFinishOrder(0), DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), RaceFinishFrames(0.0f),
-				RaceProgress(0.0f)
+				RaceProgress(0.0f), ModePoints(0), ModeCarried(0), ModeLives(0), ModeTimer(0.0f), SpawnedFrames(0.0f),
+				ModeFlags(0), ModeCarryOverFlags(0)
 		{
 		}
 	};

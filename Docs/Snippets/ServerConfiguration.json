@@ -80,8 +80,24 @@
 	"TotalKills": 10,
 	"TotalLaps": 3,
 	"TotalTreasureCollected": 0,
-	"OvertimeSecs": 0,
-	
+	/* -1 lets the game mode decide: 60 seconds in races, no overtime elsewhere */
+	"OvertimeSecs": -1,
+
+	/* Options of some game modes, the values below are the defaults */
+	"PlayerLives": 5,
+	"TeamLives": 30,
+	"MaxTeamPlayersWithLives": 16,
+	"LateJoinersCanPlay": false,
+	"ResetAllTeams": true,
+	"AmplifyDamage": false,
+	"AllowPassing": false,
+	"FlagPickupCooldownSecs": 5,
+	"ExtraDroppedGems": 1,
+	"TransferDroppedGems": false,
+	"PunishSelfDeaths": false,
+	"SelfDeathCostsTeamPoint": true,
+	"FriendlyFireCostsTeamPoint": false,
+
 	/* Spectating */
 	"EnableSpectate": true,
 	"EnableFreeCamera": true,
@@ -115,6 +131,13 @@
 			"TotalKills": 10,
 			"TotalLaps": 3,
 			"TotalTreasureCollected": 0
+		},
+		{
+			"LevelName": "battle2",
+			"GameMode": "lrs",
+			"PlayerLives": 3,
+			"MaxGameTimeSecs": 600,
+			"OvertimeSecs": 120
 		}
 	],
 	

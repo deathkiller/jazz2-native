@@ -136,6 +136,8 @@ namespace Jazz2
 #else
 		static constexpr std::int32_t ActivateTileRange = 26;
 #endif
+		/** @brief Color of the water unless a script gives it its own, see @ref Rendering::CombineRenderer */
+		static constexpr Vector3f DefaultWaterColor = Vector3f(0.4f, 0.6f, 0.8f);
 
 		/** @} */
 
@@ -162,6 +164,7 @@ namespace Jazz2
 		bool IsLedgeClimbEnabled(const Actors::Player* player) const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
+		bool CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter) override;
 		bool CanPlayersCollide() const override;
 		Recti GetLevelBounds() const override;
 		float GetElapsedFrames() const override;
@@ -174,8 +177,11 @@ namespace Jazz2
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;
 		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) override;
+		std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const override;
+		bool IsPlayerColorForced(const Actors::Player* player) const override;
 		CharacterProfile GetCharacterProfile(PlayerType type) const override;
 		bool WarpsTransmuteCoins() const override;
+		WaterInteraction GetWaterInteraction() const override;
 
 		/** @brief Returns the internal name (path) of the current level */
 		StringView GetLevelName() const {
@@ -232,6 +238,7 @@ namespace Jazz2
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
+		void HandlePlayerPushed(Actors::Player* player) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
 		bool HandlePlayerFire(Actors::Player* player, WeaponType weaponType) override;
@@ -440,6 +447,8 @@ namespace Jazz2
 		// Sprites the level recolors, for the script to apply, see Formats::ScriptDataChunk
 		SmallVector<std::uint8_t, 0> _spriteRecolors;
 #endif
+		// Settings the level starts with, a script may change some of them later (see Formats::LevelSettingsChunk)
+		Formats::LevelSettingsChunk::Settings _levelSettings;
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -460,9 +469,16 @@ namespace Jazz2
 		float _waterLevel;
 		// The water as the level script left it after onPlayer() in its last tick, see GetPlayerWaterLevel()
 		float _playerWaterLevel = 0.0f;
+		// Colors of the water at its surface and at the bottom of the view, see Rendering::CombineRenderer
+		Vector3f _waterColorTop = DefaultWaterColor;
+		Vector3f _waterColorBottom = DefaultWaterColor;
 		bool _playerWaterLevelSet = false;
-		// The water is still there for the actors, but not drawn (`jjWaterLayer` of JJ2+ out of the layers)
+		// The water is still there for the actors, but not drawn
 		bool _waterHidden = false;
+		// How players move under water, see GetWaterInteraction()
+		WaterInteraction _waterInteraction = WaterInteraction::Swim;
+		// How the ambient lighting goes with the water, see Rendering::PlayerViewport
+		Formats::LevelSettingsChunk::WaterLighting _waterLighting = Formats::LevelSettingsChunk::WaterLighting::None;
 		Vector4f _defaultAmbientLight;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
@@ -541,6 +557,8 @@ namespace Jazz2
 		virtual void LoadLevelScripts(StringView fullPath);
 		/** @brief Loads the scripts of the level, with @p scriptText read in place of the `.j2as` file if it's not empty */
 		void LoadLevelScripts(StringView fullPath, StringView scriptText);
+		/** @brief Applies the settings of the level that its properties have no room for, the water and the rules */
+		void ApplyLevelSettings(const Formats::LevelSettingsChunk::Settings& settings);
 		/** @brief Creates HUD */
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */

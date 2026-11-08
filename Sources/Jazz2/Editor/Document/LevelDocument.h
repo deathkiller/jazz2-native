@@ -397,6 +397,18 @@ namespace Jazz2::Editor
 		/** @brief Sets the payload of a chunk as @ref SetChunk() does, taking the data instead of copying it */
 		void ReplaceChunk(std::uint32_t tag, SmallVector<std::uint8_t, 0>&& data);
 
+		/** @brief Returns the settings the properties of the level have no room for, see @ref Formats::LevelSettingsChunk */
+		Formats::LevelSettingsChunk::Settings GetLevelSettings() const;
+		/** @brief Writes the settings into their chunk, which is left out if all of them have their defaults */
+		void SetLevelSettings(const Formats::LevelSettingsChunk::Settings& settings);
+		/**
+		 * @brief Keeps the water in front of the same layer after the layers moved
+		 *
+		 * @p newIndices has the new index of each layer by its old one, -1 for a removed layer, the water in front of
+		 * one is in front of the next one behind it.
+		 */
+		void RemapLevelSettingsLayers(ArrayView<const std::int32_t> newIndices);
+
 		/**
 		 * @brief Checks the document for problems that would make the level unloadable
 		 *

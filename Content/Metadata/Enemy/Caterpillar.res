@@ -6,18 +6,22 @@
 	"Animations": {
 		"Idle": {
 			"Path": "Caterpillar/idle.aura",
+			"FrameRate": 13.5,
 			"States": [ 0 ]
 		},
 		"InhaleStart": {
 			"Path": "Caterpillar/inhale_start.aura",
+			"FrameRate": 21.9,
 			"States": [ 1 ]
 		},
 		"Inhale": {
 			"Path": "Caterpillar/inhale.aura",
+			"FrameRate": 10.3,
 			"States": [ 2 ]
 		},
 		"ExhaleStart": {
 			"Path": "Caterpillar/exhale_start.aura",
+			"FrameRate": 14.6,
 			"States": [ 3 ]
 		},
 		"Exhale": {

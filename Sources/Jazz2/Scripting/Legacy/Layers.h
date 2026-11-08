@@ -676,12 +676,6 @@ namespace Jazz2::Scripting
 	// TODO
 
 	/**
-	 * @brief Sets the color of darkness used by ambient lighting
-	 *
-	 * @partialsupport Currently has no effect.
-	 */
-	void jjSetDarknessColor(jjPALCOLOR color);
-	/**
 	 * @brief Sets the fade color of the textured background
 	 *
 	 * The same as calling `setFadeColor()` on @ref warpHorizon of the textured background layer, which is `jjLayers[8]`,

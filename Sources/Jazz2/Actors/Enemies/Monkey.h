@@ -57,5 +57,9 @@ namespace Jazz2::Actors::Enemies
 
 		bool _isWalking;
 		bool _stuck;
+		std::uint8_t _idleLoops;
+
+		bool TryThrow();
+		void ThrowBanana(std::uint32_t distance, std::int32_t offsetX);
 	};
 }

@@ -173,6 +173,11 @@
 			"Path": "Pickup/food_pizza.aura",
 			"States": [ 76 ]
 		},
+		"TargetArrow": {
+			"Path": "CTF/arrow.aura",
+			"FrameRate": 0,
+			"States": [ 90 ]
+		},
 		"PickupCarrot": {
 			"Path": "Pickup/carrot_full.aura",
 			"States": [ 77 ]

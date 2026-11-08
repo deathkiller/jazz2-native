@@ -7,6 +7,8 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
 
+#include <cstring>
+
 namespace Jazz2::Events
 {
 	EventMap::EventMap(Vector2i layoutSize)
@@ -753,8 +755,38 @@ namespace Jazz2::Events
 		return false;
 	}
 
+	std::uint8_t EventMap::GetEventDifficulty(std::int32_t x, std::int32_t y) const
+	{
+		if (_difficultyEvents.empty() || x < 0 || y < 0 || x >= _layoutSize.X || y >= _layoutSize.Y) {
+			return 0;
+		}
+		std::int32_t tile = x + y * _layoutSize.X;
+		auto it = std::lower_bound(_difficultyEvents.begin(), _difficultyEvents.end(), tile, [](const DifficultyEvent& entry, std::int32_t value) {
+			return entry.Tile < value;
+		});
+		return (it != _difficultyEvents.end() && it->Tile == tile ? it->Difficulty : 0);
+	}
+
+	void EventMap::CollectEasyOrHardEvents(SmallVectorImpl<DifficultyEventInfo>& events) const
+	{
+		for (const auto& entry : _difficultyEvents) {
+			if (entry.Difficulty == 1 || entry.Difficulty == 2) {
+				auto& info = events.emplace_back();
+				info.Tile = Vector2i(entry.Tile % _layoutSize.X, entry.Tile / _layoutSize.X);
+				info.Difficulty = entry.Difficulty;
+				const auto& tile = _eventLayout[entry.Tile];
+				info.Event = tile.Event;
+				info.Params[0] = tile.EventParams[0];
+				info.Params[1] = tile.EventParams[1];
+			}
+		}
+		events.append(_skippedDifficultyEvents.begin(), _skippedDifficultyEvents.end());
+	}
+
 	void EventMap::LoadEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options)
 	{
+		_difficultyEvents.clear();
+		_skippedDifficultyEvents.clear();
 		if (!_eventLayout.Allocate(std::size_t(_layoutSize.X) * std::size_t(_layoutSize.Y))) {
 			LOGE("Cannot allocate the event layout of {}x{} tiles", _layoutSize.X, _layoutSize.Y);
 			_loadFailed = true;
@@ -788,11 +820,38 @@ namespace Jazz2::Events
 			}
 
 			// An event of no difficulty at all is present in all of them, and a multiplayer-only event only in multiplayer
-			if ((event.Flags & Formats::EventRecord::DifficultyMask) != 0 && (event.Flags & difficultyFlag) == 0) {
+			bool skipped = (((event.Flags & Formats::EventRecord::DifficultyMask) != 0 && (event.Flags & difficultyFlag) == 0) ||
+				((event.Flags & Formats::EventRecord::MultiplayerOnly) != 0 && !options.Multiplayer));
+
+			// The difficulty as the original game has it, the converter keeps it in the flags (see JJ2Level::MakeEventRecord())
+			std::uint8_t difficultyMask = (event.Flags & Formats::EventRecord::DifficultyMask);
+			std::uint8_t difficulty;
+			if ((event.Flags & Formats::EventRecord::MultiplayerOnly) != 0) {
+				difficulty = 3;
+			} else if (difficultyMask == Formats::EventRecord::Easy) {
+				difficulty = 1;
+			} else if (difficultyMask == Formats::EventRecord::Hard) {
+				difficulty = 2;
+			} else {
+				difficulty = 0;
+			}
+			// As measured in JJ2+, an event left out in this difficulty isn't there for scripts either
+			if (skipped) {
+				// JJ2+ multiplayer modes still take these as control points or capture points
+				if (difficulty == 1 || difficulty == 2) {
+					auto& info = _skippedDifficultyEvents.emplace_back();
+					info.Tile = Vector2i(x, y);
+					info.Difficulty = difficulty;
+					info.Event = (EventType)event.Type;
+					info.Params[0] = event.Params[0];
+					info.Params[1] = event.Params[1];
+				}
 				return;
 			}
-			if ((event.Flags & Formats::EventRecord::MultiplayerOnly) != 0 && !options.Multiplayer) {
-				return;
+			if (difficulty != 0) {
+				auto& entry = _difficultyEvents.emplace_back();
+				entry.Tile = x + y * _layoutSize.X;
+				entry.Difficulty = difficulty;
 			}
 
 			EventType eventType = (EventType)event.Type;
@@ -863,6 +922,9 @@ namespace Jazz2::Events
 					StoreTileEvent(x, y, eventType, actorFlags, eventParams);
 					break;
 			}
+		});
+		std::sort(_difficultyEvents.begin(), _difficultyEvents.end(), [](const DifficultyEvent& a, const DifficultyEvent& b) {
+			return a.Tile < b.Tile;
 		});
 
 		LoadOffGridEvents(reader, tileMap, options, difficultyFlag, occupiedTiles);

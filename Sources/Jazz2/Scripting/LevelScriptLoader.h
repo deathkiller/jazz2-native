@@ -280,6 +280,8 @@ namespace Jazz2::Scripting
 		 * The energy of the object against the one of its template, as JJ2+ shows the health of a boss.
 		 */
 		bool GetScriptBossHealth(std::int32_t& health, std::int32_t& maxHealth);
+		/** @brief Returns `true` if the script ended the boss fight with `jjPLAYER::activateBoss(false)` for every player, the meter of a boss of the game is hidden then */
+		bool HidesNativeBossMeter() const;
 		/** @brief Returns the abilities of a character as `jjCharacters` changed them */
 		CharacterProfile GetCharacterProfile(PlayerType type) const;
 		/** @brief Returns `jjCharacters[]` of a player type, a scratch copy for a type that isn't a character */
@@ -490,6 +492,8 @@ namespace Jazz2::Scripting
 		void OnLevelBegin();
 		/** @brief Called when a level reloads */
 		void OnLevelReload();
+		/** @brief Called when a player enters a cheat code (`onCheat()`), returns `true` if the script handled it, the game doesn't apply it then */
+		bool OnCheat(StringView cheat);
 		/**
 		 * @brief Called when another handler is about to be made in place of the level, see @ref IStateHandler::OnReplacing()
 		 *
@@ -509,6 +513,8 @@ namespace Jazz2::Scripting
 		void OnLevelCallback(Actors::ActorBase* initiator, std::uint8_t* eventParams);
 		/** @brief Called when a part of viewport or HUD is drawn */
 		bool OnDraw(UI::HUD* hud, Actors::Player* player, const Rectf& view, DrawType type);
+		/** @brief Returns the seconds left on the timer a script started for a player (`jjPLAYER::timerStart()`), `false` if it's stopped */
+		bool GetPlayerTimer(Actors::Player* player, float& secondsLeft, bool& isPaused) const;
 		/** @brief Called when a player dies */
 		void OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider);
 
@@ -537,6 +543,16 @@ namespace Jazz2::Scripting
 		std::int32_t _waterTick = -1;
 		// The layer `jjWaterLayer` puts the water in front of, the water isn't drawn for one that isn't 1 to 8
 		std::int32_t _waterLayer = 1;
+
+		// `WATERLIGHT::wl` of JJ2+
+		static constexpr std::int32_t LegacyWaterLightingNone = 0;
+		static constexpr std::int32_t LegacyWaterLightingGlobal = 1;
+		static constexpr std::int32_t LegacyWaterLightingLagunicus = 3;
+
+		// Gives the script the settings of the level it starts with (see Formats::LevelSettingsChunk)
+		void ApplyLevelSettings();
+		// Sets the colors of the water at its surface and at the bottom of the view (`jjSetWaterGradient()`)
+		void SetWaterColors(const Vector3f& top, const Vector3f& bottom);
 		asIScriptFunction* _onDrawAmmo;
 		asIScriptFunction* _onDrawHealth;
 		asIScriptFunction* _onDrawLives;
@@ -752,6 +768,11 @@ namespace Jazz2::Scripting
 		void SyncLayerProperties();
 		// Sets jjResolutionWidth/Height and jjSubscreenWidth/Height to the size of the view, every frame
 		void UpdateViewSize();
+		// Sets jjGameMode and jjGameCustom to the multiplayer game mode, every frame
+		void UpdateGameMode();
+		// Control points of Domination as jjControlPoints shows them
+		Legacy::jjCONTROLPOINT _controlPoints[16];
+		static Legacy::jjCONTROLPOINT* GetControlPoint(std::int32_t index);
 
 		// Returns the engine layer a script means by a layer number of the original (see GetLayerIndex()), or nullptr, and
 		// in `proxy` its jjLAYER proxy if a script asked for one (not AddRef'd) - the global layer properties are the
@@ -801,9 +822,15 @@ namespace Jazz2::Scripting
 			bool HasPalette = false;
 			std::uint8_t Indices[256];
 			jjPALCOLOR Colors[256];
+			// Row of the palette sprites of SPRITE::MAPPING are drawn through, made on first use, -1 for none
+			std::int32_t PaletteOffset = -1;
 		};
 		std::unique_ptr<SpriteModeMapping[]> _spriteModeMappings;
 		SpriteModeMapping& GetSpriteModeMapping(std::uint8_t index);
+		// Returns the palette offset sprites of SPRITE::MAPPING are drawn with, see GetSpritePaletteOffset()
+		std::int32_t GetMappingPaletteOffset(std::uint8_t index);
+		// Lets go of the row of a mapping, it's made again from what the script set next time
+		static void ReleaseMappingPalette(SpriteModeMapping& mapping);
 
 		// Makes a layer for a script, or uses one again, and returns its index, or -1 (see CreateLayer())
 		std::int32_t AddScriptLayer(Vector2i size, const Tiles::LayerDescription& description);
@@ -876,6 +903,8 @@ namespace Jazz2::Scripting
 		std::int32_t colorDepth = 16;
 		std::int32_t checkedMaxSubVideoWidth = 0;
 		std::int32_t checkedMaxSubVideoHeight = 0;
+		// `/maxresolution` a script asked for, `jjResolutionMaxWidth/Height` report it then
+		Vector2i _maxResolution;
 		std::int32_t realVideoW = 0;
 		std::int32_t realVideoH = 0;
 		std::int32_t subVideoW = 0;
@@ -979,6 +1008,8 @@ namespace Jazz2::Scripting
 		static void jjPrint(const String& text, bool timestamp);
 		static void jjDebug(const String& text, bool timestamp);
 		static void jjChat(const String& text, bool teamchat);
+		// Runs a chat command of JJ2+ a script sent (`jjChat("/...")`) without the slash
+		void ProcessChatCommand(StringView line);
 		static void jjConsole(const String& text, bool sendToAll);
 		static void jjSpy(const String& text);
 
@@ -1048,6 +1079,7 @@ namespace Jazz2::Scripting
 		static std::int32_t set_waterLayer(std::int32_t value);
 		static void setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2);
 		static void setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2);
+		static void jjSetDarknessColor(jjPALCOLOR color);
 		static void setWaterGradientToTBG();
 		static void resetWaterGradient();
 		static void triggerRock(std::uint8_t id);

@@ -218,7 +218,8 @@ namespace Jazz2::Actors::Environment
 	bool SwingingVine::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* player = runtime_cast<Player>(other)) {
-			if (player->_springCooldown <= 0.0f) {
+			// Grabbed by the hands, the end under the feet of a player above it isn't
+			if (player->_springCooldown <= 0.0f && player->GetPos().Y >= _chunkPos[ChunkCount - 1].Y) {
 				player->UpdateCarryingObject(this, SuspendType::SwingingVine);
 			}
 			return true;

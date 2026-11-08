@@ -4,12 +4,21 @@
 #include "../Explosion.h"
 #include "../Player.h"
 
-#include "../../../nCine/Base/Random.h"
-
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr float SwimRadius = 64.0f;
+		constexpr std::int32_t SwimPeriod = 1024;
+		constexpr std::int32_t SwimTicksBeforeDash = 280;
+		constexpr float DashDistance = 320.0f;
+		constexpr float DashDivisor = 64.0f;
+		constexpr std::int32_t DashTicks = 100;
+		constexpr std::int32_t ReturnTicks = 64;
+	}
+
 	Fish::Fish()
-		: _state(StateIdle), _idleTime(0.0f), _attackCooldown(60.0f)
+		: _state(StateSwimming), _counter(0), _swimCounter(0), _tickTime(0.0f)
 	{
 	}
 
@@ -20,19 +29,15 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Fish::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::ApplyGravitation, false);
-
-		if (!_levelHandler->IsReforged()) {
-			SetState(ActorState::CollideWithTileset, false);
-		}
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
 		SetHealthByDifficulty(1);
 		_scoreValue = 100;
 
-		_originPos = _pos;
+		_originPos = _returnFrom = _pos;
 
 		async_await RequestMetadataAsync("Enemy/Fish"_s);
-		SetFacingLeft(Random().NextBool());
+		SetFacingLeft(false);
 		SetAnimation(AnimState::Idle);
 
 		async_return true;
@@ -40,87 +45,94 @@ namespace Jazz2::Actors::Enemies
 
 	void Fish::OnUpdate(float timeMult)
 	{
-		float waterLevel = _levelHandler->GetWaterLevel();
-		bool inWater = (_pos.Y > waterLevel - 160.0f);
-		if (!inWater) {
-			// Don't move if not in water
-			return;
-		}
-
 		EnemyBase::OnUpdate(timeMult);
 
-		if (_pos.Y < waterLevel + 8.0f) {
-			MoveInstantly(Vector2f(_pos.X, waterLevel + 8.0f), MoveType::Absolute | MoveType::Force);
-		}
-
-		if (_frozenTimeLeft > 0.0f) {
+		// Measured in JJ2+: it doesn't move at all when it's not under the water
+		if (_frozenTimeLeft > 0.0f || _originPos.Y < _levelHandler->GetWaterLevel()) {
 			return;
 		}
 
-		SetState(ActorState::CanJump, false);
+		_tickTime += timeMult * TicksPerFrame;
+		while (_tickTime >= 1.0f) {
+			_tickTime -= 1.0f;
+			AdvanceTick();
+		}
+	}
 
-		if (_state == StateAttacking) {
-			_speed.X += _direction.X * 0.11f * timeMult;
-			_speed.Y += _direction.Y * 0.11f * timeMult;
-		} else if (_state == StateBraking) {
-			_speed.X = lerp(_speed.X, _speed.X * 0.96f, timeMult);
-			_speed.Y = lerp(_speed.Y, _speed.Y * 0.96f, timeMult);
+	void Fish::AdvanceTick()
+	{
+		_counter++;
 
-			if (std::abs(_speed.X) < 0.01f && std::abs(_speed.Y) < 0.01f) {
-				_state = StateReturning;
-			}
-		} else if (_state == StateReturning) {
-			Vector2f diff = _originPos - _pos;
-			if (diff.Length() < 8.0f) {
-				_state = StateIdle;
-				_attackCooldown = 240.0f;
-			} else {
-				constexpr float ReturnSpeed = 3.0f;
-				_speed = diff.Normalized() * ReturnSpeed;
-				SetFacingLeft(_speed.X < 0.0f);
-			}
-		} else {
-			if (_attackCooldown < 0.0f) {
-				_attackCooldown = 60.0f;
+		Vector2f newPos;
+		switch (_state) {
+			case StateSwimming: {
+				// Measured in JJ2+: a figure-eight of 64 px, once every 1024 ticks
+				_swimCounter++;
+				newPos = GetSwimPos();
+				if (newPos.X != _pos.X) {
+					SetFacingLeft(newPos.X < _pos.X);
+				}
 
-				Vector2f targetPos;
-				auto players = _levelHandler->GetPlayers();
-				for (auto* player : players) {
-					if (player->GetHealth() <= 0) {
-						continue;
+				if (_swimCounter >= SwimTicksBeforeDash) {
+					Player* target = nullptr;
+					float targetDistance = DashDistance;
+					for (auto* player : _levelHandler->GetPlayers()) {
+						float distance = (player->GetPos() - _pos).Length();
+						if (player->GetHealth() > 0 && distance < targetDistance) {
+							target = player;
+							targetDistance = distance;
+						}
 					}
-
-					targetPos = player->GetPos();
-					_direction = targetPos - _pos;
-					float length = _direction.Length();
-					if (length < 320.0f) {
-						_direction.Normalize();
-
-						_speed.X = 0.0f;
-						_speed.Y = 0.0f;
-						SetFacingLeft(_direction.X < 0.0f);
-						_state = StateAttacking;
-
-						SetTransition(AnimState::TransitionAttack, false, [this]() {
-							_state = StateBraking;
-						});
-						break;
+					if (target != nullptr) {
+						// Measured in JJ2+: it covers a 64th of the distance each tick, so it overshoots
+						_speedPerTick = (target->GetPos() - _pos) / DashDivisor;
+						SetFacingLeft(_speedPerTick.X < 0.0f);
+						SetAnimation(AnimState::TransitionAttack);
+						_state = StateDashing;
+						_counter = 0;
+						newPos = _pos;
 					}
 				}
-			} else if (_idleTime < 0.0f) {
-				float x = Random().NextFloat(-1.4f, 1.4f);
-				float y = Random().NextFloat(-2.0f, 2.0f);
-
-				_speed.X = (_speed.X + x) * 0.2f;
-				_speed.Y = (_speed.Y + y) * 0.2f;
-
-				_idleTime = 20.0f;
-			} else {
-				_idleTime -= timeMult;
+				break;
 			}
 
-			_attackCooldown -= timeMult;
+			case StateDashing: {
+				newPos = _pos + _speedPerTick;
+				if (_counter >= DashTicks) {
+					_returnFrom = newPos;
+					SetFacingLeft(_originPos.X < newPos.X);
+					SetAnimation(AnimState::Idle);
+					_state = StateReturning;
+					_counter = 0;
+				}
+				break;
+			}
+
+			case StateReturning: {
+				float t = std::min((float)_counter / ReturnTicks, 1.0f);
+				Vector2f swimStart = _originPos + Vector2f(0.0f, SwimRadius);
+				newPos = _returnFrom + (swimStart - _returnFrom) * t;
+				if (_counter >= ReturnTicks) {
+					_state = StateSwimming;
+					_counter = 0;
+					_swimCounter = 0;
+				}
+				break;
+			}
 		}
+
+		// Stays under the water surface
+		float minY = _levelHandler->GetWaterLevel() + 8.0f;
+		if (newPos.Y < minY) {
+			newPos.Y = minY;
+		}
+		MoveInstantly(newPos, MoveType::Absolute | MoveType::Force);
+	}
+
+	Vector2f Fish::GetSwimPos() const
+	{
+		float angle = (float)_swimCounter * fTwoPi / SwimPeriod;
+		return _originPos + Vector2f(sinf(angle) * SwimRadius, cosf(angle * 2.0f) * SwimRadius);
 	}
 
 	void Fish::OnSerializeState(Stream& dest)
@@ -128,10 +140,12 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteVariableInt32(_state);
-		dest.WriteValueAsLE<float>(_idleTime);
-		dest.WriteValueAsLE<float>(_attackCooldown);
-		dest.WriteValueAsLE<float>(_direction.X);
-		dest.WriteValueAsLE<float>(_direction.Y);
+		dest.WriteVariableInt32(_counter);
+		dest.WriteVariableInt32(_swimCounter);
+		dest.WriteValueAsLE<float>(_speedPerTick.X);
+		dest.WriteValueAsLE<float>(_speedPerTick.Y);
+		dest.WriteValueAsLE<float>(_returnFrom.X);
+		dest.WriteValueAsLE<float>(_returnFrom.Y);
 	}
 
 	void Fish::OnDeserializeState(Stream& src)
@@ -139,40 +153,13 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_state = src.ReadVariableInt32();
-		_idleTime = src.ReadValueAsLE<float>();
-		_attackCooldown = src.ReadValueAsLE<float>();
-		_direction.X = src.ReadValueAsLE<float>();
-		_direction.Y = src.ReadValueAsLE<float>();
-
-		// Attacking lasts only until the end of the attack transition
-		if (_state == StateAttacking) {
-			_state = StateBraking;
-		}
-	}
-
-	void Fish::OnHitWall(float timeMult)
-	{
-		EnemyBase::OnHitWall(timeMult);
-
-		_speed.X = 0.0f;
-		_speed.Y = 0.0f;
-
-	}
-
-	void Fish::OnHitFloor(float timeMult)
-	{
-		EnemyBase::OnHitFloor(timeMult);
-
-		_speed.X = 0.0f;
-		_speed.Y = 0.0f;
-	}
-
-	void Fish::OnHitCeiling(float timeMult)
-	{
-		EnemyBase::OnHitCeiling(timeMult);
-
-		_speed.X = 0.0f;
-		_speed.Y = 0.0f;
+		_counter = src.ReadVariableInt32();
+		_swimCounter = src.ReadVariableInt32();
+		_speedPerTick.X = src.ReadValueAsLE<float>();
+		_speedPerTick.Y = src.ReadValueAsLE<float>();
+		_returnFrom.X = src.ReadValueAsLE<float>();
+		_returnFrom.Y = src.ReadValueAsLE<float>();
+		SetAnimation(_state == StateDashing ? AnimState::TransitionAttack : AnimState::Idle);
 	}
 
 	bool Fish::OnPerish(ActorBase* collider)
@@ -180,7 +167,7 @@ namespace Jazz2::Actors::Enemies
 		CreateParticleDebrisOnPerish(collider);
 		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
 
-		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::SmallDark);
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::SmallDark);
 
 		TryGenerateRandomDrop();
 

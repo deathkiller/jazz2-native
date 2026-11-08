@@ -635,6 +635,26 @@ namespace nCine
 		RHI::Device::SetBlendingState(blendingState);
 	}
 
+#if defined(IMGUI_HAS_VIEWPORT) && !defined(WITH_RHI_GL) && (defined(WITH_RHI_D3D11) || \
+		((defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL)) && (defined(WITH_SDL2) || defined(WITH_SDL3))))
+	namespace
+	{
+		// Viewport sizes are in ImGui units, a swap chain needs pixels
+		Vector2i GetPlatformWindowPixelSize(ImGuiViewport* viewport, ImVec2 size)
+		{
+			ImVec2 scale = viewport->FramebufferScale;
+			const ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+			if (platformIo.Platform_GetWindowFramebufferScale != nullptr && viewport->PlatformUserData != nullptr) {
+				scale = platformIo.Platform_GetWindowFramebufferScale(viewport);
+			}
+			if (scale.x <= 0.0f || scale.y <= 0.0f) {
+				scale = ImVec2(1.0f, 1.0f);
+			}
+			return Vector2i(std::int32_t(size.x * scale.x), std::int32_t(size.y * scale.y));
+		}
+	}
+#endif
+
 #if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 	// The multi-viewport path below intentionally uses raw OpenGL instead of the RHI: it renders into
 	// the GL contexts of additional platform windows, where the RHI backend's single-context state and
@@ -825,8 +845,8 @@ namespace nCine
 		// PlatformHandleRaw is the native handle of the window the platform backend created for this viewport
 		RHI::AuxiliarySwapchainDesc desc;
 		desc.WindowHandle = viewport->PlatformHandleRaw;
-		viewport->RendererUserData = RHI::Device::CreateAuxiliarySwapchain(Death::move(desc),
-			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
+		const Vector2i pixelSize = GetPlatformWindowPixelSize(viewport, viewport->Size);
+		viewport->RendererUserData = RHI::Device::CreateAuxiliarySwapchain(Death::move(desc), pixelSize.X, pixelSize.Y);
 	}
 
 	void ImGuiDrawing::OnDestroyPlatformWindow(ImGuiViewport* viewport)
@@ -837,7 +857,8 @@ namespace nCine
 
 	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
 	{
-		RHI::Device::ResizeAuxiliarySwapchain(viewport->RendererUserData, std::int32_t(size.x), std::int32_t(size.y));
+		const Vector2i pixelSize = GetPlatformWindowPixelSize(viewport, size);
+		RHI::Device::ResizeAuxiliarySwapchain(viewport->RendererUserData, pixelSize.X, pixelSize.Y);
 	}
 
 	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
@@ -863,6 +884,9 @@ namespace nCine
 		if (fbWidth <= 0 || fbHeight <= 0) {
 			return;
 		}
+
+		// A move to a monitor with another DPI changes the pixel size without any Renderer_SetWindowSize call
+		RHI::Device::ResizeAuxiliarySwapchain(viewport->RendererUserData, fbWidth, fbHeight);
 
 		// Point the device at this window's back-buffer, draw into it with the shared direct path, then hand the
 		// device back to the main window. The swap chain is presented afterwards, from Renderer_SwapBuffers -
@@ -929,8 +953,8 @@ namespace nCine
 		// window, which the platform backend creates because the RHI is Vulkan resp. Metal)
 		RHI::AuxiliarySwapchainDesc desc;
 		desc.WindowHandle = ImGuiSdlInput::GetPlatformWindowHandle(viewport);
-		data->Swapchain = RHI::Device::CreateAuxiliarySwapchain(Death::move(desc),
-			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
+		const Vector2i pixelSize = GetPlatformWindowPixelSize(viewport, viewport->Size);
+		data->Swapchain = RHI::Device::CreateAuxiliarySwapchain(Death::move(desc), pixelSize.X, pixelSize.Y);
 		viewport->RendererUserData = data;
 	}
 
@@ -946,7 +970,8 @@ namespace nCine
 	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
 	{
 		if (PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData)) {
-			RHI::Device::ResizeAuxiliarySwapchain(data->Swapchain, std::int32_t(size.x), std::int32_t(size.y));
+			const Vector2i pixelSize = GetPlatformWindowPixelSize(viewport, size);
+			RHI::Device::ResizeAuxiliarySwapchain(data->Swapchain, pixelSize.X, pixelSize.Y);
 		}
 	}
 
@@ -979,6 +1004,8 @@ namespace nCine
 			data->Framebuffer->AttachColorTexture(*data->Target, 0);
 			data->Width = fbWidth;
 			data->Height = fbHeight;
+			// A move to a monitor with another DPI changes the pixel size without any Renderer_SetWindowSize call
+			RHI::Device::ResizeAuxiliarySwapchain(data->Swapchain, fbWidth, fbHeight);
 		}
 
 		const Recti previousViewport = RHI::Device::GetViewport();

@@ -574,12 +574,7 @@ namespace Jazz2::Scripting
 			bool get_antiGrav() const;
 			/** @brief Sets whether gravity is turned off for the player */
 			bool set_antiGrav(bool value);
-			/**
-			 * @brief Returns whether the player is invisible
-			 *
-			 * @partialsupport Currently it reports whether the player is invulnerable instead, and assigning it has no
-			 * effect.
-			 */
+			/** @brief Returns whether the player is invisible, it isn't drawn then */
 			bool get_invisibility() const;
 			/** @brief Sets whether the player is invisible */
 			bool set_invisibility(bool value);
@@ -795,10 +790,10 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Starts the player's timer
 			 *
+			 * The HUD shows the time left at the top of the view, unless @ref onDrawPlayerTimer() draws it.
 			 * @param ticks Time on the timer in ticks
 			 * @param startPaused Whether the timer starts paused
 			 * @return @ref TIMER::PAUSED if `startPaused` is true, @ref TIMER::STARTED otherwise
-			 * @partialsupport The timer isn't shown on the HUD.
 			 */
 			std::uint32_t timerStart(std::int32_t ticks, bool startPaused);
 			/**
@@ -848,10 +843,10 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Activates the bosses of the level
 			 *
-			 * Works like the player touching an Activate Boss event.
-			 * @param activate Currently ignored, the bosses are activated either way
+			 * Works like the player touching an Activate Boss event. With `activate` false only the player's
+			 * @ref bossActivated is cleared, which hides the boss meter, the bosses go on.
+			 * @param activate Whether to activate the bosses or end the boss fight of the player
 			 * @return Always true
-			 * @partialsupport The `activate` parameter is currently ignored.
 			 */
 			bool activateBoss(bool activate);
 			/**
@@ -1081,7 +1076,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns whether this player can hurt the given player
 			 *
-			 * @partialsupport Currently always returns false.
+			 * Always false in single player and cooperation. Otherwise the rules of the game mode apply, for example
+			 * nobody but the ring holder and the bottom feeder in Roast Tag, or nobody in jail in Jailbreak.
 			 */
 			bool isEnemy(const jjPLAYER* victim) const;
 
@@ -1143,7 +1139,6 @@ namespace Jazz2::Scripting
 			// `ySpeed` a behavior of an object set and the tick it did, the player moves by it from the next tick
 			float _pendingYSpeed = 0.0f;
 			std::int32_t _pendingYSpeedTick = 0;
-			bool _hasPendingYSpeed = false;
 
 			void ApplyYSpeed(float value);
 
@@ -1155,6 +1150,8 @@ namespace Jazz2::Scripting
 			// `bossActive` as it was given to the script last, a change of the script stays
 			bool _syncedBossActive = false;
 			bool _syncedOnce = false;
+			// `_pendingYSpeed` is set
+			bool _hasPendingYSpeed = false;
 			// The object the player pushed in that tick, `platform` names it (see jjOBJ::beSolid())
 			std::int32_t _pushedObject = 0;
 			std::int32_t _pushedTick = INT32_MIN;
@@ -1169,6 +1166,8 @@ namespace Jazz2::Scripting
 			std::uint8_t _spriteParam = 0;
 			// `onPlayerDraw()` of the script draws the player in this tick, the player doesn't draw itself (see SetDrawnByScript())
 			bool _drawnByScript = false;
+			// `invisibility`, the player isn't drawn
+			bool _invisible = false;
 
 			// Hands the update of a player of SPRITE::INVISIBLE back to the player, which isn't drawn then
 			class InvisibleOverride;
@@ -1188,6 +1187,14 @@ namespace Jazz2::Scripting
 
 			// Gives the properties what the player is now, except `bossActive` if a script changed it
 			void SyncPropertiesToBackingStore();
+
+		public:
+			// Sets the maximum health of the player (`/smhealth`), a player at full health stays at full health
+			void SetMaxHealth(std::int32_t value);
+			// Whether the script ended the boss fight of a boss of the game for the player (activateBoss(false))
+			bool HidesNativeBossMeter() const {
+				return (_syncedOnce && _syncedBossActive && !bossActive);
+			}
 		};
 
 		/**

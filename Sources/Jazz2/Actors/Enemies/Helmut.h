@@ -25,17 +25,24 @@ namespace Jazz2::Actors::Enemies
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		float GetTurnLookAhead() const override {
+			return 13.0f;
+		}
+		// Measured in JJ2+: it ignores Stop Enemy left of where it started
+		bool StopsAtStopEnemy() const override {
+			return _pos.X > _originX;
+		}
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = 0.9f;
+		static constexpr float DefaultSpeed = 0.91f * TicksPerFrame;
 
-		bool _idling;
 		float _stateTime;
+		float _originX;
+		bool _idling;
 		bool _stuck;
-		float _turnCooldown;
 	};
 }

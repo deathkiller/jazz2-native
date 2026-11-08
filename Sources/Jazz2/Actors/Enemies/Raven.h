@@ -6,10 +6,10 @@ namespace Jazz2::Actors::Enemies
 {
 	/**
 		@brief Raven
-		
-		Black bird that hovers in place with a gentle bobbing motion and, when a player comes within
-		range, swoops down to attack from above before gliding back to its origin, staying clear of the
-		water. Takes a couple of hits to defeat.
+
+		Black bird that rises above its perch when a player comes within range and flies back and forth
+		over them. From time to time it glides down at the player and then swoops back to its perch,
+		staying clear of the water. Takes a couple of hits to defeat.
 	*/
 	class Raven : public EnemyBase
 	{
@@ -30,11 +30,21 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		Vector2f _originPos, _lastPos, _targetPos, _lastSpeed;
-		float _anglePhase;
-		float _attackTime;
-		bool _attacking;
+		enum class RavenState : std::uint8_t {
+			Perched,
+			Patrolling,
+			Gliding,
+			Swooping
+		};
 
-		void AttackNearestPlayer();
+		Vector2f _originPos, _speedPerTick;
+		std::int32_t _counter;
+		float _tickTime;
+		RavenState _ravenState;
+
+		void AdvanceTick();
+		void ChangeState(RavenState state);
+		bool FindTarget(Vector2f& targetPos, float maxDistanceSqr);
+		void Face(bool left);
 	};
 }

@@ -29,8 +29,8 @@ Drawing hooks are called every frame for the view of each local player and get a
 
 - @ref onDrawLayer1() to @ref onDrawLayer8() --- draw into the level at the given layer, from the background at the back
 	to layer 1 at the front
-- @ref onDrawAmmo(), @ref onDrawHealth(), @ref onDrawLives(), @ref onDrawScore() --- draw parts of the HUD. Returning
-	`true` replaces the part the game would draw, returning `false` keeps it.
+- @ref onDrawAmmo(), @ref onDrawHealth(), @ref onDrawLives(), @ref onDrawScore(), @ref onDrawPlayerTimer() --- draw
+	parts of the HUD. Returning `true` replaces the part the game would draw, returning `false` keeps it.
 
 @section hooks-events Events and objects
 
@@ -38,6 +38,7 @@ Drawing hooks are called every frame for the view of each local player and get a
 - @ref onObjectHit() --- when a player or a bullet hits an object with @ref jjOBJ::scriptedCollisions
 - @ref onPlayerTimerEnd() --- when the timer of a player started by @ref jjPLAYER::timerStart() runs out
 - @ref onRoast() --- when a player dies
+- @ref onCheat() --- when a player enters a cheat code
 
 A class implementing @ref jjBEHAVIORINTERFACE becomes a behavior of an object, the game then calls its
 @ref jjBEHAVIORINTERFACE::onBehave() method every tick, and optionally its @ref jjBEHAVIORINTERFACE::onDraw() and
@@ -47,11 +48,11 @@ A class implementing @ref jjBEHAVIORINTERFACE becomes a behavior of an object, t
 
 The following hooks of other games are never called, a script may define them, but they have no effect:
 
-- `onChat()`, `onLocalChat()`, `onCheat()` --- chat messages and cheats
+- `onChat()`, `onLocalChat()` --- chat messages
 - `onGameStart()`, `onGameStop()` --- starting and stopping of a multiplayer game
 - `onReceive()`, `onGetPublicInterface()` --- communication between scripts and over the network
 - `onHelp()` --- help pages
-- `onDrawPlayerTimer()`, `onDrawGameModeHUD()` --- the game never draws these parts of the HUD through a script
+- `onDrawGameModeHUD()` --- the game never draws this part of the HUD through a script
 
 @note A few hooks are called with less information than they could have, or not in all game modes, see
 @ref onRoast() and @ref onDrawScore().

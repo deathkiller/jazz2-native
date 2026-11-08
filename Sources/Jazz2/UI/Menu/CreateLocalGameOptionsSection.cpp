@@ -185,6 +185,26 @@ namespace Jazz2::UI::Menu
 				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				case MpGameMode::Cooperation: return _("Cooperation");
 				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::RoastTag: return _("Roast Tag");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::LastRabbitStanding: return _("Last Rabbit Standing");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::ExtendedLastRabbitStanding: return _("Extended Last Rabbit Standing");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::Pestilence: return _("Pestilence");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::TeamLastRabbitStanding: return _("Team Last Rabbit Standing");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::Jailbreak: return _("Jailbreak");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::DeathCaptureTheFlag: return _("Death Capture The Flag");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::FlagRun: return _("Flag Run");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::Domination: return _("Domination");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
+				case MpGameMode::HeadHunters: return _("Head Hunters");
+				// TRANSLATORS: Option for Game Mode item in Create Local Splitscreen Game section
 				default: return _("Battle");
 			}
 		}

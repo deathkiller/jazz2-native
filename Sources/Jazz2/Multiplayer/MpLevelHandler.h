@@ -133,6 +133,7 @@ namespace Jazz2::Multiplayer
 		bool CanPlayersCollide() const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
+		bool CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter) override;
 		float GetHurtInvulnerableTime() const override;
 		bool GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const override;
 
@@ -213,6 +214,49 @@ namespace Jazz2::Multiplayer
 		Vector2f GetSpawnPoint(Actors::Player* player) override;
 		float GetElapsedFrames() const override;
 		void EndGame(Actors::Player* winner) override;
+		StringView GetPlayerName(Actors::Player* player) override;
+		Actors::Player* FindPlayerByIndex(std::uint32_t playerIndex) override;
+		Vector2f GetTeamBasePosition(std::uint8_t team) override;
+		void ShowAlertToAllPlayers(StringView text) override;
+		void SendMessageToAllPlayers(StringView text) override;
+		void SyncPlayerModeState(Actors::Player* player) override;
+		void SyncTeamScores() override;
+		SmallVectorImpl<GameModes::GameModeObject>& GetGameModeObjects() override;
+		std::uint32_t CreateGameModeObjectId() override;
+		void SyncGameModeObjects() override;
+		void FindEventPositions(EventType eventType, SmallVectorImpl<Pair<Vector2f, std::uint16_t>>& positions) override;
+		void FindCapturePoints(SmallVectorImpl<GameModes::CapturePointInfo>& points) override;
+		void FindSpawnPoints(SmallVectorImpl<Vector2f>& positions) override;
+		void FindOriginalEvents(std::uint8_t jj2EventId, SmallVectorImpl<Pair<Vector2i, std::uint32_t>>& events) override;
+		void WarpPlayer(Actors::Player* player, Vector2f pos) override;
+		std::int32_t CountPlayersWithRole(GameModes::PlayerModeFlags flag, std::uint8_t team) override;
+		bool FindPlayerWithRole(GameModes::PlayerModeFlags flag, Vector2f& pos) override;
+		bool IsOvertime() const override;
+		bool CanStartOvertime() const override;
+		std::uint32_t GetOvertimeScoreCap() const override;
+		void SetOvertimeScoreCap(std::uint32_t score) override;
+		/** @brief Returns `true` if two players push each other when they touch, under the rules of the current game mode */
+		bool CanPlayersPush(Actors::Player* a, Actors::Player* b);
+		void KillPlayer(Actors::Player* player) override;
+		std::int32_t GetPlayerGemCount(Actors::Player* player) override;
+		void ClearPlayerGems(Actors::Player* player) override;
+		void AddPlayerGems(Actors::Player* player, std::int32_t count) override;
+		void SpawnGems(Vector2f pos, std::int32_t count, Actors::Player* owner) override;
+		void SetPlayerOut(Actors::Player* player, bool out) override;
+
+		/** @brief Returns the score of the team as the HUD shows it, on clients as last synchronized */
+		std::uint32_t GetSyncedTeamScore(std::uint8_t team) const {
+			return (team < _teamScores.size() ? _teamScores[team] : 0);
+		}
+
+		/** @brief Returns `true` if @p attacker may hurt @p victim under the rules of the current game mode */
+		bool CanPlayerDamagePlayer(Actors::Player* victim, Actors::Player* attacker);
+		/** @brief Returns the damage of one hit of @p amount under the rules of the current game mode */
+		std::int32_t GetPlayerDamage(Actors::Player* victim, Actors::Player* attacker, std::int32_t amount);
+		/** @brief Called when @p attacker hurt @p victim */
+		void HandlePlayerHitByPlayer(Actors::Player* victim, Actors::Player* attacker);
+		/** @brief Called before a pit nobody caused roasts the player, returns `true` if the game mode kept it alive */
+		bool HandlePlayerHazardDeath(Actors::Player* player);
 
 		/** @brief Returns the number of laps required to finish a race (Race/TeamRace) */
 		std::uint32_t GetTotalLaps() const;
@@ -459,10 +503,18 @@ namespace Jazz2::Multiplayer
 
 		struct PlayerName {
 			String Name;
-			std::uint8_t Flags;
 			std::uint32_t FurColor;
+			std::uint8_t Flags;
 			std::uint8_t Team;
 			bool IsSpectating;		// Synced separately (PlayerPropertyType::Spectate), spectators are not drawn or followed
+			std::uint8_t ModeFlags;	// Synced separately (PlayerPropertyType::ModeState), see GameModes::PlayerModeFlags
+		};
+
+		// Server + Client: local actor showing a GameModeObject, see UpdateGameModeObjectVisuals()
+		struct GameModeObjectVisual {
+			std::uint32_t Id;
+			GameModes::GameModeObjectType Type;
+			std::shared_ptr<Actors::ActorBase> Actor;
 		};
 
 		struct PlayerPositionInRound {
@@ -604,6 +656,19 @@ namespace Jazz2::Multiplayer
 		std::uint32_t _ctfCaptures[MaxTeamCount];	// Server: per-team capture count (used as the team score in CTF)
 		std::uint32_t _teamKills[MaxTeamCount];		// Server: per-team kill count credited at kill time (team score in TeamBattle; independent of current membership so switching teams can't transfer a score)
 		SmallVector<CtfClientFlag, 0> _ctfFlagStates; // Server + Client: per-team flag info for the HUD and carried-flag attachment
+		SmallVector<GameModes::GameModeObject, 0> _gameModeObjects;		// Server: owned by the game mode; Client: mirrored
+		SmallVector<GameModeObjectVisual, 0> _gameModeObjectVisuals;	// Server + Client: local actors showing _gameModeObjects
+		// Server: trigger zones of the bottom row of the level with special meaning, see ResolveSpecialTriggers()
+		SmallVector<std::uint8_t, 0> _clientOffTriggers;
+		std::uint32_t _lastGameModeObjectId;
+		std::uint32_t _overtimeScoreCap;			// Server + Client: score that wins the overtime, 0 if not capped
+		std::int16_t _teamTriggerId;				// -1 if none
+		std::int16_t _serverTriggerId;				// -1 if none
+		bool _teamTriggerOnForBlue;
+		bool _specialTriggersResolved;
+		bool _killingPlayer;						// Server: KillPlayer() is running, it's not a hazard
+		bool _silentKill;							// Server: the death isn't counted (a team change)
+		bool _modeOvertime;							// Server + Client: the round of a custom mode is in overtime
 		SmallVector<PlayerScore, 0> _scoreboard;	// Server: built periodically; Client: mirrored for the scoreboard
 		float _scoreboardSyncTime;					// Server: countdown until the next scoreboard broadcast
 		SmallVector<RoundResult, 0> _roundResults;	// Server: built when the round ends; Client: mirrored for the HUD
@@ -696,19 +761,34 @@ namespace Jazz2::Multiplayer
 		std::uint8_t FindSmallestTeam(Actors::Multiplayer::MpPlayer* exclude);
 		std::uint8_t ResolveTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requested);
 		bool ChangePlayerTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin);
+		/** @brief Moves a player who changed the team to the new team's spawn point (while the round is running) */
+		void RespawnOnNewTeam(Actors::Multiplayer::MpPlayer* player);
 		void RebalanceTeams(bool force);
 		void BroadcastPlayerTeam(Actors::Multiplayer::MpPlayer* player);
-		std::uint32_t ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const;
-		void RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team);
+		std::uint32_t ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team, std::uint8_t modeFlags = 0) const;
+		void RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team, std::uint8_t modeFlags = 0);
 		std::uint32_t GetTeamScore(std::uint8_t team) override;
-		void SyncTeamScores();
+
+		/** @brief Sends the mode fields of @ref MpPlayerState of the player to all peers */
+		void BroadcastPlayerModeState(Actors::Multiplayer::MpPlayer* mpPlayer);
+		/** @brief Applies @ref ServerConfiguration::PunishSelfDeaths to a player who died to a pit, a hazard or by its own hand */
+		void ApplySelfDeathPenalty(Actors::Multiplayer::MpPlayer* player);
+		/** @brief Either takes a point from the team, or gives one to every other team (if enabled) */
+		void ApplyDeathPenalty(std::uint8_t team, bool ownTeamLoses, bool enabled);
+		/** @brief Returns `true` if the player is out of the round, by elimination or by the game mode */
+		bool IsPlayerEliminated(Actors::Multiplayer::MpPlayer* player);
+		/** @brief Returns the mode-specific ranking metric of the player */
+		std::uint32_t GetPlayerRoundScore(Actors::Multiplayer::MpPlayer* player);
+		/** @brief Creates, moves and destroys the local actors that show the objects of the game mode */
+		void UpdateGameModeObjectVisuals();
+		/** @brief Destroys all objects of the game mode and their actors */
+		void ClearGameModeObjects();
 
 		void BuildCtfBases();
 		void UpdateCtf(float timeMult);
 		void UpdateCtfClient();
 		void DropCtfFlag(Actors::Player* player);
 		void BuildScoreboard();
-		void ShowAlertToAllPlayers(StringView text);
 		void SetControllableToAllPlayers(bool enable);
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
@@ -752,10 +832,18 @@ namespace Jazz2::Multiplayer
 		 * @p onlyTeam is not @cpp -1 @ce, only members of that team are collected.
 		 */
 		StringView BuildWebhookStandings(SmallVectorImpl<WebhookClient::LeaderboardEntry>& entries, std::int32_t onlyTeam = -1);
-		void CheckGameEnds();
+		void CheckGameEnds() override;
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameWithTeam(std::uint8_t team) override;
 		void EndGameOnTimeOut();
+		/** @brief Starts the overtime of a custom mode when its time limit ran out */
+		void StartModeOvertime();
+		/** @brief Finds the team trigger, the server trigger and the other trigger zones of the bottom row of the level */
+		void ResolveSpecialTriggers();
+		/** @brief Returns the state of a trigger as the client of the peer has it */
+		bool GetTriggerStateForPeer(const PeerDescriptor& peerDesc, std::uint8_t triggerId, bool state);
+		/** @brief Sends the state of the special triggers to the peer, which depend on its team */
+		void SendSpecialTriggersToPeer(const Peer& peer);
 
 		bool ApplyFromPlaylist();
 		void RestartPlaylist();
@@ -801,6 +889,8 @@ namespace Jazz2::Multiplayer
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
 		static std::int32_t GetTreasureWeight(std::uint8_t gemType);
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
+		/** @brief Sets the health and the max health of a player at the start of a round or when it joins */
+		void ApplyInitialHealth(Actors::Player* player);
 		void InitializeValidateAssetsPacket(MemoryStream& packet);
 		void InitializeLoadLevelPacket(MemoryStream& packet);
 		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, Actors::ActorBase* actor);
@@ -855,6 +945,7 @@ namespace Jazz2::Multiplayer
 		bool HandleServerPacketUpdatePositionsInRound(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncMinimapTrack(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTeamScores(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncGameModeObjects(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncRoundResults(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);

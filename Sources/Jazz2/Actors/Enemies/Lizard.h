@@ -25,6 +25,13 @@ namespace Jazz2::Actors::Enemies
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		// Measured in JJ2+: it walks through Stop Enemy and turns only at walls and ledges
+		bool StopsAtStopEnemy() const override {
+			return false;
+		}
+		float GetTurnLookAhead() const override {
+			return 0.0f;
+		}
 		void OnUpdateHitbox() override;
 		void OnHitFloor(float timeMult) override;
 		void OnHitWall(float timeMult) override;
@@ -33,7 +40,7 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = 1.0f;
+		static constexpr float DefaultSpeed = TicksPerFrame;
 
 		bool _stuck;
 		bool _isFalling;

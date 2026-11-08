@@ -8,7 +8,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Demon::Demon()
-		: _attackTime(80.0f), _attacking(false), _stuck(false), _turnCooldown(0.0f)
+		: _attackTime(IdleTicks / TicksPerFrame), _walkTime(0.0f), _attacking(false), _stuck(false)
 	{
 	}
 
@@ -41,68 +41,80 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransition == nullptr) {
-			if (_attacking) {
-				if (_attackTime <= 0.0f) {
-					_attacking = false;
-					_attackTime = Random().NextFloat(60.0f, 90.0f);
+		if (!_attacking) {
+			// Measured in JJ2+: it slides to a stop
+			_speed.X *= powf(BrakeFactor, timeMult * TicksPerFrame);
+		}
 
-					_speed.X = 0.0f;
+		if (_currentTransition != nullptr) {
+			return;
+		}
 
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741826, false);
-				} else if (GetState(ActorState::CanJump)) {
-					if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
-						if (_stuck) {
-							MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
-						} else if (_turnCooldown <= 0.0f) {
-							SetFacingLeft(!IsFacingLeft());
-							_speed.X = (IsFacingLeft() ? -1.8f : 1.8f);
-							_turnCooldown = 90.0f;
-							_stuck = true;
-						} else {
-							_attacking = false;
-							_attackTime = 90.0f - _turnCooldown;
-							_turnCooldown = 0.0f;
+		if (_attacking) {
+			_speed.X = (IsFacingLeft() ? -WalkSpeed : WalkSpeed) * TicksPerFrame;
 
-							_speed.X = 0.0f;
-
-							SetAnimation(AnimState::Idle);
-							SetTransition((AnimState)1073741826, false);
-						}
+			if (GetState(ActorState::CanJump)) {
+				if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
+					if (_stuck) {
+						MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 					} else {
-						_stuck = false;
-					}
-
-					_attackTime -= timeMult;
-				}
-			} else {
-				if (_attackTime <= 0.0f) {
-					for (auto& player : _levelHandler->GetPlayers()) {
-						if (player->GetHealth() <= 0) {
-							continue;
-						}
-
-						Vector2f newPos = player->GetPos();
-						if ((newPos - _pos).Length() <= 300.0f) {
-							_attacking = true;
-							_attackTime = Random().NextFloat(130.0f, 180.0f);
-
-							SetFacingLeft(newPos.X < _pos.X);
-							_speed.X = (IsFacingLeft() ? -1.8f : 1.8f);
-
-							SetAnimation((AnimState)1073741824);
-							SetTransition((AnimState)1073741825, false);
-							break;
-						}
+						SetFacingLeft(!IsFacingLeft());
+						_speed.X = (IsFacingLeft() ? -WalkSpeed : WalkSpeed) * TicksPerFrame;
+						_walkTime = 0.0f;
+						_stuck = true;
 					}
 				} else {
-					_attackTime -= timeMult;
+					_stuck = false;
+				}
+			}
+
+			// Measured in JJ2+: it stops only after walking away from the player for a while
+			_walkTime += timeMult;
+			if (_walkTime >= MinWalkAwayTicks / TicksPerFrame && IsWalkingAwayFromPlayer()) {
+				_attacking = false;
+				_attackTime = IdleTicks / TicksPerFrame;
+
+				SetAnimation(AnimState::Idle);
+				SetTransition((AnimState)1073741826, false);
+			}
+		} else if (_attackTime > 0.0f) {
+			_attackTime -= timeMult;
+		} else {
+			for (auto& player : _levelHandler->GetPlayers()) {
+				if (player->GetHealth() <= 0) {
+					continue;
+				}
+
+				Vector2f newPos = player->GetPos();
+				if ((newPos - _pos).Length() < 256.0f) {
+					_attacking = true;
+					_walkTime = 0.0f;
+
+					SetFacingLeft(newPos.X < _pos.X);
+					_speed.X = 0.0f;
+
+					SetAnimation((AnimState)1073741824);
+					SetTransition((AnimState)1073741825, false);
+					break;
 				}
 			}
 		}
+	}
 
-		_turnCooldown -= timeMult;
+	bool Demon::IsWalkingAwayFromPlayer() const
+	{
+		bool found = false;
+		for (auto& player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+			float dx = player->GetPos().X - _pos.X;
+			if (std::abs(dx) <= StopDistance || (dx < 0.0f) == IsFacingLeft()) {
+				return false;
+			}
+			found = true;
+		}
+		return found;
 	}
 
 	void Demon::OnSerializeState(Stream& dest)
@@ -110,7 +122,7 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteValueAsLE<float>(_attackTime);
-		dest.WriteValueAsLE<float>(_turnCooldown);
+		dest.WriteValueAsLE<float>(_walkTime);
 
 		std::uint8_t flags = 0;
 		if (_attacking) flags |= 0x01;
@@ -123,7 +135,7 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_attackTime = src.ReadValueAsLE<float>();
-		_turnCooldown = src.ReadValueAsLE<float>();
+		_walkTime = src.ReadValueAsLE<float>();
 
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 		_attacking = ((flags & 0x01) != 0);

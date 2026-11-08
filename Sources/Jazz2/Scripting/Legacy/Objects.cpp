@@ -2639,6 +2639,19 @@ namespace Jazz2::Scripting
 		return false;
 	}
 
+	bool LevelScriptLoader::HidesNativeBossMeter() const
+	{
+		bool hidden = false;
+		for (Actors::Player* player : _levelHandler->_players) {
+			auto it = _playerBackingStore.find(player->GetPlayerIndex());
+			if (it == _playerBackingStore.end() || !it->second->HidesNativeBossMeter()) {
+				return false;
+			}
+			hidden = true;
+		}
+		return hidden;
+	}
+
 	bool LevelScriptLoader::OnBossAreaActivated()
 	{
 		if (GetContextType() != ScriptContextType::Legacy) {
@@ -3249,17 +3262,30 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectProperty("jjPARTICLETILE", "uint8 quadrant", 0);
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 get_tileID() const", asMETHOD(TparticleTILE, get_AStile), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPARTICLETILE", "uint16 set_tileID(uint16)", asMETHOD(TparticleTILE, set_AStile), asCALL_THISCALL);
-		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLETILE tile", asOFFSET(jjPARTICLE, GENERIC));
+		engine->RegisterObjectProperty("jjPARTICLE", "jjPARTICLETILE tile", asOFFSET(jjPARTICLE, GENERIC));*/
 
-		engine->RegisterObjectType("jjCONTROLPOINT", sizeof(_controlPoint), asOBJ_REF | asOBJ_NOCOUNT);
-		engine->RegisterGlobalFunction("const jjCONTROLPOINT@ get_jjControlPoints(int)", asFUNCTION(getControlPoint), asCALL_CDECL);
-		engine->RegisterObjectProperty("jjCONTROLPOINT", "const string name", asOFFSET(_controlPoint, name));
-		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int xTile", asOFFSET(_controlPoint, xTile));
-		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int yTile", asOFFSET(_controlPoint, yTile));
-		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int direction", asOFFSET(_controlPoint, direction));
-		engine->RegisterObjectProperty("jjCONTROLPOINT", "const TEAM::Color controlTeam", asOFFSET(_controlPoint, controlTeam));
-		engine->RegisterObjectMethod("jjCONTROLPOINT", "float get_xPos() const", AS_OBJ_FLOAT_GETTER(_controlPoint, pos.x), asCALL_CDECL_OBJLAST);
-		engine->RegisterObjectMethod("jjCONTROLPOINT", "float get_yPos() const", AS_OBJ_FLOAT_GETTER(_controlPoint, pos.y), asCALL_CDECL_OBJLAST);*/
+		/** @brief Control point of Domination, see @ref jjControlPoints */
+		engine->RegisterObjectType("jjCONTROLPOINT", sizeof(jjCONTROLPOINT), asOBJ_REF | asOBJ_NOCOUNT);
+		/**
+		 * @brief Control points of Domination, ordered from top to bottom and then from left to right
+		 *
+		 * There are always 16 of them, an unused one has an empty name, zero positions and `TEAM::NEUTRAL`.
+		 */
+		engine->RegisterGlobalFunction("const jjCONTROLPOINT@ get_jjControlPoints(int)", asFUNCTION(LevelScriptLoader::GetControlPoint), asCALL_CDECL);
+		/** @brief Name of the control point, the help string of its Text event or "Control Point N" */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const string name", asOFFSET(jjCONTROLPOINT, name));
+		/** @brief Horizontal tile position */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int xTile", asOFFSET(jjCONTROLPOINT, xTile));
+		/** @brief Vertical tile position */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int yTile", asOFFSET(jjCONTROLPOINT, yTile));
+		/** @brief Facing direction, 1 for right, -1 for left */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const int direction", asOFFSET(jjCONTROLPOINT, direction));
+		/** @brief Team holding the control point, `TEAM::NEUTRAL` for nobody */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const TEAM::Color controlTeam", asOFFSET(jjCONTROLPOINT, controlTeam));
+		/** @brief Horizontal position in pixels, the middle of the tile */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const float xPos", asOFFSET(jjCONTROLPOINT, xPos));
+		/** @brief Vertical position in pixels, the middle of the tile */
+		engine->RegisterObjectProperty("jjCONTROLPOINT", "const float yPos", asOFFSET(jjCONTROLPOINT, yPos));
 	}
 }
 

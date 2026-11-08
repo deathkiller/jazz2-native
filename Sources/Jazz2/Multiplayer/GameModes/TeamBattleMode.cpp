@@ -42,9 +42,10 @@ namespace Jazz2::Multiplayer::GameModes
 			return GameEndResult::None();
 		}
 
-		// First team to reach the kill target (combined member kills) wins
+		// First team to reach the kill target (combined member kills) wins, the cap in overtime
+		std::uint32_t target = GetKillTarget(ctx);
 		for (std::uint8_t team = 0; team < teamCount; team++) {
-			if (ctx.GetTeamScore(team) >= config.TotalKills) {
+			if (ctx.GetTeamScore(team) >= target) {
 				return { true, true, nullptr, team };
 			}
 		}

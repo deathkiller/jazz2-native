@@ -273,12 +273,15 @@ namespace Jazz2::Editor
 		String _name;
 		std::int32_t _index;
 		bool _insert;
+		bool _hasNewSplines;
 		// The layer while it isn't in the level
 		CompressedBuffer _layer;
-		// Ground lines before and after the change, the latter known once it was done
+		// Ground lines and the settings of the level (the layer of the water) before and after the change, the latter known
+		// once it was done
 		SmallVector<std::uint8_t, 0> _oldSplines;
 		SmallVector<std::uint8_t, 0> _newSplines;
-		bool _hasNewSplines;
+		SmallVector<std::uint8_t, 0> _oldSettings;
+		SmallVector<std::uint8_t, 0> _newSettings;
 
 		InsertLayerCommand(String name, std::int32_t index, bool insert);
 

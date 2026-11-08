@@ -8,7 +8,8 @@ namespace Jazz2::Multiplayer
 		@brief Multiplayer game mode
 
 		Selects the win condition and team rules of a multiplayer round, from free-for-all and team variants
-		of Battle, Race and Treasure Hunt to Capture The Flag and Cooperation.
+		of Battle, Race and Treasure Hunt to Capture The Flag, Jailbreak, Domination and Cooperation.
+		The value is sent over the network, so new modes are only appended.
 	*/
 	enum class MpGameMode
 	{
@@ -21,7 +22,18 @@ namespace Jazz2::Multiplayer
 		TreasureHunt,		/**< Treasure Hunt */
 		TeamTreasureHunt,	/**< Team Treasure Hunt */
 		CaptureTheFlag,		/**< Capture The Flag */
-		Cooperation			/**< Cooperation */
+		Cooperation,		/**< Cooperation */
+
+		RoastTag,						/**< Roast Tag */
+		LastRabbitStanding,				/**< Last Rabbit Standing */
+		ExtendedLastRabbitStanding,		/**< Extended Last Rabbit Standing */
+		Pestilence,						/**< Pestilence */
+		TeamLastRabbitStanding,			/**< Team Last Rabbit Standing */
+		Jailbreak,						/**< Jailbreak */
+		DeathCaptureTheFlag,			/**< Death Capture The Flag */
+		FlagRun,						/**< Flag Run */
+		Domination,						/**< Domination */
+		HeadHunters						/**< Head Hunters */
 	};
 }
 

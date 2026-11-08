@@ -902,6 +902,9 @@ VsOutput main(VsInput _input)
 }
 )",
 				R"(uniform float4 uAmbientColor;
+uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -967,8 +970,8 @@ float4 main(PsInput _input) : COLOR
 	vWavePhases = _input.vWavePhases;
 	vWaterLine = _input.vWaterLine;
 	vConstants = _input.vConstants;
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
+	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
 	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
 	float belowWaterLine = vWaterLine.y - waveHeight;
 	float aaSlope = vConstants.y;
@@ -1081,6 +1084,9 @@ VsOutput main(VsInput _input)
 }
 )",
 				R"(uniform float4 uAmbientColor;
+uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1146,8 +1152,8 @@ float4 main(PsInput _input) : COLOR
 	vWavePhases = _input.vWavePhases;
 	vWaterLine = _input.vWaterLine;
 	vConstants = _input.vConstants;
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
+	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
 	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
 	float belowWaterLine = vWaterLine.y - waveHeight;
 	float aaSlope = vConstants.y;
@@ -1230,6 +1236,8 @@ VsOutput main(VsInput _input)
 uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1273,8 +1281,8 @@ float4 main(PsInput _input) : COLOR
 	vTexCoords = _input.vTexCoords;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
+	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
 	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
@@ -1351,6 +1359,8 @@ VsOutput main(VsInput _input)
 uniform float uTime;
 uniform float2 uCameraPos;
 uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1394,8 +1404,8 @@ float4 main(PsInput _input) : COLOR
 	vTexCoords = _input.vTexCoords;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
+	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
 	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);

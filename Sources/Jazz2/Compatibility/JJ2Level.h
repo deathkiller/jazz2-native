@@ -345,6 +345,10 @@ namespace Jazz2::Compatibility
 		WeaponsDescription _weapons;
 		WeaponEditorData _weaponsEditorData[std::int32_t(WeaponType::Count)];
 		SmallVector<std::uint8_t, 0> _mlleSpriteRecolors;
+		// Settings of the MLLE stream, see Formats::LevelSettingsChunk - the layer of the water is the number of the layer in
+		// the original game (`jjWaterLayer`), it becomes the index of the converted layer when it's written
+		Formats::LevelSettingsChunk::Settings _mlleSettings;
+		std::int32_t _mlleWaterLayer = 1;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);
 		void LoadStaticTileData(JJ2Block& block, bool strictParser);
@@ -355,6 +359,8 @@ namespace Jazz2::Compatibility
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
 		void LoadMlleWeapons(JJ2Block& block, std::uint32_t version);
 		ConversionResult ConvertEvent(EventConverter& eventConverter, JJ2Event eventType, std::uint32_t tileParams);
+		// Returns the index of the color of the palette of the level nearest to the given one, never the transparent 0
+		std::uint8_t FindNearestLevelColor(std::uint8_t r, std::uint8_t g, std::uint8_t b) const;
 		void LoadScriptWeapons(StringView scriptPath);
 		void CheckWaterLevelAroundStart();
 		// Returns the event of a tile of the grid, `nullptr` if it has none

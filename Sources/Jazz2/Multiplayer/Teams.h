@@ -23,10 +23,22 @@ namespace Jazz2::Multiplayer
 			case MpGameMode::TeamRace:
 			case MpGameMode::TeamTreasureHunt:
 			case MpGameMode::CaptureTheFlag:
+			case MpGameMode::TeamLastRabbitStanding:
+			case MpGameMode::Jailbreak:
+			case MpGameMode::DeathCaptureTheFlag:
+			case MpGameMode::FlagRun:
+			case MpGameMode::Domination:
+			case MpGameMode::HeadHunters:
 				return true;
 			default:
 				return false;
 		}
+	}
+
+	/** @brief Returns `true` if the specified game mode uses the team flags and bases of Capture The Flag */
+	inline bool UsesCtfFlags(MpGameMode mode)
+	{
+		return (mode == MpGameMode::CaptureTheFlag || mode == MpGameMode::DeathCaptureTheFlag);
 	}
 
 	/** @brief Returns the display color of the specified team (Blue, Red, Green, Yellow) */

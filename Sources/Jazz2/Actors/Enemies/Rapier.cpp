@@ -9,8 +9,27 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr AnimState AnimLunge = (AnimState)1073741824;
+		constexpr AnimState AnimWindUp = (AnimState)1073741825;
+		constexpr AnimState AnimBrake = (AnimState)1073741826;
+
+		constexpr float AttackDistance = 180.0f;
+		constexpr float FloatRadius = 16.0f;
+		constexpr std::int32_t FloatPeriod = 1024;
+		constexpr std::int32_t FloatTicksBeforeAttack = 370;
+		constexpr std::int32_t WindUpTicks = 32;
+		constexpr std::int32_t LungeTicks = 71;
+		constexpr std::int32_t BrakeTicks = 20;
+		constexpr std::int32_t ReturnTicks = 64;
+		constexpr float LungeAccelerationX = 1.0f / 16.0f;
+		constexpr float LungeSpringY = 1.0f / 256.0f;
+		constexpr float BrakeFactor = 0.875f;
+	}
+
 	Rapier::Rapier()
-		: _anglePhase(0.0f), _attackTime(80.0f), _attacking(false), _noiseCooldown(Random().FastFloat(200.0f, 400.0f))
+		: _rapierState(RapierState::Floating), _counter(0), _floatCounter(FloatPeriod / 4), _tickTime(0.0f), _noiseCooldown(Random().FastFloat(200.0f, 400.0f))
 	{
 	}
 
@@ -26,11 +45,12 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(2);
 		_scoreValue = 300;
 
-		_originPos = _lastPos = _targetPos = _pos;
+		_originPos = _returnFrom = _pos;
 
 		async_await RequestMetadataAsync("Enemy/Rapier"_s);
 		SetFacingLeft(Random().NextBool());
-		SetAnimation(AnimState::Idle);
+		ShowFrame(AnimState::Idle, 0);
+		MoveInstantly(GetFloatPos(), MoveType::Absolute | MoveType::Force);
 
 		async_return true;
 	}
@@ -45,85 +65,143 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransition == nullptr) {
-			if (_attackTime > 0.0f) {
-				_attackTime -= timeMult;
-			} else {
-				if (_attacking) {
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741826, false, [this]() {
-						_targetPos = _originPos;
+		_tickTime += timeMult * TicksPerFrame;
+		while (_tickTime >= 1.0f) {
+			_tickTime -= 1.0f;
+			AdvanceTick();
+		}
 
-						_attackTime = Random().NextFloat(200.0f, 260.0f);
-						_attacking = false;
-					});
+		if (_noiseCooldown > 0.0f) {
+			_noiseCooldown -= timeMult;
+		} else {
+			_noiseCooldown = Random().FastFloat(300.0f, 600.0f);
+			if (Random().NextFloat() < 0.5f) {
+				PlaySfx("Noise"_s, 0.7f);
+			}
+		}
+	}
+
+	void Rapier::AdvanceTick()
+	{
+		_counter++;
+
+		switch (_rapierState) {
+			case RapierState::Floating: {
+				_floatCounter++;
+				Vector2f targetPos;
+				bool found = (_floatCounter >= FloatTicksBeforeAttack && FindTarget(targetPos));
+				MoveInstantly(GetFloatPos(), MoveType::Absolute | MoveType::Force);
+				ShowFrame(AnimState::Idle, _floatCounter / 8);
+
+				// Measured in JJ2+: it turns to the player only when it winds up
+				if (found && (targetPos - _pos).SqrLength() < AttackDistance * AttackDistance) {
+					SetFacingLeft(targetPos.X < _pos.X);
+					ChangeState(RapierState::WindingUp);
+				}
+				break;
+			}
+
+			case RapierState::WindingUp: {
+				if (_counter >= WindUpTicks) {
+					_speedPerTick = Vector2f::Zero;
+					ChangeState(RapierState::Lunging);
+					PlaySfx("Attack"_s, 0.7f);
+					ShowFrame(AnimLunge, 0);
 				} else {
-					AttackNearestPlayer();
+					ShowFrame(AnimWindUp, _counter / 4);
 				}
+				break;
 			}
 
-			if (_noiseCooldown > 0.0f) {
-				_noiseCooldown -= timeMult;
-			} else {
-				_noiseCooldown = Random().FastFloat(300.0f, 600.0f);
-
-				if (Random().NextFloat() < 0.5f) {
-					PlaySfx("Noise"_s, 0.7f);
+			case RapierState::Lunging: {
+				Vector2f targetPos;
+				if (!FindTarget(targetPos)) {
+					targetPos = _pos;
 				}
+				_speedPerTick.X += (IsFacingLeft() ? -LungeAccelerationX : LungeAccelerationX);
+				_speedPerTick.Y += (targetPos.Y - _pos.Y) * LungeSpringY;
+				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
+				ShowFrame(AnimLunge, _counter / 8);
+
+				if (_counter >= LungeTicks) {
+					ChangeState(RapierState::Braking);
+				}
+				break;
+			}
+
+			case RapierState::Braking: {
+				_speedPerTick *= BrakeFactor;
+				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
+				ShowFrame(AnimBrake, _counter / 4);
+
+				if (_counter >= BrakeTicks) {
+					_returnFrom = _pos;
+					SetFacingLeft(_originPos.X < _pos.X);
+					ChangeState(RapierState::Returning);
+				}
+				break;
+			}
+
+			case RapierState::Returning: {
+				float t = std::min((float)_counter / ReturnTicks, 1.0f);
+				Vector2f floatStart = _originPos + Vector2f(0.0f, FloatRadius);
+				MoveInstantly(_returnFrom + (floatStart - _returnFrom) * t, MoveType::Absolute | MoveType::Force);
+				ShowFrame(AnimState::Idle, _counter / 8);
+
+				if (_counter >= ReturnTicks) {
+					_floatCounter = 0;
+					ChangeState(RapierState::Floating);
+				}
+				break;
 			}
 		}
+	}
 
-		_anglePhase += timeMult * 0.02f;
+	void Rapier::ChangeState(RapierState state)
+	{
+		_rapierState = state;
+		_counter = 0;
+	}
 
-		float speedX = ((_targetPos.X - _lastPos.X) * timeMult / 26.0f + _lastSpeed.X * 1.4f) / 2.4f;
-		float speedY = ((_targetPos.Y - _lastPos.Y) * timeMult / 26.0f + _lastSpeed.Y * 1.4f) / 2.4f;
-		_lastPos.X += speedX;
-		_lastPos.Y += speedY;
-		_lastSpeed = Vector2f(speedX, speedY);
-
-		bool willFaceLeft = (_speed.X < 0.0f);
-		if (IsFacingLeft() != willFaceLeft) {
-			SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
-				SetFacingLeft(willFaceLeft);
-			});
+	void Rapier::ShowFrame(AnimState anim, std::int32_t frame)
+	{
+		SetAnimation(anim);
+		if (_renderer.FrameCount > 0) {
+			SetAnimationFrame(frame % _renderer.FrameCount);
 		}
+	}
 
-		MoveInstantly(_lastPos + Vector2f(cosApprox(_anglePhase) * 10.0f, sinApprox(_anglePhase * 2.0f) * 10.0f), MoveType::Absolute | MoveType::Force);
+	Vector2f Rapier::GetFloatPos() const
+	{
+		float angle = (float)(_floatCounter % FloatPeriod) * (fTwoPi / FloatPeriod);
+		return _originPos + Vector2f(sinf(angle) * FloatRadius, cosf(angle * 2.0f) * FloatRadius);
 	}
 
 	void Rapier::OnSerializeState(Stream& dest)
 	{
 		EnemyBase::OnSerializeState(dest);
 
-		dest.WriteValueAsLE<float>(_lastPos.X);
-		dest.WriteValueAsLE<float>(_lastPos.Y);
-		dest.WriteValueAsLE<float>(_targetPos.X);
-		dest.WriteValueAsLE<float>(_targetPos.Y);
-		dest.WriteValueAsLE<float>(_lastSpeed.X);
-		dest.WriteValueAsLE<float>(_lastSpeed.Y);
-		dest.WriteValueAsLE<float>(_anglePhase);
-		dest.WriteValueAsLE<float>(_attackTime);
-		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_rapierState);
+		dest.WriteVariableInt32(_counter);
+		dest.WriteVariableInt32(_floatCounter);
+		dest.WriteValueAsLE<float>(_speedPerTick.X);
+		dest.WriteValueAsLE<float>(_speedPerTick.Y);
+		dest.WriteValueAsLE<float>(_returnFrom.X);
+		dest.WriteValueAsLE<float>(_returnFrom.Y);
 	}
 
 	void Rapier::OnDeserializeState(Stream& src)
 	{
 		EnemyBase::OnDeserializeState(src);
 
-		_lastPos.X = src.ReadValueAsLE<float>();
-		_lastPos.Y = src.ReadValueAsLE<float>();
-		_targetPos.X = src.ReadValueAsLE<float>();
-		_targetPos.Y = src.ReadValueAsLE<float>();
-		_lastSpeed.X = src.ReadValueAsLE<float>();
-		_lastSpeed.Y = src.ReadValueAsLE<float>();
-		_anglePhase = src.ReadValueAsLE<float>();
-		_attackTime = src.ReadValueAsLE<float>();
-		_attacking = (src.ReadValue<std::uint8_t>() != 0);
-
-		// Preparing to attack was interrupted, the attack itself starts only from the transition callback
-		if (!_attacking && _currentAnimation != nullptr && _currentAnimation->State == (AnimState)1073741824) {
-			SetAnimation(AnimState::Idle);
-		}
+		std::uint8_t state = src.ReadValue<std::uint8_t>();
+		_rapierState = (state <= (std::uint8_t)RapierState::Returning ? (RapierState)state : RapierState::Floating);
+		_counter = src.ReadVariableInt32();
+		_floatCounter = src.ReadVariableInt32();
+		_speedPerTick.X = src.ReadValueAsLE<float>();
+		_speedPerTick.Y = src.ReadValueAsLE<float>();
+		_returnFrom.X = src.ReadValueAsLE<float>();
+		_returnFrom.Y = src.ReadValueAsLE<float>();
 	}
 
 	bool Rapier::OnPerish(ActorBase* collider)
@@ -135,35 +213,21 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void Rapier::AttackNearestPlayer()
+	bool Rapier::FindTarget(Vector2f& targetPos)
 	{
+		float nearestSqr = FLT_MAX;
 		bool found = false;
-		Vector2f foundPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
+		for (auto* player : _levelHandler->GetPlayers()) {
 			if (player->GetHealth() <= 0) {
 				continue;
 			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_lastPos - newPos).SqrLength() < (_lastPos - foundPos).SqrLength()) {
-				foundPos = newPos;
+			float distanceSqr = (player->GetPos() - _pos).SqrLength();
+			if (distanceSqr < nearestSqr) {
+				nearestSqr = distanceSqr;
+				targetPos = player->GetPos();
 				found = true;
 			}
 		}
-
-		Vector2f diff = (foundPos - _lastPos);
-		if (found && diff.Length() <= 200.0f) {
-			SetAnimation((AnimState)1073741824);
-			SetTransition((AnimState)1073741825, false, [this, foundPos]() {
-				_targetPos = foundPos;
-
-				_attackTime = 80.0f;
-				_attacking = true;
-
-				PlaySfx("Attack"_s, 0.7f);
-			});
-		}
+		return found;
 	}
 }

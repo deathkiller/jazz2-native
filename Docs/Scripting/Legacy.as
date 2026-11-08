@@ -129,6 +129,17 @@ void onPlayerTimerEnd(jjPLAYER@ player);
 void onRoast(jjPLAYER@ victim, jjPLAYER@ killer);
 
 /**
+	@brief Called when a player enters a cheat code in the console
+
+	Called for every code starting with `jj`, also for codes the game doesn't know, so a script can add its own.
+	Not called while cheats aren't allowed.
+	@param cheat    The code as it was entered, such as `jjnxt`
+	@return `true` if the script handled the code and the game shouldn't apply it, `false` to let the game apply it
+	@callback
+*/
+bool onCheat(string &in cheat);
+
+/**
 	@brief Called by a Script Callback event of the level, numbered from 0 to 255
 
 	The number in the name stands for the <em>Function</em> parameter of the event, so an event with number 7 calls
@@ -220,11 +231,13 @@ bool onDrawScore(jjPLAYER@ player, jjCANVAS@ canvas);
 
 /**
 	@brief Called when the HUD draws the timer of a player
+
+	Called every frame for the view of each player while the timer started by @ref jjPLAYER::timerStart() runs or is
+	paused.
 	@param player   The player whose view is drawn
 	@param canvas   Canvas covering the view of the player
 	@return `true` if the script drew its own version and the game should skip the default one
 	@callback
-	@partialsupport Never called by the game, the timer of a player isn't shown on the HUD.
 */
 bool onDrawPlayerTimer(jjPLAYER@ player, jjCANVAS@ canvas);
 

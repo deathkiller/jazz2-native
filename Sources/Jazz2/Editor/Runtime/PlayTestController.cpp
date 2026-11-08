@@ -136,8 +136,8 @@ namespace Jazz2::Editor
 		}
 
 		// Chunks the game reads from a level, see ContentResolver::TryLoadLevel(), the others are only of the editor
-		constexpr std::uint32_t GameChunkTags[] = { Formats::LevelTextsChunk::Tag, Formats::LayerPropertiesChunk::Tag, Formats::ScriptDataChunk::Tag,
-			Formats::WeaponsChunk::Tag };
+		constexpr std::uint32_t GameChunkTags[] = { Formats::LevelTextsChunk::Tag, Formats::LayerPropertiesChunk::Tag, Formats::LevelSettingsChunk::Tag,
+			Formats::ScriptDataChunk::Tag, Formats::WeaponsChunk::Tag };
 
 		void CollectGameChunks(const LevelDocument& document, SmallVectorImpl<Formats::ChunkRecord>& chunks)
 		{

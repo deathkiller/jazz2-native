@@ -6,10 +6,12 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <float.h>
+
 namespace Jazz2::Actors::Enemies
 {
 	Witch::Witch()
-		: _attackTime(0.0f), _playerHit(false)
+		: _attackTime(FirstAttackTicks / TicksPerFrame), _playerHit(false)
 	{
 	}
 
@@ -57,50 +59,64 @@ namespace Jazz2::Actors::Enemies
 			_attackTime -= timeMult;
 		}
 
-		Vector2f targetPos;
+		// Measured in JJ2+: she hangs still while casting
+		if (_currentTransition != nullptr) {
+			_speed = Vector2f::Zero;
+			return;
+		}
 
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
+		Player* target = nullptr;
+		float targetDistanceSqr = FLT_MAX;
+		for (auto* player : _levelHandler->GetPlayers()) {
 			if (player->GetHealth() <= 0) {
 				continue;
 			}
-
-			targetPos = player->GetPos();
-			// Fly above the player
-			targetPos.Y -= 100.0f;
-
-			Vector2f direction = (_pos - targetPos);
-			float length = direction.Length();
-
-			if (_attackTime <= 0.0f && length < 260.0f) {
-				_attackTime = 450.0f;
-
-				PlaySfx("MagicFire"_s);
-
-				SetTransition(AnimState::TransitionAttack, true, [this]() {
-					Vector2f bulletPos = Vector2f(_pos.X + (IsFacingLeft() ? -24.0f : 24.0f), _pos.Y);
-
-					std::shared_ptr<MagicBullet> magicBullet = std::make_shared<MagicBullet>(this);
-					magicBullet->OnActivated(ActorActivationDetails(
-						_levelHandler,
-						Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 1)
-					));
-					_levelHandler->AddActor(magicBullet);
-
-					Explosion::Create(_levelHandler, Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 2), Explosion::Type::TinyDark);
-				});
-			} else if (length > 20.0f && length < 500.0f) {
-				direction.Normalize();
-				_speed.X = (direction.X * DefaultSpeed + _speed.X) * 0.5f;
-				_speed.Y = (direction.Y * DefaultSpeed + _speed.Y) * 0.5f;
-
-				SetFacingLeft(_speed.X < 0.0f);
-				return;
+			float distanceSqr = (player->GetPos() - _pos).SqrLength();
+			if (distanceSqr < targetDistanceSqr) {
+				target = player;
+				targetDistanceSqr = distanceSqr;
 			}
 		}
+		if (target == nullptr) {
+			_speed = Vector2f::Zero;
+			return;
+		}
 
-		_speed.X = 0.0f;
-		_speed.Y = 0.0f;
+		if (_attackTime <= 0.0f && targetDistanceSqr < AttackDistance * AttackDistance) {
+			_attackTime = AttackTicks / TicksPerFrame;
+			_speed = Vector2f::Zero;
+
+			PlaySfx("MagicFire"_s);
+
+			SetTransition(AnimState::TransitionAttack, true, [this]() {
+				Vector2f bulletPos = Vector2f(_pos.X + (IsFacingLeft() ? -24.0f : 24.0f), _pos.Y);
+
+				std::shared_ptr<MagicBullet> magicBullet = std::make_shared<MagicBullet>(std::static_pointer_cast<Witch>(shared_from_this()));
+				magicBullet->OnActivated(ActorActivationDetails(
+					_levelHandler,
+					Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 1)
+				));
+				_levelHandler->AddActor(magicBullet);
+
+				Explosion::Create(_levelHandler, Vector3i((std::int32_t)bulletPos.X, (std::int32_t)bulletPos.Y, _renderer.GetLayer() + 2), Explosion::Type::TinyDark);
+			});
+			return;
+		}
+
+		// Measured in JJ2+: fast flight to a point above the player, then a slow drift around it
+		Vector2f diff = target->GetPos() - _pos;
+		diff.Y -= FlyAboveDistance;
+		float speedX = (std::abs(diff.X) > DriftDistance ? FlySpeedX : DriftSpeedX);
+		bool goLeft = (diff.X < 0.0f);
+		if (std::abs(diff.X) < DriftDistance / 2 && _speed.X != 0.0f) {
+			// She drifts on past the player for a bit instead of turning on the spot
+			goLeft = (_speed.X < 0.0f);
+		}
+		Vector2f targetSpeed = Vector2f(goLeft ? -speedX : speedX, std::clamp(diff.Y, -FlySpeedY, FlySpeedY)) * TicksPerFrame;
+		float keep = powf(0.25f, timeMult * TicksPerFrame);
+		_speed = targetSpeed + (_speed - targetSpeed) * keep;
+
+		SetFacingLeft(_speed.X < 0.0f);
 	}
 
 	void Witch::OnSerializeState(Stream& dest)
@@ -191,8 +207,14 @@ namespace Jazz2::Actors::Enemies
 	bool Witch::MagicBullet::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* player = runtime_cast<Player>(other)) {
+			// An invulnerable player isn't turned into a frog, as in JJ2+
+			if (player->IsInvulnerable()) {
+				return false;
+			}
 			DecreaseHealth(INT32_MAX);
-			_owner->OnPlayerHit();
+			if (auto owner = _owner.lock()) {
+				owner->OnPlayerHit();
+			}
 
 			player->MorphTo(PlayerType::Frog);
 			return true;

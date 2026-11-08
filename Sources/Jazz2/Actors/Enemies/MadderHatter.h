@@ -25,13 +25,18 @@ namespace Jazz2::Actors::Enemies
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		float GetTurnLookAhead() const override {
+			return 31.0f;
+		}
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = 0.7f;
+		static constexpr float DefaultSpeed = 0.76f * TicksPerFrame;
+		// Measured in JJ2+: it walks for 70 ticks between attacks
+		static constexpr float WalkTicks = 70.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't

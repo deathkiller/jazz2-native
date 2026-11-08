@@ -1803,6 +1803,36 @@
     <ClInclude Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.h">
       <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\CustomGameModeBase.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\DeathCaptureTheFlagMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\DominationMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\FlagRunMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\HeadHuntersMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\JailbreakMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\LastRabbitStandingMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\PestilenceMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\RoastTagMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamLastRabbitStandingMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\FirstRunSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -2290,6 +2320,9 @@
       <Filter>Header Files\Dependencies\jsoncpp</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Multiplayer\CtfBase.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\GameModeObjectActor.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Multiplayer\Flag.h">
@@ -3734,6 +3767,36 @@
     <ClCompile Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.cpp">
       <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\CustomGameModeBase.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\DeathCaptureTheFlagMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\DominationMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\FlagRunMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\HeadHuntersMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\JailbreakMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\LastRabbitStandingMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\PestilenceMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\RoastTagMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\TeamLastRabbitStandingMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
@@ -3945,6 +4008,9 @@
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Multiplayer\CtfBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\GameModeObjectActor.cpp">
       <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ScoreboardSection.cpp">

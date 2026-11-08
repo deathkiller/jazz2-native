@@ -463,6 +463,9 @@ namespace Jazz2::Editor
 		if (!reload && changes.HasAny(DocumentChangeKind::LevelProperties)) {
 			_editHandler->ApplyLevelProperties(_document.Properties);
 		}
+		if (!reload && changes.HasAny(DocumentChangeKind::Chunks)) {
+			_editHandler->ApplyLevelSettings(_document.GetLevelSettings());
+		}
 		if (reload) {
 			// The tiles may look otherwise when the level is loaded again, as a tile that isn't overridden anymore; the colors
 			// of the tiles stay as they are unless what they're made of changed

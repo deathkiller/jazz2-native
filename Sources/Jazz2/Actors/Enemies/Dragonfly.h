@@ -7,9 +7,9 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Dragonfly
 		
-		Flying insect that hovers and drifts erratically, then periodically buzzes and darts in a
-		straight line toward a nearby player before braking to a stop, staying above the water surface.
-		Defeated by a single hit.
+		Flying insect that bobs in place until a player comes near, then buzzes in a straight line to
+		a point beside and above the player and hovers there, following the player around. Stays above
+		the water surface. Defeated by a single hit.
 	*/
 	class Dragonfly : public EnemyBase
 	{
@@ -35,13 +35,24 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr std::int32_t StateIdle = 0;
-		static constexpr std::int32_t StateAttacking = 1;
-		static constexpr std::int32_t StateBraking = 2;
+		static constexpr std::int32_t StateFlying = 1;
+		static constexpr std::int32_t StateHovering = 2;
+		static constexpr std::int32_t StateDiving = 3;
+		static constexpr std::int32_t StateReturning = 4;
 
 		std::int32_t _state;
-		float _idleTime;
-		float _attackCooldown;
-		Vector2f _direction;
+		std::int32_t _counter;
+		std::int32_t _animTicks;
+		float _tickTime;
+		Vector2f _originPos;
+		Vector2f _basePos;
+		Vector2f _targetPos;
+		Vector2f _diveFrom;
 		std::shared_ptr<AudioBufferPlayer> _noise;
+
+		void AdvanceTick();
+		Player* FindNearestPlayer(float maxDistance, bool aboveWaterOnly) const;
+		bool FindTargetPos(Vector2f& targetPos, float maxDistance) const;
+		void StopNoise();
 	};
 }

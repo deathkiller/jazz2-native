@@ -707,6 +707,17 @@ namespace Jazz2::Scripting
 			// Whether a script set how the object is handled, the game handles it itself otherwise (see ScriptObjectHost::OnCollision())
 			bool _bulletHandlingSet = false;
 			bool _playerHandlingSet = false;
+			// A behavior moves the object itself, the speeds are its (see ScriptObjectHost::FollowScriptMovement())
+			bool _movedByBehavior = false;
+			// Made in STATE::START, shown floating as a pickup of the game until a behavior of the script runs it (see
+			// ScriptObjectHost::CallScriptBehavior())
+			bool _startPending = false;
+			// A bullet a player fired of a weapon whose bullets a script controls, see ScriptObjectHost::InitializeScriptedBullet()
+			bool _scriptedBullet = false;
+			// The template gave it a `curFrame` outside of its animation, which it keeps as JJ2+ does (see ScriptObjectHost::PullFromActor())
+			bool _ownFrame = false;
+			// How many frames ahead a behavior set `frameID` of an animation counted by the age (see ScriptObjectHost::PullFromActor())
+			std::int8_t _framePhase = 0;
 
 			// The object of the game this is the script view of (see LevelScriptLoader::GetObjectById()), none for a template
 			// or an object a script controls entirely (see _wrapper)
@@ -715,13 +726,6 @@ namespace Jazz2::Scripting
 			ScriptObjectHost* _host = nullptr;
 			// The behavior of the script running for the object (its function or object), see behave1()
 			const void* _runningBehavior = nullptr;
-			// A behavior moves the object itself, the speeds are its (see ScriptObjectHost::FollowScriptMovement())
-			bool _movedByBehavior = false;
-			// Made in STATE::START, shown floating as a pickup of the game until a behavior of the script runs it (see
-			// ScriptObjectHost::CallScriptBehavior())
-			bool _startPending = false;
-			// A bullet a player fired of a weapon whose bullets a script controls, see ScriptObjectHost::InitializeScriptedBullet()
-			bool _scriptedBullet = false;
 			// The animation of its own a script gave the object of the game, which shows its frames in place of the ones of
 			// its own animation, 0 for none (see ScriptObjectHost::PullFromActor())
 			std::int32_t _skinAnim = 0;
@@ -731,32 +735,42 @@ namespace Jazz2::Scripting
 			std::int32_t _touchTick = INT32_MIN;
 			// The last tick a buttstomping player touched it in, the first touch of a buttstomp is the attack
 			std::int32_t _stompTouchTick = INT32_MIN;
-			// How many frames ahead a behavior set `frameID` of an animation counted by the age (see ScriptObjectHost::PullFromActor())
-			std::int8_t _framePhase = 0;
 			// The properties as the object of the game had them last, the ones a script writes are told apart by them
 			struct SyncedState {
 				float XPos, YPos, XSpeed, YSpeed;
-				std::int8_t Direction, Energy, State;
 				// The animation of the animation table the object shows by itself, 0 for none of the original
 				std::int32_t NativeAnim;
-				std::int16_t CurAnim;
 				std::uint32_t CurFrame;
+				// How much lower `yPos` is than the object of the game, so the frame of its animation stands where it stands
+				// (see ScriptObjectHost::GetSkinOffsetY())
+				float SkinOffsetY;
+				std::int16_t CurAnim;
+				// The score of an enemy of the game
+				std::uint16_t Points;
+				std::int8_t Direction, Energy, State;
 				// The light the object has in the game, of the template of its event (the object of the game lights itself)
 				std::uint8_t LightType;
 				// Ticks the object is frozen for, of a bullet how long it freezes what it hits (see ScriptObjectHost::PushToActor())
 				std::uint8_t Freeze;
-				// How much lower `yPos` is than the object of the game, so the frame of its animation stands where it stands
-				// (see ScriptObjectHost::GetSkinOffsetY())
-				float SkinOffsetY;
 				// The animation has more frames than the graphics of the game, the frame is drawn as it is (see PullFromActor())
 				bool LongerAnim;
-				// The score of an enemy of the game
-				std::uint16_t Points;
 			};
 			SyncedState _synced = {};
 
 			// Takes over what an object gets of its template (jjObjectPresets), all but what makes it this object
 			void CopyTemplate(const jjOBJ& preset);
+		};
+
+		/** @brief Control point of Domination, read only, an unused one is empty and neutral */
+		struct jjCONTROLPOINT
+		{
+			String name;
+			std::int32_t xTile = 0;
+			std::int32_t yTile = 0;
+			std::int32_t direction = 0;
+			std::int32_t controlTeam = -1;
+			float xPos = 0.0f;
+			float yPos = 0.0f;
 		};
 
 		/** @brief Per-particle data for a pixel particle */

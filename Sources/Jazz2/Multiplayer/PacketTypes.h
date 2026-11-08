@@ -96,6 +96,7 @@ namespace Jazz2::Multiplayer
 		SyncTeamScores,					/**< Sends the per-team aggregate scores for the HUD */
 		SyncScoreboard,					/**< Sends per-player scoreboard rows (name, kills, deaths, points, ping) */
 		SyncRoundResults,				/**< Sends the final round standings shown while the round is ending */
+		SyncGameModeObjects,			/**< Sends the objects of the game mode (control points, jails, heads, ...) */
 
 		PlayerSetProperty = 130,		/**< Sets a property of a player */
 		PlayerResetProperties,			/**< Resets all properties of a player */
@@ -178,6 +179,7 @@ namespace Jazz2::Multiplayer
 		SugarRush,			/**< Remaining sugar rush time */
 		AmbientLight,		/**< Ambient light intensity to apply and/or to remember for the checkpoint */
 		FlyCheat,			/**< Whether fly-cheat behavior is active (unlimited copter flight) */
+		ModeState,			/**< Role, score, carried amount and lives defined by the game mode */
 
 		WeaponAmmo = 30,	/**< Ammo of a weapon */
 		WeaponUpgrades,		/**< Upgrades of a weapon */

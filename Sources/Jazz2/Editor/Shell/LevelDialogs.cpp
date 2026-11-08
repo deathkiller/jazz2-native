@@ -5,6 +5,7 @@
 #include "FilePickers.h"
 #include "PropertyRows.h"
 #include "ShellCommon.h"
+#include "ShellPanels.h"
 #include "TextPrompt.h"
 #include "TileSetsDialog.h"
 #include "../Tools/EditorContext.h"
@@ -24,6 +25,7 @@
 #include "../../UI/Windows/Surface.h"
 #include "../UI/EditorUi.h"
 #include "../../ContentResolver.h"
+#include "../../LevelHandler.h"
 #include "../../Formats/LevelPreview.h"
 #include "../../Formats/TileSetFile.h"
 #include "../../PreferencesCache.h"
@@ -73,6 +75,53 @@ namespace Jazz2::Editor
 			if (final) {
 				session.GetHistory().BreakMerge();
 			}
+		}
+
+		using LevelSettings = Formats::LevelSettingsChunk::Settings;
+
+		// Changes the settings the properties have no room for as ChangeProperties() changes the properties
+		void ChangeSettings(IEditorContext& session, Function<void(LevelSettings&)>&& change, bool final = true)
+		{
+			LevelDocument& document = session.GetDocument();
+			LevelSettings settings = document.GetLevelSettings();
+			change(settings);
+			SmallVector<std::uint8_t, 0> data;
+			Formats::LevelSettingsChunk::Write(settings, data);
+			const Formats::ChunkRecord* chunk = document.FindChunk(Formats::LevelSettingsChunk::Tag);
+			bool changed = (chunk != nullptr ? (chunk->Data.size() != data.size() || !std::equal(data.begin(), data.end(), chunk->Data.begin())) : !data.empty());
+			if (changed) {
+				session.Execute(std::make_unique<SetChunkCommand>(document, Formats::LevelSettingsChunk::Tag, data, _x("editor", "Level properties")), true);
+			}
+			if (final) {
+				session.GetHistory().BreakMerge();
+			}
+		}
+
+		Colorf GetWaterColor(const LevelSettings& settings, bool bottom)
+		{
+			if (!settings.HasWaterColors) {
+				const Vector3f& color = LevelHandler::DefaultWaterColor;
+				return Colorf(color.X, color.Y, color.Z, 1.0f);
+			}
+			const std::uint8_t* color = (bottom ? settings.WaterColorBottom : settings.WaterColorTop);
+			return Colorf(color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f, 1.0f);
+		}
+
+		void SetWaterColor(LevelSettings& settings, bool bottom, const Colorf& color)
+		{
+			auto toBytes = [](const Colorf& c, std::uint8_t* bytes) {
+				bytes[0] = std::uint8_t(std::round(std::clamp(c.R, 0.0f, 1.0f) * 255.0f));
+				bytes[1] = std::uint8_t(std::round(std::clamp(c.G, 0.0f, 1.0f) * 255.0f));
+				bytes[2] = std::uint8_t(std::round(std::clamp(c.B, 0.0f, 1.0f) * 255.0f));
+			};
+			if (!settings.HasWaterColors) {
+				// The other color stays as the game has it
+				Colorf defaultColor = GetWaterColor(settings, false);
+				toBytes(defaultColor, settings.WaterColorTop);
+				toBytes(defaultColor, settings.WaterColorBottom);
+				settings.HasWaterColors = true;
+			}
+			toBytes(color, bottom ? settings.WaterColorBottom : settings.WaterColorTop);
 		}
 
 		void SetTextProperty(IEditorContext& session, String Formats::LevelProperties::* member, StringView text)
@@ -929,6 +978,102 @@ namespace Jazz2::Editor
 			number->Tooltip = _x("editor", "From the top of the level, below the level means no water");
 		}
 		{
+			// TRANSLATORS: Label in the Level Properties dialog, the colors of the water at its surface and at the bottom of the view
+			auto* row = AddRow(content, _x("editor", "Water colors"));
+			for (std::int32_t i = 0; i < 2; i++) {
+				bool bottom = (i == 1);
+				auto getColor = [s, bottom]() { return GetWaterColor(s->GetDocument().GetLevelSettings(), bottom); };
+				auto* swatch = row->Add<ColorSwatch>(getColor, [s, bottom, getColor]() {
+					Surface* surface = s->GetSurface();
+					if (surface == nullptr) {
+						return;
+					}
+					// All picked while the picker is open is a single step, which starts here
+					s->GetHistory().BreakMerge();
+					ColorPicker::ShowPopup(*surface, surface->GetPointerPos(), getColor, [s, bottom](const Colorf& color) {
+						ChangeSettings(*s, [bottom, color](LevelSettings& settings) { SetWaterColor(settings, bottom, color); }, false);
+					});
+				});
+				swatch->Tooltip = (bottom ? _x("editor", "Color at the bottom of the view") : _x("editor", "Color at the surface"));
+			}
+			// TRANSLATORS: Button in the Level Properties dialog, the water gets the colors the game gives it
+			auto* reset = row->Add<Button>(_x("editor", "Default"), EditorIcon::None, [s]() {
+				ChangeSettings(*s, [](LevelSettings& settings) { settings.HasWaterColors = false; });
+			});
+			reset->Tooltip = _x("editor", "The colors the game gives the water");
+		}
+		{
+			static const PropertyChoice MovementChoices[] = {
+				// TRANSLATORS: Choices of how players move under water in the Level Properties dialog
+				{ _x("editor", "By depth"), std::int32_t(Formats::LevelSettingsChunk::WaterMovement::Default) },
+				{ _x("editor", "Swim"), std::int32_t(Formats::LevelSettingsChunk::WaterMovement::Swim) },
+				{ _x("editor", "Low gravity"), std::int32_t(Formats::LevelSettingsChunk::WaterMovement::LowGravity) },
+			};
+			// TRANSLATORS: Label in the Level Properties dialog, how players move under water
+			auto* row = AddRow(content, _x("editor", "Under water"));
+			auto* dropdown = AddChoiceDropdown(row, MovementChoices, [s]() {
+				return std::int32_t(s->GetDocument().GetLevelSettings().Movement);
+			}, [s](std::int32_t value) {
+				ChangeSettings(*s, [value](LevelSettings& settings) { settings.Movement = Formats::LevelSettingsChunk::WaterMovement(value); });
+			});
+			dropdown->Width = 150.0f;
+			dropdown->Tooltip = _x("editor", "Low gravity walks and jumps under water instead of swimming");
+		}
+		{
+			static const PropertyChoice LightingChoices[] = {
+				// TRANSLATORS: Choices of the light under water in the Level Properties dialog
+				{ _x("editor", "Full light"), std::int32_t(Formats::LevelSettingsChunk::WaterLighting::None) },
+				{ _x("editor", "Ambient light"), std::int32_t(Formats::LevelSettingsChunk::WaterLighting::Global) },
+				{ _x("editor", "Darker deeper"), std::int32_t(Formats::LevelSettingsChunk::WaterLighting::Depth) },
+			};
+			// TRANSLATORS: Label in the Level Properties dialog, how the light of the level goes with the water
+			auto* row = AddRow(content, _x("editor", "Water light"));
+			auto* dropdown = AddChoiceDropdown(row, LightingChoices, [s]() {
+				return std::int32_t(s->GetDocument().GetLevelSettings().Lighting);
+			}, [s](std::int32_t value) {
+				ChangeSettings(*s, [value](LevelSettings& settings) { settings.Lighting = Formats::LevelSettingsChunk::WaterLighting(value); });
+			});
+			dropdown->Width = 150.0f;
+			dropdown->Tooltip = _x("editor", "Darker deeper is full light above the water, the light of the level 15 tiles deep");
+		}
+		{
+			// The layers as they are while the dialog is open, it's modal, the dropdown keeps the list
+			auto choices = std::make_shared<SmallVector<PropertyChoice, 0>>();
+			// TRANSLATORS: Choice of the layer the water is drawn in front of in the Level Properties dialog
+			choices->push_back({ _x("editor", "All layers"), Formats::LevelSettingsChunk::WaterInFront });
+			const LevelDocument& document = session.GetDocument();
+			for (std::int32_t i = 1; i < std::int32_t(document.Layers.size()); i++) {
+				const DocumentLayer& layer = document.Layers[i];
+				choices->push_back({ !layer.Name.empty() ? layer.Name : GetAutoLayerName(document, i), i });
+			}
+			// TRANSLATORS: Choice of the layer the water is drawn in front of in the Level Properties dialog, the water isn't drawn but it's still there
+			choices->push_back({ _x("editor", "Hidden"), Formats::LevelSettingsChunk::WaterHidden });
+			// TRANSLATORS: Label in the Level Properties dialog, the layer the water is drawn in front of
+			auto* row = AddRow(content, _x("editor", "Water in front of"));
+			auto* dropdown = AddChoiceDropdown(row, *choices, [s, choices]() {
+				std::int32_t layer = s->GetDocument().GetLevelSettings().WaterLayer;
+				// In front of the frontmost layer is in front of all of them
+				return (layer == 0 ? Formats::LevelSettingsChunk::WaterInFront : layer);
+			}, [s](std::int32_t value) {
+				ChangeSettings(*s, [value](LevelSettings& settings) { settings.WaterLayer = value; });
+			}, [](std::int32_t) {
+				return String(_x("editor", "Unknown"));
+			});
+			dropdown->Width = 150.0f;
+			dropdown->Tooltip = _x("editor", "Hidden water isn't drawn, players still swim in it");
+		}
+		{
+			// TRANSLATORS: Label of the speed the water rises or falls at in the Level Properties dialog, and the unit after it, pixels per second
+			auto* row = AddRow(content, String(_x("editor", "Water speed") + " ("_s + _x("editor", "px/s") + ")"_s));
+			auto* number = row->Add<NumberBox>([s]() {
+				return s->GetDocument().GetLevelSettings().WaterChangeSpeed;
+			}, [s](float value, bool final) {
+				ChangeSettings(*s, [value](LevelSettings& settings) { settings.WaterChangeSpeed = std::max(value, 0.0f); }, final);
+			}, 0.0f, 10000.0f, 7.0f, 1);
+			number->Width = 60.0f;
+			number->Tooltip = _x("editor", "How fast the water rises or falls when a script moves it");
+		}
+		{
 			// TRANSLATORS: Label in the Level Properties dialog, the tile whose colors light up an RGB keyboard while the level is played
 			auto* row = AddRow(content, _x("editor", "Caption tile"));
 			row->Add<TilePreview>(session, [s]() { return std::int32_t(s->GetDocument().Properties.CaptionTileId); });
@@ -983,6 +1128,18 @@ namespace Jazz2::Editor
 				});
 			});
 		}
+		// TRANSLATORS: Checkbox in the Level Properties dialog, the coins left when a bonus warp is used become gems
+		content->Add<CheckBox>(_x("editor", "Bonus warps turn coins into gems"), [s]() {
+			return s->GetDocument().GetLevelSettings().WarpsTransmuteCoins;
+		}, [s](bool value) {
+			ChangeSettings(*s, [value](LevelSettings& settings) { settings.WarpsTransmuteCoins = value; });
+		});
+		// TRANSLATORS: Checkbox in the Level Properties dialog, objects of a generator event read its parameters where they first land
+		content->Add<CheckBox>(_x("editor", "Generated objects take parameters where they land"), [s]() {
+			return s->GetDocument().GetLevelSettings().DelayGeneratedCrateOrigins;
+		}, [s](bool value) {
+			ChangeSettings(*s, [value](LevelSettings& settings) { settings.DelayGeneratedCrateOrigins = value; });
+		});
 
 		ShowModal(*surface, Death::move(dialog));
 	}

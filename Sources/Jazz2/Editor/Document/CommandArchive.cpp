@@ -18,7 +18,8 @@ namespace Jazz2::Editor
 		// 2 --- the events off the grid a change changes aren't stored, they're worked out of the lists
 		// 3 --- a change of many tiles is stored compressed, as it's kept in memory
 		// 4 --- a change of the events off the grid is stored as the runs of them it changes, not as both lists
-		constexpr std::uint8_t Version = 4;
+		// 5 --- an addition or a removal of a layer keeps the settings of the level before and after it (the layer of the water)
+		constexpr std::uint8_t Version = 5;
 		// Commands nested deeper than this are damaged, a transaction holds commands, not other transactions so deep
 		constexpr std::int32_t MaxDepth = 16;
 		// Deflate makes about 1032 bytes of a byte at most, a buffer said to be larger is damaged
@@ -369,6 +370,8 @@ namespace Jazz2::Editor
 			w.Blob(c->_oldSplines);
 			w.Blob(c->_newSplines);
 			w.Value<std::uint8_t>(c->_hasNewSplines ? 1 : 0);
+			w.Blob(c->_oldSettings);
+			w.Blob(c->_newSettings);
 			return true;
 		}
 		if (auto* c = runtime_cast<SetLayerPropertiesCommand>(&command)) {
@@ -579,6 +582,8 @@ namespace Jazz2::Editor
 				r.Blob(command->_oldSplines);
 				r.Blob(command->_newSplines);
 				command->_hasNewSplines = (r.Value<std::uint8_t>() != 0);
+				r.Blob(command->_oldSettings);
+				r.Blob(command->_newSettings);
 				return (r.IsValid() ? Death::move(command) : nullptr);
 			}
 			case CommandType::SetLayerProperties: {

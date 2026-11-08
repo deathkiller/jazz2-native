@@ -38,6 +38,38 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::Scripting
 {
+	namespace
+	{
+		struct PlayerModeInfo {
+			bool Jailed = false;
+			bool Zombie = false;
+			bool Out = false;
+			std::int32_t Lives = 0;
+			std::int32_t Kills = 0;
+			std::int32_t Deaths = 0;
+		};
+
+		// Role of the player in a multiplayer game mode, all zero outside of one
+		PlayerModeInfo GetPlayerModeInfo(Actors::Player* player)
+		{
+			PlayerModeInfo info;
+#if defined(WITH_MULTIPLAYER)
+			using Jazz2::Multiplayer::GameModes::PlayerModeFlags;
+			if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player)) {
+				if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
+					info.Jailed = (peerDesc->ModeFlags & (std::uint8_t)PlayerModeFlags::Jailed) != 0;
+					info.Zombie = (peerDesc->ModeFlags & (std::uint8_t)PlayerModeFlags::Zombie) != 0;
+					info.Out = (peerDesc->ModeFlags & (std::uint8_t)PlayerModeFlags::Eliminated) != 0;
+					info.Lives = peerDesc->ModeLives;
+					info.Kills = (std::int32_t)peerDesc->Kills;
+					info.Deaths = (std::int32_t)peerDesc->Deaths;
+				}
+			}
+#endif
+			return info;
+		}
+	}
+
 	namespace Legacy
 	{
 		namespace
@@ -657,8 +689,10 @@ namespace Jazz2::Scripting
 				_player->_tubeBallPoseLeft = std::max(_player->_tubeBallPoseLeft, value * FrameTimer::FramesPerSecond / 70.0f);
 				// ...which can't shoot meanwhile (measured), as on a pinball paddle
 				_player->_onPinballPaddleTime = std::max(_player->_onPinballPaddleTime, value * FrameTimer::FramesPerSecond / 70.0f);
+				_player->_ballCarryLeft = value * FrameTimer::FramesPerSecond / 70.0f;
 			} else {
 				_ballTime = 0;
+				_player->_ballCarryLeft = 0.0f;
 				if (_player->_inTubeTime > 0) {
 					_player->_controllable = true;
 					_player->SetState(Actors::ActorState::ApplyGravitation | Actors::ActorState::CollideWithTileset, true);
@@ -815,9 +849,7 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		bool jjPLAYER::get_isOut() const {
-			noop();
-			// TODO: Equals true if the player has lost all their lives (or joined too late) in an LRS-based gamemode.
-			return false;
+			return GetPlayerModeInfo(_player).Out;
 		}
 		bool jjPLAYER::get_isSpectating() const {
 			noop();
@@ -908,15 +940,26 @@ namespace Jazz2::Scripting
 			_player->SetState(Actors::ActorState::ApplyGravitation, !value);
 			return value;
 		}
+		void jjPLAYER::SetMaxHealth(std::int32_t value) {
+			if (_player == nullptr || value <= 0) {
+				return;
+			}
+			bool wasFull = (_player->_health > 0 && _player->_health >= _player->_maxHealth);
+			_player->_maxHealth = value;
+			if (_player->_health > 0 && (wasFull || _player->_health > value)) {
+				_player->_health = value;
+			}
+		}
 		bool jjPLAYER::get_invisibility() const {
+			return _invisible;
+		}
+		bool jjPLAYER::set_invisibility(bool value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->GetState(Actors::ActorState::IsInvulnerable);
-		}
-		bool jjPLAYER::set_invisibility(bool value) {
-			noop();
-			return false;
+			_invisible = value;
+			UpdateDrawOverride();
+			return value;
 		}
 		bool jjPLAYER::get_noclipMode() const {
 			if (_player == nullptr) {
@@ -1303,9 +1346,11 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			noop();
+			if (!activate) {
+				bossActive = false;
+				return true;
+			}
 
-			// TODO: activate
 			_levelScriptLoader->_levelHandler->BroadcastTriggeredEvent(_player, EventType::AreaActivateBoss, nullptr);
 			return true;
 		}
@@ -1487,25 +1532,30 @@ namespace Jazz2::Scripting
 			return _levelScriptLoader->_levelHandler->GetCameraView(_player).Y;
 		}
 		std::int32_t jjPLAYER::get_deaths() const {
-			noop();
-			return 0;
+			return GetPlayerModeInfo(_player).Deaths;
 		}
 
 		bool jjPLAYER::get_isJailed() const {
-			noop();
-			return false;
+			return GetPlayerModeInfo(_player).Jailed;
 		}
 		bool jjPLAYER::get_isZombie() const {
-			noop();
-			return false;
+			return GetPlayerModeInfo(_player).Zombie;
 		}
 		std::int32_t jjPLAYER::get_lrsLives() const {
-			noop();
-			return 0;
+#if defined(WITH_MULTIPLAYER)
+			// Negative outside of the Last Rabbit Standing modes, as in JJ2+
+			if (auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler())) {
+				auto mode = mpHandler->GetGameMode();
+				if (mode == Jazz2::Multiplayer::MpGameMode::LastRabbitStanding || mode == Jazz2::Multiplayer::MpGameMode::ExtendedLastRabbitStanding ||
+					mode == Jazz2::Multiplayer::MpGameMode::TeamLastRabbitStanding) {
+					return GetPlayerModeInfo(_player).Lives;
+				}
+			}
+#endif
+			return -1;
 		}
 		std::int32_t jjPLAYER::get_roasts() const {
-			noop();
-			return 0;
+			return GetPlayerModeInfo(_player).Kills;
 		}
 		std::int32_t jjPLAYER::get_laps() const {
 			noop();
@@ -1593,7 +1643,17 @@ namespace Jazz2::Scripting
 			return result;
 		}
 		bool jjPLAYER::isEnemy(const jjPLAYER* victim) const {
-			noop();
+#if defined(WITH_MULTIPLAYER)
+			// The damage rules of the server, with the exceptions of the game mode (ring holder, zombies, jailed players)
+			if (victim != nullptr && _player != nullptr && victim->_player != nullptr) {
+				auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+				if (mpHandler != nullptr && mpHandler->GetGameMode() != Jazz2::Multiplayer::MpGameMode::Cooperation &&
+					runtime_cast<Actors::Multiplayer::MpPlayer>(_player) != nullptr && runtime_cast<Actors::Multiplayer::MpPlayer>(victim->_player) != nullptr) {
+					return mpHandler->CanPlayerDamagePlayer(victim->_player, _player);
+				}
+			}
+#endif
+			// Nobody is an enemy in single player
 			return false;
 		}
 
@@ -1615,7 +1675,7 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return;
 			}
-			bool hidden = (_spriteMode == spriteType_INVISIBLE || _drawnByScript);
+			bool hidden = (_spriteMode == spriteType_INVISIBLE || _invisible || _drawnByScript);
 			// Nothing else hands over the update of a player
 			bool overridden = (_player->GetUpdateOverride() != nullptr);
 			if (hidden != overridden) {
@@ -2274,11 +2334,13 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Sends a line of chat
 		 *
-		 * Currently the text is only added to the messages at the bottom of the screen and to the log. Commands,
-		 * text starting with `/`, are ignored.
+		 * The text is added to the messages at the bottom of the screen. Of the commands, text starting with `/`,
+		 * `/smhealth` sets the maximum health of the players, `/maxresolution` sets what @ref jjResolutionMaxWidth
+		 * and @ref jjResolutionMaxHeight report and `/difficulty` sets @ref jjDifficulty, the other ones are ignored.
 		 * @param text Text of the message
 		 * @param teamchat Currently ignored
-		 * @partialsupport The message isn't sent to other players, `teamchat` is ignored and commands aren't run.
+		 * @partialsupport The message isn't sent to other players, `teamchat` is ignored and commands of a multiplayer
+		 * server aren't run.
 		 */
 		engine->RegisterGlobalFunction("void jjChat(const ::string &in text, bool teamchat = false)", asFUNCTION(jjChat), asCALL_CDECL);
 		/**

@@ -57,10 +57,10 @@ namespace Jazz2::Actors::Multiplayer
 		// Players physically bump each other (team-independent). Attacking players deal damage instead
 		// (handled below), so they don't bump. Separation runs every overlapping frame so players can't
 		// pass through each other; only the network resync is throttled (see _bumpCooldown).
+		auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
 		if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
 			if (_health > 0 && anotherPlayer->_health > 0 && !IsAttacking() && !anotherPlayer->IsAttacking() &&
-				!IsRammingFrozen(anotherPlayer) && !anotherPlayer->IsRammingFrozen(this)) {
-				auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+				!IsRammingFrozen(anotherPlayer) && !anotherPlayer->IsRammingFrozen(this) && mpHandler->CanPlayersPush(this, anotherPlayer)) {
 				// Shared separation/impulse physics (see Player::ApplyPlayerBump). When stacking is enabled, vertical
 				// overlap is left to the local stacking resolver, so the server must NOT bump them apart or resync it.
 				if (ApplyPlayerBump(*anotherPlayer, mpHandler->IsPlayerStackingEnabled())) {
@@ -79,10 +79,7 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Check player special move here
 		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other)) {
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
-			auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
-			bool friendlyFire = mpHandler->_networkManager->GetServerConfiguration().FriendlyFire;
-			bool canHit = (otherPlayerOnServer != this) && (friendlyFire || GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team);
-			if (_health > 0 && canHit) {
+			if (_health > 0 && mpHandler->CanPlayerDamagePlayer(this, otherPlayerOnServer)) {
 				bool otherIsPlayer = false;
 				// Running fast into a frozen player hurts it like an attack does (see Player::FrozenRamSpeed)
 				bool rammedFrozen = false;
@@ -109,7 +106,7 @@ namespace Jazz2::Actors::Multiplayer
 					rammer->_speed.X *= -0.5f;
 					rammer->_speed.Y = FrozenRamBounceSpeedY;
 					rammer->SetState(ActorState::CanJump, false);
-					static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerBumped(rammer);
+					mpHandler->HandlePlayerBumped(rammer);
 				}
 
 				auto* shot = runtime_cast<Weapons::ShotBase>(other);
@@ -123,7 +120,10 @@ namespace Jazz2::Actors::Multiplayer
 						const WeaponOptions& options = _levelHandler->GetWeaponDefinition(shot->GetSourceWeapon()).Options;
 						_gemsLostOnHit = (shot->IsUpgraded() ? options.GemsLostPowerup : options.GemsLost);
 					}
-					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
+					std::int32_t damage = mpHandler->GetPlayerDamage(this, otherPlayerOnServer, 1);
+					if (TakeDamage(damage, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f))) {
+						mpHandler->HandlePlayerHitByPlayer(this, otherPlayerOnServer);
+					}
 					_gemsLostOnHit = 3;
 				}
 				if (!otherIsPlayer) {
@@ -140,10 +140,7 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		if (_canTakeDamage && _health > 0) {
 			if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
-				auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
-				auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
-				bool friendlyFire = mpHandler->_networkManager->GetServerConfiguration().FriendlyFire;
-				return (otherPlayerOnServer != this) && (friendlyFire || otherPlayerOnServer->GetPeerDescriptor()->Team != GetPeerDescriptor()->Team);
+				return static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->CanPlayerDamagePlayer(this, static_cast<PlayerOnServer*>(weaponOwner));
 			}
 		}
 
@@ -152,6 +149,12 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool PlayerOnServer::TakeDamage(std::int32_t amount, float pushForce, bool ignoreInvulnerable)
 	{
+		// A pit nobody caused, the game mode may keep the player alive
+		if (_inDeathEvent && _canTakeDamage && _health > 0 && _lastAttacker == nullptr &&
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerHazardDeath(this)) {
+			return false;
+		}
+
 		if (!_canTakeDamage || !MpPlayer::TakeDamage(amount, pushForce, ignoreInvulnerable)) {
 			return false;
 		}

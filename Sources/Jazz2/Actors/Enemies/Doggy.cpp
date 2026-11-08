@@ -9,8 +9,18 @@
 
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr float WalkSpeed = 1.0f;
+		constexpr float DashSpeed = 3.0f;
+		constexpr float RunSpeed = 2.0f;
+		constexpr float DashTicks = 16.0f;
+		constexpr float NoticeDistance = 48.0f;
+		constexpr float CalmDownDistance = 160.0f;
+	}
+
 	Doggy::Doggy()
-		: _attackSpeed(0.0f), _attackTime(0.0f), _noiseCooldown(120.0f), _stuck(false)
+		: _attackTime(0.0f), _noiseCooldown(120.0f), _enraged(false), _stuck(false)
 	{
 	}
 
@@ -41,17 +51,14 @@ namespace Jazz2::Actors::Enemies
 			case 0:
 			default:
 				async_await RequestMetadataAsync("Enemy/Doggy"_s);
-				_attackSpeed = 3.2f;
 				break;
 			case 1: // TSF Cat
 				async_await RequestMetadataAsync("Enemy/Cat"_s);
-				_attackSpeed = 3.8f;
 				break;
 		}
 		SetFacingLeft(Random().NextBool());
 		SetAnimation(AnimState::Walk);
-
-		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f);
+		UpdateSpeed();
 
 		PlaceOnGround();
 
@@ -66,8 +73,29 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_attackTime <= 0.0f) {
-			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f);
+		if (_attackTime > 0.0f) {
+			_attackTime -= timeMult;
+		}
+
+		if (_enraged && IsPlayerFarAway()) {
+			_enraged = false;
+		} else if (!_enraged && _attackTime <= 0.0f && IsPlayerInFront()) {
+			_enraged = true;
+			_attackTime = DashTicks / TicksPerFrame;
+			_noiseCooldown = 0.0f;
+			PlaySfx("Attack");
+		}
+
+		if (IsAttacking()) {
+			SetAnimation(AnimState::TransitionAttack);
+
+			if (_noiseCooldown <= 0.0f) {
+				_noiseCooldown = Random().NextFloat(25, 40);
+				PlaySfx("Woof"_s);
+			} else {
+				_noiseCooldown -= timeMult;
+			}
+		} else {
 			SetAnimation(AnimState::Walk);
 
 			if (_noiseCooldown <= 0.0f) {
@@ -76,16 +104,8 @@ namespace Jazz2::Actors::Enemies
 			} else {
 				_noiseCooldown -= timeMult;
 			}
-		} else {
-			_attackTime -= timeMult;
-
-			if (_noiseCooldown <= 0.0f) {
-				_noiseCooldown = Random().NextFloat(25, 40);
-				PlaySfx("Woof"_s);
-			} else {
-				_noiseCooldown -= timeMult;
-			}
 		}
+		UpdateSpeed();
 
 		if (GetState(ActorState::CanJump)) {
 			if (!CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
@@ -93,7 +113,11 @@ namespace Jazz2::Actors::Enemies
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 				} else {
 					SetFacingLeft(!IsFacingLeft());
-					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * (_attackTime <= 0.0f ? 1.0f : _attackSpeed);
+					// Measured in JJ2+: every turn while enraged starts a new dash
+					if (_enraged) {
+						_attackTime = DashTicks / TicksPerFrame;
+					}
+					UpdateSpeed();
 					_stuck = true;
 				}
 			} else {
@@ -102,12 +126,45 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Doggy::UpdateSpeed()
+	{
+		float speed = (_attackTime > 0.0f ? DashSpeed : (_enraged ? RunSpeed : WalkSpeed));
+		_speed.X = (IsFacingLeft() ? -speed : speed) * TicksPerFrame;
+	}
+
+	bool Doggy::IsPlayerInFront() const
+	{
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+			Vector2f diff = player->GetPos() - _pos;
+			if (std::abs(diff.X) < NoticeDistance && std::abs(diff.Y) < 32.0f && (diff.X < 0.0f) == IsFacingLeft()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool Doggy::IsPlayerFarAway() const
+	{
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() > 0 && std::abs(player->GetPos().X - _pos.X) <= CalmDownDistance) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	void Doggy::OnSerializeState(Stream& dest)
 	{
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteValueAsLE<float>(_attackTime);
-		dest.WriteValue<std::uint8_t>(_stuck ? 1 : 0);
+		std::uint8_t flags = 0;
+		if (_stuck) flags |= 0x01;
+		if (_enraged) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
 	}
 
 	void Doggy::OnDeserializeState(Stream& src)
@@ -115,7 +172,9 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_attackTime = src.ReadValueAsLE<float>();
-		_stuck = (src.ReadValue<std::uint8_t>() != 0);
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_stuck = ((flags & 0x01) != 0);
+		_enraged = ((flags & 0x02) != 0);
 	}
 
 	void Doggy::OnUpdateHitbox()
@@ -139,13 +198,13 @@ namespace Jazz2::Actors::Enemies
 				if (Player* owner = shotBase->GetOwner()) {
 					SetFacingLeft(owner->GetPos().X < _pos.X);
 				}
-				if (_attackTime <= 0.0f) {
+				if (!IsAttacking()) {
 					PlaySfx("Attack");
 					SetAnimation(AnimState::TransitionAttack);
 				}
-				_speed.X = (IsFacingLeft() ? -3.0f : 3.0f) * 70.0f / 60.0f;
-				_attackTime = 16.0f * 60.0f / 70.0f;
+				_attackTime = DashTicks / TicksPerFrame;
 				_noiseCooldown = 45.0f;
+				UpdateSpeed();
 			}
 		}
 

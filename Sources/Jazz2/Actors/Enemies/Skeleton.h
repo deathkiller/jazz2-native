@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = 0.7f;
+		static constexpr float DefaultSpeed = TicksPerFrame;
 
 		bool _stuck;
 	};

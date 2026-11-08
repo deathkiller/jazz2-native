@@ -327,8 +327,21 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalKills = 10;
 		serverConfig.TotalLaps = 3;
 		serverConfig.TotalTreasureCollected = 0;
-		// The first player across the finish line doesn't end a race - everybody else gets this long to finish too
-		serverConfig.OvertimeSecs = 60;
+		// Left unset on purpose: the game mode decides, see ServerConfiguration::GetOvertimeSecs()
+		serverConfig.OvertimeSecs = -1;
+		serverConfig.PlayerLives = 5;
+		serverConfig.TeamLives = 30;
+		serverConfig.MaxTeamPlayersWithLives = 16;
+		serverConfig.LateJoinersCanPlay = false;
+		serverConfig.ResetAllTeams = true;
+		serverConfig.AmplifyDamage = false;
+		serverConfig.AllowPassing = false;
+		serverConfig.FlagPickupCooldownSecs = 5;
+		serverConfig.ExtraDroppedGems = 1;
+		serverConfig.TransferDroppedGems = false;
+		serverConfig.PunishSelfDeaths = false;
+		serverConfig.SelfDeathCostsTeamPoint = true;
+		serverConfig.FriendlyFireCostsTeamPoint = false;
 
 		serverConfig.EnableSpectate = true;
 		// Left unset on purpose: the game mode decides until a configuration says otherwise
@@ -381,6 +394,51 @@ namespace Jazz2::Multiplayer
 		serverConfig.AllowMinimap = playlistEntry.AllowMinimap;
 		serverConfig.AllowMinimapSet = playlistEntry.AllowMinimapSet;
 		serverConfig.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
+		serverConfig.PlayerLives = playlistEntry.PlayerLives;
+		serverConfig.TeamLives = playlistEntry.TeamLives;
+		serverConfig.MaxTeamPlayersWithLives = playlistEntry.MaxTeamPlayersWithLives;
+		serverConfig.LateJoinersCanPlay = playlistEntry.LateJoinersCanPlay;
+		serverConfig.ResetAllTeams = playlistEntry.ResetAllTeams;
+		serverConfig.AmplifyDamage = playlistEntry.AmplifyDamage;
+		serverConfig.AllowPassing = playlistEntry.AllowPassing;
+		serverConfig.FlagPickupCooldownSecs = playlistEntry.FlagPickupCooldownSecs;
+		serverConfig.ExtraDroppedGems = playlistEntry.ExtraDroppedGems;
+		serverConfig.TransferDroppedGems = playlistEntry.TransferDroppedGems;
+		serverConfig.PunishSelfDeaths = playlistEntry.PunishSelfDeaths;
+		serverConfig.SelfDeathCostsTeamPoint = playlistEntry.SelfDeathCostsTeamPoint;
+		serverConfig.FriendlyFireCostsTeamPoint = playlistEntry.FriendlyFireCostsTeamPoint;
+	}
+
+	template<class TJson, class TTarget>
+	static void ParseGameModeRules(TJson& json, TTarget& target)
+	{
+		// The same properties in the root and in a playlist entry
+		auto readUInt = [&json](const char* name, std::uint32_t& value, std::int64_t min, std::int64_t max) {
+			std::int64_t v;
+			if (json[name].get(v) == Json::SUCCESS && v >= min && v <= max) {
+				value = std::uint32_t(v);
+			}
+		};
+		auto readBool = [&json](const char* name, bool& value) {
+			bool v;
+			if (json[name].get(v) == Json::SUCCESS) {
+				value = v;
+			}
+		};
+
+		readUInt("PlayerLives", target.PlayerLives, 1, 100);
+		readUInt("TeamLives", target.TeamLives, 1, 100);
+		readUInt("MaxTeamPlayersWithLives", target.MaxTeamPlayersWithLives, 1, 32);
+		readBool("LateJoinersCanPlay", target.LateJoinersCanPlay);
+		readBool("ResetAllTeams", target.ResetAllTeams);
+		readBool("AmplifyDamage", target.AmplifyDamage);
+		readBool("AllowPassing", target.AllowPassing);
+		readUInt("FlagPickupCooldownSecs", target.FlagPickupCooldownSecs, 0, INT32_MAX);
+		readUInt("ExtraDroppedGems", target.ExtraDroppedGems, 1, 10);
+		readBool("TransferDroppedGems", target.TransferDroppedGems);
+		readBool("PunishSelfDeaths", target.PunishSelfDeaths);
+		readBool("SelfDeathCostsTeamPoint", target.SelfDeathCostsTeamPoint);
+		readBool("FriendlyFireCostsTeamPoint", target.FriendlyFireCostsTeamPoint);
 	}
 
 	String NetworkManager::OnOverrideContentPath(StringView path)
@@ -713,9 +771,11 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t overtimeSecs;
-				if (doc["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs >= 0 && overtimeSecs <= INT32_MAX) {
-					serverConfig.OvertimeSecs = std::uint32_t(overtimeSecs);
+				if (doc["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs <= INT32_MAX) {
+					serverConfig.OvertimeSecs = (overtimeSecs >= 0 ? std::int32_t(overtimeSecs) : -1);
 				}
+
+				ParseGameModeRules(doc, serverConfig);
 
 				bool enableSpectate;
 				if (doc["EnableSpectate"].get(enableSpectate) == Json::SUCCESS) {
@@ -765,6 +825,19 @@ namespace Jazz2::Multiplayer
 						playlistEntry.AllowMinimap = serverConfig.AllowMinimap;
 						playlistEntry.AllowMinimapSet = serverConfig.AllowMinimapSet;
 						playlistEntry.ColorizePlayersByTeam = serverConfig.ColorizePlayersByTeam;
+						playlistEntry.PlayerLives = serverConfig.PlayerLives;
+						playlistEntry.TeamLives = serverConfig.TeamLives;
+						playlistEntry.MaxTeamPlayersWithLives = serverConfig.MaxTeamPlayersWithLives;
+						playlistEntry.LateJoinersCanPlay = serverConfig.LateJoinersCanPlay;
+						playlistEntry.ResetAllTeams = serverConfig.ResetAllTeams;
+						playlistEntry.AmplifyDamage = serverConfig.AmplifyDamage;
+						playlistEntry.AllowPassing = serverConfig.AllowPassing;
+						playlistEntry.FlagPickupCooldownSecs = serverConfig.FlagPickupCooldownSecs;
+						playlistEntry.ExtraDroppedGems = serverConfig.ExtraDroppedGems;
+						playlistEntry.TransferDroppedGems = serverConfig.TransferDroppedGems;
+						playlistEntry.PunishSelfDeaths = serverConfig.PunishSelfDeaths;
+						playlistEntry.SelfDeathCostsTeamPoint = serverConfig.SelfDeathCostsTeamPoint;
+						playlistEntry.FriendlyFireCostsTeamPoint = serverConfig.FriendlyFireCostsTeamPoint;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
@@ -869,9 +942,11 @@ namespace Jazz2::Multiplayer
 						}
 
 						std::int64_t overtimeSecs;
-						if (entry["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs >= 0 && overtimeSecs <= INT32_MAX) {
-							playlistEntry.OvertimeSecs = std::uint32_t(overtimeSecs);
+						if (entry["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs <= INT32_MAX) {
+							playlistEntry.OvertimeSecs = (overtimeSecs >= 0 ? std::int32_t(overtimeSecs) : -1);
 						}
+
+						ParseGameModeRules(entry, playlistEntry);
 
 						if (!playlistEntry.LevelName.empty() && serverConfig.GameMode != MpGameMode::Unknown) {
 							serverConfig.Playlist.push_back(Death::move(playlistEntry));
@@ -962,6 +1037,16 @@ namespace Jazz2::Multiplayer
 			case MpGameMode::TeamTreasureHunt: return "Team Treasure Hunt"_s;
 			case MpGameMode::CaptureTheFlag: return "Capture The Flag"_s;
 			case MpGameMode::Cooperation: return "Cooperation"_s;
+			case MpGameMode::RoastTag: return "Roast Tag"_s;
+			case MpGameMode::LastRabbitStanding: return "Last Rabbit Standing"_s;
+			case MpGameMode::ExtendedLastRabbitStanding: return "Extended Last Rabbit Standing"_s;
+			case MpGameMode::Pestilence: return "Pestilence"_s;
+			case MpGameMode::TeamLastRabbitStanding: return "Team Last Rabbit Standing"_s;
+			case MpGameMode::Jailbreak: return "Jailbreak"_s;
+			case MpGameMode::DeathCaptureTheFlag: return "Death Capture The Flag"_s;
+			case MpGameMode::FlagRun: return "Flag Run"_s;
+			case MpGameMode::Domination: return "Domination"_s;
+			case MpGameMode::HeadHunters: return "Head Hunters"_s;
 			default: return "Unknown"_s;
 		}
 	}
@@ -985,6 +1070,26 @@ namespace Jazz2::Multiplayer
 			return MpGameMode::CaptureTheFlag;
 		} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
 			return MpGameMode::Cooperation;
+		} else if (gameModeString == "roasttag"_s || gameModeString == "rt"_s) {
+			return MpGameMode::RoastTag;
+		} else if (gameModeString == "lastrabbitstanding"_s || gameModeString == "lrs"_s) {
+			return MpGameMode::LastRabbitStanding;
+		} else if (gameModeString == "extendedlastrabbitstanding"_s || gameModeString == "xlrs"_s) {
+			return MpGameMode::ExtendedLastRabbitStanding;
+		} else if (gameModeString == "pestilence"_s || gameModeString == "pest"_s) {
+			return MpGameMode::Pestilence;
+		} else if (gameModeString == "teamlastrabbitstanding"_s || gameModeString == "tlrs"_s) {
+			return MpGameMode::TeamLastRabbitStanding;
+		} else if (gameModeString == "jailbreak"_s || gameModeString == "jb"_s) {
+			return MpGameMode::Jailbreak;
+		} else if (gameModeString == "deathcapturetheflag"_s || gameModeString == "dctf"_s) {
+			return MpGameMode::DeathCaptureTheFlag;
+		} else if (gameModeString == "flagrun"_s || gameModeString == "fr"_s) {
+			return MpGameMode::FlagRun;
+		} else if (gameModeString == "domination"_s || gameModeString == "dom"_s) {
+			return MpGameMode::Domination;
+		} else if (gameModeString == "headhunters"_s || gameModeString == "head"_s) {
+			return MpGameMode::HeadHunters;
 		} else {
 			return MpGameMode::Unknown;
 		}

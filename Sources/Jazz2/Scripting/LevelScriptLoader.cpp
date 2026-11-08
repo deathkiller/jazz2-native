@@ -32,6 +32,7 @@
 #include "../UI/InGameConsole.h"
 
 #include "../../nCine/Application.h"
+#include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Graphics/RenderResources.h"
 #include "../../nCine/Graphics/Texture.h"
@@ -391,6 +392,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 				ContentResolver::Get().ReleasePaletteOffset(pair.second);
 			}
 		}
+		if (_spriteModeMappings != nullptr) {
+			for (std::int32_t i = 0; i < 256; i++) {
+				ReleaseMappingPalette(_spriteModeMappings[i]);
+			}
+		}
 		// Gives the graphics of the game back as they were, before anything else of the level goes
 		_animTables = nullptr;
 	}
@@ -519,9 +525,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			numberOfTiles = std::uint32_t(tileMap->GetLoadedTileCount());
 		}
 		UpdateViewSize();
+		UpdateGameMode();
 
 		// The weather of the level, scripts start and stop it by these
 		PullWeather(true);
+		ApplyLevelSettings();
 
 		// Scenery is a part of its tile, it has an object only where a script drives it (see Legacy::ScriptSceneryObject),
 		// a script can still register a spawner of its own over this one
@@ -614,6 +622,35 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		OnAfterScriptCall();
 	}
 
+	bool LevelScriptLoader::OnCheat(StringView cheat)
+	{
+		if (GetContextType() != ScriptContextType::Legacy) {
+			return false;
+		}
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("bool onCheat(string &in)");
+		if (func == nullptr) {
+			return false;
+		}
+
+		OnBeforeScriptCall();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
+
+		String text(cheat);
+		ctx->Prepare(func);
+		ctx->SetArgObject(0, &text);
+		bool handled = false;
+		std::int32_t r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			AS_LOG_EXCEPTION(ctx);
+		} else if (r == asEXECUTION_FINISHED) {
+			handled = (ctx->GetReturnByte() != 0);
+		}
+
+		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
+		return handled;
+	}
+
 	void LevelScriptLoader::UpdateViewSize()
 	{
 		// The HUD callbacks set them for the view they draw, a script without any reads them too; before the views are
@@ -635,8 +672,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		realVideoH = viewSize.Y;
 		subVideoW = subscreenSize.X;
 		subVideoH = subscreenSize.Y;
-		checkedMaxSubVideoWidth = subscreenSize.X;
-		checkedMaxSubVideoHeight = subscreenSize.Y;
+		checkedMaxSubVideoWidth = (_maxResolution.X > 0 ? _maxResolution.X : subscreenSize.X);
+		checkedMaxSubVideoHeight = (_maxResolution.Y > 0 ? _maxResolution.Y : subscreenSize.Y);
 	}
 
 	std::int32_t LevelScriptLoader::GetGameTick() const
@@ -676,6 +713,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			StopUnusedLoopedSamples();
 		}
 		UpdateViewSize();
+		UpdateGameMode();
 		RefreshSceneryObjects();
 		UpdateWaterLevel(currentTick);
 
@@ -885,6 +923,47 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 		// Push any script-modified jjLAYER properties into the engine layer descriptions (no-op if no jjLayers accessed)
 		SyncLayerProperties();
+		// jjWaterInteraction and jjWaterLighting are plain properties, scripts change them at any time
+		_levelHandler->_waterInteraction = (waterInteraction == Legacy::waterInteraction_LOWGRAVITY ? WaterInteraction::LowGravity : WaterInteraction::Swim);
+		_levelHandler->_waterLighting = (waterLightMode == LegacyWaterLightingGlobal ? Formats::LevelSettingsChunk::WaterLighting::Global
+			: (waterLightMode == LegacyWaterLightingLagunicus ? Formats::LevelSettingsChunk::WaterLighting::Depth : Formats::LevelSettingsChunk::WaterLighting::None));
+	}
+
+	void LevelScriptLoader::ApplyLevelSettings()
+	{
+		using Formats::LevelSettingsChunk;
+
+		// The level handler applied them already, the script reads them as JJ2+ has them
+		const LevelSettingsChunk::Settings& settings = _levelHandler->_levelSettings;
+		warpsTransmuteCoins = settings.WarpsTransmuteCoins;
+		delayGeneratedCrateOrigins = settings.DelayGeneratedCrateOrigins;
+		_waterChangeSpeed = settings.WaterChangeSpeed / 70.0f;
+		switch (settings.Movement) {
+			case LevelSettingsChunk::WaterMovement::Swim: waterInteraction = Legacy::waterInteraction_SWIM; break;
+			case LevelSettingsChunk::WaterMovement::LowGravity: waterInteraction = Legacy::waterInteraction_LOWGRAVITY; break;
+			default: waterInteraction = Legacy::waterInteraction_POSITIONBASED; break;
+		}
+		switch (settings.Lighting) {
+			case LevelSettingsChunk::WaterLighting::Global: waterLightMode = LegacyWaterLightingGlobal; break;
+			case LevelSettingsChunk::WaterLighting::Depth: waterLightMode = LegacyWaterLightingLagunicus; break;
+			default: waterLightMode = LegacyWaterLightingNone; break;
+		}
+		// The number of the layer in the original game, 1 in front of all of them, 0 hides the water
+		if (settings.WaterLayer == LevelSettingsChunk::WaterHidden) {
+			_waterLayer = 0;
+		} else if (settings.WaterLayer == LevelSettingsChunk::WaterInFront) {
+			_waterLayer = 1;
+		} else {
+			auto* tileMap = _levelHandler->TileMap();
+			std::uint8_t number = (tileMap != nullptr ? tileMap->GetLayerOriginalNumber(settings.WaterLayer) : 0);
+			_waterLayer = (number != 0 ? number : 1);
+		}
+	}
+
+	void LevelScriptLoader::SetWaterColors(const Vector3f& top, const Vector3f& bottom)
+	{
+		_levelHandler->_waterColorTop = top;
+		_levelHandler->_waterColorBottom = bottom;
 	}
 
 	void LevelScriptLoader::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
@@ -965,8 +1044,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		bool overrideDraw = false;
 		if (func != nullptr) {
 			// TODO: Move this somewhere
-			checkedMaxSubVideoWidth = (std::int32_t)view.W;
-			checkedMaxSubVideoHeight = (std::int32_t)view.H;
+			checkedMaxSubVideoWidth = (_maxResolution.X > 0 ? _maxResolution.X : (std::int32_t)view.W);
+			checkedMaxSubVideoHeight = (_maxResolution.Y > 0 ? _maxResolution.Y : (std::int32_t)view.H);
 			realVideoW = (std::int32_t)view.W;
 			realVideoH = (std::int32_t)view.H;
 			subVideoW = (std::int32_t)view.W;
@@ -1096,6 +1175,17 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			description.SpeedModelX = model;
 			description.SpeedModelY = model;
 		}
+	}
+
+	bool LevelScriptLoader::GetPlayerTimer(Actors::Player* player, float& secondsLeft, bool& isPaused) const
+	{
+		auto it = _playerBackingStore.find(player->GetPlayerIndex());
+		if (it == _playerBackingStore.end() || it->second->_timerState == 0) { // STOPPED
+			return false;
+		}
+		secondsLeft = std::max(it->second->_timerLeft, 0.0f) / FrameTimer::FramesPerSecond;
+		isPaused = (it->second->_timerState == 2); // PAUSED
+		return true;
 	}
 
 	void LevelScriptLoader::OnPlayerDied(Actors::Player* player, Actors::ActorBase* collider)

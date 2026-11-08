@@ -18,7 +18,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	LizardFloat::LizardFloat()
-		: _attackTime(200.0f), _moveTime(100.0f)
+		: _attackTime(200.0f), _moveTime(100.0f), _awake(false)
 	{
 	}
 
@@ -119,6 +119,14 @@ namespace Jazz2::Actors::Enemies
 		if (found) {
 			float distance = (targetPos - _pos).Length();
 
+			// It floats in place until a player comes within 128 px, as measured in JJ2+
+			if (!_awake) {
+				if (distance >= 128.0f) {
+					return;
+				}
+				_awake = true;
+			}
+
 			if (distance < 280.0f && _attackTime <= 0.0f) {
 				SetTransition(AnimState::TransitionAttack, false, [this]() {
 					std::shared_ptr<Environment::Bomb> bomb = std::make_shared<Environment::Bomb>();
@@ -170,6 +178,7 @@ namespace Jazz2::Actors::Enemies
 
 		_attackTime = src.ReadValueAsLE<float>();
 		_moveTime = src.ReadValueAsLE<float>();
+		_awake = true;
 
 		// The copter was created again at the spawn position
 		if (_copter != nullptr) {

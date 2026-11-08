@@ -117,6 +117,32 @@ namespace Jazz2::Events
 		 */
 		bool GetGeneratorEvent(std::int32_t x, std::int32_t y, EventType& type, const std::uint8_t*& params, std::uint8_t& delay) const;
 		/**
+		 * @brief Returns the difficulty of the event of the level on specified tile position as the original game has it
+		 *
+		 * 0 for an event of every difficulty, 1 for an easy one, 2 for a hard one and 3 for a multiplayer-only one. An event
+		 * left out in this difficulty isn't in the tile at all, as in JJ2+. Scripts of JJ2+ read it as the event's parameter.
+		 */
+		std::uint8_t GetEventDifficulty(std::int32_t x, std::int32_t y) const;
+
+		/** @brief Event meant only for the easy or only for the hard difficulty, see @ref CollectEasyOrHardEvents() */
+		struct DifficultyEventInfo {
+			/** @brief Tile position */
+			Vector2i Tile;
+			/** @brief Difficulty as the original game has it, 1 for an easy one, 2 for a hard one */
+			std::uint8_t Difficulty;
+			/** @brief Event type */
+			EventType Event;
+			/** @brief First two event parameters */
+			std::uint8_t Params[2];
+		};
+
+		/**
+		 * @brief Collects all events meant only for the easy or only for the hard difficulty
+		 *
+		 * Includes those left out in the current difficulty, JJ2+ multiplayer modes use them as control points.
+		 */
+		void CollectEasyOrHardEvents(SmallVectorImpl<DifficultyEventInfo>& events) const;
+		/**
 		 * @brief Returns the start or the warp target on specified tile position, which aren't kept in the tiles
 		 *
 		 * Returns @ref EventType::LevelStart with the player types it's for, @ref EventType::WarpTarget with its ID, or
@@ -333,6 +359,14 @@ namespace Jazz2::Events
 		/// checkpoint starts out with an empty tile list, and a level may have no event tiles at all.
 		bool _hasRollbackCheckpoint;
 		SmallVector<GeneratorInfo, 0> _generators;
+		/// The events of the grid that aren't of every difficulty, sorted by the tile, see GetEventDifficulty()
+		struct DifficultyEvent {
+			std::int32_t Tile;
+			std::uint8_t Difficulty;
+		};
+		SmallVector<DifficultyEvent, 0> _difficultyEvents;
+		/// Easy-only and hard-only events left out in the current difficulty
+		SmallVector<DifficultyEventInfo, 0> _skippedDifficultyEvents;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
 		/// Positions of the off-grid events in pixels, the tile of the event `i` is `_layoutSize.X * _layoutSize.Y + i`

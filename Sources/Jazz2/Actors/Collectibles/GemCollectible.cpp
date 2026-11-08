@@ -5,7 +5,7 @@
 namespace Jazz2::Actors::Collectibles
 {
 	GemCollectible::GemCollectible()
-		: _ignoreTime(0.0f), _gemType(0)
+		: _ignoreTime(0.0f), _gemType(0), _ownerPlayerId(0)
 	{
 	}
 
@@ -22,6 +22,7 @@ namespace Jazz2::Actors::Collectibles
 		bool hasLimitedLifetime = (details.Params[1] & 0x01) == 0x01;
 		bool isFlipped = (details.Params[1] & 0x02) == 0x02;
 		bool isDelayed = (details.Params[1] & 0x04) == 0x04;
+		_ownerPlayerId = details.Params[2];
 
 		if (hasLimitedLifetime && _levelHandler->CanEventDisappear(EventType::Gem)) {
 			_timeLeft = 8.0f * FrameTimer::FramesPerSecond;
@@ -88,7 +89,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void GemCollectible::OnCollect(Player* player)
 	{
-		if (_ignoreTime > 0.0f) {
+		if (_ignoreTime > 0.0f || (_ownerPlayerId != 0 && player->GetPlayerIndex() + 1 == _ownerPlayerId)) {
 			return;
 		}
 

@@ -12,6 +12,7 @@
 #include "../../Actors/Player.h"
 #include "../../Actors/Collectibles/CollectibleBase.h"
 #include "../../Actors/Enemies/Dragon.h"
+#include "../../Actors/Enemies/Bat.h"
 #include "../../Actors/Enemies/Doggy.h"
 #include "../../Actors/Enemies/EnemyBase.h"
 #include "../../Actors/Enemies/Monkey.h"
@@ -1798,6 +1799,7 @@ namespace Jazz2::Scripting::Legacy
 			}
 		}
 		// What the behavior changed so far goes to the object first, what the object did comes back
+		auto stateBefore = _obj->state;
 		UpdateSkin(*_obj);
 		PushToActor(*_obj, *_actor);
 		UpdateFrameHitbox(*_actor);
@@ -1817,6 +1819,10 @@ namespace Jazz2::Scripting::Legacy
 			// An enemy of the game walks in STATE::WALK there while it moves, scripts fire from it (ice demons)
 			_obj->state = (std::abs(_obj->xSpeed) > 0.0f ? sWALK : sSTILL);
 			_obj->_synced.State = _obj->state;
+		}
+		if (runtime_cast<Actors::Enemies::EnemyBase>(_actor) != nullptr) {
+			// Ticks in the current state, as JJ2+ counts them for walkers (scripts animate tuff demons by it)
+			_obj->counter = (_obj->state == stateBefore ? _obj->counter + 1 : 0);
 		}
 		_isRunningOwnBehavior = false;
 
@@ -2217,6 +2223,7 @@ namespace Jazz2::Scripting::Legacy
 			// The animation of the object of the game shows its own frames again, any other one is shown in their place
 			obj._skinAnim = (obj.curAnim > 0 && obj.curAnim != obj._synced.NativeAnim ? obj.curAnim : 0);
 			obj._synced.CurAnim = obj.curAnim;
+			obj._ownFrame = false;
 		}
 	}
 
@@ -2468,6 +2475,15 @@ namespace Jazz2::Scripting::Legacy
 			if (((obj.state == sSTART || obj.state == sSTILL) && gameBehavior) || obj.state == sFLOAT || obj.state == sFLOATFALL) {
 				obj.state = (collectible->_untouched ? sFLOAT : sFLOATFALL);
 			}
+		} else if (auto* bat = runtime_cast<Actors::Enemies::Bat>(&actor)) {
+			// As BEHAVIOR::BAT: hangs STILL, takes off in TURN and flies in FLY
+			if (obj.state == sSTART || obj.state == sSTILL || obj.state == sTURN || obj.state == sFLY || obj.state == sWALK) {
+				switch (bat->GetBatState()) {
+					case Actors::Enemies::Bat::BatState::Hanging: obj.state = sSTILL; break;
+					case Actors::Enemies::Bat::BatState::Waking: obj.state = sTURN; break;
+					case Actors::Enemies::Bat::BatState::Flying: obj.state = sFLY; break;
+				}
+			}
 		} else if (auto* doggy = runtime_cast<Actors::Enemies::Doggy>(&actor)) {
 			// Shot, it dashes in STATE::ACTION as JJ2+ has it (zombie dogs show their attack then)
 			if (doggy->IsAttacking()) {
@@ -2524,7 +2540,12 @@ namespace Jazz2::Scripting::Legacy
 			std::uint32_t shownAnim = (obj._skinAnim > 0 ? std::uint32_t(obj._skinAnim) : nativeAnim);
 			std::uint32_t frameCount, firstFrame;
 			obj._synced.LongerAnim = false;
-			if (shownAnim != 0 && tables.GetAnimationFrames(shownAnim, frameCount, firstFrame) && frameCount > 0) {
+			bool hasFrames = (shownAnim != 0 && tables.GetAnimationFrames(shownAnim, frameCount, firstFrame) && frameCount > 0);
+			if (hasFrames && obj._ownFrame && obj.curFrame >= firstFrame && obj.curFrame < firstFrame + frameCount) {
+				// A frame of the animation after all, it animates as the object of the game does
+				obj._ownFrame = false;
+			}
+			if (hasFrames && !obj._ownFrame) {
 				std::uint32_t position = std::uint32_t(std::max<std::int32_t>(actor._renderer.CurrentFrame, 0));
 				std::int32_t age = levelScripts->GetGameTick() - levelScripts->GetObjectSpawnTick(obj.objectID);
 				bool byAge = true;
@@ -2973,6 +2994,7 @@ namespace Jazz2::Scripting::Legacy
 		// An animation a script gave the template is the one the object shows (not the one of the template, see
 		// LevelScriptLoader::GetObjectPreset())
 		_skinAnim = (preset.curAnim > 0 && preset.curAnim != preset._synced.CurAnim ? preset.curAnim : 0);
+		_ownFrame = (_skinAnim == 0 && preset.curFrame != 0 && preset.curFrame != preset._synced.CurFrame);
 		_synced.LightType = preset._synced.LightType;
 	}
 }
@@ -3346,6 +3368,7 @@ namespace Jazz2::Scripting
 			// What a script changes of the template is told apart by this, see OnActorAdded()
 			preset->_synced.Energy = preset->energy;
 			preset->_synced.CurAnim = preset->curAnim;
+			preset->_synced.CurFrame = preset->curFrame;
 			preset->_synced.LightType = preset->lightType;
 		}
 		preset->AddRef();

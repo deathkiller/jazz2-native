@@ -2171,6 +2171,7 @@ if(WITH_MULTIPLAYER)
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/GameModeObjectActor.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.h
@@ -2207,6 +2208,16 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TreasureHuntMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamTreasureHuntMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CustomGameModeBase.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/DeathCaptureTheFlagMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/DominationMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/FlagRunMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/HeadHuntersMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/JailbreakMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/LastRabbitStandingMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/PestilenceMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/RoastTagMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamLastRabbitStandingMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateLocalGameOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
@@ -2220,6 +2231,7 @@ if(WITH_MULTIPLAYER)
 
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/GameModeObjectActor.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.cpp
@@ -2238,6 +2250,16 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/RaceMode.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TreasureHuntMode.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CustomGameModeBase.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/DeathCaptureTheFlagMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/DominationMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/FlagRunMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/HeadHuntersMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/JailbreakMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/LastRabbitStandingMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/PestilenceMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/RoastTagMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamLastRabbitStandingMode.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp

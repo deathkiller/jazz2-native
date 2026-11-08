@@ -141,6 +141,10 @@ namespace Jazz2::UI::Menu
 		} else if (roundStarted && (gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt)) {
 			// TRANSLATORS: Column header in the multiplayer scoreboard (amount of treasure collected), keep it short
 			extraLabel = _("Treasure"); hasExtra = true;
+		} else if (roundStarted) {
+			if (auto* activeMode = mpLevelHandler->GetActiveGameMode()) {
+				extraLabel = activeMode->GetScoreboardLabel(); hasExtra = !extraLabel.empty();
+			}
 		}
 
 		Recti contentBounds = _root->GetContentBounds();
@@ -227,7 +231,9 @@ namespace Jazz2::UI::Menu
 		bool teamMode = IsTeamGameMode(gameMode);
 		bool roundStarted = (mpLevelHandler->GetLevelState() >= MpLevelHandler::LevelState::Running);
 		bool raceMode = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
-		bool hasExtra = roundStarted && (raceMode || gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt);
+		auto* activeMode = mpLevelHandler->GetActiveGameMode();
+		bool hasExtra = roundStarted && (raceMode || gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt ||
+			(activeMode != nullptr && !activeMode->GetScoreboardLabel().empty()));
 		std::uint32_t totalLaps = (raceMode ? mpLevelHandler->GetTotalLaps() : 0);
 
 		Recti contentBounds = _root->GetContentBounds();

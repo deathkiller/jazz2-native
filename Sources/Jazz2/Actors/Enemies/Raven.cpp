@@ -3,13 +3,29 @@
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
 
-#include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/Random.h"
+
+#include <float.h>
 
 namespace Jazz2::Actors::Enemies
 {
+	namespace
+	{
+		constexpr float NoticeDistance = 192.0f;
+		constexpr float PatrolHeight = 64.0f;
+		constexpr float RiseSpeed = 2.3f;
+		constexpr float PatrolAcceleration = 0.035f;
+		constexpr float PatrolSpeed = 2.4f;
+		constexpr std::int32_t PatrolTicksBeforeGlide = 176;
+		constexpr float GlideStartDistance = 40.0f;
+		constexpr std::int32_t GlideTicks = 76;
+		constexpr float GlideSpeedX = 1.0f;
+		constexpr float GlideSpeedY = 0.5f;
+		constexpr float SwoopSpeed = 5.0f;
+	}
+
 	Raven::Raven()
-		: _anglePhase(0.0f), _attackTime(160.0f), _attacking(false)
+		: _counter(0), _tickTime(0.0f), _ravenState(RavenState::Perched)
 	{
 	}
 
@@ -25,7 +41,7 @@ namespace Jazz2::Actors::Enemies
 		SetHealthByDifficulty(2);
 		_scoreValue = 300;
 
-		_originPos = _lastPos = _targetPos = _pos;
+		_originPos = _pos;
 
 		async_await RequestMetadataAsync("Enemy/Raven"_s);
 		SetFacingLeft(Random().NextBool());
@@ -44,74 +60,118 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_currentTransition == nullptr) {
-			if (_attackTime > 0.0f) {
-				_attackTime -= timeMult;
-			} else {
-				if (_attacking) {
-					SetAnimation(AnimState::Idle);
+		_tickTime += timeMult * TicksPerFrame;
+		while (_tickTime >= 1.0f) {
+			_tickTime -= 1.0f;
+			AdvanceTick();
+		}
+	}
 
-					_targetPos = _originPos;
+	void Raven::AdvanceTick()
+	{
+		_counter++;
 
-					_attackTime = 120.0f;
-					_attacking = false;
-				} else {
-					AttackNearestPlayer();
+		Vector2f targetPos;
+		switch (_ravenState) {
+			case RavenState::Perched: {
+				if (FindTarget(targetPos, NoticeDistance * NoticeDistance)) {
+					ChangeState(RavenState::Patrolling);
+					_speedPerTick = Vector2f::Zero;
 				}
+				break;
+			}
+
+			case RavenState::Patrolling: {
+				// Measured in JJ2+: it flies back and forth over the player, 64 px above its perch
+				bool found = FindTarget(targetPos, FLT_MAX);
+				if (!found) {
+					targetPos = _originPos;
+				}
+
+				float patrolY = _originPos.Y - PatrolHeight;
+				float waterLevel = _levelHandler->GetWaterLevel() - 20.0f;
+				if (patrolY > waterLevel) {
+					patrolY = waterLevel;
+				}
+
+				float dx = targetPos.X - _pos.X;
+				_speedPerTick.X = std::clamp(_speedPerTick.X + (dx < 0.0f ? -PatrolAcceleration : PatrolAcceleration), -PatrolSpeed, PatrolSpeed);
+				_speedPerTick.Y = std::clamp(patrolY - _pos.Y, -RiseSpeed, RiseSpeed);
+				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
+				if (_speedPerTick.X != 0.0f) {
+					Face(_speedPerTick.X < 0.0f);
+				}
+
+				if (found && _counter >= PatrolTicksBeforeGlide && std::abs(dx) < GlideStartDistance && (dx < 0.0f) == (_speedPerTick.X < 0.0f)) {
+					ChangeState(RavenState::Gliding);
+					SetAnimation(AnimState::TransitionAttack);
+					PlaySfx("Attack"_s, 0.7f, Random().NextFloat(1.4f, 1.8f));
+				}
+				break;
+			}
+
+			case RavenState::Gliding: {
+				MoveInstantly(Vector2f(IsFacingLeft() ? -GlideSpeedX : GlideSpeedX, GlideSpeedY), MoveType::Relative | MoveType::Force);
+				if (_counter >= GlideTicks) {
+					ChangeState(RavenState::Swooping);
+					SetAnimation(AnimState::Idle);
+				}
+				break;
+			}
+
+			case RavenState::Swooping: {
+				// Measured in JJ2+: it swoops straight back to its perch at up to 5 px a tick on each axis
+				Vector2f diff = _originPos - _pos;
+				Vector2f step = Vector2f(std::clamp(diff.X, -SwoopSpeed, SwoopSpeed), std::clamp(diff.Y, -SwoopSpeed, SwoopSpeed));
+				MoveInstantly(step, MoveType::Relative | MoveType::Force);
+				if (step.X != 0.0f) {
+					Face(step.X < 0.0f);
+				}
+				if (std::abs(diff.X) <= SwoopSpeed && std::abs(diff.Y) <= SwoopSpeed) {
+					ChangeState(RavenState::Patrolling);
+					_speedPerTick = Vector2f::Zero;
+				}
+				break;
 			}
 		}
+	}
 
-		_anglePhase += timeMult * 0.04f;
+	void Raven::ChangeState(RavenState state)
+	{
+		_ravenState = state;
+		_counter = 0;
+	}
 
-		if ((_targetPos - _lastPos).Length() > 5.0f) {
-			Vector2f dir = (_targetPos - _lastPos).Normalized();
-			Vector2f speed = {
-				lerpByTime(_lastSpeed.X, _attacking ? 4.0f : 2.0f, 0.1f, timeMult),
-				lerpByTime(_lastSpeed.Y, _attacking ? 4.0f : 2.0f, 0.1f, timeMult)
-			};
-			_lastPos.X += dir.X * speed.X * timeMult;
-			_lastPos.Y += dir.Y * speed.Y * timeMult;
-			_lastSpeed = speed;
-
-			bool willFaceLeft = (speed.X < 0.0f);
-			if (IsFacingLeft() != willFaceLeft) {
-				SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
-					SetFacingLeft(willFaceLeft);
-				});
+	void Raven::Face(bool left)
+	{
+		if (IsFacingLeft() != left && _currentTransition == nullptr) {
+			SetFacingLeft(left);
+			if (_ravenState == RavenState::Patrolling) {
+				SetTransition(AnimState::TransitionTurn, false);
 			}
 		}
-
-		MoveInstantly(_lastPos + Vector2f(0.0f, sinApprox(_anglePhase) * 6.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	void Raven::OnSerializeState(Stream& dest)
 	{
 		EnemyBase::OnSerializeState(dest);
 
-		dest.WriteValueAsLE<float>(_lastPos.X);
-		dest.WriteValueAsLE<float>(_lastPos.Y);
-		dest.WriteValueAsLE<float>(_targetPos.X);
-		dest.WriteValueAsLE<float>(_targetPos.Y);
-		dest.WriteValueAsLE<float>(_lastSpeed.X);
-		dest.WriteValueAsLE<float>(_lastSpeed.Y);
-		dest.WriteValueAsLE<float>(_anglePhase);
-		dest.WriteValueAsLE<float>(_attackTime);
-		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
+		dest.WriteVariableInt32((std::int32_t)_ravenState);
+		dest.WriteVariableInt32(_counter);
+		dest.WriteValueAsLE<float>(_speedPerTick.X);
+		dest.WriteValueAsLE<float>(_speedPerTick.Y);
 	}
 
 	void Raven::OnDeserializeState(Stream& src)
 	{
 		EnemyBase::OnDeserializeState(src);
 
-		_lastPos.X = src.ReadValueAsLE<float>();
-		_lastPos.Y = src.ReadValueAsLE<float>();
-		_targetPos.X = src.ReadValueAsLE<float>();
-		_targetPos.Y = src.ReadValueAsLE<float>();
-		_lastSpeed.X = src.ReadValueAsLE<float>();
-		_lastSpeed.Y = src.ReadValueAsLE<float>();
-		_anglePhase = src.ReadValueAsLE<float>();
-		_attackTime = src.ReadValueAsLE<float>();
-		_attacking = (src.ReadValue<std::uint8_t>() != 0);
+		std::int32_t state = src.ReadVariableInt32();
+		_ravenState = (state >= 0 && state <= (std::int32_t)RavenState::Swooping ? (RavenState)state : RavenState::Perched);
+		_counter = src.ReadVariableInt32();
+		_speedPerTick.X = src.ReadValueAsLE<float>();
+		_speedPerTick.Y = src.ReadValueAsLE<float>();
+		SetAnimation(_ravenState == RavenState::Gliding ? AnimState::TransitionAttack : AnimState::Idle);
 	}
 
 	bool Raven::OnPerish(ActorBase* collider)
@@ -124,42 +184,21 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void Raven::AttackNearestPlayer()
+	bool Raven::FindTarget(Vector2f& targetPos, float maxDistanceSqr)
 	{
+		float nearestSqr = maxDistanceSqr;
 		bool found = false;
-		Vector2f foundPos = Vector2f::Zero;
-		float targetDistance = 300.0f;
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
+		for (auto* player : _levelHandler->GetPlayers()) {
 			if (player->GetHealth() <= 0) {
 				continue;
 			}
-
-			Vector2f newPos = player->GetPos();
-			float distance = (_lastPos - newPos).Length();
-			if (distance < targetDistance) {
-				foundPos = newPos;
-				targetDistance = distance;
+			float distanceSqr = (player->GetPos() - _pos).SqrLength();
+			if (distanceSqr < nearestSqr) {
+				nearestSqr = distanceSqr;
+				targetPos = player->GetPos();
 				found = true;
 			}
 		}
-
-		if (found) {
-			SetAnimation(AnimState::TransitionAttack);
-
-			// Can't fly into the water
-			float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
-			if (foundPos.Y > waterLevel - 8.0f) {
-				foundPos.Y = waterLevel - 8.0f;
-			}
-
-			_targetPos = foundPos;
-			_targetPos.Y -= 30.0f;
-
-			_attackTime = 80.0f;
-			_attacking = true;
-
-			PlaySfx("Attack"_s, 0.7f, Random().NextFloat(1.4f, 1.8f));
-		}
+		return found;
 	}
 }

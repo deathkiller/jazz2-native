@@ -473,7 +473,7 @@ namespace Jazz2::Compatibility
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser)
 	{
-		if (version > 0x107) {
+		if (version > 0x108) {
 			LOGW("MLLE stream version 0x{:x} in level \"{}\" is not supported", version, LevelName);
 			return;
 		}
@@ -493,24 +493,42 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Convert remaining coins to gems when warp is used
-		bool warpsTransmuteCoins = block.ReadBool();
-		// TODO: Objects spawned from Generators will derive their parameters from tile they first appear at (e.g., after gravitation)
-		bool delayGeneratedCrateOrigins = block.ReadBool();
-		std::int32_t echo = block.ReadInt32();
+		// What MLLE-Include sets up before the level starts, in the units of the game (see Formats::LevelSettingsChunk)
+		_mlleSettings.WarpsTransmuteCoins = block.ReadBool();
+		_mlleSettings.DelayGeneratedCrateOrigins = block.ReadBool();
+		// `jjEcho`, nothing plays it
+		block.ReadInt32();
 		std::uint32_t darknessColorBgra = block.ReadUInt32();
 		_darknessColor = ((darknessColorBgra >> 16) & 0xff) | (darknessColorBgra & 0x0000ff00) | ((darknessColorBgra << 16) & 0x00ff0000);
-		// TODO: Water level change speed
+		// Pixels per tick of 70 a second
 		float waterChangeSpeed = ReadFiniteFloat(block);
-		// TODO: How player should react to being underwater (PositionBased, Swim, LowGravity)
+		_mlleSettings.WaterChangeSpeed = (waterChangeSpeed >= 0.0f ? waterChangeSpeed * 70.0f : _mlleSettings.WaterChangeSpeed);
+		// `WATERINTERACTION::WaterInteraction`, numbered as Formats::LevelSettingsChunk::WaterMovement
 		std::uint8_t waterInteraction = block.ReadByte();
-		std::int32_t waterLayer = block.ReadInt32();
-		// TODO: How water and ambient lighting should interact in the level (None, Global, Lagunicus)
-		std::uint8_t waterLighting = block.ReadByte();
+		if (waterInteraction <= std::uint8_t(Formats::LevelSettingsChunk::WaterMovement::LowGravity)) {
+			_mlleSettings.Movement = Formats::LevelSettingsChunk::WaterMovement(waterInteraction);
+		}
+		_mlleWaterLayer = block.ReadInt32();
+		// `WATERLIGHT::wl`, NONE 0, GLOBAL 1 and LAGUNICUS 3
+		switch (block.ReadByte()) {
+			case 1: _mlleSettings.Lighting = Formats::LevelSettingsChunk::WaterLighting::Global; break;
+			case 3: _mlleSettings.Lighting = Formats::LevelSettingsChunk::WaterLighting::Depth; break;
+			default: _mlleSettings.Lighting = Formats::LevelSettingsChunk::WaterLighting::None; break;
+		}
 		// Clamped first, a float outside of the range of the integer it's converted to is undefined behavior
 		_waterLevel = (std::uint16_t)std::clamp(ReadFiniteFloat(block), 0.0f, 65535.0f);
+		// ARGB, black for both when the level leaves the gradient of the water as it is
 		std::uint32_t waterGradientStart = block.ReadUInt32();
 		std::uint32_t waterGradientStop = block.ReadUInt32();
+		if (((waterGradientStart | waterGradientStop) & 0x00FFFFFF) != 0) {
+			_mlleSettings.HasWaterColors = true;
+			_mlleSettings.WaterColorTop[0] = std::uint8_t(waterGradientStart >> 16);
+			_mlleSettings.WaterColorTop[1] = std::uint8_t(waterGradientStart >> 8);
+			_mlleSettings.WaterColorTop[2] = std::uint8_t(waterGradientStart);
+			_mlleSettings.WaterColorBottom[0] = std::uint8_t(waterGradientStop >> 16);
+			_mlleSettings.WaterColorBottom[1] = std::uint8_t(waterGradientStop >> 8);
+			_mlleSettings.WaterColorBottom[2] = std::uint8_t(waterGradientStop);
+		}
 
 		// Level palette
 		_useLevelPalette = block.ReadBool();
@@ -672,8 +690,25 @@ namespace Jazz2::Compatibility
 			if (version >= 0x103) {
 				std::int16_t editedTilesCount = block.ReadInt16();
 				for (std::int32_t i = 0; i < editedTilesCount && !block.ReachedEndOfStream(); i++) {
+					std::uint16_t tileId = std::uint16_t(block.ReadInt16());
+					// MLLE-Include-1.8 marks an image in true color by the vertical flip bit, RGBA follows instead of indices -
+					// the level keeps palette indices, so it gets the nearest colors of the palette of the level
+					if (version >= 0x108 && (tileId & 0x2000) != 0) {
+						std::uint8_t rgba[32 * 32 * 4];
+						block.ReadRawBytes(rgba, sizeof(rgba));
+						if (!_useLevelPalette) {
+							LOGW("Level \"{}\" has an edited tile {} in true color without a palette of its own, skipping", LevelName, tileId & 0x1FFF);
+							continue;
+						}
+						auto& tile = _overridenTileDiffuses.emplace_back();
+						tile.TileID = std::uint16_t(tileId & 0x1FFF);
+						for (std::int32_t j = 0; j < 32 * 32; j++) {
+							tile.Diffuse[j] = (rgba[j * 4 + 3] < 128 ? 0 : FindNearestLevelColor(rgba[j * 4], rgba[j * 4 + 1], rgba[j * 4 + 2]));
+						}
+						continue;
+					}
 					auto& tile = _overridenTileDiffuses.emplace_back();
-					tile.TileID = block.ReadInt16();
+					tile.TileID = tileId;
 					block.ReadRawBytes(tile.Diffuse, 32 * 32);
 				}
 
@@ -708,6 +743,23 @@ namespace Jazz2::Compatibility
 				}
 			}
 		}
+	}
+
+	std::uint8_t JJ2Level::FindNearestLevelColor(std::uint8_t r, std::uint8_t g, std::uint8_t b) const
+	{
+		std::int32_t bestIndex = 1;
+		std::int32_t bestDistance = INT32_MAX;
+		for (std::int32_t i = 1; i < 256; i++) {
+			std::int32_t dr = std::int32_t(_levelPalette[i * 3]) - r;
+			std::int32_t dg = std::int32_t(_levelPalette[i * 3 + 1]) - g;
+			std::int32_t db = std::int32_t(_levelPalette[i * 3 + 2]) - b;
+			std::int32_t distance = dr * dr + dg * dg + db * db;
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				bestIndex = i;
+			}
+		}
+		return std::uint8_t(bestIndex);
 	}
 
 	ConversionResult JJ2Level::ConvertEvent(EventConverter& eventConverter, JJ2Event eventType, std::uint32_t tileParams)
@@ -1241,6 +1293,9 @@ namespace Jazz2::Compatibility
 		SmallVector<SmallVector<Formats::TileRecord, 0>, JJ2LayerCount> previewTiles;
 
 		std::int32_t writtenLayers = 0;
+		// Index each layer of the original game is written at, -1 if it isn't
+		std::int32_t writtenIndexOfOriginal[JJ2LayerCount];
+		std::fill(std::begin(writtenIndexOfOriginal), std::end(writtenIndexOfOriginal), -1);
 
 		// In the order they're drawn, from the front, so the editor lists them so - the layers of the original keep their numbers
 		// wherever they are (see LayerRecord::OriginalNumber), which is what the scripts know them by
@@ -1267,6 +1322,9 @@ namespace Jazz2::Compatibility
 			MakeLayerRecord(i, record, texture, textureLookup, _hasMlleData || _hasScript);
 			writer.WriteLayerHeader(record);
 			layerProperties.push_back(Formats::LayerPropertiesChunk::Entry::FromRecord(std::uint32_t(writtenLayers), record, layer.Name, texture));
+			if (i < JJ2LayerCount) {
+				writtenIndexOfOriginal[i] = writtenLayers;
+			}
 			writtenLayers++;
 
 			SmallVector<Formats::TileRecord, 0>* previewLayerTiles = nullptr;
@@ -1330,6 +1388,21 @@ namespace Jazz2::Compatibility
 		Formats::LayerPropertiesChunk::Write(layerProperties, layerPropertiesChunk.Data);
 		if (!layerPropertiesChunk.Data.empty()) {
 			chunks.push_back(Death::move(layerPropertiesChunk));
+		}
+		// The water in front of a layer of the original game is in front of the layer it became, in front of the frontmost
+		// one it's in front of all of them, a number out of the layers hides it
+		Formats::LevelSettingsChunk::Settings levelSettings = _mlleSettings;
+		if (_mlleWaterLayer >= 1 && _mlleWaterLayer <= JJ2LayerCount) {
+			std::int32_t index = writtenIndexOfOriginal[_mlleWaterLayer - 1];
+			levelSettings.WaterLayer = (index > 0 ? index : Formats::LevelSettingsChunk::WaterInFront);
+		} else {
+			levelSettings.WaterLayer = Formats::LevelSettingsChunk::WaterHidden;
+		}
+		Formats::ChunkRecord levelSettingsChunk;
+		levelSettingsChunk.Tag = Formats::LevelSettingsChunk::Tag;
+		Formats::LevelSettingsChunk::Write(levelSettings, levelSettingsChunk.Data);
+		if (!levelSettingsChunk.Data.empty()) {
+			chunks.push_back(Death::move(levelSettingsChunk));
 		}
 		if (_hasScript) {
 			// What the script reads by jjHelpStrings, the texts above have lost the characters of the formatting

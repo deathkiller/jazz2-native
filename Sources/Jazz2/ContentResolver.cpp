@@ -145,7 +145,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 21;
+	static constexpr std::uint64_t ShadersVersion = 22;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -3237,8 +3237,8 @@ namespace Jazz2
 		{
 			SmallVector<Formats::ChunkRecord, 0> chunks;
 			reader.ReadSelectedChunks(chunks, [](std::uint32_t tag, std::uint32_t) {
-				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::LayerPropertiesChunk::Tag || tag == Formats::ScriptDataChunk::Tag ||
-					tag == Formats::WeaponsChunk::Tag);
+				return (tag == Formats::LevelTextsChunk::Tag || tag == Formats::LayerPropertiesChunk::Tag || tag == Formats::LevelSettingsChunk::Tag ||
+					tag == Formats::ScriptDataChunk::Tag || tag == Formats::WeaponsChunk::Tag);
 			});
 			if (!reader.IsValid()) {
 				LOGE("Level \"{}\" cannot be read: {}", fullPath, reader.GetError());
@@ -3294,6 +3294,11 @@ namespace Jazz2
 					}
 					auto recolors = Formats::ScriptDataChunk::ReadSection(chunk.Data, Formats::ScriptDataChunk::Section::Recolors);
 					descriptor.SpriteRecolors.append(recolors.begin(), recolors.end());
+				} else if (chunk.Tag == Formats::LevelSettingsChunk::Tag) {
+					if (!Formats::LevelSettingsChunk::Read(chunk.Data, descriptor.Settings)) {
+						// What was read before the damage is kept, the rest has its defaults
+						LOGW("Level \"{}\" has damaged settings", fullPath);
+					}
 				} else if (chunk.Tag == Formats::WeaponsChunk::Tag) {
 					switch (Formats::WeaponsChunk::Read(chunk.Data, descriptor.Weapons)) {
 						case Formats::WeaponsChunk::ReadResult::Damaged: LOGW("Level \"{}\" has damaged weapons, those of the game are used", fullPath); break;

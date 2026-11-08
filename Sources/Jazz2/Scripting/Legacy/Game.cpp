@@ -12,8 +12,14 @@
 #include "../../../nCine/Input/IInputManager.h"
 #include "../../../nCine/Base/Algorithms.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "../../Multiplayer/MpLevelHandler.h"
+#	include "../../Actors/Multiplayer/MpPlayer.h"
+#endif
+
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <IO/FileSystem.h>
 
 #include <Containers/StringConcatenable.h>
@@ -99,6 +105,68 @@ namespace Jazz2::Scripting
 		noop(); return 0;
 	}
 
+	Legacy::jjCONTROLPOINT* LevelScriptLoader::GetControlPoint(std::int32_t index)
+	{
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		return &_this->_controlPoints[index >= 0 && index < 16 ? index : 0];
+	}
+
+	void LevelScriptLoader::UpdateGameMode()
+	{
+		gameMode = GM_SP;
+		customMode = 0;
+#if defined(WITH_MULTIPLAYER)
+		// The base mode and the custom mode of JJ2+ (GAME::Custom values) the mode is built on
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler);
+		if (mpHandler == nullptr) {
+			return;
+		}
+
+		// Control points of Domination, synchronized to clients as objects of the game mode
+		std::int32_t pointCount = 0;
+		for (const auto& obj : mpHandler->GetGameModeObjects()) {
+			if (obj.Type != Multiplayer::GameModes::GameModeObjectType::ControlPoint || pointCount >= 16) {
+				continue;
+			}
+			auto& cp = _controlPoints[pointCount++];
+			if (cp.name != obj.Name) {
+				cp.name = obj.Name;
+			}
+			cp.xTile = (std::int32_t)(obj.Pos.X / 32.0f);
+			cp.yTile = (std::int32_t)(obj.Pos.Y / 32.0f);
+			cp.direction = (obj.Direction < 0 ? -1 : 1);
+			cp.controlTeam = (obj.Team == Multiplayer::GameModes::GameModeObject::NeutralTeam ? -1 : (std::int32_t)obj.Team);
+			cp.xPos = obj.Pos.X;
+			cp.yPos = obj.Pos.Y;
+		}
+		for (std::int32_t i = pointCount; i < 16; i++) {
+			_controlPoints[i] = {};
+		}
+		maxScore = (std::int32_t)mpHandler->GetServerConfiguration().TotalKills;
+		switch (mpHandler->GetGameMode()) {
+			case Multiplayer::MpGameMode::Battle: gameMode = GM_BATTLE; break;
+			case Multiplayer::MpGameMode::TeamBattle: gameMode = GM_CTF; customMode = 11; break;
+			case Multiplayer::MpGameMode::Race:
+			case Multiplayer::MpGameMode::TeamRace: gameMode = GM_RACE; break;
+			case Multiplayer::MpGameMode::TreasureHunt:
+			case Multiplayer::MpGameMode::TeamTreasureHunt: gameMode = GM_TREASURE; break;
+			case Multiplayer::MpGameMode::CaptureTheFlag: gameMode = GM_CTF; break;
+			case Multiplayer::MpGameMode::Cooperation: gameMode = GM_COOP; break;
+			case Multiplayer::MpGameMode::RoastTag: gameMode = GM_BATTLE; customMode = 1; break;
+			case Multiplayer::MpGameMode::LastRabbitStanding: gameMode = GM_BATTLE; customMode = 2; break;
+			case Multiplayer::MpGameMode::ExtendedLastRabbitStanding: gameMode = GM_BATTLE; customMode = 3; break;
+			case Multiplayer::MpGameMode::Pestilence: gameMode = GM_BATTLE; customMode = 4; break;
+			case Multiplayer::MpGameMode::Jailbreak: gameMode = GM_CTF; customMode = 12; break;
+			case Multiplayer::MpGameMode::DeathCaptureTheFlag: gameMode = GM_CTF; customMode = 13; break;
+			case Multiplayer::MpGameMode::FlagRun: gameMode = GM_CTF; customMode = 14; break;
+			case Multiplayer::MpGameMode::TeamLastRabbitStanding: gameMode = GM_CTF; customMode = 15; break;
+			case Multiplayer::MpGameMode::Domination: gameMode = GM_CTF; customMode = 16; break;
+			case Multiplayer::MpGameMode::HeadHunters: gameMode = GM_CTF; customMode = 17; break;
+			default: break;
+		}
+#endif
+	}
+
 	// TODO
 
 	void LevelScriptLoader::jjAlert(const String& text, bool sendToAll, std::uint32_t size)
@@ -121,17 +189,58 @@ namespace Jazz2::Scripting
 		LOGD("{}", text);
 	}
 	void LevelScriptLoader::jjChat(const String& text, bool teamchat) {
-		noop();
-		LOGW("{}", text);
-
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		if (text.hasPrefix('/')) {
-			// TODO: Process command
+			_this->ProcessChatCommand(text.exceptPrefix(1));
 			return;
 		}
 
-		// TODO: teamchat
-		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		// There's nobody to send it to, it's shown as a message of the player
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, Compatibility::JJ2Strings::RecodeScriptString(text, true));
+	}
+	void LevelScriptLoader::ProcessChatCommand(StringView line) {
+		auto parts = line.trimmed().partition(' ');
+		String command = StringUtils::lowercase(parts[0]);
+		String argument(parts[2].trimmed());
+
+		if (command == "smhealth"_s) {
+			// The maximum health of the players, scripts raise it as a reward
+			char* end = nullptr;
+			long value = std::strtol(argument.data(), &end, 10);
+			if (end != argument.data() && value >= 1 && value <= 99) {
+				for (Actors::Player* player : _levelHandler->_players) {
+					GetPlayerBackingStore(player)->SetMaxHealth(std::int32_t(value));
+				}
+			}
+		} else if (command == "maxresolution"_s) {
+			// Only reported back by jjResolutionMaxWidth/Height, the view of the game is never larger than a script expects
+			// and has no trails to avoid - a script shrinking it would ask again after every change
+			auto size = argument.partition('x');
+			char* endW = nullptr;
+			char* endH = nullptr;
+			String width(size[0]);
+			String height(size[2]);
+			long w = std::strtol(width.data(), &endW, 10);
+			long h = std::strtol(height.data(), &endH, 10);
+			if (endW != width.data() && endH != height.data() && w > 0 && h > 0) {
+				_maxResolution = Vector2i(std::int32_t(w), std::int32_t(h));
+				checkedMaxSubVideoWidth = _maxResolution.X;
+				checkedMaxSubVideoHeight = _maxResolution.Y;
+			}
+		} else if (command == "difficulty"_s) {
+			std::int32_t value = -1;
+			if (argument == "easy"_s) value = 0;
+			else if (argument == "medium"_s || argument == "normal"_s) value = 1;
+			else if (argument == "hard"_s) value = 2;
+			// Turbo isn't a difficulty of the game, it's ignored as `jjDifficulty = 3` is
+			if (value >= 0) {
+				_levelHandler->_difficulty = (GameDifficulty)(std::int32_t(GameDifficulty::Easy) + value);
+				DifficultyForNextLevel = value;
+			}
+		} else {
+			// Commands of a multiplayer server (/gamemode, /mouseaim, /noctfcolors, ...), nothing to do in this game
+			LOGD("Command \"/{}\" of the script ignored", line);
+		}
 	}
 	void LevelScriptLoader::jjConsole(const String& text, bool sendToAll) {
 		noop();
@@ -165,8 +274,51 @@ namespace Jazz2::Scripting
 	// TODO
 
 	std::int32_t get_teamScore(std::int32_t color) {
-		noop(); return 0;
+#if defined(WITH_MULTIPLAYER)
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(owner->GetLevelHandler())) {
+			return (std::int32_t)mpHandler->GetSyncedTeamScore((std::uint8_t)color);
+		}
+#endif
+		return 0;
 	}
+	// The player with the role in the multiplayer game mode, or nullptr
+	static jjPLAYER* GetPlayerWithModeRole(std::uint8_t flag) {
+#if defined(WITH_MULTIPLAYER)
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		for (auto* player : owner->GetPlayers()) {
+			if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player)) {
+				auto peerDesc = mpPlayer->GetPeerDescriptor();
+				if (peerDesc != nullptr && (peerDesc->ModeFlags & flag) != 0) {
+					return owner->GetPlayerBackingStore(player);
+				}
+			}
+		}
+#endif
+		return nullptr;
+	}
+	jjPLAYER* get_tokenOwner() {
+#if defined(WITH_MULTIPLAYER)
+		return GetPlayerWithModeRole((std::uint8_t)Multiplayer::GameModes::PlayerModeFlags::It);
+#else
+		return nullptr;
+#endif
+	}
+	jjPLAYER* get_bottomFeeder() {
+#if defined(WITH_MULTIPLAYER)
+		return GetPlayerWithModeRole((std::uint8_t)Multiplayer::GameModes::PlayerModeFlags::BottomFeeder);
+#else
+		return nullptr;
+#endif
+	}
+	bool get_doZombiesAlreadyExist() {
+#if defined(WITH_MULTIPLAYER)
+		return (GetPlayerWithModeRole((std::uint8_t)Multiplayer::GameModes::PlayerModeFlags::Zombie) != nullptr);
+#else
+		return false;
+#endif
+	}
+
 	std::int32_t GetMaxHealth() {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		auto players = owner->GetPlayers();
@@ -507,15 +659,10 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Base mode of the current game
 		 *
-		 * Doesn't reflect a custom mode, see @ref jjGameCustom for that.
-		 * @partialsupport Always @ref GAME::SP, also in multiplayer.
+		 * Doesn't reflect a custom mode, see @ref jjGameCustom for that. Team modes are built on @ref GAME::CTF.
 		 */
 		engine->RegisterGlobalProperty("const GAME::Mode jjGameMode", &gameMode);
-		/**
-		 * @brief Custom mode of the current game, if any
-		 *
-		 * @partialsupport Always @ref GAME::NOCUSTOM, also in multiplayer team modes.
-		 */
+		/** @brief Custom mode of the current game, if any */
 		engine->RegisterGlobalProperty("const GAME::Custom jjGameCustom", &customMode);
 		/**
 		 * @brief Whether players from other computers can join, and over which network
@@ -542,13 +689,15 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Largest width a subscreen may have in the current level
 		 *
-		 * Currently the same as @ref jjSubscreenWidth.
+		 * What a script set by the `/maxresolution` command of @ref jjChat(), otherwise the same as
+		 * @ref jjSubscreenWidth. The view of the game doesn't change by it.
 		 */
 		engine->RegisterGlobalProperty("const int jjResolutionMaxWidth", &checkedMaxSubVideoWidth);
 		/**
 		 * @brief Largest height a subscreen may have in the current level
 		 *
-		 * Currently the same as @ref jjSubscreenHeight.
+		 * What a script set by the `/maxresolution` command of @ref jjChat(), otherwise the same as
+		 * @ref jjSubscreenHeight. The view of the game doesn't change by it.
 		 */
 		engine->RegisterGlobalProperty("const int jjResolutionMaxHeight", &checkedMaxSubVideoHeight);
 		/**
@@ -608,11 +757,7 @@ namespace Jazz2::Scripting
 		 */
 		engine->RegisterGlobalProperty("const bool jjStrongPowerups", &strongPowerups);
 
-		/**
-		 * @brief Score needed to win a competitive game
-		 *
-		 * @partialsupport Always 0.
-		 */
+		/** @brief Score needed to win a competitive game, 0 outside of multiplayer */
 		engine->RegisterGlobalProperty("const int jjMaxScore", &maxScore);
 		engine->RegisterGlobalFunction("int get_jjTeamScore(TEAM::Color)", asFUNCTION(get_teamScore), asCALL_CDECL);
 		engine->RegisterGlobalFunction("int get_jjMaxHealth()", asFUNCTION(GetMaxHealth), asCALL_CDECL);
@@ -624,9 +769,12 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalProperty("const bool jjShowMaxHealth", &jjShowMaxHealth);
 		engine->RegisterGlobalFunction("int get_jjStartHealth()", asFUNCTION(GetStartHealth), asCALL_CDECL);
 
-		/*engine->RegisterGlobalProperty("const bool jjDoZombiesAlreadyExist", &doZombiesAlreadyExist);
+		/** @brief Whether any player is a zombie in Pestilence */
+		engine->RegisterGlobalFunction("bool get_jjDoZombiesAlreadyExist()", asFUNCTION(get_doZombiesAlreadyExist), asCALL_CDECL);
+		/** @brief Player with the fewest points in Roast Tag, anyone can roast them, or `null` */
 		engine->RegisterGlobalFunction("jjPLAYER@ get_jjBottomFeeder()", asFUNCTION(get_bottomFeeder), asCALL_CDECL);
-		engine->RegisterGlobalFunction("jjPLAYER@ get_jjTokenOwner()", asFUNCTION(get_tokenOwner), asCALL_CDECL);*/
+		/** @brief Player holding Eva's Ring in Roast Tag, or `null` */
+		engine->RegisterGlobalFunction("jjPLAYER@ get_jjTokenOwner()", asFUNCTION(get_tokenOwner), asCALL_CDECL);
 	}
 }
 

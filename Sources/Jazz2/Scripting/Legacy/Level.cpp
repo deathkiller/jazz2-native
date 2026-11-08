@@ -116,16 +116,22 @@ namespace Jazz2::Scripting
 		return value;
 	}
 	void LevelScriptLoader::setWaterGradient(std::uint8_t red1, std::uint8_t green1, std::uint8_t blue1, std::uint8_t red2, std::uint8_t green2, std::uint8_t blue2) {
-		noop();
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		_this->SetWaterColors(Vector3f(red1, green1, blue1) / 255.0f, Vector3f(red2, green2, blue2) / 255.0f);
 	}
 	void LevelScriptLoader::setWaterGradientFromColors(jjPALCOLOR color1, jjPALCOLOR color2) {
-		noop();
+		setWaterGradient(color1.red, color1.green, color1.blue, color2.red, color2.green, color2.blue);
 	}
 	void LevelScriptLoader::setWaterGradientToTBG() {
-		noop();
+		// The colors of the palette the textured background of JJ2 fades through
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		const jjPALCOLOR& top = _this->jjPalette.getColor(176);
+		const jjPALCOLOR& bottom = _this->jjPalette.getColor(207);
+		setWaterGradient(top.red, top.green, top.blue, bottom.red, bottom.green, bottom.blue);
 	}
 	void LevelScriptLoader::resetWaterGradient() {
-		noop();
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		_this->SetWaterColors(LevelHandler::DefaultWaterColor, LevelHandler::DefaultWaterColor);
 	}
 
 	void LevelScriptLoader::triggerRock(std::uint8_t id) {
@@ -328,9 +334,9 @@ namespace Jazz2::Scripting
 		engine->SetDefaultNamespace("WATERLIGHT");
 		/** @brief How ambient lighting behaves when the level has water */
 		engine->RegisterEnum("wl");
-		engine->RegisterEnumValue("wl", "NONE", 0);			///< Full brightness everywhere while water is active, ignoring ambient lighting
-		engine->RegisterEnumValue("wl", "GLOBAL", 1);		///< Ambient lighting applies equally above and below the water surface
-		engine->RegisterEnumValue("wl", "LAGUNICUS", 3);	///< Full brightness above water, darker the deeper below the surface the player is
+		engine->RegisterEnumValue("wl", "NONE", LegacyWaterLightingNone);			///< Full brightness everywhere while water is active, ignoring ambient lighting
+		engine->RegisterEnumValue("wl", "GLOBAL", LegacyWaterLightingGlobal);		///< Ambient lighting applies equally above and below the water surface
+		engine->RegisterEnumValue("wl", "LAGUNICUS", LegacyWaterLightingLagunicus);	///< Full brightness above water, darker the deeper below the surface the player is
 		engine->SetDefaultNamespace("WATERINTERACTION");
 		/** @brief How local players move underwater */
 		engine->RegisterEnum("WaterInteraction");
@@ -341,13 +347,18 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief How ambient lighting behaves when the level has water
 		 *
-		 * @partialsupport Currently has no effect.
+		 * The level starts with what its MLLE settings say.
+		 * @partialsupport @ref WATERLIGHT::NONE and @ref WATERLIGHT::GLOBAL both light the level as the game always does, above
+		 * and below the water. @ref WATERLIGHT::LAGUNICUS is approximated: full light above the water, and below it the light
+		 * of the level is reached 15 tiles deep.
 		 */
 		engine->RegisterGlobalProperty("WATERLIGHT::wl jjWaterLighting", &waterLightMode);
 		/**
 		 * @brief How local players move underwater
 		 *
-		 * @partialsupport Currently has no effect.
+		 * With @ref WATERINTERACTION::LOWGRAVITY players don't swim, they walk and jump as on land and fall with the gravity
+		 * of the water. The level starts with what its MLLE settings say.
+		 * @partialsupport @ref WATERINTERACTION::POSITIONBASED always swims, the gravity of the water isn't measured in JJ2+.
 		 */
 		engine->RegisterGlobalProperty("WATERINTERACTION::WaterInteraction jjWaterInteraction", &waterInteraction);
 		/**
@@ -395,26 +406,24 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Sets the colors of the water from two RGB colors
 		 *
-		 * @partialsupport Currently has no effect.
+		 * The first color tints the water at its surface, the second one at the bottom of the view.
+		 * @partialsupport The colors tint the water effect of the game, which isn't the gradient of JJ2+. The software renderer
+		 * and the consoles without shaders keep the default color.
 		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient(uint8 red1, uint8 green1, uint8 blue1, uint8 red2, uint8 green2, uint8 blue2)", asFUNCTION(setWaterGradient), asCALL_CDECL);
 		/**
 		 * @brief Sets the colors of the water from two palette colors
 		 *
-		 * @partialsupport Currently has no effect.
+		 * See the other overload.
 		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient(jjPALCOLOR color1, jjPALCOLOR color2)", asFUNCTION(setWaterGradientFromColors), asCALL_CDECL);
 		/**
 		 * @brief Sets the colors of the water from the textured background colors of the palette
 		 *
-		 * @partialsupport Currently has no effect.
+		 * The colors of palette indices 176 and 207, the gradient the textured background of the original game fades through.
 		 */
 		engine->RegisterGlobalFunction("void jjSetWaterGradient()", asFUNCTION(setWaterGradientToTBG), asCALL_CDECL);
-		/**
-		 * @brief Restores the default colors of the water
-		 *
-		 * @partialsupport Currently has no effect.
-		 */
+		/** @brief Restores the default colors of the water */
 		engine->RegisterGlobalFunction("void jjResetWaterGradient()", asFUNCTION(resetWaterGradient), asCALL_CDECL);
 
 		/**

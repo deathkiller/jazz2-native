@@ -1417,4 +1417,110 @@ namespace Jazz2::Formats
 			data.append(reinterpret_cast<const std::uint8_t*>(text.data()), reinterpret_cast<const std::uint8_t*>(text.data()) + length);
 		}
 	}
+
+	bool LevelSettingsChunk::Read(ArrayView<const std::uint8_t> data, Settings& settings)
+	{
+		const std::uint8_t* p = data.data();
+		const std::uint8_t* end = p + data.size();
+		while (p < end) {
+			std::uint8_t field = *p++;
+			std::uint32_t size;
+			if (!ReadVarUint(p, end, size) || std::uint32_t(end - p) < size) {
+				return false;
+			}
+			// The bytes a newer version adds after a value are skipped, a field shorter than its value is ignored,
+			// a value a newer version added is taken as the default
+			switch (Field(field)) {
+				case Field::WaterColors:
+					if (size >= 6) {
+						settings.HasWaterColors = true;
+						std::memcpy(settings.WaterColorTop, p, 3);
+						std::memcpy(settings.WaterColorBottom, p + 3, 3);
+					}
+					break;
+				case Field::WaterMovement:
+					if (size >= 1 && p[0] <= std::uint8_t(WaterMovement::LowGravity)) {
+						settings.Movement = WaterMovement(p[0]);
+					}
+					break;
+				case Field::WaterLighting:
+					if (size >= 1 && p[0] <= std::uint8_t(WaterLighting::Depth)) {
+						settings.Lighting = WaterLighting(p[0]);
+					}
+					break;
+				case Field::WaterLayer: {
+					const std::uint8_t* value = p;
+					std::uint32_t layer;
+					// A level has at most 255 layers, see LevelReader::ReadLayerCount()
+					if (ReadVarUint(value, p + size, layer) && layer <= UINT8_MAX + 1) {
+						settings.WaterLayer = (layer == 0 ? WaterHidden : std::int32_t(layer - 1));
+					}
+					break;
+				}
+				case Field::WaterChangeSpeed:
+					if (size >= 4) {
+						float speed = ReadFloatLE(p);
+						if (std::isfinite(speed) && speed >= 0.0f) {
+							settings.WaterChangeSpeed = speed;
+						}
+					}
+					break;
+				case Field::Rules:
+					if (size >= 1) {
+						settings.WarpsTransmuteCoins = (p[0] & std::uint8_t(Rules::NoWarpsTransmuteCoins)) == 0;
+						settings.DelayGeneratedCrateOrigins = (p[0] & std::uint8_t(Rules::DelayGeneratedCrateOrigins)) != 0;
+					}
+					break;
+				default:
+					break;
+			}
+			p += size;
+		}
+		return true;
+	}
+
+	void LevelSettingsChunk::Write(const Settings& settings, SmallVectorImpl<std::uint8_t>& data)
+	{
+		const Settings defaults;
+		data.clear();
+		auto writeField = [&data](Field field, const std::uint8_t* bytes, std::size_t size) {
+			data.push_back(std::uint8_t(field));
+			WriteVarUint(data, std::uint32_t(size));
+			data.append(bytes, bytes + size);
+		};
+
+		if (settings.HasWaterColors) {
+			const std::uint8_t colors[6] = { settings.WaterColorTop[0], settings.WaterColorTop[1], settings.WaterColorTop[2],
+				settings.WaterColorBottom[0], settings.WaterColorBottom[1], settings.WaterColorBottom[2] };
+			writeField(Field::WaterColors, colors, sizeof(colors));
+		}
+		if (settings.Movement != defaults.Movement) {
+			const std::uint8_t movement = std::uint8_t(settings.Movement);
+			writeField(Field::WaterMovement, &movement, 1);
+		}
+		if (settings.Lighting != defaults.Lighting) {
+			const std::uint8_t lighting = std::uint8_t(settings.Lighting);
+			writeField(Field::WaterLighting, &lighting, 1);
+		}
+		if (settings.WaterLayer != defaults.WaterLayer && (settings.WaterLayer == WaterHidden || (settings.WaterLayer >= 0 && settings.WaterLayer <= UINT8_MAX))) {
+			SmallVector<std::uint8_t, 5> layer;
+			WriteVarUint(layer, std::uint32_t(settings.WaterLayer == WaterHidden ? 0 : settings.WaterLayer + 1));
+			writeField(Field::WaterLayer, layer.data(), layer.size());
+		}
+		if (settings.WaterChangeSpeed != defaults.WaterChangeSpeed && std::isfinite(settings.WaterChangeSpeed) && settings.WaterChangeSpeed >= 0.0f) {
+			SmallVector<std::uint8_t, 4> speed;
+			WriteFloatLE(speed, settings.WaterChangeSpeed);
+			writeField(Field::WaterChangeSpeed, speed.data(), speed.size());
+		}
+		std::uint8_t rules = 0;
+		if (!settings.WarpsTransmuteCoins) {
+			rules |= std::uint8_t(Rules::NoWarpsTransmuteCoins);
+		}
+		if (settings.DelayGeneratedCrateOrigins) {
+			rules |= std::uint8_t(Rules::DelayGeneratedCrateOrigins);
+		}
+		if (rules != 0) {
+			writeField(Field::Rules, &rules, 1);
+		}
+	}
 }

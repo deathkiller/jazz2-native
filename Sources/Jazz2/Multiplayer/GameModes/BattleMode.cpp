@@ -1,10 +1,12 @@
-#include "BattleMode.h"
+﻿#include "BattleMode.h"
 
 #if defined(WITH_MULTIPLAYER)
 
 #include "../ServerInitialization.h"
 #include "../../Actors/Player.h"
 #include "../../UI/Font.h"
+
+#include <algorithm>
 
 #include <Base/Format.h>
 
@@ -89,15 +91,55 @@ namespace Jazz2::Multiplayer::GameModes
 		}
 
 		// First player to reach the kill target wins
+		std::uint32_t target = GetKillTarget(ctx);
 		for (auto* player : players) {
 			if (ctx.IsSpectating(player)) {
 				continue;
 			}
-			if (ctx.GetPlayerState(player).Kills >= config.TotalKills) {
+			if (ctx.GetPlayerState(player).Kills >= target) {
 				return { true, false, player, (std::uint8_t)0 };
 			}
 		}
 		return GameEndResult::None();
+	}
+
+	GameEndResult BattleMode::OnTimeOut(IGameModeContext& ctx)
+	{
+		// Overtime, the host decides by the score when it's off or over
+		if (!ctx.GetServerConfiguration().Elimination && ctx.CanStartOvertime()) {
+			return GameEndResult::Overtime();
+		}
+		return GameEndResult::None();
+	}
+
+	void BattleMode::OnOvertimeStarted(IGameModeContext& ctx)
+	{
+		// The cap is the best player or team score + 2, but never more than the max score
+		std::uint32_t best = 0;
+		if (IsTeamBased()) {
+			std::uint8_t teamCount = ctx.GetTeamCount();
+			for (std::uint8_t team = 0; team < teamCount; team++) {
+				best = std::max<std::uint32_t>(best, ctx.GetTeamScore(team));
+			}
+		} else {
+			for (auto* player : ctx.GetPlayers()) {
+				if (!ctx.IsSpectating(player)) {
+					best = std::max<std::uint32_t>(best, ctx.GetPlayerState(player).Kills);
+				}
+			}
+		}
+		std::uint32_t cap = best + 2;
+		std::uint32_t maxScore = ctx.GetServerConfiguration().TotalKills;
+		if (maxScore > 0) {
+			cap = std::min<std::uint32_t>(cap, maxScore);
+		}
+		ctx.SetOvertimeScoreCap(cap);
+	}
+
+	std::uint32_t BattleMode::GetKillTarget(IGameModeContext& ctx)
+	{
+		std::uint32_t cap = ctx.GetOvertimeScoreCap();
+		return (cap > 0 ? cap : ctx.GetServerConfiguration().TotalKills);
 	}
 
 	void BattleMode::AssignTeams(IGameModeContext& ctx)
@@ -116,12 +158,13 @@ namespace Jazz2::Multiplayer::GameModes
 
 	void BattleMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
-		const auto& config = ctx.GetServerConfiguration();
 		auto& state = ctx.GetPlayerState(player);
 
 		char stringBuffer[32];
-		std::size_t length = formatInto(stringBuffer, "K: {}  D: {}  /{}", state.Kills, state.Deaths, config.TotalKills);
-		hud.DrawHudText(GameModeFontType::Medium, { stringBuffer, length }, view.X + 14.0f, view.Y + 5.0f, 2.0f, UI::Alignment::TopLeft, UI::Font::DefaultColor, 0.8f, 1.0f);
+		std::size_t length = formatInto(stringBuffer, "K: {}  D: {}  /{}", state.Kills, state.Deaths, GetKillTarget(ctx));
+		// The cap of the overtime replaces the max score, in blue except in Team Battle
+		Colorf color = (ctx.GetOvertimeScoreCap() > 0 && !IsTeamBased() ? Colorf(0.42f, 0.52f, 0.8f) : UI::Font::DefaultColor);
+		hud.DrawHudText(GameModeFontType::Medium, { stringBuffer, length }, view.X + 14.0f, view.Y + 5.0f, 2.0f, UI::Alignment::TopLeft, color, 0.8f, 1.0f);
 
 		hud.DrawPositionInRound(view, player);
 	}

@@ -33,6 +33,7 @@
 #include "../Actors/Multiplayer/RemoteActor.h"
 #include "../Actors/Multiplayer/Flag.h"
 #include "../Actors/Multiplayer/CtfBase.h"
+#include "../Actors/Multiplayer/GameModeObjectActor.h"
 
 #include "../Actors/Collectibles/CollectibleBase.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
@@ -72,6 +73,12 @@ namespace Jazz2::Multiplayer
 	static const std::uint32_t PointsPerPosition[] = {
 		20, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
 	};
+
+	// The modes from Roast Tag on keep their score in MpPlayerState::ModePoints
+	static constexpr bool IsCustomGameMode(MpGameMode mode)
+	{
+		return (mode >= MpGameMode::RoastTag);
+	}
 
 	static void WriteCarryOver(MemoryStream& packet, const PlayerCarryOver& c)
 	{
@@ -205,7 +212,7 @@ namespace Jazz2::Multiplayer
 			_lastUpdated(0), _seqNumWarped(0), _lastSentPressedActions(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
-			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f),
+			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _lastGameModeObjectId(0), _overtimeScoreCap(0), _teamTriggerId(-1), _serverTriggerId(-1), _teamTriggerOnForBlue(false), _specialTriggersResolved(false), _killingPlayer(false), _silentKill(false), _modeOvertime(false), _scoreboardSyncTime(0.0f),
 			_activeBossHealth(-1), _activeBossMaxHealth(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
@@ -336,7 +343,7 @@ namespace Jazz2::Multiplayer
 	{
 		if (auto* mpPlayer = runtime_cast<MpPlayer>(player)) {
 			if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
-				return ColorizeFurForTeam(furColor, peerDesc->Team);
+				return ColorizeFurForTeam(furColor, peerDesc->Team, peerDesc->ModeFlags);
 			}
 		}
 		return furColor;
@@ -347,7 +354,17 @@ namespace Jazz2::Multiplayer
 		// Team coloring is a game-mode mechanic (keeps teams distinguishable), so it overrides the cosmetic color
 		// preference and must apply to every local player, not just the first one.
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
-		return serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode);
+		if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+			return true;
+		}
+		if (_gameMode != nullptr) {
+			if (auto* mpPlayer = runtime_cast<MpPlayer>(player)) {
+				if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
+					return (_gameMode->GetForcedFurColor(peerDesc->ModeFlags) != 0);
+				}
+			}
+		}
+		return false;
 	}
 
 	bool MpLevelHandler::IsPausable() const
@@ -542,6 +559,11 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
+			// Timers of the game modes (holding control points, jails, carried flags) run every frame
+			if (_gameMode != nullptr && _levelState == LevelState::Running) {
+				_gameMode->OnUpdate(*this, timeMult);
+			}
+
 			// Periodically broadcast the scoreboard (player stats + ping) so the in-game scoreboard stays current,
 			// and the team/flag state so late joiners and clients can place the CTF bases/flags
 			_scoreboardSyncTime -= timeMult;
@@ -550,6 +572,15 @@ namespace Jazz2::Multiplayer
 				BuildScoreboard();
 				if (IsTeamGameMode(serverConfig.GameMode)) {
 					SyncTeamScores();
+				}
+				// Also for late joiners, objects and roles are otherwise sent only when they change
+				if (!_gameModeObjects.empty()) {
+					SyncGameModeObjects();
+				}
+				if (_gameMode != nullptr && IsCustomGameMode(_gameMode->GetMode())) {
+					for (auto* player : _players) {
+						BroadcastPlayerModeState(static_cast<MpPlayer*>(player));
+					}
 				}
 			}
 
@@ -591,6 +622,8 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
+		UpdateGameModeObjectVisuals();
+
 		_updateTimeLeft -= timeMult;
 		_gameTimeLeft -= timeMult;
 
@@ -602,6 +635,8 @@ namespace Jazz2::Multiplayer
 					LOGI("Level \"{}\" is ready", _levelName);
 
 					if (_isServer) {
+						ResolveSpecialTriggers();
+
 						if (!_isLocalSession) {
 							MemoryStream packet;
 							InitializeValidateAssetsPacket(packet);
@@ -617,6 +652,17 @@ namespace Jazz2::Multiplayer
 						} else {
 							_levelState = LevelState::PreGame;
 							_gameTimeLeft = serverConfig.PreGameSecs * FrameTimer::FramesPerSecond;
+							// The pregame is mandatory in some modes (everybody has to be in when lives are counted)
+							bool pregameMandatory = (serverConfig.GameMode == MpGameMode::Jailbreak || serverConfig.GameMode == MpGameMode::LastRabbitStanding ||
+								serverConfig.GameMode == MpGameMode::ExtendedLastRabbitStanding || serverConfig.GameMode == MpGameMode::TeamLastRabbitStanding ||
+								serverConfig.GameMode == MpGameMode::Pestilence);
+							if (pregameMandatory && serverConfig.PreGameSecs == 0 && !_isLocalSession) {
+								_gameTimeLeft = 30.0f * FrameTimer::FramesPerSecond;
+							}
+							// Jails are always open during the pregame (trigger 30 releases the prisoners)
+							if (serverConfig.GameMode == MpGameMode::Jailbreak) {
+								SetTrigger(30, true);
+							}
 							// TRANSLATORS: Message shown to all players in multiplayer when the pre-game phase of a round starts, keep the leading line breaks
 							ShowAlertToAllPlayers(_("\n\nThe game will begin shortly!"));
 						}
@@ -634,6 +680,22 @@ namespace Jazz2::Multiplayer
 									break;
 								case MpGameMode::CaptureTheFlag:
 									targetLabel = "Captures"_s; targetValue = serverConfig.TotalKills;
+									break;
+								case MpGameMode::LastRabbitStanding:
+								case MpGameMode::ExtendedLastRabbitStanding:
+									targetLabel = "Lives"_s; targetValue = serverConfig.PlayerLives;
+									break;
+								case MpGameMode::TeamLastRabbitStanding:
+									targetLabel = "Team lives"_s; targetValue = serverConfig.TeamLives;
+									break;
+								case MpGameMode::RoastTag:
+								case MpGameMode::Pestilence:
+								case MpGameMode::Jailbreak:
+								case MpGameMode::DeathCaptureTheFlag:
+								case MpGameMode::FlagRun:
+								case MpGameMode::Domination:
+								case MpGameMode::HeadHunters:
+									targetLabel = "Score"_s; targetValue = serverConfig.TotalKills;
 									break;
 								case MpGameMode::Race:
 								case MpGameMode::TeamRace:
@@ -733,6 +795,11 @@ namespace Jazz2::Multiplayer
 						SetControllableToAllPlayers(true);
 						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
 						SendLevelStateToAllPlayers();
+
+						if (_gameMode != nullptr) {
+							_gameMode->OnRoundStarted(*this);
+						}
+
 						CalculatePositionInRound(true);
 
 						if (auto* webhook = _networkManager->GetWebhook()) {
@@ -770,7 +837,7 @@ namespace Jazz2::Multiplayer
 								CalculatePositionInRound();
 							}
 						}
-						if (serverConfig.GameMode == MpGameMode::CaptureTheFlag) {
+						if (UsesCtfFlags(serverConfig.GameMode)) {
 							UpdateCtf(timeMult);
 						}
 						if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.MaxGameTimeSecs > 0 && _gameTimeLeft <= 0.0f) {
@@ -955,7 +1022,7 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		ShowDebugWindow();
 
-		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && ImGui::GetCurrentContext() != nullptr) {
 			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
 			/*if (_isServer) {
@@ -1492,12 +1559,20 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 			// If the dying player was carrying an enemy flag, drop it where they fell
-			if (serverConfig.GameMode == MpGameMode::CaptureTheFlag) {
+			if (UsesCtfFlags(serverConfig.GameMode)) {
 				DropCtfFlag(player);
 			}
 
+			// The game mode decides where the player respawns (its own checkpoint vs. a fresh spawn point, or a jail), the
+			// spawn invulnerability, and while the round is running also whether the player may respawn at all
+			RespawnDecision respawn = { true, true, Vector2f::Zero, 0.0f };
+			if (_gameMode != nullptr) {
+				respawn = _gameMode->DecideRespawn(*this, mpPlayer);
+			}
+			bool isEliminated = (_levelState == LevelState::Running && IsPlayerEliminated(mpPlayer));
+
 			bool canRespawn = (_enableSpawning && _nextLevelType == ExitType::None &&
-				(_levelState != LevelState::Running || !serverConfig.Elimination || peerDesc->Deaths < serverConfig.TotalKills));
+				(_levelState != LevelState::Running || (!isEliminated && respawn.CanRespawn)));
 			bool shouldRollback = false;
 
 			if (canRespawn && _activeBoss != nullptr) {
@@ -1552,15 +1627,15 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (_gameMode != nullptr) {
-					// The game mode decides where the player respawns (its own checkpoint vs. a fresh spawn point) and
-					// the spawn invulnerability. Cooperation keeps the checkpoint; competitive modes move to a spawn point.
-					RespawnDecision respawn = _gameMode->DecideRespawn(*this, mpPlayer);
+					// Cooperation keeps the checkpoint, competitive modes move to a spawn point
 					if (!respawn.UseCheckpoint) {
 						mpPlayer->_checkpointPos = respawn.SpawnPos;
 					}
 					if (respawn.InvulnerableSecs > 0.0f) {
 						mpPlayer->SetInvulnerability(respawn.InvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 					}
+					peerDesc->SpawnedFrames = _elapsedFrames;
+					_gameMode->OnPlayerSpawned(*this, mpPlayer);
 				}
 			}
 
@@ -1578,8 +1653,12 @@ namespace Jazz2::Multiplayer
 				return canRespawn;
 			}
 
-			if (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills) {
-				peerDesc->DeathElapsedFrames = _elapsedFrames;
+			if (isEliminated) {
+				if (peerDesc->DeathElapsedFrames == FLT_MAX) {
+					peerDesc->DeathElapsedFrames = _elapsedFrames;
+				}
+				// The player is out until the next round, so it can at least watch the others
+				SetPlayerOut(mpPlayer, true);
 			}
 
 			if (canRespawn && peerDesc->RemotePeer) {
@@ -1813,6 +1892,10 @@ namespace Jazz2::Multiplayer
 					}
 				}
 			}
+
+			if (_gameMode != nullptr && _levelState == LevelState::Running) {
+				_gameMode->OnGemsCollected(*this, player, gemType, prevCount, newCount);
+			}
 		}
 	}
 
@@ -2038,14 +2121,16 @@ namespace Jazz2::Multiplayer
 		LevelHandler::SetTrigger(triggerId, newState);
 
 		if (_isServer && !_isLocalSession) {
-			MemoryStream packet(2);
-			packet.WriteValue<std::uint8_t>(triggerId);
-			packet.WriteValue<std::uint8_t>(newState);
-
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SetTrigger, packet);
+			// Some triggers of the bottom row of the level differ per client
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->LevelState < PeerLevelState::LevelSynchronized) {
+					continue;
+				}
+				MemoryStream packet(2);
+				packet.WriteValue<std::uint8_t>(triggerId);
+				packet.WriteValue<std::uint8_t>(GetTriggerStateForPeer(*peerDesc, triggerId, newState));
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SetTrigger, packet);
+			}
 		}
 	}
 
@@ -2291,6 +2376,445 @@ namespace Jazz2::Multiplayer
 		EndGame(static_cast<MpPlayer*>(winner));
 	}
 
+	StringView MpLevelHandler::GetPlayerName(Actors::Player* player)
+	{
+		return static_cast<MpPlayer*>(player)->GetPeerDescriptor()->PlayerName;
+	}
+
+	Actors::Player* MpLevelHandler::FindPlayerByIndex(std::uint32_t playerIndex)
+	{
+		for (auto* player : _players) {
+			if ((std::uint32_t)player->_playerIndex == playerIndex) {
+				return player;
+			}
+		}
+		return nullptr;
+	}
+
+	Vector2f MpLevelHandler::GetTeamBasePosition(std::uint8_t team)
+	{
+		Vector2f basePos;
+		bool found = false;
+		_eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event == EventType::CtfBase && e.EventParams[0] == team) {
+				basePos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8.0f);
+				found = true;
+				return false;
+			}
+			return true;
+		}, true);
+
+		Vector2f pos = (found ? basePos : GetSpawnPoint(PlayerType::Jazz, team));
+		// The base sprites are anchored one tile above the ground
+		pos.Y += Tiles::TileSet::DefaultTileSize;
+		return pos;
+	}
+
+	void MpLevelHandler::SyncPlayerModeState(Actors::Player* player)
+	{
+		if (!_isServer) {
+			return;
+		}
+
+		// The role may force a color, e.g. of a zombie
+		player->RefreshColorPalette();
+		BroadcastPlayerModeState(static_cast<MpPlayer*>(player));
+	}
+
+	void MpLevelHandler::BroadcastPlayerModeState(MpPlayer* mpPlayer)
+	{
+		if (_isLocalSession) {
+			return;
+		}
+
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+		MemoryStream packet(24);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ModeState);
+		packet.WriteVariableUint32(mpPlayer->_playerIndex);
+		packet.WriteValue<std::uint8_t>(peerDesc->ModeFlags);
+		packet.WriteVariableUint32(peerDesc->ModePoints);
+		packet.WriteVariableUint32(peerDesc->ModeCarried);
+		packet.WriteVariableInt32(peerDesc->ModeLives);
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+	}
+
+	SmallVectorImpl<GameModeObject>& MpLevelHandler::GetGameModeObjects()
+	{
+		return _gameModeObjects;
+	}
+
+	std::uint32_t MpLevelHandler::CreateGameModeObjectId()
+	{
+		return ++_lastGameModeObjectId;
+	}
+
+	void MpLevelHandler::SyncGameModeObjects()
+	{
+		if (!_isServer || _isLocalSession) {
+			// The visuals of a local session read the objects directly
+			return;
+		}
+
+		MemoryStream packet(4 + _gameModeObjects.size() * 24);
+		packet.WriteVariableUint32((std::uint32_t)_gameModeObjects.size());
+		for (const auto& obj : _gameModeObjects) {
+			packet.WriteVariableUint32(obj.Id);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)obj.Type);
+			packet.WriteValue<std::uint8_t>(obj.Team);
+			packet.WriteValue<std::uint8_t>(obj.CapturingTeam);
+			packet.WriteValue<std::uint8_t>(obj.Progress);
+			packet.WriteValue<std::int8_t>(obj.Direction);
+			packet.WriteVariableInt32((std::int32_t)obj.Pos.X);
+			packet.WriteVariableInt32((std::int32_t)obj.Pos.Y);
+			packet.WriteVariableUint32(obj.CarrierPlayerIndex);
+			std::uint8_t nameLength = (std::uint8_t)std::min<std::size_t>(obj.Name.size(), 255);
+			packet.WriteValue<std::uint8_t>(nameLength);
+			packet.Write(obj.Name.data(), nameLength);
+		}
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncGameModeObjects, packet);
+	}
+
+	void MpLevelHandler::FindEventPositions(EventType eventType, SmallVectorImpl<Pair<Vector2f, std::uint16_t>>& positions)
+	{
+		_eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event == eventType) {
+				positions.push_back(pair(Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
+					y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2), (std::uint16_t)(e.EventParams[0] | (e.EventParams[1] << 8))));
+			}
+			return true;
+		}, true);
+	}
+
+	void MpLevelHandler::FindCapturePoints(SmallVectorImpl<GameModes::CapturePointInfo>& points)
+	{
+		SmallVector<Events::EventMap::DifficultyEventInfo, 0> events;
+		_eventMap->CollectEasyOrHardEvents(events);
+		// Ordered from top to bottom and then from left to right
+		nCine::sort(events.begin(), events.end(), [](const auto& a, const auto& b) {
+			return (a.Tile.Y != b.Tile.Y ? a.Tile.Y < b.Tile.Y : a.Tile.X < b.Tile.X);
+		});
+		for (const auto& e : events) {
+			auto& point = points.emplace_back();
+			point.Pos = Vector2f(e.Tile.X * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2,
+				e.Tile.Y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
+			point.Direction = (e.Difficulty == 1 ? 1 : -1);
+			if (e.Event == EventType::AreaText) {
+				point.Name = GetLevelText(e.Params[0]);
+			}
+		}
+	}
+
+	void MpLevelHandler::FindSpawnPoints(SmallVectorImpl<Vector2f>& positions)
+	{
+		for (const auto& spawnPoint : _multiplayerSpawnPoints) {
+			positions.push_back(spawnPoint.Pos);
+		}
+		if (positions.empty()) {
+			positions.push_back(GetSpawnPoint(PlayerType::Jazz, 0));
+		}
+	}
+
+	void MpLevelHandler::FindOriginalEvents(std::uint8_t jj2EventId, SmallVectorImpl<Pair<Vector2i, std::uint32_t>>& events)
+	{
+		// See Compatibility::EventConverter::MakePassthroughEvent()
+		_eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event == EventType::PassthroughEvent && e.EventParams[0] == jj2EventId) {
+				std::uint32_t params = (std::uint32_t)e.EventParams[1] | ((std::uint32_t)e.EventParams[2] << 8) | ((std::uint32_t)e.EventParams[3] << 16);
+				events.push_back(pair(Vector2i(x, y), params));
+			}
+			return true;
+		}, false);
+	}
+
+	void MpLevelHandler::WarpPlayer(Actors::Player* player, Vector2f pos)
+	{
+		player->WarpToPosition(pos, WarpFlags::Default);
+	}
+
+	std::int32_t MpLevelHandler::CountPlayersWithRole(GameModes::PlayerModeFlags flag, std::uint8_t team)
+	{
+		std::int32_t count = 0;
+		for (auto* player : _players) {
+			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+			if (peerDesc->Team == team && player->_playerType != PlayerType::Spectate &&
+				(flag == GameModes::PlayerModeFlags::None || (peerDesc->ModeFlags & (std::uint8_t)flag) != 0)) {
+				count++;
+			}
+		}
+		if (!_isServer) {
+			for (auto& [actorId, playerName] : _playerNames) {
+				if (playerName.Team == team && !playerName.IsSpectating &&
+					(flag == GameModes::PlayerModeFlags::None || (playerName.ModeFlags & (std::uint8_t)flag) != 0)) {
+					count++;
+				}
+			}
+		}
+		return count;
+	}
+
+	bool MpLevelHandler::FindPlayerWithRole(GameModes::PlayerModeFlags flag, Vector2f& pos)
+	{
+		for (auto* player : _players) {
+			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+			if ((peerDesc->ModeFlags & (std::uint8_t)flag) != 0 && player->_health > 0) {
+				pos = player->_pos;
+				return true;
+			}
+		}
+		if (!_isServer) {
+			for (auto& [actorId, playerName] : _playerNames) {
+				if ((playerName.ModeFlags & (std::uint8_t)flag) == 0) {
+					continue;
+				}
+				std::unique_lock lock(_lock);
+				auto it = _remoteActors.find(actorId);
+				if (it != _remoteActors.end()) {
+					pos = it->second->GetPos();
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	bool MpLevelHandler::IsOvertime() const
+	{
+		return _modeOvertime;
+	}
+
+	bool MpLevelHandler::CanStartOvertime() const
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		return (!_modeOvertime && serverConfig.GetOvertimeSecs() > 0);
+	}
+
+	std::uint32_t MpLevelHandler::GetOvertimeScoreCap() const
+	{
+		return _overtimeScoreCap;
+	}
+
+	void MpLevelHandler::SetOvertimeScoreCap(std::uint32_t score)
+	{
+		_overtimeScoreCap = score;
+		// TRANSLATORS: Message shown to all players when the overtime starts, {} is the score that wins it, keep the leading line breaks
+		ShowAlertToAllPlayers(_f("\n\nFirst to reach {} points wins!", score));
+	}
+
+	bool MpLevelHandler::CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter)
+	{
+		if (_gameMode == nullptr) {
+			return true;
+		}
+		auto* shooterPlayer = runtime_cast<MpPlayer>(shooter);
+		return _gameMode->CanFreezeActor(*this, actor, shooterPlayer);
+	}
+
+	bool MpLevelHandler::CanPlayersPush(Actors::Player* a, Actors::Player* b)
+	{
+		return (_gameMode == nullptr || _levelState != LevelState::Running || _gameMode->CanPlayersPush(*this, a, b));
+	}
+
+	void MpLevelHandler::KillPlayer(Actors::Player* player)
+	{
+		auto* playerOnServer = static_cast<PlayerOnServer*>(player);
+		playerOnServer->_lastAttacker = nullptr;
+		_killingPlayer = true;
+		playerOnServer->TakeDamage(INT32_MAX, 0.0f, true);
+		_killingPlayer = false;
+	}
+
+	std::int32_t MpLevelHandler::GetPlayerGemCount(Actors::Player* player)
+	{
+		std::int32_t count = 0;
+		for (std::int32_t gems : player->_inventory.Gems) {
+			count += gems;
+		}
+		return count;
+	}
+
+	void MpLevelHandler::ClearPlayerGems(Actors::Player* player)
+	{
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+		for (std::uint8_t gemType = 0; gemType < 4; gemType++) {
+			if (player->_inventory.Gems[gemType] == 0) {
+				continue;
+			}
+			player->_inventory.Gems[gemType] = 0;
+			player->_inventoryCheckpoint.Gems[gemType] = 0;
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(10);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Gems);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(gemType);
+				packet.WriteVariableInt32(0);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::AddPlayerGems(Actors::Player* player, std::int32_t count)
+	{
+		// Through the player, so the change is synchronized and reported to the game mode as a pickup is
+		player->AddGems(0, count);
+	}
+
+	void MpLevelHandler::SpawnGems(Vector2f pos, std::int32_t count, Actors::Player* owner)
+	{
+		std::uint8_t ownerId = (owner != nullptr ? (std::uint8_t)(owner->_playerIndex + 1) : 0);
+		for (std::int32_t i = 0; i < count; i++) {
+			float dir = (Random().NextBool() ? -1.0f : 1.0f);
+			float force = Random().NextFloat(10.0f, 20.0f);
+			Vector3i spawnPos = Vector3i((std::int32_t)pos.X, (std::int32_t)pos.Y, MainPlaneZ);
+			std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04, ownerId };
+			auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos);
+			if (actor != nullptr) {
+				actor->AddExternalForce(dir * force, force);
+				AddActor(actor);
+			}
+		}
+	}
+
+	void MpLevelHandler::SetPlayerOut(Actors::Player* player, bool out)
+	{
+		// Switching to spectate mode replaces the actor, which mutates _players, so it's deferred to the end of the
+		// frame and the player is looked up again there
+		auto playerIndex = player->_playerIndex;
+		InvokeAsync([this, playerIndex, out]() {
+			for (auto* candidate : _players) {
+				auto* mpPlayer = static_cast<MpPlayer*>(candidate);
+				if (mpPlayer->_playerIndex != playerIndex) {
+					continue;
+				}
+				auto peerDesc = mpPlayer->GetPeerDescriptor();
+				if (out && peerDesc->IsSpectating == SpectateMode::None) {
+					SetPlayerSpectateMode(mpPlayer, SpectateMode::Forced);
+				} else if (!out && (peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
+					SetPlayerSpectateMode(mpPlayer, SpectateMode::None);
+				}
+				break;
+			}
+		});
+	}
+
+	bool MpLevelHandler::CanPlayerDamagePlayer(Actors::Player* victim, Actors::Player* attacker)
+	{
+		if (victim == attacker) {
+			return false;
+		}
+
+		auto victimDesc = static_cast<MpPlayer*>(victim)->GetPeerDescriptor();
+		auto attackerDesc = static_cast<MpPlayer*>(attacker)->GetPeerDescriptor();
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (!serverConfig.FriendlyFire && victimDesc->Team == attackerDesc->Team) {
+			return false;
+		}
+
+		return (_gameMode == nullptr || _gameMode->CanDamagePlayer(*this, victim, attacker));
+	}
+
+	std::int32_t MpLevelHandler::GetPlayerDamage(Actors::Player* victim, Actors::Player* attacker, std::int32_t amount)
+	{
+		if (_gameMode == nullptr || _levelState != LevelState::Running) {
+			return amount;
+		}
+		// All shots do 1 more heart of damage, also in the overtime of some modes
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.AmplifyDamage || (_modeOvertime && _gameMode->HasDamageAmplifierInOvertime())) {
+			amount++;
+		}
+		return _gameMode->GetDamage(*this, victim, attacker, amount);
+	}
+
+	void MpLevelHandler::HandlePlayerHitByPlayer(Actors::Player* victim, Actors::Player* attacker)
+	{
+		if (_gameMode != nullptr && _levelState == LevelState::Running) {
+			_gameMode->OnPlayerHit(*this, victim, attacker);
+		}
+	}
+
+	void MpLevelHandler::ApplySelfDeathPenalty(MpPlayer* player)
+	{
+		// A death by own fault (a pit, spikes) costs a point
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (!serverConfig.PunishSelfDeaths) {
+			return;
+		}
+		auto peerDesc = player->GetPeerDescriptor();
+		if (IsTeamGameMode(serverConfig.GameMode)) {
+			ApplyDeathPenalty(peerDesc->Team, serverConfig.SelfDeathCostsTeamPoint, true);
+		} else if (peerDesc->Kills > 0) {
+			peerDesc->Kills--;
+		}
+	}
+
+	void MpLevelHandler::ApplyDeathPenalty(std::uint8_t team, bool ownTeamLoses, bool enabled)
+	{
+		// Either the own team loses a point, or every other team gains one
+		if (!enabled || team >= MaxTeamCount) {
+			return;
+		}
+		if (ownTeamLoses) {
+			if (_teamKills[team] > 0) {
+				_teamKills[team]--;
+			}
+		} else {
+			std::uint8_t teamCount = GetTeamCount();
+			for (std::uint8_t other = 0; other < teamCount; other++) {
+				if (other != team) {
+					_teamKills[other]++;
+				}
+			}
+		}
+	}
+
+	bool MpLevelHandler::HandlePlayerHazardDeath(Actors::Player* player)
+	{
+		if (_killingPlayer || _gameMode == nullptr || _levelState != LevelState::Running ||
+			!_gameMode->PreventsHazardDeath(*this, player)) {
+			return false;
+		}
+		// The hazard fires every frame until the warp below moves the player out of it
+		if (player->_currentTransition != nullptr && (player->_currentTransition->State == AnimState::TransitionWarpIn ||
+			player->_currentTransition->State == AnimState::TransitionWarpInFreefall)) {
+			return true;
+		}
+		// Kept alive at 1 heart, out of the hazard
+		player->_health = 1;
+		HandlePlayerSetHealth(player, 1);
+		player->WarpToPosition(GetSpawnPoint(player), WarpFlags::Default);
+		return true;
+	}
+
+	bool MpLevelHandler::IsPlayerEliminated(MpPlayer* player)
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		auto peerDesc = player->GetPeerDescriptor();
+		if (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills) {
+			return true;
+		}
+		return (_gameMode != nullptr && _gameMode->IsEliminated(*this, player));
+	}
+
+	std::uint32_t MpLevelHandler::GetPlayerRoundScore(MpPlayer* player)
+	{
+		if (_gameMode != nullptr) {
+			return _gameMode->GetRoundScore(*this, player);
+		}
+		return player->GetPeerDescriptor()->Kills;
+	}
+
 	std::uint32_t MpLevelHandler::GetTotalLaps() const
 	{
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -2355,9 +2879,11 @@ namespace Jazz2::Multiplayer
 		// When switching AWAY from Capture The Flag, destroy any existing flags (BuildCtfBases() self-guards and
 		// returns early in non-CTF modes). When switching TO CTF, the flags are (re)built at round start in
 		// ResetAllPlayerStats() so the spawn reaches all currently-synchronized players.
-		if (serverConfig.GameMode != MpGameMode::CaptureTheFlag) {
+		if (!UsesCtfFlags(serverConfig.GameMode)) {
 			BuildCtfBases();
 		}
+		// Objects of the previous mode are gone, the new mode builds its own when the round starts
+		ClearGameModeObjects();
 
 		if (serverConfig.GameMode != MpGameMode::Cooperation) {
 			_levelState = LevelState::Countdown3;
@@ -2524,6 +3050,11 @@ namespace Jazz2::Multiplayer
 	{
 		char infoBuffer[256];
 
+		// Commands of the game mode itself, e.g. /release in Jailbreak
+		if (isAdmin && _gameMode != nullptr && line.hasPrefix('/') && _gameMode->ProcessCommand(*this, line.exceptPrefix(1))) {
+			return true;
+		}
+
 		if (line == "/endpoints"_s) {
 			if (isAdmin) {
 				auto endpoints = _networkManager->GetServerEndpoints();
@@ -2631,26 +3162,8 @@ namespace Jazz2::Multiplayer
 			if (isAdmin) {
 				auto [variableName, sep, value] = line.exceptPrefix("/set "_s).trimmedPrefix().partition(' ');
 				if (variableName == "mode"_s) {
-					auto gameModeString = StringUtils::lowercase(value.trimmed());
-
-					MpGameMode gameMode;
-					if (gameModeString == "battle"_s || gameModeString == "b"_s) {
-						gameMode = MpGameMode::Battle;
-					} else if (gameModeString == "teambattle"_s || gameModeString == "tb"_s) {
-						gameMode = MpGameMode::TeamBattle;
-					} else if (gameModeString == "race"_s || gameModeString == "r"_s) {
-						gameMode = MpGameMode::Race;
-					} else if (gameModeString == "teamrace"_s || gameModeString == "tr"_s) {
-						gameMode = MpGameMode::TeamRace;
-					} else if (gameModeString == "treasurehunt"_s || gameModeString == "th"_s) {
-						gameMode = MpGameMode::TreasureHunt;
-					} else if (gameModeString == "teamtreasurehunt"_s || gameModeString == "tth"_s) {
-						gameMode = MpGameMode::TeamTreasureHunt;
-					} else if (gameModeString == "capturetheflag"_s || gameModeString == "ctf"_s) {
-						gameMode = MpGameMode::CaptureTheFlag;
-					} else if (gameModeString == "cooperation"_s || gameModeString == "coop"_s || gameModeString == "c"_s) {
-						gameMode = MpGameMode::Cooperation;
-					} else {
+					MpGameMode gameMode = NetworkManager::StringToGameMode(value.trimmed());
+					if (gameMode == MpGameMode::Unknown) {
 						return false;
 					}
 
@@ -3212,6 +3725,11 @@ namespace Jazz2::Multiplayer
 		});
 	}
 
+	void MpLevelHandler::SendMessageToAllPlayers(StringView text)
+	{
+		SendMessageToAll(text, false);
+	}
+
 	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode)
 	{
 		if DEATH_UNLIKELY(!_isServer) {
@@ -3297,9 +3815,7 @@ namespace Jazz2::Multiplayer
 			ptr->OnActivated(Actors::ActorActivationDetails(this,
 				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 				playerParams));
-			ptr->_health = (serverConfig.InitialPlayerHealth > 0
-				? serverConfig.InitialPlayerHealth
-				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+			ApplyInitialHealth(ptr);
 
 			// This used to be assigned to the previous (destroyed) actor, so the new one kept the default and could
 			// always move - a spectator revived when a round starts (typically everyone who finished the previous
@@ -3317,6 +3833,7 @@ namespace Jazz2::Multiplayer
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->LapStarted = TimeStamp::Now();
 			peerDesc->RaceProgress = 0.0f;
+			peerDesc->SpawnedFrames = _elapsedFrames;
 		}
 
 		peerDesc->Player = ptr;
@@ -3948,6 +4465,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::SyncTeamScores: return HandleServerPacketSyncTeamScores(peer, data);
 				case ServerPacketType::SyncScoreboard: return HandleServerPacketSyncScoreboard(peer, data);
 				case ServerPacketType::SyncRoundResults: return HandleServerPacketSyncRoundResults(peer, data);
+				case ServerPacketType::SyncGameModeObjects: return HandleServerPacketSyncGameModeObjects(peer, data);
 				case ServerPacketType::PlayerSetProperty: return HandleServerPacketPlayerSetProperty(peer, data);
 				case ServerPacketType::PlayerResetProperties: return HandleServerPacketPlayerResetProperties(peer, data);
 				case ServerPacketType::PlayerRespawn: return HandleServerPacketPlayerRespawn(peer, data);
@@ -4888,6 +5406,8 @@ namespace Jazz2::Multiplayer
 						}
 						case LevelState::Countdown3: {
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
+							_modeOvertime = false;
+							_overtimeScoreCap = 0;
 							LOGI("Starting round...");
 							break;
 						}
@@ -4964,7 +5484,7 @@ namespace Jazz2::Multiplayer
 						player->RefreshColorPalette();
 					}
 					for (auto& [actorId, playerName] : _playerNames) {
-						RecolorRemoteActor(actorId, playerName.FurColor, playerName.Team);
+						RecolorRemoteActor(actorId, playerName.FurColor, playerName.Team, playerName.ModeFlags);
 					}
 				});
 				break;
@@ -5035,13 +5555,22 @@ namespace Jazz2::Multiplayer
 			}
 			case LevelPropertyType::Overtime: {
 				std::int32_t timeLeft = packet.ReadVariableInt32();
+				// The overtime of a custom mode also sends whether it's one and its score cap
+				bool modeOvertime = false;
+				std::uint32_t scoreCap = 0;
+				if (packet.GetPosition() < packet.GetSize()) {
+					modeOvertime = (packet.ReadValue<std::uint8_t>() != 0);
+					scoreCap = packet.ReadVariableUint32();
+				}
 
 				LOGD("[MP] ServerPacketType::LevelSetProperty::Overtime - timeLeft: {:.1f}", (float)timeLeft * 0.01f);
 
 				// The countdown itself runs locally from here (the HUD reads it on the main thread)
-				InvokeAsync([this, timeLeft]() {
+				InvokeAsync([this, timeLeft, modeOvertime, scoreCap]() {
 					_overtimeTimeLeft = (float)timeLeft * 0.01f;
 					_overtimeStarted = (_overtimeTimeLeft > 0.0f);
+					_modeOvertime = modeOvertime;
+					_overtimeScoreCap = scoreCap;
 				});
 				break;
 			}
@@ -5534,7 +6063,7 @@ namespace Jazz2::Multiplayer
 			// even when the player has none of their own.
 			auto pnIt = _playerNames.find(actorId);
 			if (pnIt != _playerNames.end()) {
-				std::uint32_t furColor = ColorizeFurForTeam(pnIt->second.FurColor, pnIt->second.Team);
+				std::uint32_t furColor = ColorizeFurForTeam(pnIt->second.FurColor, pnIt->second.Team, pnIt->second.ModeFlags);
 				if (furColor != 0) {
 					remoteActor->SetPlayerColor(furColor);
 				}
@@ -5836,7 +6365,7 @@ namespace Jazz2::Multiplayer
 					// (Re)apply the effective color if the actor already exists (otherwise CreateRemoteActor
 					// picks it up from _playerNames). Team coloring can force a color even when the player
 					// has none of their own, so this runs whenever the color or team is known.
-					RecolorRemoteActor(actorId, it.first->second.FurColor, it.first->second.Team);
+					RecolorRemoteActor(actorId, it.first->second.FurColor, it.first->second.Team, it.first->second.ModeFlags);
 				}
 			}
 		});
@@ -5965,6 +6494,43 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	bool MpLevelHandler::HandleServerPacketSyncGameModeObjects(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > 1024) {
+			LOGW("[MP] ServerPacketType::SyncGameModeObjects - Malformed packet");
+			return true;
+		}
+
+		SmallVector<GameModeObject, 0> objects;
+		objects.reserve(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			GameModeObject& obj = objects.emplace_back();
+			obj.Id = packet.ReadVariableUint32();
+			obj.Type = (GameModeObjectType)packet.ReadValue<std::uint8_t>();
+			obj.Team = packet.ReadValue<std::uint8_t>();
+			obj.CapturingTeam = packet.ReadValue<std::uint8_t>();
+			obj.Progress = packet.ReadValue<std::uint8_t>();
+			obj.Direction = packet.ReadValue<std::int8_t>();
+			obj.Pos.X = (float)packet.ReadVariableInt32();
+			obj.Pos.Y = (float)packet.ReadVariableInt32();
+			obj.CarrierPlayerIndex = packet.ReadVariableUint32();
+			std::uint8_t nameLength = packet.ReadValue<std::uint8_t>();
+			obj.Name = String(NoInit, nameLength);
+			if DEATH_UNLIKELY(packet.Read(obj.Name.data(), nameLength) != nameLength) {
+				LOGW("[MP] ServerPacketType::SyncGameModeObjects - Malformed packet");
+				return true;
+			}
+		}
+
+		// Applied on the main thread, UpdateGameModeObjectVisuals() owns the actors there
+		InvokeAsync([this, objects = Death::move(objects)]() mutable {
+			_gameModeObjects = Death::move(objects);
+		});
+		return true;
+	}
+
 	bool MpLevelHandler::HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
 		MemoryStream packet(data);
@@ -6060,6 +6626,35 @@ namespace Jazz2::Multiplayer
 		PlayerPropertyType propertyType = (PlayerPropertyType)packet.ReadValue<std::uint8_t>();
 		std::uint32_t playerIndex = packet.ReadVariableUint32();
 
+		// The role in the game mode is tracked for every player, it's shown next to their name and may force a color
+		if (propertyType == PlayerPropertyType::ModeState) {
+			std::uint8_t modeFlags = packet.ReadValue<std::uint8_t>();
+			std::uint32_t modePoints = packet.ReadVariableUint32();
+			std::uint32_t modeCarried = packet.ReadVariableUint32();
+			std::int32_t modeLives = packet.ReadVariableInt32();
+			InvokeAsync([this, playerIndex, modeFlags, modePoints, modeCarried, modeLives]() {
+				if (playerIndex == _lastSpawnedActorId) {
+					if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+						bool flagsChanged = (peerDesc->ModeFlags != modeFlags);
+						peerDesc->ModeFlags = modeFlags;
+						peerDesc->ModePoints = modePoints;
+						peerDesc->ModeCarried = modeCarried;
+						peerDesc->ModeLives = modeLives;
+						if (flagsChanged && !_players.empty()) {
+							_players[0]->RefreshColorPalette();
+						}
+					}
+				} else {
+					auto it = _playerNames.try_emplace(playerIndex, PlayerName{});
+					if (it.first->second.ModeFlags != modeFlags) {
+						it.first->second.ModeFlags = modeFlags;
+						RecolorRemoteActor(playerIndex, it.first->second.FurColor, it.first->second.Team, modeFlags);
+					}
+				}
+			});
+			return true;
+		}
+
 		// Team is tracked for every player (not just the local one) so the HUD/nametags can color them
 		if (propertyType == PlayerPropertyType::Team) {
 			std::uint8_t team = packet.ReadValue<std::uint8_t>();
@@ -6077,7 +6672,7 @@ namespace Jazz2::Multiplayer
 					auto it = _playerNames.try_emplace(playerIndex, PlayerName{});
 					it.first->second.Team = team;
 					// Recolor the matching remote actor for its new team
-					RecolorRemoteActor(playerIndex, it.first->second.FurColor, team);
+					RecolorRemoteActor(playerIndex, it.first->second.FurColor, team, it.first->second.ModeFlags);
 				}
 			});
 			return true;
@@ -6522,6 +7117,7 @@ namespace Jazz2::Multiplayer
 				peerDesc->RaceFinishOrder = 0;
 				peerDesc->RaceFinishFrames = 0.0f;
 				peerDesc->RaceProgress = 0.0f;
+				peerDesc->SpawnedFrames = _elapsedFrames;
 				_roundResults.clear();
 
 				player->_inventory.Coins = 0;
@@ -6984,9 +7580,7 @@ namespace Jazz2::Multiplayer
 				player->_controllableExternal = true;
 			} else {
 				player->_controllableExternal = _controllableExternal;
-				player->_health = (serverConfig.InitialPlayerHealth > 0
-					? serverConfig.InitialPlayerHealth
-					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+				ApplyInitialHealth(player.get());
 			}
 
 			// The character the player plays as, which a spectator's actor is not - it used to be overwritten by one
@@ -7626,6 +8220,10 @@ namespace Jazz2::Multiplayer
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerTakeDamage, packet);
 			}
 
+			if (_silentKill) {
+				return;
+			}
+
 			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
 				std::uint32_t treasureLost = std::min<std::uint32_t>(peerDesc->TreasureCollected, std::uint32_t(std::max<std::int32_t>(mpPlayer->_gemsLostOnHit, 0)));
 				// If the player is dead, drop half of the collected treasure instead
@@ -7675,7 +8273,13 @@ namespace Jazz2::Multiplayer
 					// Do not award a kill for a friendly-fire teamkill (or a self-kill in a team mode) - the roasted
 					// message below is still shown so players see what happened
 					bool isTeamKill = (attacker != mpPlayer && IsTeamGameMode(serverConfig.GameMode) && attackerPeerDesc->Team == peerDesc->Team);
-					if (!isTeamKill) {
+					if (isTeamKill) {
+						ApplyDeathPenalty(peerDesc->Team, serverConfig.FriendlyFireCostsTeamPoint, serverConfig.FriendlyFire);
+					} else if (attacker == mpPlayer) {
+						// A self-inflicted death
+						ApplySelfDeathPenalty(mpPlayer);
+					}
+					if (!isTeamKill && attacker != mpPlayer && (_gameMode == nullptr || _gameMode->CountsAsKill(*this, mpPlayer, attacker))) {
 						attackerPeerDesc->Kills++;
 						if (IsTeamGameMode(serverConfig.GameMode) && attackerPeerDesc->Team < MaxTeamCount) {
 							_teamKills[attackerPeerDesc->Team]++;
@@ -7688,6 +8292,10 @@ namespace Jazz2::Multiplayer
 							packet4.WriteVariableUint32(attackerPeerDesc->Kills);
 							_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
 						}
+					}
+
+					if (_gameMode != nullptr) {
+						_gameMode->OnPlayerKilled(*this, mpPlayer, attacker);
 					}
 
 					// TRANSLATORS: Message in the console in multiplayer when a player is killed by another player, first {} is victim name, second {} is attacker name, keep \f[...] formatting as it is
@@ -7717,6 +8325,11 @@ namespace Jazz2::Multiplayer
 						return (peerDesc && peerDesc->IsAuthenticated);
 					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
 				} else {
+					ApplySelfDeathPenalty(mpPlayer);
+					if (_gameMode != nullptr) {
+						_gameMode->OnPlayerKilled(*this, mpPlayer, nullptr);
+					}
+
 					// TRANSLATORS: Message in the console in multiplayer when a player is killed by an enemy or a hazard (not by another player), {} is player name, keep \f[...] formatting as it is
 					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
 						peerDesc->PlayerName));
@@ -8570,6 +9183,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(40 * 1024);
 					_tileMap->SerializeResumableToStream(packet);
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
+					SendSpecialTriggersToPeer(peer);
 				}
 
 				// Synchronize weather - the peer applied whatever the level file specifies when it loaded, which is
@@ -8743,9 +9357,7 @@ namespace Jazz2::Multiplayer
 						Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 						playerParams
 					));
-					player->_health = (serverConfig.InitialPlayerHealth > 0
-						? serverConfig.InitialPlayerHealth
-						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+					ApplyInitialHealth(player.get());
 
 					// Spawning as a real player clears any stale spectate state (e.g., carried over from a previous
 					// round or a reconnect), otherwise the player would be treated as spectating despite being active
@@ -9233,36 +9845,50 @@ namespace Jazz2::Multiplayer
 		peerDesc->TeamSwitchCooldown = TeamSwitchCooldownFrames;
 
 		BroadcastPlayerTeam(player);
+		RespawnOnNewTeam(player);
+		return true;
+	}
 
-		// Relocate the player to a friendly spawn point so a mid-round switch doesn't leave them behind enemy lines
-		if (_levelState == LevelState::Running) {
-			Vector2f spawnPos = GetSpawnPoint(peerDesc->PreferredPlayerType, newTeam);
-			player->_checkpointPos = spawnPos;
+	void MpLevelHandler::RespawnOnNewTeam(MpPlayer* player)
+	{
+		if (_levelState != LevelState::Running) {
+			return;
+		}
 
-			if (player->_health <= 0) {
-				// Dead player: bring them back at the new team's spawn point
-				player->Respawn(spawnPos);
+		auto peerDesc = player->GetPeerDescriptor();
+		Vector2f spawnPos = GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
+		player->_checkpointPos = spawnPos;
 
-				if (peerDesc->RemotePeer) {
-					peerDesc->LastUpdated = UINT64_MAX;
-					static_cast<PlayerOnServer*>(player)->_canTakeDamage = false;
+		if (player->_health <= 0) {
+			// Dead player: bring them back at the new team's spawn point
+			player->Respawn(spawnPos);
 
-					MemoryStream packet(12);
-					packet.WriteVariableUint32(player->_playerIndex);
-					packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.X * 512.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.Y * 512.0f));
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet);
-				}
-			} else {
-				// Living player: Respawn() silently no-ops on a living player, so warp instead. WarpToPosition(Fast)
-				// resyncs the owning client (PlayerMoveInstantly via HandlePlayerWarped) and installs the warp grace,
-				// so the anti-cheat does not flag the relocation as a teleport.
-				player->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+			if (peerDesc->RemotePeer) {
+				peerDesc->LastUpdated = UINT64_MAX;
+				static_cast<PlayerOnServer*>(player)->_canTakeDamage = false;
+
+				MemoryStream packet(12);
+				packet.WriteVariableUint32(player->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.X * 512.0f));
+				packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.Y * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet);
+			}
+		} else if (peerDesc->IsSpectating != SpectateMode::None) {
+			player->WarpToPosition(spawnPos, WarpFlags::Fast);
+		} else {
+			// Measured in JJ2+: the player dies without it being counted and respawns on the new team
+			if (_gameMode != nullptr) {
+				_gameMode->OnPlayerTeamChanged(*this, player);
+			}
+			_silentKill = true;
+			KillPlayer(player);
+			_silentKill = false;
+
+			if (player->_health > 0) {
+				// The kill was refused (e.g. a respawn is still pending), so it's only moved
 				player->WarpToPosition(spawnPos, WarpFlags::Fast);
 			}
 		}
-
-		return true;
 	}
 
 	void MpLevelHandler::RebalanceTeams(bool force)
@@ -9339,31 +9965,7 @@ namespace Jazz2::Multiplayer
 			peerDesc->Team = smallestTeam;
 			peerDesc->TeamSwitchCooldown = TeamSwitchCooldownFrames;
 			BroadcastPlayerTeam(victim);
-
-			if (_levelState == LevelState::Running) {
-				Vector2f spawnPos = GetSpawnPoint(peerDesc->PreferredPlayerType, smallestTeam);
-				victim->_checkpointPos = spawnPos;
-
-				if (victim->_health <= 0) {
-					// Dead player: bring them back at the new team's spawn point
-					victim->Respawn(spawnPos);
-
-					if (peerDesc->RemotePeer) {
-						peerDesc->LastUpdated = UINT64_MAX;
-						static_cast<PlayerOnServer*>(victim)->_canTakeDamage = false;
-
-						MemoryStream packet(12);
-						packet.WriteVariableUint32(victim->_playerIndex);
-						packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.X * 512.0f));
-						packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.Y * 512.0f));
-						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet);
-					}
-				} else {
-					// Living player: warp instead of the no-op Respawn() (see ChangePlayerTeam)
-					victim->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-					victim->WarpToPosition(spawnPos, WarpFlags::Fast);
-				}
-			}
+			RespawnOnNewTeam(victim);
 
 			anyChanged = true;
 		}
@@ -9391,6 +9993,11 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		// The team trigger of the level follows the team
+		if (peerDesc->RemotePeer && peerDesc->LevelState >= PeerLevelState::LevelSynchronized) {
+			SendSpecialTriggersToPeer(peerDesc->RemotePeer);
+		}
+
 		MemoryStream packet(8);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Team);
 		packet.WriteVariableUint32(player->_playerIndex);
@@ -9402,8 +10009,16 @@ namespace Jazz2::Multiplayer
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 	}
 
-	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const
+	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team, std::uint8_t modeFlags) const
 	{
+		// A role in the game mode (e.g. a zombie) wins over the team color
+		if (_gameMode != nullptr) {
+			std::uint32_t forcedColor = _gameMode->GetForcedFurColor(modeFlags);
+			if (forcedColor != 0) {
+				return forcedColor;
+			}
+		}
+
 		// In team modes with team coloring enabled, force the primary fur color section to the team color. Kept
 		// consistent on server and clients - both have the synced ColorizePlayersByTeam flag and team ids.
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -9413,12 +10028,12 @@ namespace Jazz2::Multiplayer
 		return furColor;
 	}
 
-	void MpLevelHandler::RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team)
+	void MpLevelHandler::RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team, std::uint8_t modeFlags)
 	{
 		// (Re)applies the effective (team-aware) fur color to a remote player actor if it currently exists. Looks the
 		// actor up under the lock, then recolors after releasing it - SetPlayerColor reloads metadata (file I/O),
 		// which must not run while holding the spinlock.
-		std::uint32_t effectiveColor = ColorizeFurForTeam(furColor, team);
+		std::uint32_t effectiveColor = ColorizeFurForTeam(furColor, team, modeFlags);
 		std::shared_ptr<Actors::ActorBase> actor;
 		{
 			std::unique_lock lock(_lock);
@@ -9434,9 +10049,18 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t MpLevelHandler::GetTeamScore(std::uint8_t team)
 	{
+		std::uint32_t modeScore;
+		if (_gameMode != nullptr && _gameMode->TryGetTeamScore(*this, team, modeScore)) {
+			return modeScore;
+		}
+
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 		if (serverConfig.GameMode == MpGameMode::CaptureTheFlag) {
 			return (team < MaxTeamCount ? _ctfCaptures[team] : 0);
+		}
+		if (serverConfig.GameMode == MpGameMode::DeathCaptureTheFlag) {
+			// Every roast is worth a point too
+			return (team < MaxTeamCount ? _ctfCaptures[team] + _teamKills[team] : 0);
 		}
 		if (serverConfig.GameMode == MpGameMode::TeamBattle) {
 			// Kills are accumulated per team at kill time, so a player switching teams cannot transfer their score
@@ -9478,7 +10102,7 @@ namespace Jazz2::Multiplayer
 			_teamScores[team] = GetTeamScore(team);
 		}
 
-		bool isCtf = (serverConfig.GameMode == MpGameMode::CaptureTheFlag);
+		bool isCtf = UsesCtfFlags(serverConfig.GameMode);
 		if (isCtf) {
 			// Keep the local mirror in sync for the HUD (the host reads _ctfFlagStates[].State the same as clients).
 			// The host doesn't use the FlagActor/BaseActor pointers here - it renders its own _ctfFlags actors.
@@ -9549,7 +10173,7 @@ namespace Jazz2::Multiplayer
 		std::memset(_ctfCaptures, 0, sizeof(_ctfCaptures));
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (serverConfig.GameMode != MpGameMode::CaptureTheFlag) {
+		if (!UsesCtfFlags(serverConfig.GameMode)) {
 			return;
 		}
 
@@ -9618,7 +10242,12 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
 		bool stateChanged = false;
+		bool isDeathCtf = (serverConfig.GameMode == MpGameMode::DeathCaptureTheFlag);
+		float pickupCooldown = serverConfig.FlagPickupCooldownSecs * FrameTimer::FramesPerSecond;
+		bool killEveryone = false;
+		std::uint8_t scoringTeam = 0;
 
 		// Resolve the carrier actor for each carried flag and make the flag follow it. If the carrier is gone
 		// (disconnected, spectating, or dead) the flag is dropped where it last was.
@@ -9672,6 +10301,10 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (flag.Team != playerTeam) {
+					// No flag for a while after (re)spawning
+					if (_elapsedFrames - peerDesc->SpawnedFrames < pickupCooldown) {
+						continue;
+					}
 					// Enemy flag taken
 					flag.State = CtfFlagState::Carried;
 					flag.CarrierPlayerIndex = mpPlayer->_playerIndex;
@@ -9723,7 +10356,21 @@ namespace Jazz2::Multiplayer
 
 			if ((carrier->_pos - ownFlag->BasePos).Length() <= CtfTouchRadius) {
 				if (carrierTeam < MaxTeamCount) {
-					_ctfCaptures[carrierTeam]++;
+					if (isDeathCtf) {
+						// A capture is worth a point plus one for every enemy, and then everyone dies
+						std::uint32_t enemyCount = 0;
+						for (auto* player : _players) {
+							auto otherDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+							if (otherDesc->IsSpectating == SpectateMode::None && otherDesc->Team != carrierTeam) {
+								enemyCount++;
+							}
+						}
+						_ctfCaptures[carrierTeam] += 1 + enemyCount;
+						killEveryone = true;
+						scoringTeam = carrierTeam;
+					} else {
+						_ctfCaptures[carrierTeam]++;
+					}
 				}
 
 				// Return the captured flag to its base
@@ -9738,7 +10385,6 @@ namespace Jazz2::Multiplayer
 
 				if (auto* webhook = _networkManager->GetWebhook()) {
 					// The capture target reuses TotalKills
-					auto& serverConfig = _networkManager->GetServerConfiguration();
 					webhook->OnFlagCaptured(carrier->GetPeerDescriptor()->PlayerName, GetTeamName(carrierTeam), GetTeamName(flag.Team),
 						(carrierTeam < MaxTeamCount ? _ctfCaptures[carrierTeam] : 0), serverConfig.TotalKills);
 				}
@@ -9748,8 +10394,134 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
+		if (killEveryone && _levelState == LevelState::Running) {
+			SmallVector<Actors::Player*, 0> toKill;
+			for (auto* player : _players) {
+				auto otherDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+				// Without ResetAllTeams, only the enemies of the scoring team die
+				if (player->_health > 0 && otherDesc->IsSpectating == SpectateMode::None &&
+					(serverConfig.ResetAllTeams || otherDesc->Team != scoringTeam)) {
+					toKill.push_back(player);
+				}
+			}
+			for (auto* player : toKill) {
+				KillPlayer(player);
+			}
+		}
+
 		if (stateChanged) {
 			SyncTeamScores();
+		}
+	}
+
+	void MpLevelHandler::ClearGameModeObjects()
+	{
+		for (auto& visual : _gameModeObjectVisuals) {
+			if (visual.Actor != nullptr) {
+				visual.Actor->SetState(Actors::ActorState::IsDestroyed, true);
+			}
+		}
+		_gameModeObjectVisuals.clear();
+
+		if (_isServer) {
+			bool hadObjects = !_gameModeObjects.empty();
+			_gameModeObjects.clear();
+			if (hadObjects) {
+				SyncGameModeObjects();
+			}
+		}
+	}
+
+	void MpLevelHandler::UpdateGameModeObjectVisuals()
+	{
+		if (ContentResolver::Get().IsHeadless()) {
+			// A dedicated server shows nothing
+			return;
+		}
+
+		// Actors of objects that are gone, or that changed their type
+		for (std::size_t i = 0; i < _gameModeObjectVisuals.size(); ) {
+			auto& visual = _gameModeObjectVisuals[i];
+			bool found = false;
+			for (const auto& obj : _gameModeObjects) {
+				if (obj.Id == visual.Id && obj.Type == visual.Type) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				if (visual.Actor != nullptr) {
+					visual.Actor->SetState(Actors::ActorState::IsDestroyed, true);
+				}
+				_gameModeObjectVisuals.eraseUnordered(i);
+			} else {
+				i++;
+			}
+		}
+
+		for (const auto& obj : _gameModeObjects) {
+			GameModeObjectVisual* visual = nullptr;
+			for (auto& v : _gameModeObjectVisuals) {
+				if (v.Id == obj.Id) {
+					visual = &v;
+					break;
+				}
+			}
+
+			GameModeObjectActor::Visual kind;
+			std::int32_t z;
+			switch (obj.Type) {
+				case GameModeObjectType::Jail:
+				case GameModeObjectType::Base: kind = GameModeObjectActor::Visual::Jail; z = MainPlaneZ - 40; break;
+				case GameModeObjectType::Flag: kind = GameModeObjectActor::Visual::Flag; z = MainPlaneZ - 30; break;
+				case GameModeObjectType::ControlPoint: kind = GameModeObjectActor::Visual::ControlPoint; z = MainPlaneZ - 30; break;
+				default: continue;
+			}
+
+			if (visual == nullptr) {
+				// Not remoted, every side shows its own copy driven by the synchronized state
+				auto actor = std::make_shared<GameModeObjectActor>();
+				std::uint8_t params[2] = { (std::uint8_t)kind, obj.Team };
+				actor->OnActivated(Actors::ActorActivationDetails(this,
+					Vector3i((std::int32_t)obj.Pos.X, (std::int32_t)obj.Pos.Y, z), params));
+				bool prevSuppressRemoting = _suppressRemoting;
+				_suppressRemoting = true;
+				AddActor(actor);
+				_suppressRemoting = prevSuppressRemoting;
+
+				LOGD("Game mode object {} of type {} shown at [{}, {}]", obj.Id, (std::int32_t)obj.Type, obj.Pos.X, obj.Pos.Y);
+
+				auto& v = _gameModeObjectVisuals.emplace_back();
+				v.Id = obj.Id;
+				v.Type = obj.Type;
+				v.Actor = Death::move(actor);
+				visual = &v;
+			}
+
+			// A carried flag follows its carrier
+			Vector2f pos = obj.Pos;
+			if (obj.Type == GameModeObjectType::Flag && obj.CarrierPlayerIndex != UINT32_MAX) {
+				Actors::ActorBase* carrier = nullptr;
+				std::shared_ptr<Actors::ActorBase> remoteCarrier;
+				if (_isServer) {
+					carrier = FindPlayerByIndex(obj.CarrierPlayerIndex);
+				} else if (obj.CarrierPlayerIndex == _lastSpawnedActorId) {
+					carrier = (!_players.empty() ? _players[0] : nullptr);
+				} else {
+					std::unique_lock lock(_lock);
+					auto it = _remoteActors.find(obj.CarrierPlayerIndex);
+					if (it != _remoteActors.end()) {
+						remoteCarrier = it->second;
+						carrier = remoteCarrier.get();
+					}
+				}
+				if (carrier != nullptr) {
+					pos = carrier->GetPos() - Vector2f(0.0f, 20.0f);
+				}
+			}
+
+			static_cast<GameModeObjectActor*>(visual->Actor.get())->SetVisual(kind, obj.Team, obj.Progress / 255.0f, obj.Direction < 0);
+			visual->Actor->MoveInstantly(pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 		}
 	}
 
@@ -9863,7 +10635,11 @@ namespace Jazz2::Multiplayer
 
 		_scoreboard.clear();
 
-		auto getExtra = [gameMode](const auto& peerDesc) -> std::uint32_t {
+		bool modeHasColumn = (_gameMode != nullptr && !_gameMode->GetScoreboardLabel().empty());
+		auto getExtra = [gameMode, modeHasColumn](const auto& peerDesc) -> std::uint32_t {
+			if (modeHasColumn) {
+				return peerDesc->ModePoints;
+			}
 			switch (gameMode) {
 				case MpGameMode::Race:
 				case MpGameMode::TeamRace: return peerDesc->Laps;
@@ -10007,6 +10783,8 @@ namespace Jazz2::Multiplayer
 		// same-level rounds, so stale overtime state would otherwise end the next round immediately
 		_overtimeStarted = false;
 		_overtimeTimeLeft = 0.0f;
+		_modeOvertime = false;
+		_overtimeScoreCap = 0;
 		_raceFinishedCount = 0;
 		_roundResults.clear();
 
@@ -10026,6 +10804,12 @@ namespace Jazz2::Multiplayer
 			peerDesc->RaceFinishOrder = 0;
 			peerDesc->RaceFinishFrames = 0.0f;
 			peerDesc->RaceProgress = 0.0f;
+			peerDesc->ModeFlags = 0;
+			peerDesc->ModePoints = 0;
+			peerDesc->ModeCarried = 0;
+			peerDesc->ModeLives = 0;
+			peerDesc->ModeTimer = 0.0f;
+			peerDesc->SpawnedFrames = _elapsedFrames;
 
 			if (peerDesc->Player) {
 				peerDesc->Player->_inventory.Coins = 0;
@@ -10042,9 +10826,7 @@ namespace Jazz2::Multiplayer
 				peerDesc->Player->ApplyLevelWeaponRules();
 				// A spectator keeps its zero health, with any it would count as a living player
 				if (peerDesc->Player->_playerType != PlayerType::Spectate) {
-					peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
-						? serverConfig.InitialPlayerHealth
-						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+					ApplyInitialHealth(peerDesc->Player);
 				}
 
 				if (peerDesc->RemotePeer) {
@@ -10078,8 +10860,14 @@ namespace Jazz2::Multiplayer
 		// (Re)build the flags at round start. They are rebuilt here (rather than only at level load) so the spawn is
 		// broadcast to all currently-synchronized players - at level-load time no client is connected yet, so the
 		// load-time spawn would only reach late joiners via the per-peer sync.
-		if (_networkManager->GetServerConfiguration().GameMode == MpGameMode::CaptureTheFlag) {
+		if (UsesCtfFlags(_networkManager->GetServerConfiguration().GameMode)) {
 			BuildCtfBases();
+		}
+
+		// The game mode builds its objects again when the round starts
+		ClearGameModeObjects();
+		for (auto* player : _players) {
+			SyncPlayerModeState(player);
 		}
 	}
 
@@ -10299,12 +11087,22 @@ namespace Jazz2::Multiplayer
 		// Synchronize tilemap (the rolled-back tilemap is already the one a local session renders)
 		if (!_isLocalSession) {
 			// TODO: Use deflate compression here?
+			// The server trigger of the level stays on for the server
+			if (_serverTriggerId >= 0) {
+				LevelHandler::SetTrigger((std::uint8_t)_serverTriggerId, true);
+			}
 			MemoryStream packet(40 * 1024);
 			_tileMap->SerializeResumableToStream(packet);
 			_networkManager->SendTo([this](const Peer& peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
+			// The tile map carries the triggers as the server has them
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->LevelState >= PeerLevelState::LevelSynchronized) {
+					SendSpecialTriggersToPeer(peer);
+				}
+			}
 		}
 
 		for (auto& actor : _actors) {
@@ -10338,14 +11136,28 @@ namespace Jazz2::Multiplayer
 			case MpGameMode::TeamRace: scoreLabel = "laps"_s; break;
 			case MpGameMode::TreasureHunt:
 			case MpGameMode::TeamTreasureHunt: scoreLabel = "treasure"_s; break;
+			case MpGameMode::LastRabbitStanding:
+			case MpGameMode::TeamLastRabbitStanding: scoreLabel = "lives"_s; break;
+			case MpGameMode::Jailbreak:
+			case MpGameMode::DeathCaptureTheFlag:
+			case MpGameMode::Domination: scoreLabel = "kills"_s; break;
+			case MpGameMode::RoastTag:
+			case MpGameMode::ExtendedLastRabbitStanding:
+			case MpGameMode::Pestilence:
+			case MpGameMode::FlagRun:
+			case MpGameMode::HeadHunters: scoreLabel = "points"_s; break;
 			// Cooperation has no ranking, and an unknown mode has no metric to rank by
 			default: return {};
 		}
 
 		MpGameMode gameMode = serverConfig.GameMode;
 		bool isRace = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
+		IGameMode* activeMode = (IsCustomGameMode(gameMode) ? _gameMode.get() : nullptr);
 
-		auto getScore = [gameMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+		auto getScore = [gameMode, activeMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+			if (activeMode != nullptr) {
+				return activeMode->GetStateScore(peerDesc);
+			}
 			switch (gameMode) {
 				case MpGameMode::Race:
 				case MpGameMode::TeamRace: return peerDesc.Laps;
@@ -10364,7 +11176,7 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
 			// Players that completed a race are moved to spectate mode, but they are the ones the standings are
 			// mostly made of, so they are never filtered out here
-			if ((peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) ||
+			if ((peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0 && !IsPlayerEliminated(static_cast<MpPlayer*>(player))) ||
 				(onlyTeam >= 0 && peerDesc->Team != (std::uint8_t)onlyTeam)) {
 				continue;
 			}
@@ -10455,7 +11267,9 @@ namespace Jazz2::Multiplayer
 			// A player that already finished the race is in (forced) spectate mode, but still holds a position -
 			// their finishing order, which no one still racing can beat
 			bool finishedRace = (peerDesc->RaceFinishOrder != 0);
-			if (peerDesc->IsSpectating != SpectateMode::None && !finishedRace) {
+			// An eliminated player watches the rest of the round, but keeps the position it was eliminated in
+			bool isDead = (IsPlayerEliminated(mpPlayer) && !finishedRace);
+			if (peerDesc->IsSpectating != SpectateMode::None && !finishedRace && !isDead) {
 				continue;
 			}
 
@@ -10463,6 +11277,12 @@ namespace Jazz2::Multiplayer
 			switch (serverConfig.GameMode) {
 				case MpGameMode::Battle: {
 					roundPoints = peerDesc->Kills;
+					break;
+				}
+				case MpGameMode::TeamBattle:
+				case MpGameMode::TeamTreasureHunt:
+				case MpGameMode::CaptureTheFlag: {
+					// These never had a ranking of their own
 					break;
 				}
 				case MpGameMode::Race:
@@ -10514,10 +11334,13 @@ namespace Jazz2::Multiplayer
 					roundPoints = peerDesc->TreasureCollected;
 					break;
 				}
+				default: {
+					roundPoints = GetPlayerRoundScore(mpPlayer);
+					break;
+				}
 			}
 
 			// Somebody who already crossed the finish line can't be eliminated out of their position
-			bool isDead = (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills && !finishedRace);
 			if (isDead) {
 				sortedDeadPlayers.push_back(pair(mpPlayer, roundPoints));
 			} else {
@@ -10792,7 +11615,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				if (serverConfig.OvertimeSecs == 0) {
+				if (serverConfig.GetOvertimeSecs() == 0) {
 					// Overtime disabled - the race is over the moment somebody crosses the finish line
 					if (newFinishers > 0) {
 						EndGameWithTeam(FindBestRaceTeam());
@@ -10810,7 +11633,7 @@ namespace Jazz2::Multiplayer
 			case MpGameMode::Race: {
 				std::uint32_t newFinishers = UpdateRaceFinishers();
 
-				if (serverConfig.OvertimeSecs == 0) {
+				if (serverConfig.GetOvertimeSecs() == 0) {
 					// Overtime disabled - the race is over the moment somebody crosses the finish line
 					if (newFinishers > 0) {
 						EndGame(FindRaceWinner());
@@ -10887,15 +11710,16 @@ namespace Jazz2::Multiplayer
 
 		LOGI("Player {} \"{}\" finished the race ({}.)", player->_playerIndex, peerDesc->PlayerName, peerDesc->RaceFinishOrder);
 
-		if (!_overtimeStarted && serverConfig.OvertimeSecs > 0) {
+		std::uint32_t overtimeSecs = serverConfig.GetOvertimeSecs();
+		if (!_overtimeStarted && overtimeSecs > 0) {
 			// The first finisher doesn't end the round - everyone else gets this much time to complete their own laps
-			_overtimeTimeLeft = serverConfig.OvertimeSecs * FrameTimer::FramesPerSecond;
+			_overtimeTimeLeft = overtimeSecs * FrameTimer::FramesPerSecond;
 			_overtimeStarted = true;
 
-			LOGI("Overtime started - {} seconds", serverConfig.OvertimeSecs);
+			LOGI("Overtime started - {} seconds", overtimeSecs);
 			// TODO: Localize on client
 			// TRANSLATORS: Message shown to all players in a multiplayer race when the first player finishes, first {} is player name, second {} is number of seconds left for the others, keep the line breaks
-			ShowAlertToAllPlayers(_f("\n\n{} finished the race!\n{} seconds remaining", peerDesc->PlayerName, serverConfig.OvertimeSecs));
+			ShowAlertToAllPlayers(_f("\n\n{} finished the race!\n{} seconds remaining", peerDesc->PlayerName, overtimeSecs));
 
 			// Clients count the remaining time down on their own from here, so the players still racing can see it
 			if (!_isLocalSession) {
@@ -11036,7 +11860,11 @@ namespace Jazz2::Multiplayer
 		}
 
 		// Per-player captures aren't tracked in Capture The Flag, so its players are ranked by kills like in Battle
-		auto getScore = [gameMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+		IGameMode* activeMode = (IsCustomGameMode(gameMode) ? _gameMode.get() : nullptr);
+		auto getScore = [gameMode, activeMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+			if (activeMode != nullptr) {
+				return activeMode->GetStateScore(peerDesc);
+			}
 			switch (gameMode) {
 				case MpGameMode::Race:
 				case MpGameMode::TeamRace: return peerDesc.Laps;
@@ -11068,15 +11896,19 @@ namespace Jazz2::Multiplayer
 			if (scoreA != scoreB) {
 				return (scoreA > scoreB);
 			}
-			return (peerDescA->Deaths < peerDescB->Deaths);
+			if (peerDescA->Deaths != peerDescB->Deaths) {
+				return (peerDescA->Deaths < peerDescB->Deaths);
+			}
+			// Whoever was eliminated later ranks higher (FLT_MAX while still in the round)
+			return (peerDescA->DeathElapsedFrames > peerDescB->DeathElapsedFrames);
 		});
 
 		std::uint32_t position = 0;
 		for (auto* mpPlayer : ranked) {
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			// Players who spectated the round instead of playing it are not ranked at all
-			if (peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) {
+			// Players who spectated the round instead of playing it are not ranked at all, eliminated players are
+			if (peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0 && !IsPlayerEliminated(mpPlayer)) {
 				if (isRace) {
 					peerDesc->PositionInRound = 0;
 				}
@@ -11274,9 +12106,145 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::ResolveSpecialTriggers()
+	{
+		if (_specialTriggersResolved) {
+			return;
+		}
+		_specialTriggersResolved = true;
+
+		// Trigger zones in the bottom row of the level, "position N" is the N-th tile of the row:
+		// 1 = team trigger (off = on for red, on = on for blue), 2 = server trigger (on for the server, off for clients),
+		// 3 = overtime trigger (see StartModeOvertime()), any other is off for clients
+		std::int32_t bottomRow = _eventMap->GetSize().Y - 1;
+		_eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event != EventType::TriggerZone || y != bottomRow) {
+				return true;
+			}
+			std::uint8_t triggerId = e.EventParams[0];
+			if (x == 0) {
+				_teamTriggerId = triggerId;
+				_teamTriggerOnForBlue = (e.EventParams[1] != 0);
+			} else if (x == 1) {
+				_serverTriggerId = triggerId;
+			} else if (x != 2) {
+				_clientOffTriggers.push_back(triggerId);
+			}
+			return true;
+		}, false);
+
+		if (_serverTriggerId >= 0) {
+			LevelHandler::SetTrigger((std::uint8_t)_serverTriggerId, true);
+		}
+	}
+
+	bool MpLevelHandler::GetTriggerStateForPeer(const PeerDescriptor& peerDesc, std::uint8_t triggerId, bool state)
+	{
+		ResolveSpecialTriggers();
+		if (triggerId == _teamTriggerId) {
+			return ((peerDesc.Team == 0) == _teamTriggerOnForBlue);
+		}
+		if (triggerId == _serverTriggerId) {
+			return false;
+		}
+		for (std::uint8_t id : _clientOffTriggers) {
+			if (id == triggerId) {
+				return false;
+			}
+		}
+		return state;
+	}
+
+	void MpLevelHandler::SendSpecialTriggersToPeer(const Peer& peer)
+	{
+		ResolveSpecialTriggers();
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if (peerDesc == nullptr || _isLocalSession) {
+			return;
+		}
+
+		auto send = [&](std::uint8_t id) {
+			MemoryStream packet(2);
+			packet.WriteValue<std::uint8_t>(id);
+			packet.WriteValue<std::uint8_t>(GetTriggerStateForPeer(*peerDesc, id, false));
+			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SetTrigger, packet);
+		};
+
+		if (_teamTriggerId >= 0) {
+			send((std::uint8_t)_teamTriggerId);
+		}
+		if (_serverTriggerId >= 0) {
+			send((std::uint8_t)_serverTriggerId);
+		}
+		for (std::uint8_t id : _clientOffTriggers) {
+			send(id);
+		}
+	}
+
+	void MpLevelHandler::StartModeOvertime()
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		_modeOvertime = true;
+		_overtimeScoreCap = 0;
+		_gameTimeLeft = serverConfig.GetOvertimeSecs() * FrameTimer::FramesPerSecond;
+		_overtimeTimeLeft = _gameTimeLeft;
+		_overtimeStarted = true;
+
+		LOGI("Overtime started - {} seconds", serverConfig.GetOvertimeSecs());
+		// TRANSLATORS: Message shown to all players when the time limit runs out and nobody won yet, keep the leading line breaks
+		ShowAlertToAllPlayers(_("\n\nOvertime!"));
+
+		// The overtime trigger - the trigger of a trigger zone at position 3 of the bottom row is set on
+		std::int32_t bottomRow = _eventMap->GetSize().Y - 1;
+		_eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event == EventType::TriggerZone && x == 2 && y == bottomRow) {
+				SetTrigger(e.EventParams[0], true);
+				return false;
+			}
+			return true;
+		}, false);
+
+		_gameMode->OnOvertimeStarted(*this);
+
+		if (!_isLocalSession) {
+			MemoryStream packet(16);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Overtime);
+			packet.WriteVariableInt32((std::int32_t)(_overtimeTimeLeft * 100.0f));
+			packet.WriteValue<std::uint8_t>(1);
+			packet.WriteVariableUint32(_overtimeScoreCap);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		}
+		SendLevelStateToAllPlayers();
+	}
+
 	void MpLevelHandler::EndGameOnTimeOut()
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		if (_gameMode != nullptr) {
+			CalculatePositionInRound();
+			GameEndResult result = _gameMode->OnTimeOut(*this);
+			if (result.StartOvertime && CanStartOvertime()) {
+				StartModeOvertime();
+				return;
+			}
+			if (result.ShouldEnd) {
+				if (result.WithTeam) {
+					EndGameWithTeam(result.WinnerTeam);
+				} else {
+					if (result.Winner == nullptr) {
+						ShowAlertToAllPlayers(_("\n\nThe round ended in a draw"));
+					}
+					EndGame(static_cast<MpPlayer*>(result.Winner));
+				}
+				return;
+			}
+		}
 
 		if (IsTeamGameMode(serverConfig.GameMode)) {
 			// Winner is the team with the highest aggregate score; a tie ends in a draw
@@ -11618,6 +12586,22 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::ApplyInitialHealth(Actors::Player* player)
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.InitialPlayerHealth > 0) {
+			player->_health = serverConfig.InitialPlayerHealth;
+		} else if (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode)) {
+			player->_health = INT32_MAX;
+			return;
+		} else {
+			// These team modes default to 3 hearts
+			player->_health = (IsCustomGameMode(serverConfig.GameMode) && IsTeamGameMode(serverConfig.GameMode) ? 3 : 5);
+		}
+		// Respawning restores the max health
+		player->_maxHealth = player->_health;
+	}
+
 	bool MpLevelHandler::PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode)
 	{
 		return (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace ||
@@ -11737,6 +12721,11 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 	void MpLevelHandler::ShowDebugWindow()
 	{
+		// A dedicated server has no ImGui
+		if (ImGui::GetCurrentContext() == nullptr) {
+			return;
+		}
+
 		const float appWidth = theApplication().GetWidth();
 
 		//const ImVec2 windowPos = ImVec2(appWidth * 0.5f, ImGui::GetIO().DisplaySize.y - Margin);

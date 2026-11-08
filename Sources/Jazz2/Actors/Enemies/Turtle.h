@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = 1.0f;
+		static constexpr float DefaultSpeed = TicksPerFrame;
 
 		std::uint8_t _theme;
 		bool _isAttacking;

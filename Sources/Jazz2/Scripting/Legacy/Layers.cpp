@@ -10,6 +10,7 @@
 #include "../../Actors/Player.h"
 #include "../../Compatibility/JJ2Data.h"
 #include "../../Compatibility/JJ2Level.h"
+#include "../../Rendering/PlayerViewport.h"
 
 #include "../../../nCine/Base/Algorithms.h"
 
@@ -191,7 +192,9 @@ namespace Jazz2::Scripting
 			const bool translucent = (description->Color.W < 1.0f);
 			switch (description->RendererType) {
 				// SPRITE::INVISIBLE is converted to an ordinary layer of no alpha
-				case Tiles::LayerRendererType::Default: return (description->Color.W <= 0.0f ? spriteType_INVISIBLE : (translucent ? spriteType_TRANSLUCENT : spriteType_NORMAL));
+				// An opacity other than that of SPRITE::TRANSLUCENT is SPRITE::BLEND_NORMAL the level gave it, as JJ2+ reports it
+				case Tiles::LayerRendererType::Default: return (description->Color.W <= 0.0f ? spriteType_INVISIBLE : (!translucent ? spriteType_NORMAL :
+					(std::abs(description->Color.W - TranslucentLayerAlpha) < 0.5f / 255.0f ? spriteType_TRANSLUCENT : spriteType_BLENDNORMAL)));
 				case Tiles::LayerRendererType::Tinted: return spriteType_TINTED;
 				case Tiles::LayerRendererType::PaletteShift: return (translucent ? spriteType_TRANSLUCENTPALSHIFT : spriteType_PALSHIFT);
 				case Tiles::LayerRendererType::SingleColor: return (translucent ? spriteType_TRANSLUCENTCOLOR : spriteType_SINGLECOLOR);
@@ -304,6 +307,22 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		std::uint8_t jjLAYER::get_spriteParam() const {
+			if (_layerIndex < 0 || _hasSpriteMode) {
+				return _spriteParam;
+			}
+			// The parameter of a mode of a level layer is what it's drawn with, the opacity of SPRITE::BLEND_NORMAL or of a blend
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			auto tileMap = owner->GetLevelHandler()->TileMap();
+			const Tiles::LayerDescription* description = (tileMap != nullptr ? tileMap->GetLayerDescription(_layerIndex) : nullptr);
+			if (description != nullptr) {
+				std::uint32_t mode = get_spriteMode();
+				if (mode == spriteType_BLENDNORMAL) {
+					return std::uint8_t(std::clamp(description->Color.W * 255.0f + 0.5f, 0.0f, 255.0f));
+				}
+				if (description->Blend != Tiles::LayerBlend::Normal && description->Blend != Tiles::LayerBlend::Translucent) {
+					return description->BlendParam;
+				}
+			}
 			return _spriteParam;
 		}
 		std::uint8_t jjLAYER::set_spriteParam(std::uint8_t value) const {
@@ -1197,8 +1216,15 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void jjSetDarknessColor(jjPALCOLOR color) {
-		noop();
+	void LevelScriptLoader::jjSetDarknessColor(jjPALCOLOR color) {
+		// The color the ambient light darkens to, the intensity stays (see Rendering::CombineRenderer)
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		LevelHandler* levelHandler = _this->_levelHandler;
+		Vector3f rgb(color.red / 255.0f, color.green / 255.0f, color.blue / 255.0f);
+		levelHandler->_defaultAmbientLight = Vector4f(rgb, levelHandler->_defaultAmbientLight.W);
+		for (auto& viewport : levelHandler->_assignedViewports) {
+			viewport->_ambientLight = Vector4f(rgb, viewport->_ambientLight.W);
+		}
 	}
 	// The textured background of the level is layer 8, its jjLAYER keeps how scripts set it (see jjLAYER::ApplyTexture()), the
 	// global properties of JJ2+ are those of it. JJ2+ draws the other textured layers of a level without the MLLE stream in
@@ -2632,6 +2658,12 @@ namespace Jazz2::Scripting
 		engine->RegisterEnumValue("Style", "REFLECTION", tbgModeREFLECTION);	///< Plane below the horizon mirroring what's above it, see @ref jjLAYER::reflection
 		engine->SetDefaultNamespace("");
 
+		/**
+		 * @brief Sets the color of darkness used by ambient lighting
+		 *
+		 * The dark parts of the level fade to this color instead of black, black by default. Takes effect at once and
+		 * lasts until the level is left.
+		 */
 		engine->RegisterGlobalFunction("void jjSetDarknessColor(jjPALCOLOR color = jjPALCOLOR())", asFUNCTION(jjSetDarknessColor), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 red, uint8 green, uint8 blue)", asFUNCTION(jjSetFadeColors), asCALL_CDECL);
 		engine->RegisterGlobalFunction("void jjSetFadeColors(uint8 paletteColorID = 207)", asFUNCTION(jjSetFadeColorsFromPalette), asCALL_CDECL);

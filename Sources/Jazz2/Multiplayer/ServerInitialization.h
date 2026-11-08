@@ -47,6 +47,8 @@ namespace Jazz2::Multiplayer
 		bool FriendlyFire;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
+		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
+		bool ColorizePlayersByTeam;
 		/** @brief Initial player health, default is unlimited for Race and Treasure Hunt, otherwise 5 */
 		std::int32_t InitialPlayerHealth;
 		/** @brief Maximum number of seconds for a game */
@@ -61,8 +63,34 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalLaps;
 		/** @brief Total number of treasure to collect to win (Treasure Hunt); default is 0, which auto-weights the target from the level's treasure */
 		std::uint32_t TotalTreasureCollected;
-		/** @brief Duration of overtime in seconds after the first player finishes, default is 60; 0 ends the round right away (Race only) */
-		std::uint32_t OvertimeSecs;
+		/** @brief Duration of overtime in seconds, 0 for none, negative for the default of the game mode */
+		std::int32_t OvertimeSecs;
+		/** @brief Number of lives of every player (Last Rabbit Standing modes) */
+		std::uint32_t PlayerLives;
+		/** @brief Number of lives of every team (Team Last Rabbit Standing) */
+		std::uint32_t TeamLives;
+		/** @brief Maximum number of players of a team that can have lives at once (Team Last Rabbit Standing) */
+		std::uint32_t MaxTeamPlayersWithLives;
+		/** @brief Whether players who join a running round can play, otherwise they're out (Last Rabbit Standing modes) or zombies (Pestilence) */
+		bool LateJoinersCanPlay;
+		/** @brief Whether all teams start over after a capture (Death Capture The Flag) or a point (Jailbreak), otherwise only the losing ones */
+		bool ResetAllTeams;
+		/** @brief Whether every shot does 1 more heart of damage */
+		bool AmplifyDamage;
+		/** @brief Whether an injured player passes the flag or the gems to a nearby teammate with full health */
+		bool AllowPassing;
+		/** @brief Time after (re)spawning in which a player can't pick up a flag, in seconds */
+		std::uint32_t FlagPickupCooldownSecs;
+		/** @brief Number of gems a roasted player drops on top of the carried ones (Head Hunters) */
+		std::uint32_t ExtraDroppedGems;
+		/** @brief Whether dropped gems go straight to the attacker (Head Hunters) */
+		bool TransferDroppedGems;
+		/** @brief Whether dying by own fault (a pit, spikes) costs a point */
+		bool PunishSelfDeaths;
+		/** @brief Whether a death by own fault costs the own team a point, otherwise the other teams gain one */
+		bool SelfDeathCostsTeamPoint;
+		/** @brief Whether roasting a teammate costs the own team a point, otherwise the other teams gain one */
+		bool FriendlyFireCostsTeamPoint;
 		/**
 		 * @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis
 		 *
@@ -90,8 +118,6 @@ namespace Jazz2::Multiplayer
 		 * @ref MpGameMode::Cooperation and for nothing else. Set, the configured value wins outright in every mode.
 		 */
 		bool AllowMinimapSet;
-		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
-		bool ColorizePlayersByTeam;
 	};
 
 	/**
@@ -199,6 +225,17 @@ namespace Jazz2::Multiplayer
 			-   @cpp "tth" @ce / @cpp "teamtreasurehunt" @ce - Team Treasure Hunt
 			-   @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture The Flag
 			-   @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
+			-   @cpp "rt" @ce / @cpp "roasttag" @ce - Roast Tag
+			-   @cpp "lrs" @ce / @cpp "lastrabbitstanding" @ce - Last Rabbit Standing
+			-   @cpp "xlrs" @ce / @cpp "extendedlastrabbitstanding" @ce - Extended Last Rabbit Standing
+			-   @cpp "pest" @ce / @cpp "pestilence" @ce - Pestilence
+			-   @cpp "tlrs" @ce / @cpp "teamlastrabbitstanding" @ce - Team Last Rabbit Standing
+			-   @cpp "jb" @ce / @cpp "jailbreak" @ce - Jailbreak
+			-   @cpp "dctf" @ce / @cpp "deathcapturetheflag" @ce - Death Capture The Flag
+			-   @cpp "fr" @ce / @cpp "flagrun" @ce - Flag Run
+			-   @cpp "dom" @ce / @cpp "domination" @ce - Domination
+			-   @cpp "head" @ce / @cpp "headhunters" @ce - Head Hunters
+			-   In the modes that score points, @cpp "TotalKills" @ce is the score to reach
 		-   @cpp "TeamCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of teams in team game modes, clamped to 2-4 (default is **2**)
 		-   @cpp "AutoBalanceTeams" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether teams are automatically rebalanced when they become uneven (default is **true**)
 		-   @cpp "MaxTeamSizeDiff" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Allowed player-count difference between the largest and smallest team before rebalancing (default is **1**)
@@ -225,8 +262,27 @@ namespace Jazz2::Multiplayer
 		-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
 		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win (Treasure Hunt)
-		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish after the first one does, in seconds (default is **60** seconds, Race)
-			-   Set to **0** to end the round as soon as the first player finishes
+		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of overtime in seconds, **0** for none
+			-   In Race, the time the remaining players get to finish after the first one does, **0** ends the round as soon as the first player finishes
+			-   In other modes, the time a round gets when it runs out of time without a winner, in most modes the HUD then shows the score that wins it
+			-   Omit it (or set it to **-1**) and the game mode decides: **60** seconds in Race and Team Race, no overtime everywhere else
+			-   Give it explicitly and that value applies in every mode
+		-   @cpp "PlayerLives" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of lives of every player, 1-100 (default is **5**, Last Rabbit Standing modes)
+			-   In Team Last Rabbit Standing, the most lives a player can have
+		-   @cpp "TeamLives" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of lives of every team, 1-100 (default is **30**, Team Last Rabbit Standing)
+		-   @cpp "MaxTeamPlayersWithLives" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players of a team that can have lives at once, 1-32 (default is **16**, Team Last Rabbit Standing)
+		-   @cpp "LateJoinersCanPlay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players who join a running round can play (default is **false**)
+			-   Otherwise they're out in Last Rabbit Standing modes and zombies in Pestilence
+		-   @cpp "ResetAllTeams" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether all teams start over after a capture in Death Capture The Flag or a point in Jailbreak, otherwise only the losing ones (default is **true**)
+		-   @cpp "AmplifyDamage" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether every shot does 1 more heart of damage (default is **false**)
+			-   Battle, Team Battle, Roast Tag, Pestilence and the Last Rabbit Standing modes also turn it on in overtime
+		-   @cpp "AllowPassing" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether an injured player passes the flag (Capture The Flag modes, Flag Run) or the gems (Head Hunters) to a nearby teammate with full health (default is **false**)
+		-   @cpp "FlagPickupCooldownSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time after (re)spawning in which a player can't pick up a flag, in seconds (default is **5** seconds)
+		-   @cpp "ExtraDroppedGems" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of gems a roasted player drops on top of the carried ones, 1-10 (default is **1**, Head Hunters)
+		-   @cpp "TransferDroppedGems" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the dropped gems go straight to the attacker (default is **false**, Head Hunters)
+		-   @cpp "PunishSelfDeaths" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether dying by own fault, such as in a pit or on spikes, costs a point (default is **false**)
+		-   @cpp "SelfDeathCostsTeamPoint" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether such a death costs the own team a point, otherwise the other teams gain one (default is **true**)
+		-   @cpp "FriendlyFireCostsTeamPoint" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether roasting a teammate with @cpp "FriendlyFire" @ce costs the own team a point, otherwise the other teams gain one (default is **false**)
 		-   @cpp "EnableSpectate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether spectate mode is enabled (default is **true**)
 		-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other (and jump off); if disabled, they bump apart on every axis as before
 			-   Omit it and the game mode decides: stacking is on for @cpp "Cooperation" @ce and off everywhere else
@@ -253,7 +309,11 @@ namespace Jazz2::Multiplayer
 			-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 			-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
 			-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win this round (Treasure Hunt)
-			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish this round after the first one does, in seconds (Race)
+			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of overtime in this round, in seconds (default is decided by the game mode)
+			-   @cpp "PlayerLives" @ce, @cpp "TeamLives" @ce, @cpp "MaxTeamPlayersWithLives" @ce, @cpp "LateJoinersCanPlay" @ce,
+				@cpp "ResetAllTeams" @ce, @cpp "AmplifyDamage" @ce, @cpp "AllowPassing" @ce, @cpp "FlagPickupCooldownSecs" @ce,
+				@cpp "ExtraDroppedGems" @ce, @cpp "TransferDroppedGems" @ce, @cpp "PunishSelfDeaths" @ce, @cpp "SelfDeathCostsTeamPoint" @ce
+				and @cpp "FriendlyFireCostsTeamPoint" @ce : The same as above, for this round
 			-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other in this round (default is decided by the game mode)
 			-   @cpp "AllowMinimap" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the minimap is available to players in this round (default is decided by the game mode)
 		-   @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
@@ -394,8 +454,38 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalLaps;
 		/** @brief Total number of treasure collected, default is 0 for automatic calculation (Treasure Hunt) */
 		std::uint32_t TotalTreasureCollected;
-		/** @brief Duration of overtime in seconds after first player finishes (Race only) */
-		std::uint32_t OvertimeSecs;
+		/**
+		 * @brief Duration of overtime in seconds, 0 for none, negative for the default of the game mode
+		 *
+		 * Use @ref GetOvertimeSecs() to get the duration that applies.
+		 */
+		std::int32_t OvertimeSecs;
+		/** @brief Number of lives of every player (Last Rabbit Standing modes), also the most a player can have in Team Last Rabbit Standing */
+		std::uint32_t PlayerLives;
+		/** @brief Number of lives of every team (Team Last Rabbit Standing) */
+		std::uint32_t TeamLives;
+		/** @brief Maximum number of players of a team that can have lives at once (Team Last Rabbit Standing) */
+		std::uint32_t MaxTeamPlayersWithLives;
+		/** @brief Whether players who join a running round can play, otherwise they're out (Last Rabbit Standing modes) or zombies (Pestilence) */
+		bool LateJoinersCanPlay;
+		/** @brief Whether all teams start over after a capture (Death Capture The Flag) or a point (Jailbreak), otherwise only the losing ones */
+		bool ResetAllTeams;
+		/** @brief Whether every shot does 1 more heart of damage, some modes also turn it on in overtime */
+		bool AmplifyDamage;
+		/** @brief Whether an injured player passes the flag or the gems to a nearby teammate with full health */
+		bool AllowPassing;
+		/** @brief Time after (re)spawning in which a player can't pick up a flag, in seconds */
+		std::uint32_t FlagPickupCooldownSecs;
+		/** @brief Number of gems a roasted player drops on top of the carried ones (Head Hunters) */
+		std::uint32_t ExtraDroppedGems;
+		/** @brief Whether dropped gems go straight to the attacker (Head Hunters) */
+		bool TransferDroppedGems;
+		/** @brief Whether dying by own fault (a pit, spikes) costs a point */
+		bool PunishSelfDeaths;
+		/** @brief Whether a death by own fault costs the own team a point, otherwise the other teams gain one */
+		bool SelfDeathCostsTeamPoint;
+		/** @brief Whether roasting a teammate costs the own team a point, otherwise the other teams gain one (with @ref FriendlyFire) */
+		bool FriendlyFireCostsTeamPoint;
 
 		/** @brief Whether spectate mode is enabled */
 		bool EnableSpectate;
@@ -448,6 +538,19 @@ namespace Jazz2::Multiplayer
 		bool AdhocMode = false;
 
 		/** @} */
+
+		/**
+		 * @brief Returns the duration of overtime in seconds that applies to the current game mode
+		 *
+		 * The value of @ref OvertimeSecs, or if it's negative, the default of the game mode: 60 seconds in Race and
+		 * Team Race (the time left after the first player finishes), no overtime in the other modes.
+		 */
+		std::uint32_t GetOvertimeSecs() const {
+			if (OvertimeSecs >= 0) {
+				return std::uint32_t(OvertimeSecs);
+			}
+			return (GameMode == MpGameMode::Race || GameMode == MpGameMode::TeamRace ? 60 : 0);
+		}
 	};
 
 	/**

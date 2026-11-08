@@ -11,7 +11,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Monkey::Monkey()
-		: _isWalking(false), _stuck(false)
+		: _isWalking(false), _stuck(false), _idleLoops(0)
 	{
 	}
 
@@ -95,30 +95,49 @@ namespace Jazz2::Actors::Enemies
 
 	void Monkey::OnAnimationFinished()
 	{
+		bool transitionEnded = (_currentTransition != nullptr);
 		EnemyBase::OnAnimationFinished();
 
+		if (transitionEnded) {
+			return;
+		}
+
+		// Measured in JJ2+: the standing one throws after every second loop of its idle animation
+		if (!_isWalking && _idleLoops < 2) {
+			_idleLoops++;
+			if (_idleLoops < 2) {
+				return;
+			}
+		}
+
+		TryThrow();
+	}
+
+	bool Monkey::TryThrow()
+	{
 		if (_currentTransition == nullptr) {
 			bool found = false;
-			Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+			Vector2f targetPos;
+			float targetDistanceSqr = FLT_MAX;
 
-			auto players = _levelHandler->GetPlayers();
-			for (auto* player : players) {
+			for (auto* player : _levelHandler->GetPlayers()) {
 				if (player->GetHealth() <= 0) {
 					continue;
 				}
 
 				Vector2f newPos = player->GetPos();
-				if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
+				float distanceSqr = (_pos - newPos).SqrLength();
+				if (distanceSqr < targetDistanceSqr) {
 					targetPos = newPos;
+					targetDistanceSqr = distanceSqr;
 					found = true;
 				}
 			}
 
 			if (found) {
 				Vector2f diff = (targetPos - _pos);
-				float radiusDistance = diff.Length();
 				std::uint32_t distance = (std::uint32_t)std::abs(diff.X);
-				if (distance > 16.0f && radiusDistance < 280.0f) {
+				if (distance > 16.0f && targetDistanceSqr < 256.0f * 256.0f) {
 					if (_isWalking) {
 						_speed.X = 0.0f;
 
@@ -126,50 +145,49 @@ namespace Jazz2::Actors::Enemies
 							SetFacingLeft(targetPos.X < _pos.X);
 
 							SetTransition((AnimState)1073741826, false, [this, distance]() {
-								std::shared_ptr<Banana> banana = std::make_shared<Banana>();
-								uint8_t bananaParams[3];
-								bananaParams[0] = (IsFacingLeft() ? 1 : 0);
-								bananaParams[1] = distance & 0xff;
-								bananaParams[2] = (distance >> 8) & 0xff;
-								banana->OnActivated(ActorActivationDetails(
-									_levelHandler,
-									Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -8 : 8), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 2),
-									bananaParams
-								));
-								_levelHandler->AddActor(banana);
+								ThrowBanana(distance, 8);
 
 								SetTransition((AnimState)1073741827, false, [this]() {
 
 									SetTransition((AnimState)1073741824, false, [this]() {
-										SetFacingLeft(Random().NextBool());
-										_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
-
+										// Measured in JJ2+: it keeps throwing while a player is in range
+										if (!TryThrow()) {
+											SetFacingLeft(Random().NextBool());
+											_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+										}
 									});
 								});
 							});
 						});
 					} else {
+						_idleLoops = 0;
 						SetFacingLeft(targetPos.X < _pos.X);
 
 						SetTransition((AnimState)1073741826, false, [this, distance]() {
-							std::shared_ptr<Banana> banana = std::make_shared<Banana>();
-							uint8_t bananaParams[3];
-							bananaParams[0] = (IsFacingLeft() ? 1 : 0);
-							bananaParams[1] = distance & 0xff;
-							bananaParams[2] = (distance >> 8) & 0xff;
-							banana->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 2),
-								bananaParams
-							));
-							_levelHandler->AddActor(banana);
-
+							ThrowBanana(distance, 42);
 							SetTransition((AnimState)1073741827, false);
 						});
 					}
+					return true;
 				}
 			}
 		}
+		return false;
+	}
+
+	void Monkey::ThrowBanana(std::uint32_t distance, std::int32_t offsetX)
+	{
+		std::shared_ptr<Banana> banana = std::make_shared<Banana>();
+		std::uint8_t bananaParams[3];
+		bananaParams[0] = (IsFacingLeft() ? 1 : 0);
+		bananaParams[1] = distance & 0xff;
+		bananaParams[2] = (distance >> 8) & 0xff;
+		banana->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -offsetX : offsetX), (std::int32_t)_pos.Y - 8, _renderer.GetLayer() + 2),
+			bananaParams
+		));
+		_levelHandler->AddActor(banana);
 	}
 
 	bool Monkey::OnPerish(ActorBase* collider)

@@ -45,14 +45,14 @@ namespace Jazz2::Actors::Enemies
 		switch (_state) {
 			case StateIdle: {
 				if (_currentTransition == nullptr) {
-					// InhaleStart
-					SetTransition((AnimState)1, true, [this]() {
-						// Inhale
-						SetTransition((AnimState)2, true, [this]() {
-							// ExhaleStart
-							SetTransition((AnimState)3, true, [this]() {
-								_state = StateAttacking;
-								_smokesLeft = Random().Next(6, 12);
+					// Measured in JJ2+: one loop of idle, then InhaleStart, Inhale and ExhaleStart
+					SetTransition(AnimState::Idle, true, [this]() {
+						SetTransition((AnimState)1, true, [this]() {
+							SetTransition((AnimState)2, true, [this]() {
+								SetTransition((AnimState)3, true, [this]() {
+									_state = StateAttacking;
+									_smokesLeft = SmokeCount;
+								});
 							});
 						});
 					});
@@ -75,8 +75,10 @@ namespace Jazz2::Actors::Enemies
 
 						_smokesLeft--;
 						if (_smokesLeft <= 0) {
+							// Measured in JJ2+: ExhaleStart again before it goes idle
 							_state = StateIdle;
 							SetAnimation(AnimState::Idle);
+							SetTransition((AnimState)3, true);
 						}
 					});
 				} else {

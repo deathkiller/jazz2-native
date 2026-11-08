@@ -819,6 +819,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct InstanceBlock
@@ -861,6 +863,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct FsIn
@@ -927,8 +931,8 @@ float snoise(float2 v)
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]], texture2d<float> uTextureNoise [[texture(4)]], sampler uTextureNoise_smplr [[sampler(4)]])
 {
 	float4 COLOR = float4(0);
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = _in.vTexCoords;
+	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float waveHeight = wave(uvWorld.x, _globals.uTime);
@@ -981,6 +985,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct InstanceBlock
@@ -1023,6 +1029,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct FsIn
@@ -1105,8 +1113,8 @@ float3 reduceColors(float3 rgb, float2 pixel)
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]], texture2d<float> uTextureNoise [[texture(4)]], sampler uTextureNoise_smplr [[sampler(4)]])
 {
 	float4 COLOR = float4(0);
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = _in.vTexCoords;
+	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float waveHeight = wave(uvWorld.x, _globals.uTime);
@@ -1164,6 +1172,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct InstanceBlock
@@ -1206,6 +1216,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct FsIn
@@ -1231,8 +1243,8 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
 {
 	float4 COLOR = float4(0);
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = _in.vTexCoords;
+	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0 - step(uvLocal.y, _globals.uWaterLevel);
@@ -1273,6 +1285,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct InstanceBlock
@@ -1315,6 +1329,8 @@ struct _Globals
 	float uTime;
 	float2 uCameraPos;
 	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
 };
 
 struct FsIn
@@ -1356,8 +1372,8 @@ float3 reduceColors(float3 rgb, float2 pixel)
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
 {
 	float4 COLOR = float4(0);
-	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = _in.vTexCoords;
+	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0 - step(uvLocal.y, _globals.uWaterLevel);

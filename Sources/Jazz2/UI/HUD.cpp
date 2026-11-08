@@ -268,6 +268,7 @@ namespace Jazz2::UI
 				} else {
 					OnDrawHealth(scopedView, adjustedScopedView, player);
 					OnDrawScore(scopedView, player);
+					OnDrawPlayerTimer(scopedView, player);
 					OnDrawWeaponAmmo(adjustedScopedView, player);
 
 					DrawWeaponWheel(scopedView, player, viewport->_centerOnTargetOffset);
@@ -822,6 +823,36 @@ namespace Jazz2::UI
 					FontLayer, Alignment::TopLeft, Font::DefaultColor);
 			}
 		}
+	}
+
+	void HUD::OnDrawPlayerTimer(const Rectf& view, Actors::Player* player)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		float secondsLeft;
+		bool isPaused;
+		if (_levelHandler->_scripts == nullptr || !_levelHandler->_scripts->GetPlayerTimer(player, secondsLeft, isPaused) ||
+			_levelHandler->_scripts->OnDraw(this, player, view, Scripting::DrawType::PlayerTimer)) {
+			return;
+		}
+
+		// Minutes and seconds at the top of the view, below the timers of the power-ups the original HUD shows there
+		std::int32_t totalSeconds = (std::int32_t)ceilf(secondsLeft);
+		char stringBuffer[32];
+		std::size_t length = formatInto(stringBuffer, "{}:{:.2}", totalSeconds / 60, totalSeconds % 60);
+		float x = view.X + view.W * 0.5f;
+		float y = view.Y + (PreferencesCache::EnableReforgedHUD ? 14.0f : 34.0f);
+		// The last 10 seconds of a running timer are red
+		Colorf color = (!isPaused && totalSeconds <= 10 ? Colorf(0.94f, 0.36f, 0.32f) : Font::DefaultColor);
+
+		std::int32_t charOffset = 0;
+		std::int32_t charOffsetShadow = 0;
+		if constexpr (Font::ShadowsEnabled) {
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, x, y + 1.0f, FontShadowLayer,
+				Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+		}
+		_smallFont->DrawString(this, { stringBuffer, length }, charOffset, x, y, FontLayer,
+			Alignment::Center, color, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+#endif
 	}
 
 	void HUD::OnDrawScore(const Rectf& view, Actors::Player* player)

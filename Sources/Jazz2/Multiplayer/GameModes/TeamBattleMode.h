@@ -12,7 +12,7 @@ namespace Jazz2::Multiplayer::GameModes
 		Like @ref BattleMode, but players are split into teams. The per-player kill/death and respawn rules are
 		identical (inherited), so only the win condition differs: the round is won by the first team to reach the
 		kill target (its members' kills combined) or, with elimination enabled, by the last team that still has a
-		member within the death limit.
+		member within the death limit. In overtime the target is the best team score + 2, as in Battle.
 	*/
 	class TeamBattleMode : public BattleMode
 	{

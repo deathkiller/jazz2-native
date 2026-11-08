@@ -29,13 +29,13 @@
 		"AttackStart": {
 			"Path": "Monkey/attack.aura",
 			"FrameCount": 8,
-			"FrameRate": 8,
+			"FrameRate": 8.75,
 			"States": [ 1073741826 ]
 		},
 		"AttackEnd": {
 			"Path": "Monkey/attack.aura",
 			"FrameOffset": 8,
-			"FrameRate": 10,
+			"FrameRate": 14,
 			"States": [ 1073741827 ]
 		},
 		

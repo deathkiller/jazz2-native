@@ -44,6 +44,14 @@ namespace Jazz2::Editor
 			}
 			changes.truncate(target);
 		}
+
+		void GetLevelSettingsData(const LevelDocument& document, SmallVectorImpl<std::uint8_t>& data)
+		{
+			data.clear();
+			if (const Formats::ChunkRecord* chunk = document.FindChunk(Formats::LevelSettingsChunk::Tag)) {
+				data.append(chunk->Data.begin(), chunk->Data.end());
+			}
+		}
 	}
 
 	SetTilesCommand::SetTilesCommand(const LevelDocument& document, std::int32_t layer, String name)
@@ -431,6 +439,7 @@ namespace Jazz2::Editor
 			newIndices[std::size_t(order[i])] = i;
 		}
 		TerrainSpline::RemapLayers(document, newIndices);
+		document.RemapLevelSettingsLayers(newIndices);
 
 		// Told as a move, so the shown level can move its layers too instead of being loaded again
 		changes.Add(DocumentSnapshot::GetChangeKinds(SnapshotParts::Layers | SnapshotParts::Chunks) & ~DocumentChangeKind::LayerStructure);
@@ -457,6 +466,7 @@ namespace Jazz2::Editor
 		std::unique_ptr<InsertLayerCommand> command(new InsertLayerCommand(Death::move(name), index, true));
 		DocumentSnapshot::CompressLayer(layer, command->_layer);
 		TerrainSpline::GetChunkData(document, command->_oldSplines);
+		GetLevelSettingsData(document, command->_oldSettings);
 		return command;
 	}
 
@@ -465,6 +475,7 @@ namespace Jazz2::Editor
 		std::unique_ptr<InsertLayerCommand> command(new InsertLayerCommand(Death::move(name), index, false));
 		// The layer is taken when it's removed
 		TerrainSpline::GetChunkData(document, command->_oldSplines);
+		GetLevelSettingsData(document, command->_oldSettings);
 		return command;
 	}
 
@@ -476,6 +487,7 @@ namespace Jazz2::Editor
 		}
 		if (_hasNewSplines) {
 			TerrainSpline::SetChunkData(document, _newSplines);
+			document.SetChunk(Formats::LevelSettingsChunk::Tag, _newSettings);
 		} else {
 			// The ground lines of the layers after it follow them, those of a removed layer are gone with it
 			std::int32_t oldCount = std::int32_t(document.Layers.size()) + (_insert ? -1 : 1);
@@ -489,6 +501,8 @@ namespace Jazz2::Editor
 			}
 			TerrainSpline::RemapLayers(document, newIndices);
 			TerrainSpline::GetChunkData(document, _newSplines);
+			document.RemapLevelSettingsLayers(newIndices);
+			GetLevelSettingsData(document, _newSettings);
 			_hasNewSplines = true;
 		}
 	}
@@ -497,6 +511,7 @@ namespace Jazz2::Editor
 	{
 		if (_insert ? Erase(document, changes) : Insert(document, changes)) {
 			TerrainSpline::SetChunkData(document, _oldSplines);
+			document.SetChunk(Formats::LevelSettingsChunk::Tag, _oldSettings);
 		}
 	}
 
@@ -534,7 +549,8 @@ namespace Jazz2::Editor
 
 	std::size_t InsertLayerCommand::GetMemoryUsage() const
 	{
-		return sizeof(InsertLayerCommand) + _name.size() + _layer.GetMemoryUsage() + _oldSplines.capacity() + _newSplines.capacity();
+		return sizeof(InsertLayerCommand) + _name.size() + _layer.GetMemoryUsage() + _oldSplines.capacity() + _newSplines.capacity() +
+			_oldSettings.capacity() + _newSettings.capacity();
 	}
 
 	SetLayerPropertiesCommand::SetLayerPropertiesCommand(const LevelDocument& document, std::int32_t layer,

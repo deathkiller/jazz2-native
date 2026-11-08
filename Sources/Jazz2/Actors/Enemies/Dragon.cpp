@@ -51,7 +51,7 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			Vector2f newPos = player->GetPos();
-			if ((newPos - _pos).Length() <= 220.0f) {
+			if ((newPos - _pos).Length() < 256.0f) {
 				targetPos = newPos;
 				found = true;
 				break;

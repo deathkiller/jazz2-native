@@ -135,6 +135,7 @@ namespace Jazz2::Scripting
 					case spriteType_TRANSLUCENTPALSHIFT:
 					case spriteType_TRANSLUCENTSINGLEHUE:
 					case spriteType_TRANSLUCENTPLAYER:
+					case spriteType_TRANSLUCENTMAPPING:
 						return 0.5f;
 					case spriteType_TRANSLUCENTTILE:
 						// As translucent as the translucent tiles are drawn
@@ -1215,6 +1216,9 @@ namespace Jazz2::Scripting
 				}
 				return 0;
 			}
+			case Legacy::spriteType_MAPPING:
+			case Legacy::spriteType_TRANSLUCENTMAPPING:
+				return GetMappingPaletteOffset(param);
 			default: return 0;
 		}
 

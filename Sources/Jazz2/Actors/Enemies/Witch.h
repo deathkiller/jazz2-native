@@ -32,7 +32,14 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float DefaultSpeed = -4.0f;
+		static constexpr float FlySpeedX = 8.0f / 3.0f;
+		static constexpr float FlySpeedY = 4.0f / 3.0f;
+		static constexpr float DriftSpeedX = 0.35f;
+		static constexpr float DriftDistance = 48.0f;
+		static constexpr float FlyAboveDistance = 96.0f;
+		static constexpr float AttackDistance = 300.0f;
+		static constexpr float AttackTicks = 200.0f;
+		static constexpr float FirstAttackTicks = 140.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -41,7 +48,7 @@ namespace Jazz2::Actors::Enemies
 			DEATH_RUNTIME_OBJECT(ActorBase);
 
 		public:
-			MagicBullet(Witch* owner) : _owner(owner), _time(380.0f) { }
+			MagicBullet(const std::shared_ptr<Witch>& owner) : _owner(owner), _time(380.0f) { }
 
 			bool OnHandleCollision(ActorBase* other) override;
 
@@ -52,7 +59,7 @@ namespace Jazz2::Actors::Enemies
 			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		private:
-			Witch* _owner;
+			std::weak_ptr<Witch> _owner;
 			float _time;
 
 			void FollowNearestPlayer();

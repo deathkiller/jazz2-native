@@ -86,10 +86,10 @@ namespace Jazz2::Actors
 
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
-		@brief Takes over the per-frame update of an object, see @ref ActorBase::SetUpdateOverride()
+		@brief Takes over the per-frame update of an object
 
-		A level script can drive an object of the game by a behavior of its own, which decides when the object does
-		what it would do by itself.
+		Set by @ref ActorBase::SetUpdateOverride(), lets a level script decide when the object does what it would
+		do by itself.
 	*/
 	class IActorUpdateOverride
 	{
@@ -101,17 +101,17 @@ namespace Jazz2::Actors
 		/** @brief Returns `false` if the object isn't drawn in this frame */
 		virtual bool IsDrawn() const = 0;
 		/**
-		 * @brief Called before the object and another one handle their collision themselves
+		 * @brief Called before the object and another one handle their collision
 		 *
-		 * Returns `true` if the collision is handled, neither of them is told about it then.
+		 * Returns `true` if handled, neither of them is told about it then.
 		 */
 		virtual bool OnCollision(ActorBase* actor, ActorBase* other) {
 			return false;
 		}
 		/**
-		 * @brief Called before the hitbox of the object is made of its bounding box, see @ref ActorBase::UpdateHitbox()
+		 * @brief Called before the hitbox is made of the bounding box, see @ref ActorBase::UpdateHitbox()
 		 *
-		 * Returns `true` if the hitbox (@ref ActorBase::AABBInner) is set already.
+		 * Returns `true` if @ref ActorBase::AABBInner is set already.
 		 */
 		virtual bool OnUpdateHitbox(ActorBase* actor) {
 			return false;
@@ -119,19 +119,19 @@ namespace Jazz2::Actors
 		/** @brief Called after the object emitted its own lights, see @ref ActorBase::EmitLights() */
 		virtual void OnEmitLights(ActorBase* actor, SmallVectorImpl<LightEmitter>& lights) {
 		}
-		/** @brief Called when the object runs out of health, right before it perishes, returns `true` if it lives on, see @ref ActorBase::DecreaseHealth() */
+		/** @brief Called when the object runs out of health, returns `true` if it lives on */
 		virtual bool OnPerish(ActorBase* actor, ActorBase* collider) {
 			return false;
 		}
-		/** @brief Returns `true` if the object doesn't break into debris by itself, what drives it makes its own */
+		/** @brief Returns `true` if the override makes the debris instead of the object */
 		virtual bool OwnsDebris() const {
 			return false;
 		}
-		/** @brief Returns `true` if the object doesn't emit its own lights, what drives it emits them all (see @ref OnEmitLights()) */
+		/** @brief Returns `true` if the override emits all lights instead of the object, see @ref OnEmitLights() */
 		virtual bool OwnsLights() const {
 			return false;
 		}
-		/** @brief Called when the object is out of reach of the players, returns `false` if what drives it keeps it or deactivates it itself */
+		/** @brief Called when the object is out of reach of the players, returns `false` if the override handles it */
 		virtual bool OnTileDeactivated(ActorBase* actor) {
 			return true;
 		}
@@ -141,10 +141,8 @@ namespace Jazz2::Actors
 	/**
 		@brief Flags that modify behaviour of @ref ActorBase
 		
-		Bit set describing how an actor behaves and collides. It mixes instantiation hints (e.g., created from the
-		event map or asynchronously), per-instance state (invulnerable, on the ground, frozen, facing left) and
-		collision options (which entities to collide with, gravitation, solidity, per-pixel checks). Supports a
-		bitwise combination of its member values.
+		Mixes instantiation hints, per-instance state and collision options. Supports a bitwise combination of its
+		member values.
 	*/
 	enum class ActorState {
 		None = 0x00,
@@ -176,7 +174,7 @@ namespace Jazz2::Actors
 		/** @brief Actor is facing left */
 		IsFacingLeft = 0x1000,
 
-		/** @brief Actor keeps moving by its horizontal speed while frozen, which slowly decays, instead of stopping dead */
+		/** @brief Actor keeps sliding while frozen instead of stopping dead */
 		KeepsMomentumWhenFrozen = 0x2000,
 
 		/** @brief Actor should be preserved when state is rolled back to checkpoint */
@@ -208,11 +206,11 @@ namespace Jazz2::Actors
 		CollideWithTilesetReduced = 0x2000000,
 		/** @brief Collide with other solid object only if it's above center of the other hitbox */
 		CollideWithSolidObjectsBelow = 0x4000000,
-		/** @brief Ignore solid collisions agains similar objects that have this flag */
+		/** @brief Ignore solid collisions against similar objects that have this flag */
 		ExcludeSimilar = 0x8000000,
-		/** @brief Masks of tiles players hang from (vines, hooks) are solid to it as well */
+		/** @brief Tiles players hang from (vines, hooks) are solid to it as well */
 		CollideWithSuspendTiles = 0x10000000,
-		/** @brief Tiles hold a reduced hitbox by its head and lift it only straight up, its feet alone find the floor, as the original's player */
+		/** @brief Original player's tile collision - reduced hitbox, caught by its head, lifted only straight up, only its feet find the floor */
 		CollideWithTilesetLegacy = 0x20000000,
 	};
 
@@ -221,9 +219,7 @@ namespace Jazz2::Actors
 	/**
 		@brief Description how to initialize an actor
 		
-		Bundle of parameters passed to @ref ActorBase::OnActivated() and @ref ActorBase::OnActivatedAsync() when an
-		actor is spawned. It carries the owning level handler, the spawn position, the initial @ref ActorState, the
-		@ref EventType and a pointer to the raw event activation parameters.
+		Passed to @ref ActorBase::OnActivated() and @ref ActorBase::OnActivatedAsync() when an actor is spawned.
 	*/
 	struct ActorActivationDetails {
 		/** @brief Current level handler */
@@ -246,9 +242,8 @@ namespace Jazz2::Actors
 	/**
 		@brief Typed accessor over the raw event activation parameter buffer
 
-		Wraps the raw byte buffer of @ref ActorActivationDetails::Params and provides typed reads at explicit byte
-		offsets. Multi-byte values are read unaligned, matching the packed layout produced by the event converter.
-		Prefer this over indexing and type-punning the raw buffer directly.
+		Reads unaligned little-endian values from @ref ActorActivationDetails::Params. Prefer it over type-punning
+		the raw buffer.
 	*/
 	struct EventParamsReader {
 		explicit EventParamsReader(const ActorActivationDetails& details) noexcept
@@ -303,9 +298,8 @@ namespace Jazz2::Actors
 	/**
 		@brief Writes typed values into a packed event parameter buffer
 
-		The counterpart of @ref EventParamsReader for parameters that are built at runtime instead of being
-		loaded from a level file. Multi-byte values are stored unaligned and little-endian, which is the
-		packed layout of the level file, so both sources decode identically on any platform.
+		Counterpart of @ref EventParamsReader for parameters built at runtime, in the packed little-endian
+		layout of the level file.
 	*/
 	struct EventParamsWriter {
 		explicit EventParamsWriter(std::uint8_t* params) noexcept
@@ -345,9 +339,8 @@ namespace Jazz2::Actors
 	/**
 		@brief Move type
 		
-		Describes how a target position passed to @ref ActorBase::MoveInstantly() is interpreted: as an absolute
-		world position, as an offset relative to the current position, or as a forced move that ignores all
-		collision checks. Supports a bitwise combination of its member values.
+		How @ref ActorBase::MoveInstantly() interprets the target position. Supports a bitwise combination of its
+		member values.
 	*/
 	enum class MoveType {
 		Absolute = 0x00,		/**< Move to absolute position */
@@ -360,9 +353,7 @@ namespace Jazz2::Actors
 	/**
 		@brief Actor renderer type
 		
-		Selects the visual mode used by @ref ActorBase::ActorRenderer when drawing the actor's sprite. Besides the
-		default rendering it can draw an outline, render non-transparent pixels as a white or partial white mask
-		(used for hit flashes), or apply the frozen-ice effect.
+		Visual mode of @ref ActorBase::ActorRenderer, e.g. an outline, a hit flash or the frozen effect.
 	*/
 	enum class ActorRendererType {
 		Default,				/**< Default rendering */
@@ -375,9 +366,7 @@ namespace Jazz2::Actors
 	/**
 		@brief Effect type of @ref ActorBase::CreateParticleDebrisOnPerish()
 		
-		Chooses which particle debris effect is emitted when an actor perishes. Variants cover the standard burst
-		(and its in-water variant), a dissolve for ghosts, an icy shatter for frozen actors, and fire and lightning
-		effects for actors destroyed by toasting or electrocution.
+		Selects the debris an actor leaves behind when it perishes.
 	*/
 	enum class ParticleDebrisEffect {
 		Unknown,				/**< Unspecified */
@@ -392,10 +381,8 @@ namespace Jazz2::Actors
 	/**
 		@brief Base class of an object
 		
-		Common base of every object that lives in the game world. It provides the shared lifecycle and behavior of
-		an actor: activation from the event map, per-frame update, movement and collisions (with tiles, other actors
-		and solid objects), rendering and light emission, and health and perishing. Concrete actors derive from it
-		and override the relevant virtual callbacks.
+		Shared lifecycle of every object in the game world: activation, update, movement, collisions, rendering,
+		lights and health. Derived actors override the virtual callbacks.
 	*/
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
@@ -404,24 +391,24 @@ namespace Jazz2::Actors
 		friend class Player;
 		friend class Jazz2::LevelHandler;
 		friend class Jazz2::Rendering::LightingRenderer;
-		// Software renderer approximates the dynamic lighting in the combine step and needs the same light source
+		// Software renderer approximates the dynamic lighting in the combine step
 		friend class Jazz2::Rendering::CombineRenderer;
-		// Draws the silhouettes of the actors behind the x-ray tile layers from their renderers
+		// Draws actor silhouettes behind x-ray tile layers
 		friend class Jazz2::Rendering::XRayMaskRenderer;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 		friend class Jazz2::UI::Multiplayer::MpInGameCanvasLayer;
 #endif
 #if defined(WITH_PHYSICS_PROBE)
-		// Reads the position and speed it logs, and puts the player back on its mark between scenarios
+		// Reads position and speed, resets the player between scenarios
 		friend class Jazz2::Tests::PhysicsProbe;
 #endif
 #if defined(WITH_EDITOR)
-		// Stops a player moved by hand, and destroys the objects of events changed while the level is played
+		// Stops a player moved by hand, destroys objects of events edited during play
 		friend class Jazz2::Editor::PlayTestDebug;
 #endif
 #if defined(WITH_ANGELSCRIPT)
-		// Drives an object by a behavior of a level script, running the object's own update when the behavior asks
+		// Drives objects by level script behaviors
 		friend class Jazz2::Scripting::Legacy::ScriptObjectHost;
 #endif
 
@@ -476,11 +463,8 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Returns `true` if this object crossed over a given object during the current frame
 		 *
-		 * @ref IsCollidingWith() only compares the two objects where they ended up, so a fast object can pass
-		 * a small one between two frames without ever overlapping it - the faster the object and the lower the
-		 * frame rate, the more likely that is. This tests the path the object took instead, and only for
-		 * movement long enough to clear the other object in a single step, so it can only ever report a hit
-		 * that was missed.
+		 * Tests the path taken, so it catches a fast object passing a small one between frames, which
+		 * @ref IsCollidingWith() misses.
 		 */
 		bool HasCrossedOver(const ActorBase* other) const;
 		/** @brief Updates AABB for current position, rotation and animation frame */
@@ -488,11 +472,8 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Re-applies the current position to the renderer
 		 *
-		 * Called automatically after the object updates itself. It has to be called again for an object that
-		 * is moved by something else afterwards (a platform carrying it, for instance), otherwise it would be
-		 * drawn where it was before that move for one frame. An object that is drawn somewhere else than where
-		 * it is simulated (a server-side shadow of a remote player showing its interpolated position) overrides
-		 * this instead of assigning the position to the renderer on its own.
+		 * Called after the object updates itself, call it again if something else moves the object afterwards.
+		 * An object drawn elsewhere than it is simulated overrides it.
 		 */
 		virtual void UpdateRendererPosition();
 
@@ -528,23 +509,23 @@ namespace Jazz2::Actors
 
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Hands the per-frame update of the object over to something else, or takes it back with `nullptr`
+		 * @brief Hands the per-frame update over to an override, or takes it back with `nullptr`
 		 *
-		 * The object doesn't update itself then, the override decides when it does (see @ref IActorUpdateOverride).
+		 * The override then decides when the object updates, see @ref IActorUpdateOverride.
 		 */
 		void SetUpdateOverride(std::unique_ptr<IActorUpdateOverride> value);
-		/** @brief Returns what the per-frame update of the object is handed over to, or `nullptr` */
+		/** @brief Returns the update override, or `nullptr` */
 		IActorUpdateOverride* GetUpdateOverride() const {
 			return _updateOverride.get();
 		}
-		/** @brief Lets the overrides of two colliding objects handle the collision, returns `true` if one did (see @ref IActorUpdateOverride::OnCollision()) */
+		/** @brief Lets the overrides of two colliding objects handle the collision, returns `true` if one did */
 		static bool HandleCollisionByOverride(ActorBase* a, ActorBase* b) {
 			return (a->_updateOverride != nullptr && a->_updateOverride->OnCollision(a, b)) ||
 				(b->_updateOverride != nullptr && b->_updateOverride->OnCollision(b, a));
 		}
 #endif
 
-		/** @brief Adds the lights the object emits, its own (see @ref OnEmitLights()) and those of what drives it */
+		/** @brief Adds the lights of the object and of its update override */
 		void EmitLights(SmallVectorImpl<LightEmitter>& lights);
 
 	protected:
@@ -567,7 +548,7 @@ namespace Jazz2::Actors
 			Vector2i FrameConfiguration;
 			/** @brief Frame dimensions */
 			Vector2i FrameDimensions;
-			/** @brief Hotspot of the current animation, as authored (never mirrored - see UpdateAnchor()) */
+			/** @brief Hotspot of the current animation, never mirrored */
 			Vector2f Hotspot;
 			/** @brief Animation loop mode */
 			AnimationLoopMode LoopMode;
@@ -590,18 +571,14 @@ namespace Jazz2::Actors
 			/**
 			 * @brief Selects a recolor palette override
 			 *
-			 * The override is a flat offset into the shared palette texture (e.g., `paletteRow * @ref
-			 * ContentResolver::ColorsPerPalette`), or -1 for no override. It takes precedence over the base palette used
-			 * for plain (non-recolored) indexed sprites; see @ref SetIndexed.
+			 * Flat offset into the shared palette texture, or -1 for none. Takes precedence over @ref SetIndexed.
 			 */
 			void SetPalette(std::int32_t paletteOffset);
 
 			/**
 			 * @brief Marks whether the current graphic is indexed and which palette region it samples
 			 *
-			 * `basePaletteOffset` is the animation's palette offset (0 = default sprite palette, the gem-gradient rows
-			 * for gems). Indexed sprites render through the palette shader unless a recolor override is set via @ref
-			 * SetPalette. Set automatically from the current animation by @ref ActorBase::RefreshAnimation.
+			 * Set automatically by @ref ActorBase::RefreshAnimation, a @ref SetPalette override wins.
 			 */
 			void SetIndexed(bool indexed, std::int32_t basePaletteOffset);
 
@@ -614,50 +591,47 @@ namespace Jazz2::Actors
 			ActorRendererType GetRendererType() const;
 
 			/**
-				@brief Points the sprite's anchor at the hotspot of the frame being shown
-
-				Flipping mirrors the texture inside the sprite's quad, so the hotspot has to be mirrored with
-				it. The quad covers the frame's own area, which for a tightly packed sheet is smaller than the
-				animation's cell, so the mirroring has to happen within that area - doing it within the cell
-				(as a regular grid can) would displace every flipped frame by the trimmed margin.
-			*/
+			 * @brief Points the sprite's anchor at the hotspot of the frame being shown
+			 *
+			 * A flipped hotspot is mirrored within the frame's own area, not the animation's cell.
+			 */
 			void UpdateAnchor();
 
 		protected:
 			void TextureHasChanged(Texture* newTexture) override;
 
 		private:
-			// Whether the current graphic is indexed (uses the palette shader even without a recolor override)
+			// Current graphic is indexed, so it uses the palette shader even without an override
 			bool _baseIndexed;
 			ActorRendererType _rendererType;
 			ActorBase* _owner;
 			float _rendererTransition;
-			// Recolor palette override: flat offset into the shared palette texture, or -1 for none
+			// Recolor override offset into the shared palette texture, or -1
 			std::int32_t _paletteOffset;
-			// Palette offset of the current indexed graphic (the animation's PaletteOffset; 0 = default sprite palette)
+			// Palette offset of the current indexed graphic
 			std::int32_t _basePaletteOffset;
 
 			void UpdateVisibleFrames();
-			// Re-applies the current renderer type so a palette/indexed change swaps the shader and (re)binds the palette
+			// Re-applies the renderer type so a palette change swaps the shader
 			void ReinitializeCurrentType();
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 
 		/** @{ @name Constants */
 
-		/** @brief Alpha transparency threshold --- the same one the collision masks are built with */
+		/** @brief Alpha transparency threshold, same as the collision masks */
 		static constexpr std::uint8_t AlphaThreshold = MaskAlphaThreshold;
 		/** @brief Step for collision checking */
 		static constexpr float CollisionCheckStep = 0.5f;
-		/** @brief Longest distance resolved by a single collision sub-step of @ref TryStandardMovement() */
+		/** @brief Longest single collision sub-step of @ref TryStandardMovement() */
 		static constexpr float MaxMovementStep = 8.0f;
-		/** @brief Upper bound on collision sub-steps performed by @ref TryStandardMovement() in a single frame */
+		/** @brief Most collision sub-steps of @ref TryStandardMovement() per frame */
 		static constexpr std::int32_t MaxMovementSubsteps = 24;
-		/** @brief Farthest @ref TryUnstuck() displaces an actor to get it out of solid geometry */
+		/** @brief Farthest @ref TryUnstuck() moves an actor out of solid geometry */
 		static constexpr float MaxUnstuckDistance = 24.0f;
-		/** @brief Frames before @ref TryUnstuck() probes again after finding the actor was not stuck at all */
+		/** @brief Frames before @ref TryUnstuck() probes again for an actor that wasn't stuck */
 		static constexpr float UnstuckRetryNotStuck = 8.0f;
-		/** @brief Frames before @ref TryUnstuck() searches again for an actor it found no way out for */
+		/** @brief Frames before @ref TryUnstuck() searches again for a trapped actor */
 		static constexpr float UnstuckRetryTrapped = 20.0f;
 		/** @brief Frames before @ref TryUnstuck() runs again for an actor it successfully freed */
 		static constexpr float UnstuckCooldown = 60.0f;
@@ -665,52 +639,47 @@ namespace Jazz2::Actors
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		/** @brief Maximum number of animation candidates */
 		static constexpr std::int32_t AnimationCandidatesCount = 5;
-		/** @brief Size of event parameters the object was spawned with, the same as @ref Events::EventSpawner::SpawnParamsSize */
+		/** @brief Size of spawn event parameters, same as @ref Events::EventSpawner::SpawnParamsSize */
 		static constexpr std::int32_t SpawnParamsSize = 16;
 
 		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
-		// Ordered by alignment, so there is no padding between them
+		// Ordered by alignment to avoid padding
 		ILevelHandler* _levelHandler;
 		Metadata* _metadata;
 		GraphicResource* _currentAnimation;
 		GraphicResource* _currentTransition;
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief What the per-frame update of the object is handed over to, see @ref SetUpdateOverride() */
+		/** @brief Update override, see @ref SetUpdateOverride() */
 		std::unique_ptr<IActorUpdateOverride> _updateOverride;
 #endif
 
 		Vector2f _pos;
-		/** @brief Position the object had when the current frame started, i.e. the beginning of the path it took */
+		/** @brief Position at the start of the current frame, where the path taken begins */
 		Vector2f _frameStartPos;
 		Vector2f _speed;
 		Vector2f _externalForce;
 		float _internalForceY;
 		float _elasticity;
 		float _friction;
-		/** @brief Optional cap on applied upward speed per frame (0 = no cap); used to reproduce the original's constant-speed rise */
+		/** @brief Cap on applied upward speed per frame (0 = none), for the original's constant-speed rise */
 		float _maxRiseSpeed = 0.0f;
-		/** @brief Per-frame clamp on @ref _speed Y; raised for forced transport (e.g. sucker tubes) so high launch speeds aren't truncated */
+		/** @brief Per-frame clamp on @ref _speed Y, raised for forced transport (e.g. sucker tubes) */
 		float _verticalSpeedLimit = 16.0f;
-		/** @brief Per-frame clamp on @ref _speed X; raised for the non-Reforged dash, whose cap is above the default */
+		/** @brief Per-frame clamp on @ref _speed X, raised for the non-Reforged dash */
 		float _horizontalSpeedLimit = 16.0f;
 		/**
-		 * @brief Optional cap on applied horizontal movement per frame (0 = no cap)
+		 * @brief Cap on applied horizontal movement per frame (0 = none)
 		 *
-		 * The counterpart of @ref _maxRiseSpeed: internal @ref _speed X keeps its (larger) momentum while the
-		 * actor only actually travels at the capped rate. The original does this on both axes with the same
-		 * limit, which is why a dash reports twice the speed it visibly moves at - and why the momentum still
-		 * counts where the speed itself is read, such as the jump launch boost.
+		 * Like @ref _maxRiseSpeed, @ref _speed X keeps its momentum, as in the original's dash.
 		 */
 		float _maxAppliedSpeedX = 0.0f;
 		/**
-		 * @brief How far below a ledge's surface a descending actor may arrive and still be put on top of it (0 = only as far as the sub-step reaches)
+		 * @brief How far below a ledge's top a descending actor may land on it (0 = sub-step reach only)
 		 *
-		 * Without it the reach is whatever the horizontal sub-step happens to be, about 6 px, which catches a
-		 * descending actor on the ledge's side instead of putting it on top. Only the player sets this, from a
-		 * figure measured off the original - see @ref Player::LegacyLandingTolerance and @ref TryMoveSubstep().
+		 * Only the player sets it, see @ref Player::LegacyLandingTolerance.
 		 */
 		float _landingTolerance = 0.0f;
 		float _unstuckCooldown;
@@ -720,11 +689,11 @@ namespace Jazz2::Actors
 
 		Vector2i _originTile;
 		float _spawnFrames;
-		/** @brief Position (and layer) the object was activated at, used to recreate the object from a state snapshot */
+		/** @brief Position and layer the object was activated at, to recreate it from a snapshot */
 		Vector3i _spawnPos;
-		/** @brief Event parameters the object was spawned with, valid only if @ref _spawnEventType is set */
+		/** @brief Spawn event parameters, valid only if @ref _spawnEventType is set */
 		std::uint8_t _spawnEventParams[SpawnParamsSize];
-		/** @brief Event type the object was spawned from (see @ref ActorActivationDetails::Type), or @ref EventType::Empty */
+		/** @brief Event type the object was spawned from, or @ref EventType::Empty */
 		EventType _spawnEventType;
 		bool _thawPending = false;
 		bool _currentTransitionCancellable;
@@ -746,27 +715,22 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Returns `true` if the live state of the object can be stored in a level state snapshot
 		 *
-		 * A snapshot stores the event type and parameters the object was spawned with together with its live
-		 * state, so the object can be spawned again and resurrected exactly as it was. That works only for objects
-		 * spawned from an event (see @ref ActorActivationDetails::Type) which is registered in @ref Events::EventSpawner.
-		 * Objects that are not worth restoring (e.g., short-lived effects) can opt out by overriding it.
+		 * Only for objects spawned from an event registered in @ref Events::EventSpawner. Short-lived objects
+		 * can opt out by overriding it.
 		 */
 		virtual bool IsSerializable() const;
 		/**
 		 * @brief Serializes the live state of the object to a level state snapshot
 		 *
-		 * Called only if @ref IsSerializable() returns `true`. Anything that is initialized from the event parameters
-		 * in @ref OnActivatedAsync() doesn't need to be stored, because the object is spawned again with the same
-		 * parameters before @ref OnDeserializeState() is called. Derived classes must call the base implementation
-		 * first and read the data back in the same order.
+		 * State set from the event parameters needn't be stored, the object is spawned again with them. Derived
+		 * classes call the base first and read the data back in the same order.
 		 */
 		virtual void OnSerializeState(Stream& dest);
 		/**
 		 * @brief Restores the live state of the object from a level state snapshot
 		 *
-		 * Called right after the object was spawned again (i.e., after @ref OnActivatedAsync()) and before it's
-		 * added to the level. Running transitions are not restored, because their callbacks cannot be serialized,
-		 * so derived classes have to put the object into a state that doesn't wait for such a callback.
+		 * Called after @ref OnActivatedAsync(), before the object is added to the level. Running transitions
+		 * aren't restored, so the restored state must not wait for a transition callback.
 		 */
 		virtual void OnDeserializeState(Stream& src);
 
@@ -791,13 +755,7 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Called when emitting lights that have to be replicated to remote peers
 		 *
-		 * An object simulated on a multiplayer server is drawn on the clients by a stand-in that runs none of its
-		 * logic, so the lights it emits have to be described to them explicitly. This defaults to
-		 * @ref OnEmitLights(), which is right for anything whose lighting belongs to the object itself.
-		 *
-		 * Overriding it describes only the part that every observer must see. Lights that a client already
-		 * produces on its own --- decoration driven by a local preference, or an object whose stand-in replays
-		 * the whole effect --- are left out, so they aren't sent (and applied) twice.
+		 * Defaults to @ref OnEmitLights(). Override it to leave out lights that clients produce on their own.
 		 */
 		virtual void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) {
 			OnEmitLights(lights);
@@ -805,19 +763,13 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Whether an observer reproduces this object's @ref ActorState::Illuminated decoration itself
 		 *
-		 * @ref ActorState::Illuminated is a generic per-event flag (see @ref Events::EventMap::ReadEvents()),
-		 * so it may only be remoted for an object that actually turns it into lights --- an observer would
-		 * otherwise glow for an event that emits nothing on the server. An object that answers `true` leaves
-		 * those lights out of @ref OnEmitRemotedLights() and lets every observer seed an equivalent swarm
-		 * locally, which is far cheaper than describing two dozen constantly moving lights on every update.
-		 *
-		 * Declared here rather than tested for by type in the packet builder, so adding another such object
-		 * is a matter of overriding this and nothing else has to know the class exists.
+		 * Only for objects that turn the flag into lights. They leave those lights out of
+		 * @ref OnEmitRemotedLights() and every observer spawns its own.
 		 */
 		virtual bool IsIlluminatedStateRemoted() const {
 			return false;
 		}
-		/** @brief Returns how fast the object moves horizontally by itself while it's frozen, see @ref ActorState::KeepsMomentumWhenFrozen */
+		/** @brief Returns how fast the object slides while frozen, see @ref ActorState::KeepsMomentumWhenFrozen */
 		float GetFrozenMomentumX() const;
 		/** @brief Called when the object hits a floor */
 		virtual void OnHitFloor(float timeMult);
@@ -825,7 +777,7 @@ namespace Jazz2::Actors
 		virtual void OnHitCeiling(float timeMult);
 		/** @brief Called when the object hits a wall */
 		virtual void OnHitWall(float timeMult);
-		/** @brief Returns the gravity applied this frame, allowing it to be direction-dependent (e.g., the player's asymmetric jump arc) */
+		/** @brief Returns the gravity applied this frame, may depend on direction (e.g., the player's jump arc) */
 		virtual float GetGravityModifier(float baseGravity, bool isRising) const {
 			return baseGravity;
 		}
@@ -838,13 +790,8 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Discards the path the object travelled so far during the current frame
 		 *
-		 * The swept collision tests treat the distance between the position the object had when the frame
-		 * started and its current position as a path it physically travelled, so everything along that line
-		 * is checked as well (see @ref HasCrossedOver()). A forced relocation --- a warp, a respawn, a
-		 * multiplayer re-sync --- covers the distance without passing through anything in between, so the
-		 * path has to be discarded, otherwise the object would collect, hit or trigger everything on the
-		 * straight line to its destination. @ref MoveInstantly() does this on its own for every absolute
-		 * move, only code assigning the position directly has to call it.
+		 * Call it after assigning the position directly for a warp, respawn or re-sync, otherwise
+		 * @ref HasCrossedOver() hits everything on the way. @ref MoveInstantly() does it for absolute moves.
 		 */
 		void ResetPathTracking() {
 			_frameStartPos = _pos;
@@ -852,8 +799,7 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Tries to push the actor out of solid geometry it ended up inside of
 		 *
-		 * Probes with its own non-destructive collision parameters, so neither the check nor the search for a
-		 * free spot can destroy a tile or count as a weapon hit.
+		 * Probes are non-destructive, so they never destroy a tile or count as a weapon hit.
 		 *
 		 * @return `true` if the actor was moved to a free position
 		 */
@@ -871,7 +817,7 @@ namespace Jazz2::Actors
 		void CreateParticleDebrisOnPerish(ActorBase* collider);
 		/** @overload */
 		void CreateParticleDebrisOnPerish(ParticleDebrisEffect effect, Vector2f speed);
-		/** @brief Creates a sprite debris, whose pieces keep @p elasticity of their speed when they bounce off a solid tile */
+		/** @brief Creates a sprite debris, its pieces keep @p elasticity of their speed on bounce */
 		void CreateSpriteDebris(AnimState state, std::int32_t count, float elasticity = 0.8f);
 		/** @brief Returns scale of ice shrapnels */
 		virtual float GetIceShrapnelScale() const;
@@ -880,6 +826,8 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f, SfxFlags flags = SfxFlags::None);
 		/** @brief Sets an animation of the object */
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
+		/** @brief Pauses the current animation on the specified frame, for objects that count their frames themselves */
+		void SetAnimationFrame(std::int32_t frame);
 		/** @brief Sets a transition animation of the object */
 		bool SetTransition(AnimState state, bool cancellable, Function<void()>&& callback = {});
 		/** @brief Cancels a cancellable transition */
@@ -902,7 +850,7 @@ namespace Jazz2::Actors
 		 * @brief Loads specified metadata and its linked assets
 		 *
 		 * @param path          Relative path to the metadata asset
-		 * @param forceIndexed  Load linked graphics as indexed (for shader-based recoloring, e.g., the player)
+		 * @param forceIndexed  Load linked graphics as indexed for recoloring (e.g., the player)
 		 */
 		void RequestMetadata(StringView path, bool forceIndexed = false);
 
@@ -970,7 +918,7 @@ namespace Jazz2::Actors
 		bool IsCollidingWithAngled(const AABBf& aabb);
 
 		void RefreshAnimation(bool skipAnimation = false);
-		// Puts back an actor whose position became unusable, kept out of line from the per-frame caller
+		// Puts back an actor whose position became unusable
 		DEATH_NEVER_INLINE void RestoreFromInvalidPosition();
 	};
 }

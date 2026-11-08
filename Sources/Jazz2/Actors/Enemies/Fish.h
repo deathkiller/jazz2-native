@@ -6,10 +6,10 @@ namespace Jazz2::Actors::Enemies
 {
 	/**
 		@brief Fish
-		
-		Underwater enemy that drifts idly while submerged and, when a player swims within range, darts at
-		them in a quick lunge before braking and returning to its starting spot. Stays below the water
-		surface and is defeated by a single hit.
+
+		Underwater enemy that swims in a figure-eight around its starting spot and from time to time
+		dashes at a player within range, overshooting, before swimming straight back. Doesn't move when
+		it's not under the water and is defeated by a single hit.
 	*/
 	class Fish : public EnemyBase
 	{
@@ -25,23 +25,24 @@ namespace Jazz2::Actors::Enemies
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
-		void OnHitWall(float timeMult) override;
-		void OnHitFloor(float timeMult) override;
-		void OnHitCeiling(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr std::int32_t StateIdle = 0;
-		static constexpr std::int32_t StateAttacking = 1;
-		static constexpr std::int32_t StateBraking = 2;
-		static constexpr std::int32_t StateReturning = 3;
+		static constexpr std::int32_t StateSwimming = 0;
+		static constexpr std::int32_t StateDashing = 1;
+		static constexpr std::int32_t StateReturning = 2;
 
 		std::int32_t _state;
-		float _idleTime;
-		float _attackCooldown;
-		Vector2f _direction;
+		std::int32_t _counter;
+		std::int32_t _swimCounter;
+		float _tickTime;
 		Vector2f _originPos;
+		Vector2f _returnFrom;
+		Vector2f _speedPerTick;
+
+		void AdvanceTick();
+		Vector2f GetSwimPos() const;
 	};
 }

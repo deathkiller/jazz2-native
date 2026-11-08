@@ -49,7 +49,8 @@ namespace Jazz2::Actors::Enemies
 
 			Vector2f targetPos = player->GetPos();
 			float length = (_pos - targetPos).Length();
-			if (length > 20.0f && length < 60.0f) {
+			// Turns only once the player is well behind it, or it would turn back and forth under a player above it
+			if (length > 20.0f && length < 60.0f && std::abs(_pos.X - targetPos.X) > 16.0f && IsFacingLeft() != (_pos.X > targetPos.X)) {
 				SetFacingLeft(_pos.X > targetPos.X);
 				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 				break;

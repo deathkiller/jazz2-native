@@ -10,6 +10,13 @@
 
 namespace Jazz2::Rendering
 {
+	namespace
+	{
+		// How deep under the water the light of the level is reached with Formats::LevelSettingsChunk::WaterLighting::Depth,
+		// approximated, not measured in JJ2+
+		constexpr float WaterLightingDepth = 480.0f;
+	}
+
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
 		: _levelHandler(levelHandler), _targetActor(targetActor),
 #if defined(RHI_CAP_POSTPROCESSING)
@@ -349,12 +356,18 @@ namespace Jazz2::Rendering
 		ZoneScopedC(0x4876AF);
 
 		// Ambient Light Transition
-		if (_ambientLight.W != _ambientLightTarget) {
+		float ambientLightTarget = _ambientLightTarget;
+		if (_levelHandler->_waterLighting == Formats::LevelSettingsChunk::WaterLighting::Depth && _targetActor != nullptr) {
+			// Full light above the water, below it the light of the level is reached in the depth of WaterLightingDepth
+			float depth = _targetActor->GetPos().Y - _levelHandler->GetWaterLevel();
+			ambientLightTarget = (depth <= 0.0f ? 1.0f : lerp(1.0f, _ambientLightTarget, std::min(depth / WaterLightingDepth, 1.0f)));
+		}
+		if (_ambientLight.W != ambientLightTarget) {
 			float step = timeMult * 0.012f;
-			if (std::abs(_ambientLight.W - _ambientLightTarget) < step) {
-				_ambientLight.W = _ambientLightTarget;
+			if (std::abs(_ambientLight.W - ambientLightTarget) < step) {
+				_ambientLight.W = ambientLightTarget;
 			} else {
-				_ambientLight.W += step * ((_ambientLightTarget < _ambientLight.W) ? -1.0f : 1.0f);
+				_ambientLight.W += step * ((ambientLightTarget < _ambientLight.W) ? -1.0f : 1.0f);
 			}
 		}
 

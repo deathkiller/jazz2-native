@@ -7,7 +7,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	LabRat::LabRat()
-		: _isAttacking(false), _canAttack(true), _idling(false), _canIdle(false), _stateTime(0.0f), _attackTime(0.0f), _turnCooldown(0.0f)
+		: _attackTime(0.0f), _jumpPushTime(0.0f), _isAttacking(false), _canAttack(true)
 	{
 	}
 
@@ -29,7 +29,6 @@ namespace Jazz2::Actors::Enemies
 
 		_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 
-		_stateTime = Random().NextFloat(180.0f, 300.0f);
 		_attackTime = Random().NextFloat(300.0f, 400.0f);
 
 		PlaceOnGround();
@@ -45,14 +44,14 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		if (_idling) {
-			Idle(timeMult);
-		} else {
-			Walking(timeMult);
+		if (_jumpPushTime > 0.0f) {
+			_jumpPushTime -= timeMult;
+			if (_jumpPushTime <= 0.0f && _isAttacking) {
+				_speed.X = 0.0f;
+			}
 		}
 
-		_stateTime -= timeMult;
-		_turnCooldown -= timeMult;
+		Walking(timeMult);
 	}
 
 	void LabRat::OnSerializeState(Stream& dest)
@@ -62,12 +61,10 @@ namespace Jazz2::Actors::Enemies
 		std::uint8_t flags = 0;
 		if (_isAttacking) flags |= 0x01;
 		if (_canAttack) flags |= 0x02;
-		if (_idling) flags |= 0x04;
-		if (_canIdle) flags |= 0x08;
 		dest.WriteValue<std::uint8_t>(flags);
-		dest.WriteValueAsLE<float>(_stateTime);
+		dest.WriteValueAsLE<float>(0.0f);	// Unused
 		dest.WriteValueAsLE<float>(_attackTime);
-		dest.WriteValueAsLE<float>(_turnCooldown);
+		dest.WriteValueAsLE<float>(0.0f);	// Unused
 	}
 
 	void LabRat::OnDeserializeState(Stream& src)
@@ -77,11 +74,15 @@ namespace Jazz2::Actors::Enemies
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 		_isAttacking = ((flags & 0x01) != 0);
 		_canAttack = ((flags & 0x02) != 0);
-		_idling = ((flags & 0x04) != 0);
-		_canIdle = ((flags & 0x08) != 0);
-		_stateTime = src.ReadValueAsLE<float>();
+		src.ReadValueAsLE<float>();	// Unused
 		_attackTime = src.ReadValueAsLE<float>();
-		_turnCooldown = src.ReadValueAsLE<float>();
+		src.ReadValueAsLE<float>();	// Unused
+
+		if ((flags & 0x04) != 0) {
+			// It no longer idles, an idling one from an older state walks on
+			SetAnimation(AnimState::Walk);
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+		}
 
 		if (_isAttacking) {
 			// The attack transition was interrupted, finish it as its callback would
@@ -107,46 +108,20 @@ namespace Jazz2::Actors::Enemies
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void LabRat::Idle(float timeMult)
-	{
-		if (_stateTime <= 0.0f) {
-			_idling = false;
-			SetAnimation(AnimState::Walk);
-			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
-			_speed.Y = 0.0f;
-
-			_stateTime = Random().NextFloat(420, 540);
-		} else {
-			_stateTime -= timeMult;
-
-			if (Random().NextFloat() < 0.008f * timeMult) {
-				PlaySfx("Idle"_s, 0.2f);
-			}
-		}
-	}
-
 	void LabRat::Walking(float timeMult)
 	{
 		if (!_isAttacking) {
+			// Measured in JJ2+: it turns at every edge and never stops to idle
 			if (GetState(ActorState::CanJump) && !CanMoveToPosition(_speed.X * 4.0f, 0.0f)) {
-				if (_turnCooldown <= 0.0f) {
-					SetFacingLeft(!IsFacingLeft());
-					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
-					_turnCooldown = 120.0f;
-				} else {
-					_speed.X = 0;
-					_idling = true;
-					SetAnimation(AnimState::Idle);
-					_canIdle = false;
-
-					_stateTime = Random().NextFloat(260.0f, 320.0f) - _turnCooldown;
-					_turnCooldown = 0.0f;
-				}
+				SetFacingLeft(!IsFacingLeft());
+				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 			}
 
 			if (_canAttack) {
 				if (std::abs(_speed.Y) < std::numeric_limits<float>::epsilon()) {
 					AABBf aabb = AABBInner;
+					// Jumps at a player above it too, as measured in JJ2+
+					aabb.T -= 64;
 					if (IsFacingLeft()) {
 						aabb.L -= 128;
 					} else {
@@ -175,28 +150,14 @@ namespace Jazz2::Actors::Enemies
 			if (Random().NextFloat() < 0.004f * timeMult) {
 				PlaySfx("Noise"_s, 0.2f);
 			}
-
-			if (_canIdle) {
-				if (_stateTime <= 0.0f) {
-					_speed.X = 0;
-					_idling = true;
-					SetAnimation(AnimState::Idle);
-					_canIdle = false;
-
-					_stateTime = Random().NextFloat(260.0f, 320.0f);
-				}
-			} else {
-				if (_stateTime <= 0.0f) {
-					_canIdle = true;
-					_stateTime = Random().NextFloat(60.0f, 120.0f);
-				}
-			}
 		}
 	}
 
 	void LabRat::Attack()
 	{
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
+			// Measured in JJ2+: it turns around after landing
+			SetFacingLeft(!IsFacingLeft());
 			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 			_isAttacking = false;
 			_canAttack = false;
@@ -204,9 +165,11 @@ namespace Jazz2::Actors::Enemies
 			_attackTime = 180.0f;
 		});
 
-		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * 2.0f;
+		// Measured in JJ2+: it leaps forward at 3 px/tick for only 8 ticks, the rest of the jump is straight up and down
+		_speed.X = (IsFacingLeft() ? -3.0f : 3.0f) * TicksPerFrame;
+		_jumpPushTime = 8.0f / TicksPerFrame;
 		MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative);
-		_speed.Y = (_levelHandler->IsReforged() ? -3.0f : -2.0f);
+		_speed.Y = -2.5f * TicksPerFrame;
 		_internalForceY = -0.5f;
 		_isAttacking = true;
 		SetState(ActorState::CanJump, false);

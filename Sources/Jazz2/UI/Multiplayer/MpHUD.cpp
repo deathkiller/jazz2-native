@@ -68,6 +68,7 @@ namespace Jazz2::UI::Multiplayer
 		static constexpr AnimState WeaponWheel = (AnimState)80;
 		static constexpr AnimState WeaponWheelInner = (AnimState)81;
 		static constexpr AnimState WeaponWheelDim = (AnimState)82;
+		static constexpr AnimState TargetArrow = (AnimState)90;
 		static constexpr AnimState TouchDpad = (AnimState)100;
 		static constexpr AnimState TouchFire = (AnimState)101;
 		static constexpr AnimState TouchJump = (AnimState)102;
@@ -490,6 +491,28 @@ namespace Jazz2::UI::Multiplayer
 		PositionInRoundItem(StringView playerName, std::uint32_t position, std::uint32_t points, bool isLocal, bool isReference, std::uint8_t team)
 			: PlayerName(playerName), PositionInRound(position), PointsInRound(points), IsLocal(isLocal), IsReference(isReference), Team(team) {}
 	};
+
+	void MpHUD::DrawTargetArrow(const Rectf& view, Actors::Player* player, Vector2f targetPos, const Colorf& color)
+	{
+		// Nothing to point at if the target can be seen
+		Rectf camera = _levelHandler->GetCameraView(player);
+		if (targetPos.X > camera.X + 16.0f && targetPos.X < camera.X + camera.W - 16.0f &&
+			targetPos.Y > camera.Y + 16.0f && targetPos.Y < camera.Y + camera.H - 16.0f) {
+			return;
+		}
+
+		// Around the player as the camera shows it, which isn't always the middle of the view
+		Vector2f playerPos = player->GetPos();
+		float playerX = view.X + (playerPos.X - camera.X) * (view.W / std::max(camera.W, 1.0f));
+		float playerY = view.Y + (playerPos.Y - camera.Y) * (view.H / std::max(camera.H, 1.0f));
+		Vector2f diff = targetPos - playerPos;
+		float angle = std::atan2(diff.Y, diff.X);
+		float distance = 46.0f * _hudScale;
+		float x = std::round(playerX + std::cos(angle) * distance);
+		float y = std::round(playerY - 12.0f + std::sin(angle) * distance);
+		DrawElement(Resources::TargetArrow, 0, x, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.4f * color.A), _hudScale, _hudScale, false, angle);
+		DrawElement(Resources::TargetArrow, 0, x, y, MainLayer, Alignment::Center, color, _hudScale, _hudScale, false, angle);
+	}
 
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
 	{
