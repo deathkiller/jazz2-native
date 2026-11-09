@@ -98,7 +98,7 @@ namespace Jazz2::Multiplayer::GameModes
 			if (killerIsOther && !HasFlag(ctx, killer, PlayerModeFlags::Zombie)) {
 				std::int32_t humanCount;
 				std::int32_t zombieCount = CountZombies(ctx, humanCount);
-				AddPoints(ctx, killer, std::min(zombieCount, 3));
+				AddPoints(ctx, killer, std::min<std::int32_t>(zombieCount, 3));
 				ctx.SyncPlayerModeState(killer);
 			}
 			return;

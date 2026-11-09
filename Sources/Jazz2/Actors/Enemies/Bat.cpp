@@ -143,7 +143,7 @@ namespace Jazz2::Actors::Enemies
 				_counter++;
 				if (_counter >= TicksPerAnimFrame) {
 					_counter = 0;
-					_frame = (_frame + 1) % std::max(_renderer.FrameCount, 1);
+					_frame = (_frame + 1) % std::max<std::int32_t>(_renderer.FrameCount, 1);
 					float speedY = Random().FastFloat(0.0f, MaxSpeedY);
 					_speedPerTickY = (_pos.Y > targetPos.Y ? -speedY : speedY);
 				}

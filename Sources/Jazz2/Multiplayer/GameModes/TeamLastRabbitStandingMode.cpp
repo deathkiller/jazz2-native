@@ -63,7 +63,7 @@ namespace Jazz2::Multiplayer::GameModes
 					ctx.SetPlayerOut(members[i], true);
 				}
 			}
-			_reserve[team] = std::max(teamLives - given, 0);
+			_reserve[team] = std::max<std::int32_t>(teamLives - given, 0);
 		}
 
 		ctx.SyncTeamScores();
@@ -156,7 +156,7 @@ namespace Jazz2::Multiplayer::GameModes
 		for (auto* player : ctx.GetPlayers()) {
 			auto& state = ctx.GetPlayerState(player);
 			if (state.Team == team && !IsEliminated(ctx, player)) {
-				lives += std::max(state.ModeLives, 0);
+				lives += std::max<std::int32_t>(state.ModeLives, 0);
 			}
 		}
 		score = (std::uint32_t)lives;
@@ -165,12 +165,12 @@ namespace Jazz2::Multiplayer::GameModes
 
 	std::uint32_t TeamLastRabbitStandingMode::GetStateScore(const MpPlayerState& state) const
 	{
-		return (std::uint32_t)std::max(state.ModeLives, 0);
+		return (std::uint32_t)std::max<std::int32_t>(state.ModeLives, 0);
 	}
 
 	void TeamLastRabbitStandingMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
-		DrawScoreLine(ctx, hud, view, _("Lives"), (std::uint32_t)std::max(ctx.GetPlayerState(player).ModeLives, 0), false);
+		DrawScoreLine(ctx, hud, view, _("Lives"), (std::uint32_t)std::max<std::int32_t>(ctx.GetPlayerState(player).ModeLives, 0), false);
 	}
 
 	void TeamLastRabbitStandingMode::TakeOut(IGameModeContext& ctx, Actors::Player* player)
@@ -211,7 +211,7 @@ namespace Jazz2::Multiplayer::GameModes
 			return (ctx.GetPlayerState(a).ModeCarried < ctx.GetPlayerState(b).ModeCarried);
 		});
 
-		std::int32_t slots = std::max((std::int32_t)config.MaxTeamPlayersWithLives - holders, 0);
+		std::int32_t slots = std::max<std::int32_t>((std::int32_t)config.MaxTeamPlayersWithLives - holders, 0);
 		std::int32_t count = std::min((std::int32_t)outPlayers.size(), slots);
 		std::int32_t reserve = _reserve[team];
 		for (std::int32_t i = 0; i < count; i++) {

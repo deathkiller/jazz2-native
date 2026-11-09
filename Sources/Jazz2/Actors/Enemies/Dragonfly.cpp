@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Enemies
 
 		// Measured in JJ2+: the wings beat every 6 ticks at rest and every 2 ticks once it's awake
 		_animTicks++;
-		SetAnimationFrame((_animTicks / (_state == StateIdle ? 6 : 2)) % std::max(_renderer.FrameCount, 1));
+		SetAnimationFrame((_animTicks / (_state == StateIdle ? 6 : 2)) % std::max<std::int32_t>(_renderer.FrameCount, 1));
 
 		Vector2f targetPos;
 		switch (_state) {

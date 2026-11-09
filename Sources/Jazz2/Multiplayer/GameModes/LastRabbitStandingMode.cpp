@@ -109,13 +109,13 @@ namespace Jazz2::Multiplayer::GameModes
 
 	std::uint32_t LastRabbitStandingMode::GetStateScore(const MpPlayerState& state) const
 	{
-		return (std::uint32_t)std::max(state.ModeLives, 0);
+		return (std::uint32_t)std::max<std::int32_t>(state.ModeLives, 0);
 	}
 
 	void LastRabbitStandingMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
 		// TRANSLATORS: Label in the HUD of Last Rabbit Standing modes, followed by the number of lives left
-		DrawScoreLine(ctx, hud, view, _("Lives"), (std::uint32_t)std::max(ctx.GetPlayerState(player).ModeLives, 0), false);
+		DrawScoreLine(ctx, hud, view, _("Lives"), (std::uint32_t)std::max<std::int32_t>(ctx.GetPlayerState(player).ModeLives, 0), false);
 		hud.DrawPositionInRound(view, player);
 	}
 
@@ -240,7 +240,7 @@ namespace Jazz2::Multiplayer::GameModes
 	{
 		auto& state = ctx.GetPlayerState(player);
 		// TRANSLATORS: Score line in the HUD of Extended Last Rabbit Standing, first {} is the number of lives left, second {} the points
-		String text = _f("Lives: {}  Points: {}", std::max(state.ModeLives, 0), state.ModePoints);
+		String text = _f("Lives: {}  Points: {}", std::max<std::int32_t>(state.ModeLives, 0), state.ModePoints);
 		hud.DrawHudText(GameModeFontType::Medium, text, view.X + 14.0f, view.Y + 5.0f, 2.0f,
 			UI::Alignment::TopLeft, UI::Font::DefaultColor, 0.8f, 1.0f);
 		hud.DrawPositionInRound(view, player);

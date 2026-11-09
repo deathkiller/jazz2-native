@@ -46,7 +46,7 @@ namespace Jazz2::Multiplayer::GameModes
 			return OvertimeRule::TiedLeaders;
 		}
 		std::uint32_t GetLeaderScore(IGameModeContext& ctx, Actors::Player* player) override {
-			return (std::uint32_t)std::max(ctx.GetPlayerState(player).ModeLives, 0);
+			return (std::uint32_t)std::max<std::int32_t>(ctx.GetPlayerState(player).ModeLives, 0);
 		}
 		/** @brief Called when a player who joined too late is taken out */
 		virtual void OnLateJoinerOut(IGameModeContext& ctx, Actors::Player* player) { }

@@ -119,7 +119,7 @@ namespace Jazz2::Multiplayer::GameModes
 	void HeadHuntersMode::OnGemsCollected(IGameModeContext& ctx, Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount)
 	{
 		auto& state = ctx.GetPlayerState(player);
-		std::uint32_t carried = (std::uint32_t)std::max(ctx.GetPlayerGemCount(player), 0);
+		std::uint32_t carried = (std::uint32_t)std::max<std::int32_t>(ctx.GetPlayerGemCount(player), 0);
 		if (state.ModeCarried != carried) {
 			state.ModeCarried = carried;
 			ctx.SyncPlayerModeState(player);
