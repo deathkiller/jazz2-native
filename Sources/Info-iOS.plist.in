@@ -58,6 +58,23 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+        <key>UISceneConfigurations</key>
+        <dict>
+            <key>UIWindowSceneSessionRoleApplication</key>
+            <array>
+                <dict>
+                    <key>UISceneConfigurationName</key>
+                    <string>SDLSceneConfiguration</string>
+                    <key>UISceneDelegateClassName</key>
+                    <string>NCineSceneDelegate</string>
+                </dict>
+            </array>
+        </dict>
+    </dict>
 	<!-- Exposes the app's "Documents" directory in the Files app (and in Finder/iTunes): that is where the
 	     original game files are copied to, see ContentResolver and the README -->
 	<key>UIFileSharingEnabled</key>

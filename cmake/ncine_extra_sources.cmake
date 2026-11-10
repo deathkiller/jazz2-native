@@ -529,6 +529,10 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlAuxiliaryWindow.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/AuxiliaryWindowWin32.cpp
 		)
+		if(IOS)
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/IosSceneDelegate.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/IosSceneDelegate.mm)
+		endif()
 	elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_QT5")
 		target_link_libraries(${NCINE_APP} PUBLIC Qt5::Widgets)

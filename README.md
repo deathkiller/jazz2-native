@@ -247,8 +247,21 @@ This section contains only a brief explanation of the build process. For a more 
 * Build dependencies (SDL2, OpenAL Soft, Ogg/Vorbis and libcurl) will be downloaded and compiled from source automatically by *CMake*
 * Build the project with *CMake* for the `iOS` system, for example with the **Xcode** generator, which also signs and deploys the application to a device:
 ```bash
-cmake -B build -G Xcode -D CMAKE_SYSTEM_NAME=iOS -D CMAKE_OSX_ARCHITECTURES=arm64 -D CMAKE_OSX_DEPLOYMENT_TARGET=14.0 -D NCINE_IOS_DEVELOPMENT_TEAM=<Apple Developer team ID>
+cmake -B build -G Xcode -D\
+ CMAKE_SYSTEM_NAME=iOS -D\
+ CMAKE_OSX_ARCHITECTURES=arm64 -D\
+ CMAKE_OSX_DEPLOYMENT_TARGET=15.0 -D\
+ NCINE_IOS_DEVELOPMENT_TEAM=<Apple Developer team ID> -D\
+ NCINE_IOS_BUNDLE_IDENTIFIER=<CUSTOM_BUNDLE_IDENTIFIER_FOR_YOUR_INSTALLATION>
 ```
+* Open Xcode and let it auto create the target schema's
+* Connect iOS device.
+* run the `ALL_BUILD` schema and then run the `jazz2` schema target, both with the iOS device selected as a target
+
+> Note: you need to set a valid Apple Developer team ID, and to set a custom Bundle id, ex: `com.myawesome.jazz2.instance`
+> Bundle ID has to be unique and will get bound to your Apple account.
+
+
 * For the iOS Simulator, use `CMAKE_OSX_SYSROOT=iphonesimulator` with the Mac's own architecture instead, see [the documentation](https://de4th.dev/jazz2/docs/building.html) for details
 
 ### Android
