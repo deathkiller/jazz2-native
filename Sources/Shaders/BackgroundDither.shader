@@ -3,10 +3,10 @@ program BackgroundDither;
 shader_type canvas_item;
 precision highp;
 
-// What is drawn behind the sprite layer in the colors of the 16-bit renderer of JJ2+ (see Dither565.inc), the layers in
-// front of it and the sprites stay as they are: the quad covers the view and replaces it with the copy of it taken there
+// Redraws what is behind the sprite layer in JJ2+ 16-bit renderer colors (see Dither565.inc);
+// layers in front and sprites stay as they are
 
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+// One over the target size - the copy may be smaller but covers the same view
 uniform vec2 uTargetSizeInv;
 // A sharp copy of what is drawn behind the sprite layer
 uniform sampler2D uTextureBehind : texture_unit(2);

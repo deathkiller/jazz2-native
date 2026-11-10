@@ -221,6 +221,10 @@ struct Combine_Uniforms
 {
 	nCine::RHI::Software::sw::vec4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	nCine::RHI::Software::sw::vec4 uWavePhase;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -230,6 +234,7 @@ void Combine_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 	Combine_Uniforms* io = static_cast<Combine_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
+	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
@@ -254,6 +259,46 @@ static nCine::RHI::Software::sw::vec2 Combine_noiseTexCoords(const nCine::RHI::S
 	return clamp(position + Combine_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
+static float Combine_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, float cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	float y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 Combine_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	vec4 y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 Combine_waterWavePhases(const nCine::RHI::Software::FragmentShaderInput& in, float x)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return unis->uWavePhase + x * vec4(9.5492966f, 3.1830989f, 5.5704230f, 11.140846f);
+}
+
+static float Combine_waterWave(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 phases)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return dot(Combine_sinCycles(in, phases), vec4(0.0016f, 0.0032f, 0.004f, 0.0004f));
+}
+
 void Combine_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -268,7 +313,13 @@ void Combine_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 	vec4 blur = (blur1 + blur2) * vec4(0.5f);
 	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
 	blur = vec4(gray, gray, gray, blur.a);
-	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(1.0f - light.r));
+	float darknessStrength = 1.0f - light.r;
+	if (unis->uWaterLevel < 0.4f) {
+		float waveHeight = Combine_waterWave(in, Combine_waterWavePhases(in, vec2(in.u, in.v).x));
+		float isTexelAbove = clamp(0.5f - (vec2(in.u, in.v).y - unis->uWaterLevel - waveHeight) * unis->vViewSize.y * 0.70710678f, 0.0f, 1.0f);
+		darknessStrength = min(1.0f, darknessStrength + isTexelAbove * (0.4f - unis->uWaterLevel));
+	}
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
 }
@@ -278,6 +329,10 @@ struct Combine_DITHER_Uniforms
 {
 	nCine::RHI::Software::sw::vec4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	nCine::RHI::Software::sw::vec4 uWavePhase;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -287,6 +342,7 @@ void Combine_DITHER_ComputeVaryings(void* inputs, const std::uint8_t* instanceBl
 	Combine_DITHER_Uniforms* io = static_cast<Combine_DITHER_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
+	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
@@ -311,6 +367,46 @@ static nCine::RHI::Software::sw::vec2 Combine_DITHER_noiseTexCoords(const nCine:
 	return clamp(position + Combine_DITHER_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
+static float Combine_DITHER_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, float cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	float y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 Combine_DITHER_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	vec4 y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 Combine_DITHER_waterWavePhases(const nCine::RHI::Software::FragmentShaderInput& in, float x)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return unis->uWavePhase + x * vec4(9.5492966f, 3.1830989f, 5.5704230f, 11.140846f);
+}
+
+static float Combine_DITHER_waterWave(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 phases)
+{
+	using namespace nCine::RHI::Software::sw;
+	const Combine_DITHER_Uniforms* unis = static_cast<const Combine_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return dot(Combine_DITHER_sinCycles(in, phases), vec4(0.0016f, 0.0032f, 0.004f, 0.0004f));
+}
+
 void Combine_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -325,7 +421,13 @@ void Combine_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in
 	vec4 blur = (blur1 + blur2) * vec4(0.5f);
 	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
 	blur = vec4(gray, gray, gray, blur.a);
-	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(1.0f - light.r));
+	float darknessStrength = 1.0f - light.r;
+	if (unis->uWaterLevel < 0.4f) {
+		float waveHeight = Combine_DITHER_waterWave(in, Combine_DITHER_waterWavePhases(in, vec2(in.u, in.v).x));
+		float isTexelAbove = clamp(0.5f - (vec2(in.u, in.v).y - unis->uWaterLevel - waveHeight) * unis->vViewSize.y * 0.70710678f, 0.0f, 1.0f);
+		darknessStrength = min(1.0f, darknessStrength + isTexelAbove * (0.4f - unis->uWaterLevel));
+	}
+	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
 }
@@ -339,6 +441,9 @@ struct CombineWithWaterLow_Uniforms
 	float uWaterLevel;
 	nCine::RHI::Software::sw::vec4 uWaterColorTop;
 	nCine::RHI::Software::sw::vec4 uWaterColorBottom;
+	nCine::RHI::Software::sw::vec4 uWavePhase;
+	nCine::RHI::Software::sw::vec4 uWaterBase;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -348,6 +453,7 @@ void CombineWithWaterLow_ComputeVaryings(void* inputs, const std::uint8_t* insta
 	CombineWithWaterLow_Uniforms* io = static_cast<CombineWithWaterLow_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
+	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
@@ -372,6 +478,72 @@ static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_noiseTexCoords(const n
 	return clamp(position + CombineWithWaterLow_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
+static float CombineWithWaterLow_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, float cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	float y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 CombineWithWaterLow_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	vec4 y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 CombineWithWaterLow_waterWavePhases(const nCine::RHI::Software::FragmentShaderInput& in, float x)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return unis->uWavePhase + x * vec4(9.5492966f, 3.1830989f, 5.5704230f, 11.140846f);
+}
+
+static float CombineWithWaterLow_waterWave(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 phases)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return dot(CombineWithWaterLow_sinCycles(in, phases), vec4(0.0016f, 0.0032f, 0.004f, 0.0004f));
+}
+
+static nCine::RHI::Software::sw::vec3 CombineWithWaterLow_waterColorAt(const nCine::RHI::Software::FragmentShaderInput& in, float y)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
+}
+
+static nCine::RHI::Software::sw::vec3 CombineWithWaterLow_waterSceneLow(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, float isTexelBelow, nCine::RHI::Software::sw::vec2 uv)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float belowWaterLine = uvLocal.y - unis->uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5f, 0.0f, 1.0f);
+	uv = clamp(uvLocal + vec2(0.008f * CombineWithWaterLow_sinCycles(in, rippleCycles) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
+	vec3 main = swTexture(in, 0, uv).rgb();
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0f - topDist, 0.0f);
+	float isNearTop = 0.2f * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5f - (topDist - rowSize) * rowSlope, 0.0f, 1.0f);
+	return mix(main, CombineWithWaterLow_waterColorAt(in, uvLocal.y), vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+}
+
 void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -380,30 +552,17 @@ void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInpu
 	(void)in;
 	vec4 COLOR;
 	vec2 uvLocal = vec2(in.u, in.v);
-	vec3 waterColor = mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((uvLocal.y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
-	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
-	vec2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
-	float isTexelAbove = 1.0f - isTexelBelow;
-	vec2 uv = clamp(uvLocal + vec2(0.008f * sin(unis->uTime * 16.0f + uvWorld.y * 20.0f) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
-	vec4 main = swTexture(in, 0, uv);
-	float topDist = abs(uvLocal.y - unis->uWaterLevel);
-	float topGradient = max(1.0f - topDist, 0.0f);
-	float isNearTop = 0.2f * topGradient * topGradient;
-	float isVeryNearTop = 1.0f - step(unis->vViewSizeInv.y, topDist);
-	main.rgb() = mix(main.rgb(), waterColor, vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+	float isTexelBelow;
+	vec2 uv;
+	vec3 main = CombineWithWaterLow_waterSceneLow(in, uvLocal, CombineWithWaterLow_waterWave(in, CombineWithWaterLow_waterWavePhases(in, uvLocal.x)), 0.70710678f * unis->vViewSize.y, unis->vViewSizeInv.y, unis->uWaterBase.z + uvLocal.y * 3.1830989f, isTexelBelow, uv);
 	vec4 blur1 = swTexture(in, 2, uv);
 	vec4 blur2 = swTexture(in, 3, uv);
 	vec4 light = swTexture(in, 1, CombineWithWaterLow_noiseTexCoords(in, uv));
 	vec4 blur = (blur1 + blur2) * vec4(0.5f);
 	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
 	blur = vec4(gray, gray, gray, blur.a);
-	float darknessStrength = 1.0f - light.r;
-	if (unis->uWaterLevel < 0.4f) {
-		float aboveWaterDarkness = isTexelAbove * (0.4f - unis->uWaterLevel);
-		darknessStrength = min(1.0f, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
+	float darknessStrength = min(1.0f, 1.0f - light.r + (1.0f - isTexelBelow) * max(0.4f - unis->uWaterLevel, 0.0f));
+	COLOR = mix(mix(vec4(main, 1.0f) * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
 }
@@ -417,6 +576,9 @@ struct CombineWithWaterLow_DITHER_Uniforms
 	float uWaterLevel;
 	nCine::RHI::Software::sw::vec4 uWaterColorTop;
 	nCine::RHI::Software::sw::vec4 uWaterColorBottom;
+	nCine::RHI::Software::sw::vec4 uWavePhase;
+	nCine::RHI::Software::sw::vec4 uWaterBase;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
@@ -426,6 +588,7 @@ void CombineWithWaterLow_DITHER_ComputeVaryings(void* inputs, const std::uint8_t
 	CombineWithWaterLow_DITHER_Uniforms* io = static_cast<CombineWithWaterLow_DITHER_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
+	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
@@ -450,6 +613,72 @@ static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_DITHER_noiseTexCoords(
 	return clamp(position + CombineWithWaterLow_DITHER_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
+static float CombineWithWaterLow_DITHER_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, float cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	float y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 CombineWithWaterLow_DITHER_sinCycles(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 cycles)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 v = fract(cycles + 0.5f) * 2.0f - 1.0f;
+	vec4 y = 4.0f * v * (1.0f - abs(v));
+	return y * (0.775f + 0.225f * abs(y));
+}
+
+static nCine::RHI::Software::sw::vec4 CombineWithWaterLow_DITHER_waterWavePhases(const nCine::RHI::Software::FragmentShaderInput& in, float x)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return unis->uWavePhase + x * vec4(9.5492966f, 3.1830989f, 5.5704230f, 11.140846f);
+}
+
+static float CombineWithWaterLow_DITHER_waterWave(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec4 phases)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return dot(CombineWithWaterLow_DITHER_sinCycles(in, phases), vec4(0.0016f, 0.0032f, 0.004f, 0.0004f));
+}
+
+static nCine::RHI::Software::sw::vec3 CombineWithWaterLow_DITHER_waterColorAt(const nCine::RHI::Software::FragmentShaderInput& in, float y)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	return mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
+}
+
+static nCine::RHI::Software::sw::vec3 CombineWithWaterLow_DITHER_waterSceneLow(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, float isTexelBelow, nCine::RHI::Software::sw::vec2 uv)
+{
+	using namespace nCine::RHI::Software::sw;
+	const CombineWithWaterLow_DITHER_Uniforms* unis = static_cast<const CombineWithWaterLow_DITHER_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float belowWaterLine = uvLocal.y - unis->uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5f, 0.0f, 1.0f);
+	uv = clamp(uvLocal + vec2(0.008f * CombineWithWaterLow_DITHER_sinCycles(in, rippleCycles) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
+	vec3 main = swTexture(in, 0, uv).rgb();
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0f - topDist, 0.0f);
+	float isNearTop = 0.2f * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5f - (topDist - rowSize) * rowSlope, 0.0f, 1.0f);
+	return mix(main, CombineWithWaterLow_DITHER_waterColorAt(in, uvLocal.y), vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+}
+
 void CombineWithWaterLow_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -458,30 +687,17 @@ void CombineWithWaterLow_DITHER_Fragment(const nCine::RHI::Software::FragmentSha
 	(void)in;
 	vec4 COLOR;
 	vec2 uvLocal = vec2(in.u, in.v);
-	vec3 waterColor = mix(unis->uWaterColorTop.rgb(), unis->uWaterColorBottom.rgb(), clamp((uvLocal.y - unis->uWaterLevel) / max(1.0f - unis->uWaterLevel, 0.05f), 0.0f, 1.0f));
-	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
-	vec2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
-	float isTexelAbove = 1.0f - isTexelBelow;
-	vec2 uv = clamp(uvLocal + vec2(0.008f * sin(unis->uTime * 16.0f + uvWorld.y * 20.0f) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
-	vec4 main = swTexture(in, 0, uv);
-	float topDist = abs(uvLocal.y - unis->uWaterLevel);
-	float topGradient = max(1.0f - topDist, 0.0f);
-	float isNearTop = 0.2f * topGradient * topGradient;
-	float isVeryNearTop = 1.0f - step(unis->vViewSizeInv.y, topDist);
-	main.rgb() = mix(main.rgb(), waterColor, vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
+	float isTexelBelow;
+	vec2 uv;
+	vec3 main = CombineWithWaterLow_DITHER_waterSceneLow(in, uvLocal, CombineWithWaterLow_DITHER_waterWave(in, CombineWithWaterLow_DITHER_waterWavePhases(in, uvLocal.x)), 0.70710678f * unis->vViewSize.y, unis->vViewSizeInv.y, unis->uWaterBase.z + uvLocal.y * 3.1830989f, isTexelBelow, uv);
 	vec4 blur1 = swTexture(in, 2, uv);
 	vec4 blur2 = swTexture(in, 3, uv);
 	vec4 light = swTexture(in, 1, CombineWithWaterLow_DITHER_noiseTexCoords(in, uv));
 	vec4 blur = (blur1 + blur2) * vec4(0.5f);
 	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
 	blur = vec4(gray, gray, gray, blur.a);
-	float darknessStrength = 1.0f - light.r;
-	if (unis->uWaterLevel < 0.4f) {
-		float aboveWaterDarkness = isTexelAbove * (0.4f - unis->uWaterLevel);
-		darknessStrength = min(1.0f, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
+	float darknessStrength = min(1.0f, 1.0f - light.r + (1.0f - isTexelBelow) * max(0.4f - unis->uWaterLevel, 0.0f));
+	COLOR = mix(mix(vec4(main, 1.0f) * (1.0f + 0.607f * light.g) + (0.2f * light.g + max(light.g - 0.7f, 0.0f)) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
 }
@@ -3426,10 +3642,16 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 		const SwGeneratedUniformField Combine_Fields[] = {
 			{ "uAmbientColor", (std::uint32_t)offsetof(Combine_Uniforms, uAmbientColor), 4 },
 			{ "uTime", (std::uint32_t)offsetof(Combine_Uniforms, uTime), 1 },
+			{ "uWaterLevel", (std::uint32_t)offsetof(Combine_Uniforms, uWaterLevel), 1 },
+			{ "uWavePhase", (std::uint32_t)offsetof(Combine_Uniforms, uWavePhase), 4 },
+			{ "uCameraPos", (std::uint32_t)offsetof(Combine_Uniforms, uCameraPos), 2 },
 		};
 		const SwGeneratedUniformField Combine_DITHER_Fields[] = {
 			{ "uAmbientColor", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uAmbientColor), 4 },
 			{ "uTime", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uTime), 1 },
+			{ "uWaterLevel", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uWaterLevel), 1 },
+			{ "uWavePhase", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uWavePhase), 4 },
+			{ "uCameraPos", (std::uint32_t)offsetof(Combine_DITHER_Uniforms, uCameraPos), 2 },
 		};
 		const SwGeneratedUniformField CombineWithWaterLow_Fields[] = {
 			{ "uAmbientColor", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uAmbientColor), 4 },
@@ -3438,6 +3660,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterLevel), 1 },
 			{ "uWaterColorTop", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterColorTop), 4 },
 			{ "uWaterColorBottom", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterColorBottom), 4 },
+			{ "uWavePhase", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWavePhase), 4 },
+			{ "uWaterBase", (std::uint32_t)offsetof(CombineWithWaterLow_Uniforms, uWaterBase), 4 },
 		};
 		const SwGeneratedUniformField CombineWithWaterLow_DITHER_Fields[] = {
 			{ "uAmbientColor", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uAmbientColor), 4 },
@@ -3446,6 +3670,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "uWaterLevel", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterLevel), 1 },
 			{ "uWaterColorTop", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterColorTop), 4 },
 			{ "uWaterColorBottom", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterColorBottom), 4 },
+			{ "uWavePhase", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWavePhase), 4 },
+			{ "uWaterBase", (std::uint32_t)offsetof(CombineWithWaterLow_DITHER_Uniforms, uWaterBase), 4 },
 		};
 		const SwGeneratedUniformField Downsample_Fields[] = {
 			{ "uPixelOffset", (std::uint32_t)offsetof(Downsample_Uniforms, uPixelOffset), 2 },
@@ -3621,10 +3847,10 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentS
 			{ "Blur", &Blur_Fragment, (std::uint32_t)sizeof(Blur_Uniforms), Blur_Fields, 2, nullptr },
 			{ "Colorized", &Colorized_Fragment, (std::uint32_t)sizeof(Colorized_Uniforms), nullptr, 0, nullptr },
 			{ "BatchedColorized", &BatchedColorized_Fragment, (std::uint32_t)sizeof(BatchedColorized_Uniforms), nullptr, 0, nullptr },
-			{ "Combine", &Combine_Fragment, (std::uint32_t)sizeof(Combine_Uniforms), Combine_Fields, 2, &Combine_ComputeVaryings },
-			{ "Combine_DITHER", &Combine_DITHER_Fragment, (std::uint32_t)sizeof(Combine_DITHER_Uniforms), Combine_DITHER_Fields, 2, &Combine_DITHER_ComputeVaryings },
-			{ "CombineWithWaterLow", &CombineWithWaterLow_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_Uniforms), CombineWithWaterLow_Fields, 6, &CombineWithWaterLow_ComputeVaryings },
-			{ "CombineWithWaterLow_DITHER", &CombineWithWaterLow_DITHER_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_DITHER_Uniforms), CombineWithWaterLow_DITHER_Fields, 6, &CombineWithWaterLow_DITHER_ComputeVaryings },
+			{ "Combine", &Combine_Fragment, (std::uint32_t)sizeof(Combine_Uniforms), Combine_Fields, 5, &Combine_ComputeVaryings },
+			{ "Combine_DITHER", &Combine_DITHER_Fragment, (std::uint32_t)sizeof(Combine_DITHER_Uniforms), Combine_DITHER_Fields, 5, &Combine_DITHER_ComputeVaryings },
+			{ "CombineWithWaterLow", &CombineWithWaterLow_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_Uniforms), CombineWithWaterLow_Fields, 8, &CombineWithWaterLow_ComputeVaryings },
+			{ "CombineWithWaterLow_DITHER", &CombineWithWaterLow_DITHER_Fragment, (std::uint32_t)sizeof(CombineWithWaterLow_DITHER_Uniforms), CombineWithWaterLow_DITHER_Fields, 8, &CombineWithWaterLow_DITHER_ComputeVaryings },
 			{ "DefaultBatchedMeshSprites", &DefaultBatchedMeshSprites_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSprites_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedMeshSpritesNoTexture", &DefaultBatchedMeshSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedMeshSpritesNoTexture_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultBatchedSpritesNoTexture", &DefaultBatchedSpritesNoTexture_Fragment, (std::uint32_t)sizeof(DefaultBatchedSpritesNoTexture_Uniforms), nullptr, 0, nullptr },

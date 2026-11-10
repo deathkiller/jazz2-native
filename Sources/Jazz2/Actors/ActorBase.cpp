@@ -1805,10 +1805,17 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool ActorBase::UpdateFrozenState(float timeMult)
+	void ActorBase::ApplyFrozenFriction(float timeMult)
 	{
 		constexpr float FrozenSpeedKeptPerTick = 31.0f / 32.0f;
 
+		if (GetState(ActorState::KeepsMomentumWhenFrozen)) {
+			_speed.X *= std::pow(FrozenSpeedKeptPerTick, timeMult * Player::LegacyFrameRateScale);
+		}
+	}
+
+	bool ActorBase::UpdateFrozenState(float timeMult, bool frictionApplied)
+	{
 		if (_frozenTimeLeft <= 0.0f) {
 			if (!_thawPending) {
 				return false;
@@ -1819,8 +1826,8 @@ namespace Jazz2::Actors
 		if (_frozenTimeLeft > 0.0f) {
 			// Not in HandleFrozenStateChange(), it would run between SceneNode::Transform() and BaseSprite::UpdateRenderCommand()
 			_renderer.Initialize(ActorRendererType::FrozenMask);
-			if (GetState(ActorState::KeepsMomentumWhenFrozen)) {
-				_speed.X *= std::pow(FrozenSpeedKeptPerTick, timeMult * Player::LegacyFrameRateScale);
+			if (!frictionApplied) {
+				ApplyFrozenFriction(timeMult);
 			}
 			return false;
 		}

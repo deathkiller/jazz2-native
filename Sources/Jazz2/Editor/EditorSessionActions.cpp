@@ -575,8 +575,20 @@ namespace Jazz2::Editor
 			{ ActionIds::PlayBattle, _("Battle"), MpGameMode::Battle },
 			{ ActionIds::PlayTeamBattle, _("Team Battle"), MpGameMode::TeamBattle },
 			{ ActionIds::PlayRace, _("Race"), MpGameMode::Race },
+			{ ActionIds::PlayTeamRace, _("Team Race"), MpGameMode::TeamRace },
 			{ ActionIds::PlayTreasureHunt, _("Treasure Hunt"), MpGameMode::TreasureHunt },
+			{ ActionIds::PlayTeamTreasureHunt, _("Team Treasure Hunt"), MpGameMode::TeamTreasureHunt },
 			{ ActionIds::PlayCaptureTheFlag, _("Capture The Flag"), MpGameMode::CaptureTheFlag },
+			{ ActionIds::PlayRoastTag, _("Roast Tag"), MpGameMode::RoastTag },
+			{ ActionIds::PlayLastRabbitStanding, _("Last Rabbit Standing"), MpGameMode::LastRabbitStanding },
+			{ ActionIds::PlayExtendedLastRabbitStanding, _("Extended Last Rabbit Standing"), MpGameMode::ExtendedLastRabbitStanding },
+			{ ActionIds::PlayPestilence, _("Pestilence"), MpGameMode::Pestilence },
+			{ ActionIds::PlayTeamLastRabbitStanding, _("Team Last Rabbit Standing"), MpGameMode::TeamLastRabbitStanding },
+			{ ActionIds::PlayJailbreak, _("Jailbreak"), MpGameMode::Jailbreak },
+			{ ActionIds::PlayDeathCaptureTheFlag, _("Death Capture The Flag"), MpGameMode::DeathCaptureTheFlag },
+			{ ActionIds::PlayFlagRun, _("Flag Run"), MpGameMode::FlagRun },
+			{ ActionIds::PlayDomination, _("Domination"), MpGameMode::Domination },
+			{ ActionIds::PlayHeadHunters, _("Head Hunters"), MpGameMode::HeadHunters },
 		};
 		for (const ModeChoice& choice : Modes) {
 			std::int32_t value = std::int32_t(choice.Mode);

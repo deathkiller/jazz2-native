@@ -1,8 +1,7 @@
 program TexturedBackground;
 variant DITHER;
 variant KEYED;
-// The perspective of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the
-// top left of the view, as an ordinary layer would be placed - without it, the sky layers are drawn as they always were
+// JJ2+ perspective, the shift is the layer pixel at the top left of the view like an ordinary layer
 variant PLUS;
 variant PLUS + DITHER;
 variant PLUS + KEYED;
@@ -15,31 +14,24 @@ uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// xy: how far the vanishing point and the horizon are from the middle of the quad, as a fraction of it, z: 1 if it doesn't
-// fade into the horizon color there, as `warpHorizon` of JJ2+ - all 0 draws it as it always was; w: unused (a vec4, so the
-// fixed-function rebuild can read it)
+// xy: vanishing point and horizon offset from the quad's middle (fraction of it), z: 1 to skip the horizon fade
+// (JJ2+ warpHorizon), w: unused (vec4 for the fixed-function rebuild)
 uniform vec4 uHorizonOffset;
 
 #include "Include/TexturedBackgroundKey.inc"
 #include "Include/TexturedBackgroundDither.inc"
 
-// The perspective of JJ2+, measured in it: two planes, the one below the horizon seen from 60 pixels above it with a focal
-// length of 256 pixels, so a row d pixels away is 15360 / d pixels of the texture deep and shows 60 / d of them per pixel.
-// They would meet 8 rows past the horizon, so the texture never quite reaches the distance, and they fade into the horizon
-// color from 141 rows away from it, faster the closer they are.
+// JJ2+ perspective: a row d pixels from the horizon is 15360 / d texels deep and 60 / d texels per pixel wide;
+// the planes would meet 8 rows past the horizon and fade into the horizon color within 141 rows of it
 #define PLUS_DEPTH 15360.0
 #define PLUS_SCALE 60.0
 #define PLUS_GAP 8.0
 #define PLUS_FADE_ROWS 141.0
 #if LOW_POWER_GPU
 
-// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): the horizon that may be anywhere cost the
-// old warp two divisions and a comparison more per pixel. All of that is linear across the quad, so the vertex stage works
-// it out, and the fragment only takes the curves of the distance (see fragment()).
-// The old warp: how far a row is from the horizon towards the edge of the half above it and of the half below it (only
-// the one of its own half isn't negative) and the horizontal term; JJ2+: the row from the horizon, the same over the rows
-// of the fade and the horizontal term, the pixels from the vanishing point. And how opaque the layer is, the alpha of the
-// instance color.
+// Low-power GPUs: the terms linear across the quad are done per vertex, the fragment only does the curves
+// Legacy: row from the horizon towards the top edge, towards the bottom edge, horizontal term
+// JJ2+: row from the horizon, the same in fade rows, horizontal term; w: opacity
 varying vec4 vWarpTerms;
 
 void vertex() {
@@ -97,9 +89,8 @@ float addStarField(vec2 samplePosition, float threshold) {
 }
 
 #if PLUS
-// The perspective of JJ2+, by the pixels of the view as it counts them - the row of the horizon is the first one of the plane
-// below it. The texture is half of it further down than the shift, V runs up the layer (see TileMap::TexturedBackgroundPass).
-// xy the position in the texture, z how far it fades into the color of the horizon
+// JJ2+ perspective in view pixels, the horizon row belongs to the plane below; the texture sits half its size
+// below the shift and V runs up the layer. xy: texture position, z: horizon fade
 vec3 plusWarp(vec2 uv) {
 	vec2 pixel = uv * uViewSize - vec2(0.5);
 	float row = pixel.y - floor((0.5 + uHorizonOffset.y) * uViewSize.y);
@@ -113,22 +104,15 @@ vec3 plusWarp(vec2 uv) {
 	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(1.0 - rows * rows, 0.0, 1.0));
 }
 #else
-// The sky layers as this game always drew them, its own approximation of the original game: xy the position in the texture,
-// z how far it fades into the color of the horizon
+// Our own approximation of the original sky: xy: texture position, z: horizon fade
 vec3 legacyWarp(vec2 uv) {
-	// How far the row is from the horizon towards the edge of its half (0: the horizon, 1: the top or the bottom edge),
-	// which side of the horizon it is on, and the distance from the edge (1.3: the horizon, 0.3: the edge)
+	// fromHorizon: 0 at the horizon, 1 at the top/bottom edge; distance: 1.3 at the horizon, 0.3 at the edge
 	float horizonY = clamp(0.5 + uHorizonOffset.y, 0.0, 1.0);
 	float aboveHorizon = (uv.y <= horizonY ? 1.0 : 0.0);
 	float fromHorizon = (aboveHorizon > 0.5 ? (horizonY - uv.y) / max(horizonY, 0.0001) : (uv.y - horizonY) / max(1.0 - horizonY, 0.0001));
 	float distance = 1.3 - fromHorizon;
 #if SOFTWARE_RENDERER
-	// Software-renderer variant: this full-screen per-pixel fragment is dominated by transcendentals
-	// on the CPU - two pow() curves, an optional dithering second texture sample and a per-pixel
-	// voronoi "star field" (dozens of sin() per pixel when uHorizonColor.w > 0). One such draw costs
-	// roughly half a frame there, so this branch keeps the warp geometry and the horizon tint but
-	// approximates the pow() curves with plain polynomials and drops the dither sample and the star
-	// field entirely; the visible loss is the faint stars and a slightly different horizon falloff.
+	// Software renderer: polynomials instead of pow(), no dither sample or star field (too slow on the CPU)
 	float horizonDepth = distance;	// Approximates pow(distance, 1.4)
 #else
 	float horizonDepth = pow(distance, 1.4);
@@ -136,7 +120,7 @@ vec3 legacyWarp(vec2 uv) {
 
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
-	// Half of the way from the edge to the horizon, the plane above the horizon runs up, the one below it down
+	// Above the horizon the texture runs up, below it down
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (uv.x - 0.5 - uHorizonOffset.x) * (0.5 + (1.5 * horizonDepth)) * correction,
 		(uShift.y / 256.0) + (2.0 * aboveHorizon - 1.0) * 0.5 * (1.0 - fromHorizon) * 1.4 * distance
@@ -152,7 +136,7 @@ vec3 legacyWarp(vec2 uv) {
 #endif
 
 void fragment() {
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	// Opacity of screened or multiplied layers, from the instance color alpha
 #if LOW_POWER_GPU
 	float opacity = vWarpTerms.w;
 #else
@@ -160,7 +144,7 @@ void fragment() {
 #endif
 #if LOW_POWER_GPU
 #if PLUS
-	// See vertex(): the distance, |row| + 8 rows, and its reciprocal; below the horizon (its row too) the texture runs down
+	// Distance is |row| + PLUS_GAP; from the horizon row down the texture runs down
 	float qInv = 1.0 / (abs(vWarpTerms.x) + PLUS_GAP);
 	float side = (vWarpTerms.x >= 0.0 ? 1.0 : -1.0);
 	vec3 warp = vec3(
@@ -169,11 +153,8 @@ void fragment() {
 		clamp(1.0 - vWarpTerms.y * vWarpTerms.y, 0.0, 1.0)
 	);
 #else
-	// See vertex(): m how far the row is from the horizon and the distance 1.3 - m. pow() is two transcendentals on parts
-	// like the SGX543's USSE, the square root gives pow(distance, 1.5) exactly, and blending that against the linear term
-	// lands on pow(distance, 1.4) to within 0.007 over the range it takes ([0.3, 1.3]) - far closer than the plain distance
-	// the software branch settles for, which is a different shape and made the horizon read as too sharp. Above the horizon
-	// the texture runs up.
+	// m: row from the horizon; d * sqrt(d) is d^1.5 without pow(), blended with d it's within 0.007 of pow(d, 1.4)
+	// over [0.3, 1.3]. Above the horizon the texture runs up
 	float m = max(vWarpTerms.x, vWarpTerms.y);
 	float distance = 1.3 - m;
 	float distancePow15 = distance * sqrt(distance);
@@ -217,48 +198,30 @@ void fragment() {
 #if KEYED
 	COLOR = keyedColor(COLOR.rgb);
 #else
-	// Premultiplied, which the blending of the sprite modes takes as it is
+	// Premultiplied for the sprite blend modes
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 #endif
 }
 
 void fixed_function(pvr, gs) {
-	// Banded trapezoid rebuild of the warp (shared with the tunnel and the cylinder). These consoles
-	// take the include exactly as it is, with both macros left UNDEFINED. The PVR and the GS cannot lerp
-	// a texel toward a colour at all (the PVR only modulates and adds), so the horizon tint stays a second
-	// gradient pass over the bands, which is the include's default delivery. And the textured bands are
-	// cut into pieces at the texture's edges, because neither samples this render target repeating: the
-	// PVR's is a stride surface, which its texture unit cannot wrap. The perspective of JJ2+ is drawn in perspective
-	// (the PVR takes the depth as 1/w of the vertices, the GS as their Q), which needs no more pieces than the whole
-	// textures and the tint cut it into, at most 8 a band - every vertex counts on the Dreamcast and the PS2.
+	// Banded rebuild of the warp: no lerp toward a color here, so the tint is a second gradient pass, and no wrap
+	// on this target, so bands are cut at texture edges. JJ2+ perspective uses the vertex depth (PVR 1/w, GS Q)
 #define WARP_LOW_DETAIL
 #define WARP_PERSPECTIVE
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(gu) {
-	// The GE cannot fold the tint into the textured draw either (its GU_TFX_BLEND weighs by the TEXEL
-	// rather than by an interpolated alpha), so the tint stays the include's second gradient pass, but it
-	// does wrap the 256x256 render target in hardware like the RDP: each band goes out as ONE textured
-	// strip instead of being cut into up to eight pieces at the texture's edges. The perspective of JJ2+ is
-	// cut coarsely, every vertex counts on the PSP - and it's drawn in bands, the GE takes the vertices of this
-	// tier in screen space, without any perspective.
+	// The GE wraps the target, so each band is one strip, but the tint stays a second pass (GU_TFX_BLEND weighs
+	// by texel); vertices are in screen space, so JJ2+ perspective is drawn in coarse bands
 #define WARP_TEXTURE_REPEAT
 #define WARP_LOW_DETAIL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(rdp) {
-	// The same rebuild, but each band goes out as ONE strip: the RDP wraps texture coordinates in
-	// hardware (a mask on the tile descriptor), and so does the PICA200 (the render target is a power of
-	// two, which is all its repeat mode needs), so the band's unwrapped U span is sampled straight from the
-	// 256-texel row window instead of being cut into up to eight pieces at the texture's edges. That is
-	// ~130 strips a frame down to ~64, on CPUs where every strip costs more than the GPU's time to draw it.
-	// The horizon tint rides the band's own strip as a per-vertex colour through the TINT_MIX combiner,
-	// exactly like the GX block: one strip per band instead of a textured one and a gradient one, and no
-	// combiner change between them. The perspective of JJ2+ is drawn in perspective: a band is a rectangle
-	// of 4 vertices, which the RDP draws row by row, each row exactly as it maps, so it's cut only where the
-	// whole textures and the tint need it - about a dozen bands a frame.
+	// The RDP wraps in hardware, so each band is one strip, with the tint in the vertex color via TINT_MIX
+	// JJ2+ perspective: a 4-vertex band is drawn row by row exactly, so it's cut only at texture and tint edges
 #define WARP_TEXTURE_REPEAT
 #define WARP_TEXTURE_REPEAT_IN_PASS
 #define WARP_TINT_IN_VERTEX_COLOR
@@ -268,9 +231,8 @@ void fixed_function(rdp) {
 }
 
 void fixed_function(pica) {
-	// The rdp block's rebuild exactly, with the wrap taken from the render target's sampler state. The
-	// PICA200 interpolates the colors in perspective too (the depth is the w of the vertices), so the
-	// bands of the tint are kept short where the depth changes much across them.
+	// Same as the rdp block, wrap from the sampler state; colors interpolate in perspective too, so tint bands
+	// stay short where the depth changes a lot
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
@@ -280,11 +242,8 @@ void fixed_function(pica) {
 }
 
 void fixed_function(gx, legacygl) {
-	// The same banded trapezoid rebuild as above, from the same include - the geometry is portable
-	// vocabulary. The GX additionally folds the horizon tint into each band piece's own draw with a
-	// TINT_MIX combiner stage instead of laying a second gradient pass over it (same pixels, half
-	// the primitives, and the textured vertex format is never left). The perspective of JJ2+ is drawn
-	// in perspective (the depth as the q of a projective texture coordinate).
+	// The tint is folded into each band's draw via TINT_MIX instead of a second pass; JJ2+ perspective uses
+	// the q of a projective texture coordinate
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_PERSPECTIVE
 #include "Include/TexturedBackgroundWarp.inc"

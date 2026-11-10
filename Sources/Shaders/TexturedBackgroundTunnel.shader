@@ -1,8 +1,7 @@
 program TexturedBackgroundTunnel;
 variant DITHER;
 variant KEYED;
-// The tunnel of JJ2+ (SURFACE::FULLSCREEN and the inner surfaces), where the shift is the pixel of the layer at the top left
-// of the view, as an ordinary layer would be placed - without it, the tunnel is drawn as it always was
+// JJ2+ tunnel, the shift is the layer pixel at the top left of the view like an ordinary layer
 variant PLUS;
 variant PLUS + DITHER;
 variant PLUS + KEYED;
@@ -22,9 +21,8 @@ uniform vec4 uTunnel;
 
 #define INV_PI 0.31830988618379067153776752675
 
-// The tunnel of JJ2+, measured in it: the texture once around the center, and once more into the distance each time the
-// distance from the center halves, so it never ends. Its spiral turns it by 356 / r^0.15 - 91 pixels of the texture at r
-// pixels from the center, it fades into the horizon color from 87 pixels away from the center down to 4 % of it further out.
+// JJ2+ tunnel: the texture goes once around the center and repeats into the distance each time the radius halves;
+// the spiral turns it by 356 / r^0.15 - 91 texels at r pixels, the fade starts 87 pixels out and floors at 4 %
 #define PLUS_SPIRAL_SCALE 356.2
 #define PLUS_SPIRAL_POWER -0.15
 #define PLUS_SPIRAL_OFFSET -91.0
@@ -72,10 +70,8 @@ float addStarField(vec2 samplePosition, float threshold) {
 }
 
 #if PLUS
-// The tunnel of JJ2+, by the pixels of the view as it counts them, the angle clockwise from the right - the shift moves the
-// texture around a quarter as fast as an ordinary layer and into the distance as fast. V runs up the layer (see
-// TileMap::TexturedBackgroundPass). The spiral's power of the distance comes from the logarithm the depth needs anyway.
-// xy the position in the texture, z how far it fades into the color of the horizon
+// JJ2+ tunnel in view pixels, angle clockwise from the right; the shift moves around at 1/4 speed and into the
+// distance at full speed, V runs up the layer. xy: texture position, z: horizon fade
 vec3 plusTunnel(vec2 uv) {
 	vec2 fromCenter = uv * uViewSize - vec2(0.5) - vec2(uTunnel.x * uViewSize.x, floor(uTunnel.y * uViewSize.y));
 	float radius = max(length(fromCenter), 0.5);
@@ -90,22 +86,20 @@ vec3 plusTunnel(vec2 uv) {
 	return vec3(texel.x / 256.0, 1.0 - texel.y / 256.0, clamp(fade * fade - PLUS_FADE_FLOOR, 0.0, 1.0));
 }
 #else
-// The tunnel as it was always drawn: xy the position in the texture, z how far it fades into the color of the horizon
+// Legacy tunnel: xy: texture position, z: horizon fade
 vec3 legacyTunnel(vec2 uv) {
-	// Position of pixel relative to the center of the tunnel (between -1 and 1 across the screen for the center in the middle)
+	// Position from the tunnel center, -1 to 1 across the screen when centered
 	vec2 targetCoord = vec2(2.0) * uv - vec2(2.0) * uTunnel.xy;
 
-	// Aspect ratio correction, so display circle instead of ellipse
+	// Aspect correction, a circle instead of an ellipse
 	targetCoord.x *= uViewSize.x / uViewSize.y;
 
-	// Distance to center of the tunnel
 	float distance = length(targetCoord);
 
-	// x-coordinate of tunnel
+	// Angle around the center, -1 to 1
 	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
 
-	// A spiral turns further around the deeper it goes, by a quarter of a turn each time the texture repeats into the
-	// distance; chosen rather than multiplied, the depth is infinite in the very center
+	// The spiral turns a quarter per texture repeat into the distance; not multiplied, the depth is infinite at the center
 	float depth = (1.0 / distance) * 1.4;
 	vec2 texturePos = vec2(
 		(xShift)         * 1.0 + (uShift.x * 0.01) + (uTunnel.w > 0.0 ? depth * 0.5 : 0.0),
@@ -113,14 +107,10 @@ vec3 legacyTunnel(vec2 uv) {
 	);
 
 #if SOFTWARE_RENDERER
-	// Software-renderer variant: the tunnel keeps its atan()-based warp geometry and the horizon
-	// tint, but the per-pixel pow() curve, the dithering second texture sample and the voronoi
-	// "star field" (dozens of sin() per pixel when uHorizonColor.w > 0) are far too slow on the
-	// CPU, so the pow() is approximated polynomially and dither/stars are dropped entirely.
+	// Software renderer: a polynomial instead of pow(), no dither sample or star field (too slow on the CPU)
 	float horizonOpacity = 1.0 - clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.4)
 #elif LOW_POWER_GPU
-	// See TexturedBackground.shader: sqrt() is one instruction where pow() is two transcendentals, and
-	// 0.8 * d^1.5 + 0.2 * d tracks pow(d, 1.4) closely enough that the horizon keeps its shape
+	// 0.8 * d^1.5 + 0.2 * d is close to pow(d, 1.4) without pow()
 	float horizonOpacity = 1.0 - clamp(0.8 * (distance * sqrt(distance)) + 0.2 * distance - 0.3, 0.0, 1.0);
 #else
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
@@ -130,7 +120,7 @@ vec3 legacyTunnel(vec2 uv) {
 #endif
 
 void fragment() {
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	// Opacity of screened or multiplied layers, from the instance color alpha
 	float opacity = COLOR.a;
 #if PLUS
 	vec3 tunnel = plusTunnel(UV);
@@ -164,26 +154,20 @@ void fragment() {
 #if KEYED
 	COLOR = keyedColor(COLOR.rgb);
 #else
-	// Premultiplied, which the blending of the sprite modes takes as it is
+	// Premultiplied for the sprite blend modes
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 #endif
 }
 
 void fixed_function(pvr, gs) {
-	// The tunnel keeps the same planar geometry rebuild on this tier (shared
-	// with TexturedBackground.shader), with the include taken exactly as it is for the same reasons as
-	// there: the PVR and the GS have no combiner stage to fold the horizon tint into, so it is the
-	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges. The tunnel
-	// of JJ2+ is cut coarsely, every vertex counts on the Dreamcast and the PS2.
+	// Same banded rebuild as TexturedBackground.shader, cut coarsely
 #define WARP_LOW_DETAIL
 #define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(gu) {
-	// The GE keeps the second gradient pass but wraps the render target in hardware, so each band is one
-	// textured strip (see TexturedBackground.shader). The tunnel of JJ2+ is cut coarsely, every vertex
-	// counts on the PSP.
+	// The GE wraps the target, so each band is one strip; the tint stays a second pass, cut coarsely
 #define WARP_TEXTURE_REPEAT
 #define WARP_LOW_DETAIL
 #define WARP_TUNNEL
@@ -191,14 +175,7 @@ void fixed_function(gu) {
 }
 
 void fixed_function(rdp) {
-	// The same rebuild, but each band goes out as ONE strip: the RDP wraps texture coordinates in
-	// hardware (a mask on the tile descriptor), and so does the PICA200 (the render target is a power of
-	// two), so the band's unwrapped U span is sampled straight from the 256-texel row window instead of
-	// being cut into up to eight pieces at the texture's edges. That is ~130 strips a frame down to ~64,
-	// on CPUs where every strip costs more than the GPU's time to draw it. The horizon tint rides the
-	// band's own strip as a per-vertex colour through the TINT_MIX combiner, exactly like the GX block:
-	// one strip per band instead of a textured one and a gradient one, and no combiner change between them.
-	// The tunnel of JJ2+ is cut coarsely, every vertex counts on the N64.
+	// The RDP wraps in hardware, so each band is one strip, with the tint in the vertex color via TINT_MIX
 #define WARP_TEXTURE_REPEAT
 #define WARP_TEXTURE_REPEAT_IN_PASS
 #define WARP_TINT_IN_VERTEX_COLOR
@@ -208,7 +185,7 @@ void fixed_function(rdp) {
 }
 
 void fixed_function(pica) {
-	// The rdp block's rebuild exactly, with the wrap taken from the render target's sampler state
+	// Same as the rdp block, wrap from the sampler state
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
@@ -217,8 +194,7 @@ void fixed_function(pica) {
 }
 
 void fixed_function(gx, legacygl) {
-	// The tunnel borrows the same planar rebuild on this tier as well, with the
-	// horizon tint folded into the band pieces' own draw (see the include)
+	// The tint is folded into each band's own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_TUNNEL
 #include "Include/TexturedBackgroundWarp.inc"

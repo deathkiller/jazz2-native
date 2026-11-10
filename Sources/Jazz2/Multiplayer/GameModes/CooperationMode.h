@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "IGameMode.h"
+#include "GameModeBase.h"
 
 namespace Jazz2::Multiplayer::GameModes
 {
@@ -15,7 +15,7 @@ namespace Jazz2::Multiplayer::GameModes
 		lives/game-over system (handled by the player and host) stays active, exactly like classic
 		splitscreen co-op.
 	*/
-	class CooperationMode : public IGameMode
+	class CooperationMode : public GameModeBase
 	{
 	public:
 		MpGameMode GetMode() const override {

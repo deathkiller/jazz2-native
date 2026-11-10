@@ -234,7 +234,17 @@ namespace nCine
 			it, nothing could sample it otherwise. A request lasts only for the frame.
 			Does nothing without split passes.
 		*/
-		void RequestSplit(std::uint16_t layer, std::uint32_t passes);
+		void RequestSplit(std::uint16_t layer, std::uint32_t passes) {
+			RequestSplitAtKey(std::uint32_t(layer) << 16, passes);
+		}
+		/**
+			@brief Splits the queue of the current frame before the given layer sort key
+
+			As @ref RequestSplit(), with a key that is the layer in the upper half and the visit order in the lower one
+			(see @ref RenderCommand::GetLayerSortKey()), so a split can fall after all the commands of a layer that keep
+			the default visit order, before a command that's given a higher one.
+		*/
+		void RequestSplitAtKey(std::uint32_t sortKey, std::uint32_t passes);
 
 		/** @brief Number of passes a viewport can be split with */
 		static constexpr std::uint32_t MaxSplitPasses = 32;
@@ -305,7 +315,7 @@ namespace nCine
 		SmallVector<Viewport*, 0> _splitPasses;
 		/** @brief Viewport this one is a split pass of, which draws it instead of the chain */
 		Viewport* _splitOwner = nullptr;
-		/** @brief Layers the queue of the current frame is split at in ascending order, and the passes of each, see @ref RequestSplit() */
+		/** @brief Layer sort keys the queue of the current frame is split at in ascending order, and the passes of each, see @ref RequestSplitAtKey() */
 		SmallVector<std::uint32_t, 4> _splitLayers;
 		SmallVector<std::uint32_t, 4> _splitLayerPasses;
 #endif

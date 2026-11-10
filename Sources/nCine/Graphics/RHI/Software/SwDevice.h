@@ -239,10 +239,22 @@ namespace nCine::RHI::Software
 			                     `viewWaterLevel`); may be negative when the whole viewport is underwater
 			@param waterTime     Wave animation time, the shader path's `uTime` (elapsed frames * 0.0018)
 			@param waterCamY     Camera world-space Y, anchors the per-row wave phase to the world while scrolling
+			@param waterInScene  Whether the water itself was drawn in the middle of the scene already (see
+			                     @ref SetPendingSoftwareWater()), only the darkness above deep water is left to the combine
 		*/
 		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
-			bool waterActive = false, float waterLevelPx = 0.0f, float waterTime = 0.0f, float waterCamY = 0.0f);
+			bool waterActive = false, float waterLevelPx = 0.0f, float waterTime = 0.0f, float waterCamY = 0.0f, bool waterInScene = false);
+
+		/**
+			@brief Queues the water a viewport draws in the middle of its scene, in front of a layer behind the others
+
+			Applied in place over the rows of the screen buffer below the waterline when the scene reaches the draw of the
+			"Water" program, so what is drawn after it stays as it is. Matched to the draw by the viewport rectangle, which is
+			the one the scene is drawn with. The parameters are those of @ref SetPendingSoftwareLighting().
+		*/
+		static void SetPendingSoftwareWater(std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH,
+			float waterLevelPx, float waterTime, float waterCamY);
 
 	private:
 		static constexpr std::uint32_t MaxTextureUnits = 8;
@@ -280,10 +292,13 @@ namespace nCine::RHI::Software
 			std::int32_t VpX = 0, VpY = 0, VpW = 0, VpH = 0;
 			float AmbR = 0.0f, AmbG = 0.0f, AmbB = 0.0f;
 			bool WaterActive = false;
+			bool WaterInScene = false;
 			float WaterLevelPx = 0.0f, WaterTime = 0.0f, WaterCamY = 0.0f;
 		};
 		/** @brief FIFO of pending software-lighting combines (one per viewport, in submission order) */
 		static std::vector<PendingSoftwareLight> _pendingSoftwareLights;
+		/** @brief Water queued by @ref SetPendingSoftwareWater(), one per viewport, only the viewport and the water fields are used */
+		static std::vector<PendingSoftwareLight> _pendingSoftwareWater;
 
 		/** @brief Resolves the color framebuffer that draws and clears write into (RT color 0, else default) */
 		static bool ResolveFramebuffer(Framebuffer& out);
@@ -291,5 +306,7 @@ namespace nCine::RHI::Software
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		/** @brief Consumes the front queued software combine (lightmap and/or water effect) and blends it in place over its viewport rectangle */
 		static void ApplyPendingSoftwareLighting();
+		/** @brief Consumes the water queued for the current viewport and applies it in place over the rows below its waterline */
+		static void ApplyPendingSoftwareWater();
 	};
 }

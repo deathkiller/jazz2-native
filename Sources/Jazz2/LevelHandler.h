@@ -43,6 +43,7 @@ namespace Jazz2
 		class BlurRenderPass;
 		class CombineRenderer;
 		class PlayerViewport;
+		class WaterRenderer;
 	}
 
 #if defined(WITH_ANGELSCRIPT)
@@ -92,6 +93,7 @@ namespace Jazz2
 		friend class Rendering::BlurRenderPass;
 		friend class Rendering::CombineRenderer;
 		friend class Rendering::PlayerViewport;
+		friend class Rendering::WaterRenderer;
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
@@ -387,6 +389,8 @@ namespace Jazz2
 		// shader path that is its fragment stage, on the console tiers the fixed_function block that draws the
 		// tint band over whatever the lighting stage produced (see CombineWithWater.shader)
 		Shader* _combineWithWaterShader = nullptr;
+		// The water drawn mid-scene (see Water.shader)
+		Shader* _waterShader = nullptr;
 
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 		// When the scene is supersampled (splitscreen zoom-out), the HUD and the in-game menu are rendered through this
@@ -453,6 +457,8 @@ namespace Jazz2
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
 		std::unique_ptr<Tiles::TileMap> _tileMap;
+		// Child of the root node like the tile map, declared after it so it goes first
+		std::unique_ptr<Rendering::WaterRenderer> _waterRenderer;
 		Collisions::DynamicTreeBroadPhase _collisions;
 
 		Vector2i _viewSize;
@@ -475,6 +481,8 @@ namespace Jazz2
 		bool _playerWaterLevelSet = false;
 		// The water is still there for the actors, but not drawn
 		bool _waterHidden = false;
+		// Index of the layer the water is drawn in front of, or Formats::LevelSettingsChunk::WaterInFront, see GetWaterDepth()
+		std::int32_t _waterLayer = Formats::LevelSettingsChunk::WaterInFront;
 		// How players move under water, see GetWaterInteraction()
 		WaterInteraction _waterInteraction = WaterInteraction::Swim;
 		// How the ambient lighting goes with the water, see Rendering::PlayerViewport
@@ -559,6 +567,22 @@ namespace Jazz2
 		void LoadLevelScripts(StringView fullPath, StringView scriptText);
 		/** @brief Applies the settings of the level that its properties have no room for, the water and the rules */
 		void ApplyLevelSettings(const Formats::LevelSettingsChunk::Settings& settings);
+		/**
+		 * @brief Sets the layer the water is drawn in front of
+		 *
+		 * @param layerIndex  Index of the layer, @ref Formats::LevelSettingsChunk::WaterInFront or @ref Formats::LevelSettingsChunk::WaterHidden
+		 */
+		void SetWaterLayer(std::int32_t layerIndex);
+		/**
+		 * @brief Returns the depth the water is drawn at in the middle of the scene
+		 *
+		 * The depth of the nearest visible layer in front of the layer the water is in front of, everything below it is
+		 * under the water and the rest is drawn over it. `0` if the water is drawn in front of everything by the combine
+		 * pass, or not at all.
+		 */
+		std::uint16_t GetWaterDepth() const;
+		/** @brief Returns `true` if the water may be drawn in the middle of the scene, which needs passes of its own */
+		bool MayDrawWaterInScene() const;
 		/** @brief Creates HUD */
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */

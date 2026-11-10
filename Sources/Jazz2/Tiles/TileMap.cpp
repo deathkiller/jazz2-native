@@ -4083,6 +4083,21 @@ namespace Jazz2::Tiles
 		return (layerIndex >= 0 && layerIndex < (std::int32_t)_layers.size() ? _layers[layerIndex].OriginalNumber : 0);
 	}
 
+	std::uint16_t TileMap::GetDepthInFrontOfLayer(std::int32_t layerIndex) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return 0;
+		}
+		const std::uint16_t depth = _layers[layerIndex].Description.Depth;
+		std::uint16_t nearest = 0;
+		for (const auto& layer : _layers) {
+			if (layer.Visible && layer.Description.Depth > depth && (nearest == 0 || layer.Description.Depth < nearest)) {
+				nearest = layer.Description.Depth;
+			}
+		}
+		return nearest;
+	}
+
 	void TileMap::SetLayerIdentity(std::int32_t layerIndex, StringView name, std::uint8_t originalNumber)
 	{
 		if (layerIndex >= 0 && layerIndex < (std::int32_t)_layers.size()) {

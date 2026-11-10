@@ -10,28 +10,25 @@ uniform vec2 uCameraPos;
 
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
-// The cylinder of JJ2+ (see Tiles::LayerRendererType::Cylinder) - xy: the center of its horizon as a fraction of the view,
-// z: 1 if it fades into the horizon, w: 1 if it's drawn at half size. It's always drawn in the perspective of JJ2+, the shift
-// is the pixel of the layer at the top left of the view, as an ordinary layer would be placed.
+// JJ2+ cylinder - xy: horizon center as a fraction of the view, z: 1 to fade into the horizon, w: 1 for half size
+// The shift is the layer pixel at the top left of the view like an ordinary layer
 uniform vec4 uCylinder;
 
 #include "Include/TexturedBackgroundKey.inc"
 #include "Include/TexturedBackgroundDither.inc"
 
-// The cylinder of JJ2+, measured in it: the texture once from the top of the view to the bottom (twice at half size), a row
-// an angle of half a turn over the view from the horizon, across which the texture is 1/128 of the view's width per pixel
-// times 2 + cos of the angle (2 * (1 + 2 cos) at half size). It fades into the horizon color like the sky, to 65 % of it.
+// The texture spans the view height once (twice at half size), rows span half a turn from the horizon, and a pixel
+// is 1/128 of the view width times 2 + cos (2 * (1 + 2 cos) at half size); it fades like the sky, but only to 65 %
 #define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
 void fragment() {
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	// Opacity of screened or multiplied layers, from the instance color alpha
 	float opacity = COLOR.a;
 
-	// By the pixels of the view as JJ2+ counts them - the texture runs from the middle of the view down wherever the horizon is,
-	// the shift moves it along the tube a quarter as fast as an ordinary layer and around it as fast. V runs up the layer (see
-	// TileMap::TexturedBackgroundPass).
+	// In view pixels; the texture runs down from the view's middle wherever the horizon is, the shift moves it along
+	// the tube at 1/4 speed and around it at full speed, V runs up the layer
 	vec2 pixel = UV * uViewSize - vec2(0.5);
 	float row = pixel.y - floor(uCylinder.y * uViewSize.y);
 	float rowCos = cos(PI * row / uViewSize.y);
@@ -57,25 +54,20 @@ void fragment() {
 #if KEYED
 	COLOR = keyedColor(COLOR.rgb);
 #else
-	// Premultiplied, which the blending of the sprite modes takes as it is
+	// Premultiplied for the sprite blend modes
 	COLOR = vec4(COLOR.rgb * opacity, opacity);
 #endif
 }
 
 void fixed_function(pvr, gs) {
-	// The cylinder is rebuilt in bands on this tier by the include shared with the sky and the tunnel (see
-	// TexturedBackground.shader), taken exactly as it is for the same reasons as there: the PVR and the GS have
-	// no combiner stage to fold the horizon tint into, so it is the include's own second gradient pass, and the
-	// bands are cut into pieces at the texture's edges. It's cut coarsely, every vertex counts on the Dreamcast
-	// and the PS2.
+	// Same banded rebuild as TexturedBackground.shader, cut coarsely
 #define WARP_LOW_DETAIL
 #define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(gu) {
-	// The GE keeps the second gradient pass but wraps the render target in hardware, so each band is one
-	// textured strip (see TexturedBackground.shader). It's cut coarsely, every vertex counts on the PSP.
+	// The GE wraps the target, so each band is one strip; the tint stays a second pass, cut coarsely
 #define WARP_TEXTURE_REPEAT
 #define WARP_LOW_DETAIL
 #define WARP_CYLINDER
@@ -83,10 +75,7 @@ void fixed_function(gu) {
 }
 
 void fixed_function(rdp) {
-	// The same rebuild with each band as ONE strip, the RDP wrapping texture coordinates in hardware, and the
-	// horizon tint riding the band's own strip as a per-vertex colour through the TINT_MIX combiner (see
-	// TexturedBackground.shader). It's cut coarsely, every vertex counts on the N64 - a band is a rectangle of
-	// 4 vertices, which the RDP draws row by row, each row exactly as it maps.
+	// One strip per band with the tint in the vertex color; a 4-vertex band is drawn row by row exactly
 #define WARP_TEXTURE_REPEAT
 #define WARP_TEXTURE_REPEAT_IN_PASS
 #define WARP_TINT_IN_VERTEX_COLOR
@@ -97,7 +86,7 @@ void fixed_function(rdp) {
 }
 
 void fixed_function(pica) {
-	// The rdp block's rebuild exactly, with the wrap taken from the render target's sampler state
+	// Same as the rdp block, wrap from the sampler state
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_LOW_DETAIL
@@ -106,7 +95,7 @@ void fixed_function(pica) {
 }
 
 void fixed_function(gx, legacygl) {
-	// The same banded rebuild, with the horizon tint folded into the band pieces' own draw (see the include)
+	// The tint is folded into each band's own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR
 #define WARP_CYLINDER
 #include "Include/TexturedBackgroundWarp.inc"

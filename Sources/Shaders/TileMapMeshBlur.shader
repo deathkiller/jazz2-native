@@ -1,12 +1,9 @@
 program TileMapMeshBlur;
 variant USE_PALETTE;
 
-// A blur-behind layer (see Tiles::LayerRendererType::BlurBehind) in the tile-layer mesh: the tiles themselves are
-// never drawn, they only say what of the scene behind them is shown in their place - red and green move it by up to
-// 32 of the layer's pixels either way (128 doesn't), blue says how much of it is mirrored vertically, and alpha how
-// blurred what is shown is, the reflection included. A texel of no alpha does nothing at all. The 9-float vertex is
-// the tile-layer mesh layout with the mirror line of the reflection the tile belongs to added, in the same
-// coordinates as the position (see TileMap::AppendBlurTileQuad()).
+// Blur-behind layer (see Tiles::LayerRendererType::BlurBehind): tiles aren't drawn, they control the scene behind them.
+// Red/green displace it by up to 32 layer pixels (128 = none), blue mirrors it vertically, alpha blurs it; alpha 0 does
+// nothing. The 9-float vertex adds the reflection's mirror line in position coordinates (see TileMap::AppendBlurTileQuad()).
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -29,7 +26,7 @@ varying highp vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 #if LOW_POWER_GPU
-// The layer's scale on screen and the mirror line, worked out per vertex (see vertex())
+// Screen scale and mirror offset, computed per vertex
 varying highp vec4 vScale;
 #else
 varying highp vec2 vPos;
@@ -40,12 +37,10 @@ uniform sampler2D uTexture : texture_unit(0);
 #if USE_PALETTE
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
-// The blurred scene behind the layer (a sharp copy of it where the blur effects are off) and a sharp copy of it, which
-// exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
+// Blurred scene behind the layer (sharp if blur is off) and a sharp copy, bound only if the level reflects or displaces
 uniform sampler2D uTextureBehind : texture_unit(2);
 uniform sampler2D uTextureSharp : texture_unit(3);
-// One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
-// cover the same view
+// One over the target size; the textures behind may be smaller but cover the same view
 uniform highp vec2 uTargetSizeInv;
 
 void vertex() {
@@ -54,15 +49,12 @@ void vertex() {
 	vColor = aColor * color;
 	vPaletteOffset = palOffset;
 #if LOW_POWER_GPU
-	// What the fragment stage takes from derivatives elsewhere is the same in every vertex of a layer, and derivatives
-	// and divisions per pixel are a large part of this shader's cost on such a part - so the scale of the layer on
-	// screen is taken from the matrices instead. Every target is stored top-down whatever the backend's projection
-	// convention, so a row further down is always further down the layer and only the magnitude is needed.
+	// Per-pixel derivatives are costly here, so the layer's screen scale comes from the matrices
+	// Targets are always stored top-down, so only the magnitude is needed
 	highp vec4 unitX = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)));
 	highp vec4 unitY = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(0.0, 1.0, 0.0, 0.0)));
 	highp vec2 pixelsPerUnit = abs(vec2(unitX.x, unitY.y)) * 0.5 / uTargetSizeInv;
-	// xy: a quarter of a pixel of displacement in target units, z: the distance to the mirrored point in target units,
-	// w: one over the 8 pixels a reflection fades out over at the edge of the target
+	// xy: one displacement step, z: distance to the mirrored point (both in target units), w: 1 / 8 px edge fade
 	vScale = vec4(pixelsPerUnit * 0.25 * uTargetSizeInv, 2.0 * (aAxisY - aPosition.y) * pixelsPerUnit.y * uTargetSizeInv.y,
 		0.125 / uTargetSizeInv.y);
 #else
@@ -83,9 +75,7 @@ void fragment() {
 	vec4 tile = src;
 #endif
 #if LOW_POWER_GPU
-	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
-	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
-	// displacement allows, so it isn't rounded
+	// Same as below with the scale from the vertex stage; 8-bit channels times 255 are close enough to skip rounding
 	float on = step(0.5 / 255.0, tile.a);
 	float blurAmount = clamp(tile.a * (255.0 / 254.0) - (1.0 / 254.0), 0.0, 1.0);
 	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
@@ -95,37 +85,33 @@ void fragment() {
 	highp vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
 	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
 #else
-	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
-	// index 0 leave black, the largest displacement there is. Above that, it's the blur
+	// Alpha 0 turns a texel off whatever its color (often black, the largest displacement); above that it's the blur
 	float on = step(0.5 / 255.0, tile.a);
 	float blurAmount = clamp((tile.a * 255.0 - 1.0) / 254.0, 0.0, 1.0);
 	float reflectionAmount = tile.b * on;
 	vec2 displacement = (floor(tile.rg * 255.0 + 0.5) - 128.0) * on;
 	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
-	// vColor.a is the tile's own alpha times the alpha of the layer's color, how strong the whole effect is
+	// Tile alpha times layer alpha, the strength of the whole effect
 	float strength = vColor.a * on;
 
-	// The derivatives are the layer's units per pixel along the window's axes, so they carry both the scale (the view
-	// can be supersampled) and the direction of y, which differs between backends
+	// Layer units per pixel, with the view scale (supersampling) and the y direction, which differs per backend
 	highp vec2 unitsPerPixel = vec2(dFdx(vPos.x), dFdy(vPos.y));
 	unitsPerPixel.x = (abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x);
 	unitsPerPixel.y = (abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y);
-	// A step of displacement is a quarter of the layer's pixel, applied to the reflection as well
+	// One displacement step is a quarter of a layer pixel, reflection included
 	vec2 offset = displacement * strength * 0.25 / unitsPerPixel;
 	highp vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
-	// The mirrored point in window pixels
+	// The mirrored point
 	highp vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
-	// Fades out over the last few pixels of the target instead of smearing its edge where the mirrored point leaves it
+	// Fade out near the target edge instead of smearing it
 	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
 #endif
 
 	vec3 sharp = texture(uTextureSharp, uv).rgb;
 	vec3 blurred = texture(uTextureBehind, uv).rgb;
-	// The reflection is blurred as well, so a gradient in alpha can soften it gradually
+	// The reflection is blurred too, so an alpha gradient softens it
 	vec3 reflected = mix(texture(uTextureSharp, reflectionUv).rgb, texture(uTextureBehind, reflectionUv).rgb, blurAmount);
-	// The scene - moved if displaced - mixed with its blur, and that with the reflection, as one blend over the scene.
-	// Where nothing moves, the sharp part is left to the scene itself, so the sharp copy is only needed for the texels
-	// that displace or reflect
+	// Displaced scene, blur and reflection as one blend over the scene; where nothing moves, the scene itself is the sharp part
 	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
 	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
 	vec3 shown = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;

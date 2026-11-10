@@ -19,8 +19,8 @@ namespace nCine
 	class RenderQueue
 	{
 	public:
-		/** @brief Layer past the highest one a command can have, so a split at it splits nothing */
-		static constexpr std::uint32_t NoSplitLayer = 0x10000;
+		/** @brief Split key that ends the last part, a part up to it holds the rest of the queue */
+		static constexpr std::uint32_t NoSplitKey = 0xFFFFFFFFu;
 
 		RenderQueue();
 
@@ -48,19 +48,20 @@ namespace nCine
 		/**
 		 * @brief Sorts the queues, builds batches and commits the commands
 		 *
-		 * No batch spans any of @p splitLayers (in ascending order), so the queue can then be drawn in parts between
-		 * them (see @ref NextPart()).
+		 * No batch spans any of @p splitKeys (layer sort keys in ascending order, see
+		 * @ref RenderCommand::GetLayerSortKey()), so the queue can then be drawn in parts between them (see @ref NextPart()).
 		 */
-		void SortAndCommit(ArrayView<const std::uint32_t> splitLayers = {});
+		void SortAndCommit(ArrayView<const std::uint32_t> splitKeys = {});
 		/** @brief Returns the empty part the first one follows, to start @ref NextPart() with */
 		Part StartPart() const;
 		/**
 		 * @brief Returns the part that follows @p previous
 		 *
-		 * Contains the commands from where @p previous ends up to (but not including) @p endLayer, the rest of the
-		 * queue with @ref NoSplitLayer. Only what @p previous left is searched, so the parts have to be taken in order.
+		 * Contains the commands from where @p previous ends up to (but not including) the layer sort key @p endKey,
+		 * the rest of the queue with @ref NoSplitKey. Only what @p previous left is searched, so the parts have to be
+		 * taken in order.
 		 */
-		Part NextPart(const Part& previous, std::uint32_t endLayer) const;
+		Part NextPart(const Part& previous, std::uint32_t endKey) const;
 		/** @brief Issues the render commands of the given part in order */
 		void Draw(const Part& part);
 #else

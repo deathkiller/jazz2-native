@@ -184,6 +184,8 @@ namespace Jazz2::Multiplayer::GameModes
 		virtual std::uint8_t GetTeamCount() const = 0;
 		/** @brief Returns the aggregate round score of the specified team (team-based modes only) */
 		virtual std::uint32_t GetTeamScore(std::uint8_t team) = 0;
+		/** @brief Returns the synchronized second number of the team (see @ref IGameMode::TryGetTeamExtra), also on clients */
+		virtual bool GetSyncedTeamExtra(std::uint8_t team, std::uint32_t& value) const = 0;
 		/** @brief Returns the number of Capture The Flag flag states (one per team), or `0` when not in CTF */
 		virtual std::uint8_t GetCtfFlagStateCount() const = 0;
 		/** @brief Returns the flag state of the specified team in Capture The Flag (`0` = home, `1` = taken, `2` = dropped) */
@@ -207,6 +209,8 @@ namespace Jazz2::Multiplayer::GameModes
 		virtual void ShowAlertToAllPlayers(StringView text) = 0;
 		/** @brief Writes a line to the console of all players, as a message of the server */
 		virtual void SendMessageToAllPlayers(StringView text) = 0;
+		/** @brief Shows a step of the big countdown in the middle of the screen of all players, `0` shows "Go!" */
+		virtual void ShowCountdownToAllPlayers(std::int32_t secsLeft) = 0;
 		/** @brief Synchronizes the mode fields of @ref MpPlayerState of the specified player to all peers and re-applies its color */
 		virtual void SyncPlayerModeState(Actors::Player* player) = 0;
 		/** @brief Synchronizes the team scores to all peers */
@@ -314,7 +318,8 @@ namespace Jazz2::Multiplayer::GameModes
 		Encapsulates everything that differs between game modes --- win conditions, scoring, respawn rules,
 		team assignment and what happens at the level exit --- so the same rules can run on top of either the
 		networked @ref MpLevelHandler or a local splitscreen handler. A mode only ever talks to its host
-		through @ref IGameModeContext; it never references networking, peers or the concrete handler type.
+		through @ref IGameModeContext; it never references networking, peers or the concrete handler type. Modes derive
+		from @ref GameModeBase, which implements the optional parts.
 	*/
 	class IGameMode
 	{
@@ -340,9 +345,7 @@ namespace Jazz2::Multiplayer::GameModes
 			(@ref OnLevelExitReached), respawn (@ref DecideRespawn) and the HUD (@ref OnDrawHUD) are always driven by the
 			mode regardless of this flag.
 		*/
-		virtual bool OwnsRoundLogic() const {
-			return true;
-		}
+		virtual bool OwnsRoundLogic() const = 0;
 
 		/** @brief Called when the round starts (after the countdown) to reset/initialize mode state */
 		virtual void OnRoundStarted(IGameModeContext& ctx) = 0;
@@ -354,7 +357,7 @@ namespace Jazz2::Multiplayer::GameModes
 		/** @brief Called when a player dies, for mode-specific reactions (e.g. dropping a carried flag); kill/death counts are maintained by the host. @p killer may be `nullptr` (environmental death) */
 		virtual void OnPlayerKilled(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* killer) = 0;
 		/** @brief Called when a living player changed the team, right before the player respawns on the new team */
-		virtual void OnPlayerTeamChanged(IGameModeContext& ctx, Actors::Player* player) {}
+		virtual void OnPlayerTeamChanged(IGameModeContext& ctx, Actors::Player* player) = 0;
 		/** @brief Decides whether and where the specified player should respawn */
 		virtual RespawnDecision DecideRespawn(IGameModeContext& ctx, Actors::Player* player) = 0;
 
@@ -381,75 +384,42 @@ namespace Jazz2::Multiplayer::GameModes
 
 			Called on top of the friendly-fire rule of the host, so a mode only restricts it further.
 		*/
-		virtual bool CanDamagePlayer(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) {
-			return true;
-		}
+		virtual bool CanDamagePlayer(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) = 0;
 		/** @brief Returns `true` if players @p a and @p b push each other when they touch */
-		virtual bool CanPlayersPush(IGameModeContext& ctx, Actors::Player* a, Actors::Player* b) {
-			return true;
-		}
+		virtual bool CanPlayersPush(IGameModeContext& ctx, Actors::Player* a, Actors::Player* b) = 0;
 		/** @brief Called before a pit nobody caused roasts the player, returns `true` to keep it alive at 1 heart instead */
-		virtual bool PreventsHazardDeath(IGameModeContext& ctx, Actors::Player* player) {
-			return false;
-		}
+		virtual bool PreventsHazardDeath(IGameModeContext& ctx, Actors::Player* player) = 0;
 		/** @brief Returns `true` if a shot of @p shooter (may be `nullptr`) can freeze @p actor, it's called also on clients */
-		virtual bool CanFreezeActor(IGameModeContext& ctx, Actors::ActorBase* actor, Actors::Player* shooter) {
-			return true;
-		}
+		virtual bool CanFreezeActor(IGameModeContext& ctx, Actors::ActorBase* actor, Actors::Player* shooter) = 0;
 		/** @brief Returns `true` if the damage amplifier turns on in the overtime of this mode */
-		virtual bool HasDamageAmplifierInOvertime() const {
-			return false;
-		}
+		virtual bool HasDamageAmplifierInOvertime() const = 0;
 		/** @brief Processes an admin command of the mode (without the leading slash), returns `true` if it was one */
-		virtual bool ProcessCommand(IGameModeContext& ctx, StringView command) {
-			return false;
-		}
+		virtual bool ProcessCommand(IGameModeContext& ctx, StringView command) = 0;
 		/** @brief Called when the round goes into overtime */
-		virtual void OnOvertimeStarted(IGameModeContext& ctx) {
-		}
+		virtual void OnOvertimeStarted(IGameModeContext& ctx) = 0;
 		/** @brief Returns the damage @p attacker deals to @p victim by one hit of @p amount */
-		virtual std::int32_t GetDamage(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker, std::int32_t amount) {
-			return amount;
-		}
+		virtual std::int32_t GetDamage(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker, std::int32_t amount) = 0;
 		/** @brief Called when @p attacker hurt @p victim, also when the hit roasted it (after @ref OnPlayerKilled then) */
-		virtual void OnPlayerHit(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) {
-		}
+		virtual void OnPlayerHit(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) = 0;
 		/** @brief Returns whether a kill of @p victim by @p attacker counts as a kill of the attacker and of its team */
-		virtual bool CountsAsKill(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) {
-			return true;
-		}
+		virtual bool CountsAsKill(IGameModeContext& ctx, Actors::Player* victim, Actors::Player* attacker) = 0;
 		/** @brief Returns whether the specified player is out of the round for good */
-		virtual bool IsEliminated(IGameModeContext& ctx, Actors::Player* player);
+		virtual bool IsEliminated(IGameModeContext& ctx, Actors::Player* player) = 0;
 		/** @brief Returns the score of the specified team if the mode keeps it on its own, otherwise `false` */
-		virtual bool TryGetTeamScore(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& score) {
-			return false;
-		}
+		virtual bool TryGetTeamScore(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& score) = 0;
+		/** @brief Returns a second number of the specified team the HUD shows (synchronized), otherwise `false` */
+		virtual bool TryGetTeamExtra(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& value) = 0;
 		/** @brief Decides the round when its time runs out, if @ref GameEndResult::ShouldEnd is `false`, the host decides by the score */
-		virtual GameEndResult OnTimeOut(IGameModeContext& ctx) {
-			return GameEndResult::None();
-		}
+		virtual GameEndResult OnTimeOut(IGameModeContext& ctx) = 0;
 		/** @brief Returns the ranking metric stored in the specified state, a player with more ranks higher */
-		virtual std::uint32_t GetStateScore(const MpPlayerState& state) const {
-			return state.Kills;
-		}
-		/** @brief Returns label of the mode-specific column of the scoreboard, which shows @ref MpPlayerState::ModePoints, or empty */
-		virtual StringView GetScoreboardLabel() const {
-			return {};
-		}
+		virtual std::uint32_t GetStateScore(const MpPlayerState& state) const = 0;
+		/** @brief Returns label of the mode-specific column of the scoreboard, which shows @ref GetStateScore(), or empty */
+		virtual StringView GetScoreboardLabel() const = 0;
 		/** @brief Returns fur color forced on the player by its role in the mode, or `0` to keep it */
-		virtual std::uint32_t GetForcedFurColor(std::uint8_t modeFlags) const {
-			return 0;
-		}
+		virtual std::uint32_t GetForcedFurColor(std::uint8_t modeFlags) const = 0;
 		/** @brief Returns a short label shown next to the name of a player with the specified role, or empty */
-		virtual StringView GetRoleLabel(std::uint8_t modeFlags) const {
-			return {};
-		}
+		virtual StringView GetRoleLabel(std::uint8_t modeFlags) const = 0;
 	};
-
-	inline bool IGameMode::IsEliminated(IGameModeContext& ctx, Actors::Player* player)
-	{
-		return (ctx.GetPlayerState(player).ModeFlags & (std::uint8_t)PlayerModeFlags::Eliminated) != 0;
-	}
 }
 
 #endif

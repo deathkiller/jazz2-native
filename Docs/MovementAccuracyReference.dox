@@ -91,6 +91,38 @@ Holding Run raises both cap and acceleration. After release the player keeps ful
 @cpp 4.0000 @ce), in mid-air as on the ground. Absent in 3.8.0. See
 @ref Jazz2::Actors::Player::LegacyDashGraceTicks.
 
+@subsection movement-accuracy-ground-order The keys steer the tick they are read on
+
+The original reads the keys, changes the speed and then moves by the <em>new</em> speed, all in one tick. Ours
+moved first and steered afterwards, so every step was the previous tick's speed. That costs nothing at a constant
+speed but shows twice on a turn: one frame of overshoot at the old speed, then one frame behind at the new one.
+Measured with one JJ2+ script run in both games at `/max-fps:70` (one frame per tick):
+
+Turn | Original peak | Before (peak / end) | Now (peak / end)
+---- | ------------- | ------------------- | ----------------
+Walk, reversed (`tn_walk`) | 179.82 | +0.47 / <b>+7.70</b> | +0.29 / +3.51 @m_span{m-text m-dim} (3.68 of it one stalled frame) @m_endspan
+Dash, reversed with Run (`tn_dash`) | 650.60 | +4.73 / <b>+11.33</b> | +0.63 / −0.84
+Dash, reversed without Run (`tn_dash_nr`) | 561.93 | −2.91 / −3.51 | +0.90 / −0.06
+
+@m_class{m-noindent}
+
+The same order applies to the dash state, which is updated <em>after</em> the speed:
+
+-   <b>Run takes effect on the next tick.</b> The first tick with Run held still accelerates at the walk rate
+    (`0.1831`), the dash rate (`0.3662`) follows. Seen from a standstill (`tn_dash`, `g_dash`) and on a turn with
+    Run pressed with it (`tn_walk_runturn`).
+-   <b>The end of the grace snaps after the brake</b>, so the snap tick reads exactly `4.0000` and the brake starts
+    from there (`g_dash_rel`: 4.0000 then 3.8779). Ours braked in the same tick and stayed one step behind for the
+    whole turn (`tn_dash_nr` ended 7.9 px short).
+-   A frozen player's 31/32 friction also comes before the move (`fz_p_walk` 0.58 → 0.29 px).
+
+@m_class{m-noindent}
+
+Only horizontal steering moved. Jump, crouch and the special moves are still read after the move, and the bird
+keeps its own measured order (@ref movement-accuracy-bird). One side effect is worth knowing: the wall-contact
+scenarios that read exactly one acceleration step (29.9 px/s) now read 0.0, as the original does. See
+@ref Jazz2::Actors::Player::OnUpdate() and @ref Jazz2::Actors::Player::UpdateDashState().
+
 @subsection movement-accuracy-ground-applied Applied-movement cap
 
 <b>The original caps applied movement at 8 px/tick on both axes.</b> A dash reports @cpp xSpeed @ce 16 but
@@ -311,7 +343,9 @@ Half the walk cap, the full walk cap with Run --- the vine rule from @ref moveme
 The `wt_swim_*` caps read 2.0625 px/tick right and 2.1094 up, 4.0625 and 4.2344 with Run, because the original
 tests the cap <em>before</em> adding instead of clamping after: minus one acceleration step they are exactly 2
 and 4. Land has no such overshoot (`g_walk` tops at 4.0000, `g_dash` at 16.0000), so it is reproduced for water
-only.
+only. The step is one tick's acceleration taken as a speed: ours used to add it at the acceleration scale and
+settled at 2.0723 and 2.1270 (4.0717 and 4.2722 with Run), 0.5–0.9% fast. The steering lag of
+@ref movement-accuracy-ground-order had hidden that in the travel.
 
 Horizontal acceleration is <b>the same with Run</b>, vertical <b>doubles</b>: `wt_swim_right` and
 `wt_swim_right_run` share one 0.0625 ladder for 32 ticks until the slower stops at 2, while `wt_swim_up` and
@@ -1785,6 +1819,7 @@ or 12.5, 29.9 and 59.8 px/s. Ten of the affected scenarios move between exactly 
 move @m_span{m-text m-dim} (`wb_wallfind` travels 1221.0 px at all three rates) @m_endspan, and the jump boost is
 unaffected: `wb_dash_j164` launches at −9.9970 at every rate, against the original's −10.0000. This residual
 affects only the metric. The camera lead is keyed around the same residual (see @ref movement-accuracy-camera-shape).
+Since @ref movement-accuracy-ground-order these scenarios read 0.0 at 60 FPS. The other rates have not been re-run.
 
 <b>1b. Do the four rates agree with each other?</b> Positions are compared on a shared tick grid, with two runs at the
 same rate as the control:
@@ -1942,6 +1977,7 @@ Sidekick stalls after breaking a row of monitors | Reported from play as about 3
 No pose for riding a tube or a pole | `tb_down` holds animation <b>58</b> (the original's curled ball) for all 800 ticks, while ours shows @cpp 7 @ce (Walk, Run and Jump together) for all 1641 rows. `tb_right` runs 66/37/36 against our 0/7, `ob_vpole` 82/58/16 against 8/4/0, and `tb_row` 36. | Judged acceptable in play, so nothing is planned unless it is reported. Implementing it would need an @ref Jazz2::AnimState, metadata for all three characters, and a measured rule for which pose each tube gets. The id readings are in the harness `README.md`. The pinball paddle should hold the same ball.
 What the bird scenarios did not reach | The second bird was measured with a Seeker only, and nothing pressed Up and Down together or reversed below the cap. The beak charge is measured (`bd_ch_*`, see @ref movement-accuracy-bird-charge) except for its hitbox and what it does with `canHurt` turned on. | Assumed rather than measured: weapons other than the five bullet ones fire a pair of blaster shots, Up wins over Down when both are held (in a charge as in ordinary flight), and a reversal below the cap carries on accelerating the old way until the eased acceleration turns over (what `xAcc` predicts). The perched poses' odds are fitted to the loop counts. See @ref movement-accuracy-bird.
 Boosting a player standing on you | Cannot be measured here, because both probes drive a single player. | Changed from a report. Reforged bumps the lower player sideways. Non-Reforged hands the rise upward at @ref Jazz2::Actors::Player::LegacyJumpSpeed, with the rise gravity stated explicitly (see @ref movement-accuracy-objects-poleascent). Stacking is Cooperation-only and unaffected.
+Walking off a ledge starts the fall about 7 px early | In every `lh_*` scenario ours starts falling at x 763.3 walking and 766–770 dashing, where the original does at 770.3 and 776.6. Dashing, the original crosses `lh_g1_dash`'s one-tile gap without dipping at all. The original also loses one tick of horizontal travel on landing (`lh_g6_walk`: +36 px instead of +40). The old one-tick steering lag hid about half of the early fall in time, which is why the `lh_*` family reads worse since @ref movement-accuracy-ground-order. | Unmeasured. The speed and its timing match, so this is the support width at the edge (and the landing), not the movement model. Read the first tick with @cpp ys @ce > 0 and its x, not the per-tick position, because the fall that follows amplifies any onset difference.
 
 <b>Not gaps: read before chasing</b>
 
@@ -1963,6 +1999,7 @@ Tapping Run on the spot (superseded) | Scripted @cpp jjPLAYER.keyRun @ce does no
 
 Gap | Final fact
 --- | ----------
+Turning round overshoots and then lags | Ours moved before it steered, so each step was the previous tick's speed: a reversal overshot by a frame at the old speed and trailed by a frame at the new one, 7.7 px walking and 15.6 px dashing (2 × the step). Horizontal steering now runs before the move, and the dash state after the speed change. A same-script run in both games then matches tick for tick, and the C++ sweep's median speed error goes 0.3 → 0.1 px/s (526 → 539 of 599 within 25 px/s). See @ref movement-accuracy-ground-order.
 A carry that ends does not clamp, so a pole or spring runs the player far too far | When a run-along carry ends, the original snaps the speed to the walk cap (@cpp _keepRunningTime @ce: a pole launch, a spring, the rev-up). On `an_crouch_carry` it goes from 17.70 to 3.88 and the player stops 35 ticks later, while ours coasted 853 px further. The carry now applies @ref Jazz2::Actors::Player::LegacyCarryExitRunSpeed, like the spring hold, sucker tube, accelerating belt and sidekick exit already did. 5971.9 px against 5948.2 (was 6801.5), and `ob_hpole_z0` and `ob_hpole_zr` each land 197 px closer. Holding a direction and Run hid it, because the dash cap converges on the same 16.
 The crouch survives a fall, and an uppercut can be started in mid-air | Only releasing Down cleared @ref Jazz2::AnimState::Crouch. In @ref Jazz2::Actors::Player::HandleLookupAndCrouch() a held Down flips to the buttstomp binding, so the bit stayed set through the fall, and @ref Jazz2::Actors::Player::IsSpecialMoveCrouchReady() read it. On `an_crouch_gap_j` ours uppercut 110 px back out of the hole, while the original keeps falling at 10 px/tick with @cpp sm @ce at 0. The bit now clears the instant the player leaves the ground (the original's `anim` goes 65 → 17 on that tick), and @cpp IsSpecialMoveCrouchReady() @ce tests the ground explicitly. `an_crouch_gap_run` re-crouches normally on landing.
 Shooting during the skid repeats the skid | Firing cancels the skid. On `an_slide_fire` the original switches to the speed band's ordinary pose on the fire tick (`dash_start` at 13.86 px/tick, `run` at 4.00, the standing pose once stopped) and never returns. Ours drew the skid over @ref Jazz2::AnimState::Shoot for 40 ticks. Fixed in @ref Jazz2::Actors::Player::IsSlidingToHalt(), keyed on @cpp _fireFramesLeft @ce.

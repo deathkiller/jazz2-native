@@ -12,8 +12,7 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
 varying vec2 vPos;
-// The color and the radii are the same for the whole circle, so they're passed on rather than read from InstanceBlock in
-// the fragment stage, which would need it at the precision of the vertex stage there
+// Passed on so the fragment stage needn't read InstanceBlock at vertex precision
 varying vec4 vColor;
 varying vec2 vRadii;
 

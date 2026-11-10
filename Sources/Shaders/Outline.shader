@@ -38,11 +38,8 @@ void fragment() {
 }
 
 void fixed_function() {
-	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, outline grey, alpha). The shader
-	// finds the border by summing eight neighbour taps, drawn here instead as eight silhouettes offset
-	// by one texel (a black sprite lifted to the outline colour), covered by the sprite itself. (The
-	// shader's dimmer second ring at two texels is dropped - it costs another eight quads and barely
-	// registers at these resolutions.)
+	// color = (1/texWidth, 1/texHeight, outline grey, alpha). Eight silhouettes offset by one texel in the
+	// outline grey, then the sprite on top; the shader's second ring is dropped.
 	if (COLOR.a > 0.0 && has_texel_size()) {
 		vec2 step = texel_size();
 		for (int oy = -1; oy <= 1; oy++) {

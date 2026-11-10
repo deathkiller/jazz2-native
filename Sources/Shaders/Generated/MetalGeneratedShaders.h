@@ -618,8 +618,11 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	float4 uWavePhase;
 };
 
 struct InstanceBlock
@@ -634,7 +637,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -645,6 +649,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -658,15 +663,19 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	float4 uWavePhase;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -682,6 +691,30 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
 }
 
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
 {
 	float4 COLOR = float4(0);
@@ -692,7 +725,13 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
+	float darknessStrength = 1.0 - light.x;
+	if (_globals.uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(_in.vTexCoords.x, _globals));
+		float isTexelAbove = clamp(0.5 - (_in.vTexCoords.y - _globals.uWaterLevel - waveHeight) * _in.vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - _globals.uWaterLevel));
+	}
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -706,8 +745,11 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	float4 uWavePhase;
 };
 
 struct InstanceBlock
@@ -722,7 +764,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -733,6 +776,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -746,15 +790,19 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
+	float uWaterLevel;
+	float4 uWavePhase;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -768,6 +816,30 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 {
 	float2 seed = position + fract(_globals.uTime * 0.01);
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
+}
+
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
 }
 
 float bayer2(float2 pixel)
@@ -796,7 +868,13 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(1.0 - light.x));
+	float darknessStrength = 1.0 - light.x;
+	if (_globals.uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(_in.vTexCoords.x, _globals));
+		float isTexelAbove = clamp(0.5 - (_in.vTexCoords.y - _globals.uWaterLevel - waveHeight) * _in.vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - _globals.uWaterLevel));
+	}
+	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, (_in.gl_FragCoord.xy - (4.0) * floor((_in.gl_FragCoord.xy) / (4.0))));
 	return COLOR;
@@ -817,6 +895,9 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float4 uAmbientColor;
 	float uTime;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
 	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
@@ -835,7 +916,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -846,6 +928,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -861,6 +944,9 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float4 uAmbientColor;
 	float uTime;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
 	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
@@ -871,7 +957,8 @@ struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -887,16 +974,33 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
 }
 
-float wave(float x, float time)
+float sinCycles(float cycles)
 {
-	float waveOffset = cos((x - time) * 60.0) * 0.004 + cos((x - 2.0 * time) * 20.0) * 0.008 + sin((x + 2.0 * time) * 35.0) * 0.01 + cos((x + 4.0 * time) * 70.0) * 0.001;
-	return waveOffset * 0.4;
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
 }
 
-float aastep(float threshold, float value)
+float4 sinCycles(float4 cycles)
 {
-	float afwidth = length(float2(dfdx(value), dfdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 }
 
 float3 permute(float3 x)
@@ -928,46 +1032,57 @@ float snoise(float2 v)
 	return 130.0 * dot(m, g);
 }
 
+float2 waterDisplacement(float2 pos, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (uTextureNoise.sample(uTextureNoise_smplr, (i + f - 0.5) * 0.015625).xy - float2(0.5)) * float2(0.01);
+}
+
+float2 waterRaysPos(float2 uvLocal, float2 viewSizeInv, constant _Globals& _globals)
+{
+	float2 uvWorldCenter = _globals.uCameraPos * viewSizeInv;
+	float2 pixel = uvLocal / viewSizeInv;
+	return float2(uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 + uvLocal.x * 1.4 + pixel.x * (6.0 / 720.0) + pixel.y * (5.0 / 720.0) - 5.0, _globals.uTime * 5.0 + uvWorldCenter.y);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos, uTextureNoise, uTextureNoise_smplr)) * float2(isTexelBelow), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
+	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
+	main_ = mix(main_, waterColorAt(uvLocal.y, _globals) * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
+	float rays = snoise(raysPos) * 0.55 + 0.3;
+	main_ += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main_ = mix(main_, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, float3(isNearTop * isTexelBelow * 0.6));
+	return main_ + float3(0.2 * isVeryNearTop);
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]], texture2d<float> uTextureNoise [[texture(4)]], sampler uTextureNoise_smplr [[sampler(4)]])
 {
 	float4 COLOR = float4(0);
 	float2 uvLocal = _in.vTexCoords;
-	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
-	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float waveHeight = wave(uvWorld.x, _globals.uTime);
-	float isTexelBelow = aastep(waveHeight, uvLocal.y - _globals.uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 disPos = uvWorld * float2(0.1) + float2((_globals.uTime * 0.4 - (2.0) * floor((_globals.uTime * 0.4) / (2.0))));
-	float2 dis = (uTextureNoise.sample(uTextureNoise_smplr, disPos).xy - float2(0.5)) * float2(0.01);
-	float2 uv = clamp(uvLocal + (float2(0.004 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * float2(isTexelBelow), float2(0.0), float2(1.0));
-	float4 main_ = uTexture.sample(uTexture_smplr, uv);
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
-	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
-	main_.xyz = mix(main_.xyz, waterColor * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
-	float2 uvNormalized = (uvLocal / _in.vViewSizeInv - (720.0) * floor((uvLocal / _in.vViewSizeInv) / (720.0))) / 720.0;
-	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
-	float rays = snoise(float2(noisePos, _globals.uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
-	main_.xyz += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
-	float topDist = abs(uvLocal.y - _globals.uWaterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(_in.vViewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(_in.vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main_.xyz = mix(main_.xyz, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + _in.vViewSizeInv.y)).xyz, float3(topColorBlendFac));
-	main_.xyz += float3(0.2 * isVeryNearTop);
+	float isTexelBelow;
+	float2 uv;
+	float3 main_ = waterScene(uvLocal, waterWave(waterWavePhases(uvLocal.x, _globals)), 0.70710678 * _in.vViewSize.y, _in.vViewSizeInv.y, uvLocal * 0.1 + _globals.uWaterBase.xy, _globals.uWaterBase.z + uvLocal.y * 3.1830989, waterRaysPos(uvLocal, _in.vViewSizeInv, _globals), isTexelBelow, uv, _globals, uTexture, uTexture_smplr, uTextureNoise, uTextureNoise_smplr);
 	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
 	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
 	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
+	float blurScale = 1.0 / sqrt(max(_globals.uAmbientColor.w, 0.35));
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (_globals.uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - _globals.uWaterLevel, 0.0));
+	COLOR = mix(mix(float4(main_, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) * blurScale, 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -983,6 +1098,9 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float4 uAmbientColor;
 	float uTime;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
 	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
@@ -1001,7 +1119,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -1012,6 +1131,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -1027,6 +1147,9 @@ struct _Globals
 	float4x4 uViewMatrix;
 	float4 uAmbientColor;
 	float uTime;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
 	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
@@ -1037,7 +1160,8 @@ struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -1053,16 +1177,33 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
 }
 
-float wave(float x, float time)
+float sinCycles(float cycles)
 {
-	float waveOffset = cos((x - time) * 60.0) * 0.004 + cos((x - 2.0 * time) * 20.0) * 0.008 + sin((x + 2.0 * time) * 35.0) * 0.01 + cos((x + 4.0 * time) * 70.0) * 0.001;
-	return waveOffset * 0.4;
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
 }
 
-float aastep(float threshold, float value)
+float4 sinCycles(float4 cycles)
 {
-	float afwidth = length(float2(dfdx(value), dfdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
 }
 
 float3 permute(float3 x)
@@ -1092,6 +1233,41 @@ float snoise(float2 v)
 	g.x = a0.x * x0.x + h.x * x0.y;
 	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
 	return 130.0 * dot(m, g);
+}
+
+float2 waterDisplacement(float2 pos, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (uTextureNoise.sample(uTextureNoise_smplr, (i + f - 0.5) * 0.015625).xy - float2(0.5)) * float2(0.01);
+}
+
+float2 waterRaysPos(float2 uvLocal, float2 viewSizeInv, constant _Globals& _globals)
+{
+	float2 uvWorldCenter = _globals.uCameraPos * viewSizeInv;
+	float2 pixel = uvLocal / viewSizeInv;
+	return float2(uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 + uvLocal.x * 1.4 + pixel.x * (6.0 / 720.0) + pixel.y * (5.0 / 720.0) - 5.0, _globals.uTime * 5.0 + uvWorldCenter.y);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos, uTextureNoise, uTextureNoise_smplr)) * float2(isTexelBelow), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
+	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
+	main_ = mix(main_, waterColorAt(uvLocal.y, _globals) * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
+	float rays = snoise(raysPos) * 0.55 + 0.3;
+	main_ += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main_ = mix(main_, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, float3(isNearTop * isTexelBelow * 0.6));
+	return main_ + float3(0.2 * isVeryNearTop);
 }
 
 float bayer2(float2 pixel)
@@ -1114,42 +1290,18 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 {
 	float4 COLOR = float4(0);
 	float2 uvLocal = _in.vTexCoords;
-	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
-	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float waveHeight = wave(uvWorld.x, _globals.uTime);
-	float isTexelBelow = aastep(waveHeight, uvLocal.y - _globals.uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 disPos = uvWorld * float2(0.1) + float2((_globals.uTime * 0.4 - (2.0) * floor((_globals.uTime * 0.4) / (2.0))));
-	float2 dis = (uTextureNoise.sample(uTextureNoise_smplr, disPos).xy - float2(0.5)) * float2(0.01);
-	float2 uv = clamp(uvLocal + (float2(0.004 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * float2(isTexelBelow), float2(0.0), float2(1.0));
-	float4 main_ = uTexture.sample(uTexture_smplr, uv);
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
-	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
-	main_.xyz = mix(main_.xyz, waterColor * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
-	float2 uvNormalized = (uvLocal / _in.vViewSizeInv - (720.0) * floor((uvLocal / _in.vViewSizeInv) / (720.0))) / 720.0;
-	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
-	float rays = snoise(float2(noisePos, _globals.uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
-	main_.xyz += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
-	float topDist = abs(uvLocal.y - _globals.uWaterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(_in.vViewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(_in.vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main_.xyz = mix(main_.xyz, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + _in.vViewSizeInv.y)).xyz, float3(topColorBlendFac));
-	main_.xyz += float3(0.2 * isVeryNearTop);
+	float isTexelBelow;
+	float2 uv;
+	float3 main_ = waterScene(uvLocal, waterWave(waterWavePhases(uvLocal.x, _globals)), 0.70710678 * _in.vViewSize.y, _in.vViewSizeInv.y, uvLocal * 0.1 + _globals.uWaterBase.xy, _globals.uWaterBase.z + uvLocal.y * 3.1830989, waterRaysPos(uvLocal, _in.vViewSizeInv, _globals), isTexelBelow, uv, _globals, uTexture, uTexture_smplr, uTextureNoise, uTextureNoise_smplr);
 	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
 	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
 	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
+	float blurScale = 1.0 / sqrt(max(_globals.uAmbientColor.w, 0.35));
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (_globals.uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - _globals.uWaterLevel, 0.0));
+	COLOR = mix(mix(float4(main_, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) * blurScale, 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, (_in.gl_FragCoord.xy - (4.0) * floor((_in.gl_FragCoord.xy) / (4.0))));
 	return COLOR;
@@ -1168,12 +1320,14 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
-	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
 	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
 };
 
 struct InstanceBlock
@@ -1188,7 +1342,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -1199,6 +1354,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -1212,19 +1368,22 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
-	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
 	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -1240,34 +1399,63 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
 }
 
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return mix(main_, waterColorAt(uvLocal.y, _globals), float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
+}
+
 fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureLighting [[texture(1)]], sampler uTextureLighting_smplr [[sampler(1)]], texture2d<float> uTextureBlurHalf [[texture(2)]], sampler uTextureBlurHalf_smplr [[sampler(2)]], texture2d<float> uTextureBlurQuarter [[texture(3)]], sampler uTextureBlurQuarter_smplr [[sampler(3)]])
 {
 	float4 COLOR = float4(0);
 	float2 uvLocal = _in.vTexCoords;
-	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
-	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, _globals.uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = clamp(uvLocal + float2(0.008 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
-	float4 main_ = uTexture.sample(uTexture_smplr, uv);
-	float topDist = abs(uvLocal.y - _globals.uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(_in.vViewSizeInv.y, topDist);
-	main_.xyz = mix(main_.xyz, waterColor, float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
+	float isTexelBelow;
+	float2 uv;
+	float3 main_ = waterSceneLow(uvLocal, waterWave(waterWavePhases(uvLocal.x, _globals)), 0.70710678 * _in.vViewSize.y, _in.vViewSizeInv.y, _globals.uWaterBase.z + uvLocal.y * 3.1830989, isTexelBelow, uv, _globals, uTexture, uTexture_smplr);
 	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
 	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
 	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (_globals.uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - _globals.uWaterLevel, 0.0));
+	COLOR = mix(mix(float4(main_, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1281,12 +1469,14 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
-	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
 	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
 };
 
 struct InstanceBlock
@@ -1301,7 +1491,8 @@ struct VsOut
 {
 	float4 gl_Position [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
@@ -1312,6 +1503,7 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
+	_out.vViewSize = _bInstanceBlock.spriteSize;
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
 	return _out;
 }
@@ -1325,19 +1517,22 @@ struct _Globals
 {
 	float4x4 uProjectionMatrix;
 	float4x4 uViewMatrix;
+	float2 uCameraPos;
 	float4 uAmbientColor;
 	float uTime;
-	float2 uCameraPos;
 	float uWaterLevel;
 	float4 uWaterColorTop;
 	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
 };
 
 struct FsIn
 {
 	float4 gl_FragCoord [[position]];
 	float2 vTexCoords [[user(locn0)]];
-	float2 vViewSizeInv [[user(locn1)]];
+	float2 vViewSize [[user(locn1)]];
+	float2 vViewSizeInv [[user(locn2)]];
 };
 
 float2 hash2D(float2 p)
@@ -1351,6 +1546,48 @@ float2 noiseTexCoords(float2 position, constant _Globals& _globals, thread FsIn&
 {
 	float2 seed = position + fract(_globals.uTime * 0.01);
 	return clamp(position + hash2D(seed) * _in.vViewSizeInv * 1.4, float2(0.0), float2(1.0));
+}
+
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return mix(main_, waterColorAt(uvLocal.y, _globals), float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
 }
 
 float bayer2(float2 pixel)
@@ -1373,30 +1610,17 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 {
 	float4 COLOR = float4(0);
 	float2 uvLocal = _in.vTexCoords;
-	float3 waterColor = mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((uvLocal.y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
-	float2 uvWorldCenter = _globals.uCameraPos.xy * _in.vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, _globals.uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = clamp(uvLocal + float2(0.008 * sin(_globals.uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
-	float4 main_ = uTexture.sample(uTexture_smplr, uv);
-	float topDist = abs(uvLocal.y - _globals.uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(_in.vViewSizeInv.y, topDist);
-	main_.xyz = mix(main_.xyz, waterColor, float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
+	float isTexelBelow;
+	float2 uv;
+	float3 main_ = waterSceneLow(uvLocal, waterWave(waterWavePhases(uvLocal.x, _globals)), 0.70710678 * _in.vViewSize.y, _in.vViewSizeInv.y, _globals.uWaterBase.z + uvLocal.y * 3.1830989, isTexelBelow, uv, _globals, uTexture, uTexture_smplr);
 	float4 blur1 = uTextureBlurHalf.sample(uTextureBlurHalf_smplr, uv);
 	float4 blur2 = uTextureBlurQuarter.sample(uTextureBlurQuarter_smplr, uv);
 	float4 light = uTextureLighting.sample(uTextureLighting_smplr, noiseTexCoords(uv, _globals, _in));
 	float4 blur = (blur1 + blur2) * float4(0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (_globals.uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - _globals.uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = mix(mix(main_ * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - _globals.uWaterLevel, 0.0));
+	COLOR = mix(mix(float4(main_, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * float4(1.0), blur, float4(clamp((1.0 - light.x) / sqrt(max(_globals.uAmbientColor.w, 0.35)), 0.0, 1.0))), _globals.uAmbientColor, float4(darknessStrength));
 	COLOR.w = 1.0;
 	COLOR.xyz = reduceColors(COLOR.xyz, (_in.gl_FragCoord.xy - (4.0) * floor((_in.gl_FragCoord.xy) / (4.0))));
 	return COLOR;
@@ -10689,6 +10913,320 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 	float mixValue = ease(distance_);
 	float noise = 1.0 + rand(uv) * 0.1;
 	COLOR = float4(0.0, 0.0, 0.0, mixValue * noise);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
+	inline constexpr char Water_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float2 uViewSizeInv;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
+	float4 uAmbientColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char Water_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float2 uViewSizeInv;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
+	float4 uAmbientColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+};
+
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
+}
+
+float3 permute(float3 x)
+{
+	return ((x * 34.0 + 1.0) * x - (289.0) * floor(((x * 34.0 + 1.0) * x) / (289.0)));
+}
+
+float snoise(float2 v)
+{
+	const float4 C = float4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	float2 i = floor(v + dot(v, C.yy));
+	float2 x0 = v - i + dot(i, C.xx);
+	float2 i1 = x0.x > x0.y ? float2(1.0, 0.0) : float2(0.0, 1.0);
+	float4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+	i = (i - (289.0) * floor((i) / (289.0)));
+	float3 p = permute(permute(i.y + float3(0.0, i1.y, 1.0)) + i.x + float3(0.0, i1.x, 1.0));
+	float3 m = max(0.5 - float3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+	m = m * m;
+	m = m * m;
+	float3 x = 2.0 * fract(p * C.www) - 1.0;
+	float3 h = abs(x) - 0.5;
+	float3 ox = floor(x + 0.5);
+	float3 a0 = x - ox;
+	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+	float3 g;
+	g.x = a0.x * x0.x + h.x * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+float2 waterDisplacement(float2 pos, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (uTextureNoise.sample(uTextureNoise_smplr, (i + f - 0.5) * 0.015625).xy - float2(0.5)) * float2(0.01);
+}
+
+float2 waterRaysPos(float2 uvLocal, float2 viewSizeInv, constant _Globals& _globals)
+{
+	float2 uvWorldCenter = _globals.uCameraPos * viewSizeInv;
+	float2 pixel = uvLocal / viewSizeInv;
+	return float2(uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 + uvLocal.x * 1.4 + pixel.x * (6.0 / 720.0) + pixel.y * (5.0 / 720.0) - 5.0, _globals.uTime * 5.0 + uvWorldCenter.y);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr, texture2d<float> uTextureNoise, sampler uTextureNoise_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos, uTextureNoise, uTextureNoise_smplr)) * float2(isTexelBelow), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = uTexture.sample(uTexture_smplr, float2(uv.x - aberration, uv.y)).x;
+	float blue = uTexture.sample(uTexture_smplr, float2(uv.x + aberration, uv.y)).z;
+	main_ = mix(main_, waterColorAt(uvLocal.y, _globals) * (0.4 + 1.2 * float3(red, main_.y, blue)), float3(isTexelBelow * 0.5));
+	float rays = snoise(raysPos) * 0.55 + 0.3;
+	main_ += float3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main_ = mix(main_, uTexture.sample(uTexture_smplr, float2(uvLocal.x, (_globals.uWaterLevel - uvLocal.y + _globals.uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, float3(isNearTop * isTexelBelow * 0.6));
+	return main_ + float3(0.2 * isVeryNearTop);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureNoise [[texture(1)]], sampler uTextureNoise_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	float2 uvLocal = _in.gl_FragCoord.xy * _globals.uTargetSizeInv;
+	float waveHeight = waterWave(waterWavePhases(uvLocal.x, _globals));
+	float rowSlope = 0.70710678 / _globals.uViewSizeInv.y;
+	float rippleCycles = _globals.uWaterBase.z + uvLocal.y * 3.1830989;
+	float isTexelBelow;
+	float2 uv;
+	float2 raysPos = waterRaysPos(uvLocal, _globals.uViewSizeInv, _globals);
+	float3 main_ = waterScene(uvLocal, waveHeight, rowSlope, _globals.uViewSizeInv.y, uvLocal * 0.1 + _globals.uWaterBase.xy, rippleCycles, raysPos, isTexelBelow, uv, _globals, uTexture, uTexture_smplr, uTextureNoise, uTextureNoise_smplr);
+	COLOR = float4(main_, 1.0);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char Water_LOW_VsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float2 uViewSizeInv;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
+	float4 uAmbientColor;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+};
+
+vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	int gl_VertexID = int(_vid);
+	float2 aPosition = float2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char Water_LOW_FsMsl[] =
+R"__SHDR__(#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+	float2 uViewSizeInv;
+	float uTime;
+	float2 uCameraPos;
+	float uWaterLevel;
+	float4 uWaterColorTop;
+	float4 uWaterColorBottom;
+	float4 uWavePhase;
+	float4 uWaterBase;
+	float uRaysBase;
+	float4 uAmbientColor;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+};
+
+float sinCycles(float cycles)
+{
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x, constant _Globals& _globals)
+{
+	return _globals.uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y, constant _Globals& _globals)
+{
+	return mix(_globals.uWaterColorTop.xyz, _globals.uWaterColorBottom.xyz, clamp((y - _globals.uWaterLevel) / max(1.0 - _globals.uWaterLevel, 0.05), 0.0, 1.0));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, thread float& isTexelBelow, thread float2& uv, constant _Globals& _globals, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	float belowWaterLine = uvLocal.y - _globals.uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), float2(0.0), float2(1.0));
+	float3 main_ = uTexture.sample(uTexture_smplr, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return mix(main_, waterColorAt(uvLocal.y, _globals), float3(isTexelBelow * 0.4)) + float3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	float2 uvLocal = _in.gl_FragCoord.xy * _globals.uTargetSizeInv;
+	float waveHeight = waterWave(waterWavePhases(uvLocal.x, _globals));
+	float rowSlope = 0.70710678 / _globals.uViewSizeInv.y;
+	float rippleCycles = _globals.uWaterBase.z + uvLocal.y * 3.1830989;
+	float isTexelBelow;
+	float2 uv;
+	float3 main_ = waterSceneLow(uvLocal, waveHeight, rowSlope, _globals.uViewSizeInv.y, rippleCycles, isTexelBelow, uv, _globals, uTexture, uTexture_smplr);
+	COLOR = float4(main_, 1.0);
 	return COLOR;
 }
 )__SHDR__";

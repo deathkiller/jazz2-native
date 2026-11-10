@@ -41,17 +41,17 @@ namespace nCine
 		 * two together would leave every run shorter than the maximum, and every remainder past a multiple
 		 * of it, drawn one command at a time.
 		 *
-		 * A batch never spans any of @p splitLayers: the commands below one and the ones from it up end up in
+		 * A batch never spans any of @p splitKeys: the commands below one and the ones from it up end up in
 		 * different batches, so the queue can be drawn in parts with something else in between (see
 		 * @ref RenderQueue::NextPart()). None splits nothing.
 		 *
 		 * @param srcQueue     Sorted source command queue
 		 * @param destQueue    Destination queue that receives batched and pass-through commands
-		 * @param splitLayers  Layers no batch may span, in ascending order
+		 * @param splitKeys    Layer sort keys no batch may span, in ascending order (see @ref RenderCommand::GetLayerSortKey())
 		 */
 #if defined(RHI_CAP_POSTPROCESSING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
-			ArrayView<const std::uint32_t> splitLayers = {});
+			ArrayView<const std::uint32_t> splitKeys = {});
 #else
 		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
 #endif

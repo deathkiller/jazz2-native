@@ -462,6 +462,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/WaterRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/AnimationTables.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Animations.cpp

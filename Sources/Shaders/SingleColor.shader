@@ -8,9 +8,7 @@ shader_type canvas_item;
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 
-// The shape of the sprite in a single color, as SPRITE::SINGLECOLOR of JJ2+ - only the alpha of the texel is taken,
-// looking the palette index up in the palette texture when the sprite is indexed (an index is transparent where its
-// palette entry is)
+// JJ2+ SPRITE::SINGLECOLOR: the sprite's shape in one color, only texel alpha is used (via the palette when indexed)
 void fragment() {
 	vec4 src = texture(TEXTURE, UV);
 #if USE_PALETTE
@@ -25,9 +23,7 @@ void fragment() {
 }
 
 void fixed_function() {
-	// Console fixed-function tier: the black-modulated sprite with the instance colour added on top of it is that
-	// colour wherever the texture has alpha (oargb+specular on the PVR, the silhouette TEV preset on the GX), the
-	// same as WhiteMask reaches its flat mask
+	// Black-modulated sprite plus the instance color as offset gives a flat color wherever the texture has alpha
 	pass p;
 	p.color = vec4(0.0, 0.0, 0.0, COLOR.a);
 	p.offset_color = COLOR.rgb;

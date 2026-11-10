@@ -19,9 +19,7 @@ vec4 palette(vec2 uv) {
 	return vec4(c.rgb, c.a * src.a);
 }
 
-// A texel's real opacity comes from its palette entry's alpha (index 0 is transparent), not the raw texture alpha:
-// an R8 index texture reports .a == 1 everywhere, which would make the whole sprite read as opaque and the outline
-// would fill its entire bounding box. Resolve through the palette here too (matches palette()'s alpha).
+// Opacity from the palette entry, an R8 index texture reads alpha 1 everywhere
 float alphaAt(vec2 uv) {
 	vec4 src = texture(TEXTURE, uv);
 	highp float palIndex = floor(PALETTE_OFFSET + 0.5) + floor(src.r * 255.0 + 0.5);
@@ -60,8 +58,7 @@ void fragment() {
 }
 
 void fixed_function() {
-	// Console fixed-function tier: identical to Outline.shader's block - the palette lookup itself is
-	// texture state (palette bank / TLUT / baked variant) selected by the dispatch, not shading
+	// Same as Outline - the palette lookup is texture state chosen by the dispatch
 	if (COLOR.a > 0.0 && has_texel_size()) {
 		vec2 step = texel_size();
 		for (int oy = -1; oy <= 1; oy++) {

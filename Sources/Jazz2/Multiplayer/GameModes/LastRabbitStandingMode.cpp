@@ -112,6 +112,12 @@ namespace Jazz2::Multiplayer::GameModes
 		return (std::uint32_t)std::max<std::int32_t>(state.ModeLives, 0);
 	}
 
+	StringView LastRabbitStandingMode::GetScoreboardLabel() const
+	{
+		// TRANSLATORS: Column header in the multiplayer scoreboard (lives left in Last Rabbit Standing modes), keep it short
+		return _("Lives");
+	}
+
 	void LastRabbitStandingMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
 		// TRANSLATORS: Label in the HUD of Last Rabbit Standing modes, followed by the number of lives left

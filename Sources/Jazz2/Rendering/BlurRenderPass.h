@@ -52,6 +52,10 @@ namespace Jazz2::Rendering
 		 * @param height     Height of the target texture
 		 */
 		void InitializeCopy(Texture* source, std::int32_t width, std::int32_t height);
+		/** @brief Limits the pass to a rectangle of its target in pixels from the top left corner, the rest keeps what it had */
+		void SetScissor(Recti rect) {
+			_renderCommand.SetScissor(rect);
+		}
 		/** @brief Registers the render pass into the viewport chain */
 		void Register();
 		/** @brief Releases all allocated resources */

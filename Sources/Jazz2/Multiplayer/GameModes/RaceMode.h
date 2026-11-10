@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "IGameMode.h"
+#include "GameModeBase.h"
 
 namespace Jazz2::Multiplayer::GameModes
 {
@@ -15,7 +15,7 @@ namespace Jazz2::Multiplayer::GameModes
 		returns `false` and the gameplay hooks below are not yet invoked (they keep the interface satisfied until
 		the logic is ported in a later phase).
 	*/
-	class RaceMode : public IGameMode
+	class RaceMode : public GameModeBase
 	{
 	public:
 		MpGameMode GetMode() const override {

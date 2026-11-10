@@ -12,26 +12,13 @@ void fragment() {
 }
 
 void fixed_function(pvr, gu, gs) {
-	// Console fixed-function tier: gray = (r + g + b) * 0.5 and COLOR = gray * dye with
-	// dye = 1 + (color - 0.5) * 4. The textures this runs on are grayscale (fonts), so r = g = b and
-	// that "average" is really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.
-	//
-	// This is the tier without a full output scale, which is why these consoles run the same code: a
-	// vertex colour cannot carry a multiplier above 1.0 on any of them, and no combiner makes up the
-	// difference (the PVR always modulates; the GE's five texture functions combine one texel with the
-	// fragment colour and nothing else; the GS's four do the same and its MODULATE shifts by exactly
-	// 7 bits, so 0x80 is its ceiling). Neither workaround alone is right - folding the excess into
-	// the offset colour adds a constant, which lifts a glyph's dark texels as much as its bright ones
-	// and blows the antialiased edges out, while simply clamping the multiplier leaves bright tints
-	// looking washed out. So the multiplier is split into whole units drawn as successive additive
-	// passes - the sum stays proportional to the texel, and the framebuffer saturates it exactly where
-	// the shader's own clamp would. Only the GX escapes the split, in its own block below; the RDP
-	// takes the same split but needs one pass fewer, in its own block below as well.
+	// Textures are grayscale (fonts), so the gain is 1.5 * dye, up to 4.5 - more than a vertex color can carry
+	// It's split into whole units drawn as additive passes; the framebuffer saturates the sum like the shader
 	vec3 gain = 1.5 * (1.0 + (COLOR.rgb - 0.5) * 4.0);
 	float alpha = 1.0 + (COLOR.a - 0.5) * 4.0;
 	int passes = clamp(int(ceil(max(0.0, max(max(gain.r, gain.g), gain.b)))), 1, 3);
 	for (int i = 0; i < passes; i++) {
-		// Pass i carries whatever of the multiplier is left above i, clamped to one unit
+		// Pass i carries the part of the multiplier above i, up to one unit
 		pass p;
 		p.color = vec4(gain - float(i), alpha);
 		if (i > 0) {
@@ -41,24 +28,13 @@ void fixed_function(pvr, gu, gs) {
 	}
 }
 void fixed_function(rdp) {
-	// Same split multiplier as the block above, capped at TWO passes instead of three.
-	//
-	// The RDP's ceiling is not the 1.0 of a colour register but the 1.5 its colour combiner can compute
-	// at all: the second cycle can double the first one's output, yet the output clamp covers only half
-	// the overflow range - a result of 1.5 or more WRAPS to black rather than saturating (measured on
-	// hardware; see MaxCombinerResult in RdpDevice.cpp). The backend therefore merges these additive
-	// passes on the CPU into one draw and caps the summed colour at 1.49 per channel.
-	//
-	// A third pass can never survive that cap. It contributes clamp(gain - 2, 0, 1), which is non-zero
-	// only where gain > 2, and there the two-pass sum is already 1 + 1 = 2 - so both sums cap to exactly
-	// 1.49 and the packed colour is identical. Every channel below 2 gets nothing from the third pass
-	// either way. Asking for it only spends another pass of merge work per glyph, of which the menu
-	// draws a couple of hundred a frame.
+	// Same split, at most 2 passes: the backend merges them into one draw capped at 1.49 per channel
+	// (see MaxCombinerResult in RdpDevice.cpp), so a third pass would never change the result
 	vec3 gain = 1.5 * (1.0 + (COLOR.rgb - 0.5) * 4.0);
 	float alpha = 1.0 + (COLOR.a - 0.5) * 4.0;
 	int passes = clamp(int(ceil(max(0.0, max(max(gain.r, gain.g), gain.b)))), 1, 2);
 	for (int i = 0; i < passes; i++) {
-		// Pass i carries whatever of the multiplier is left above i, clamped to one unit
+		// Pass i carries the part of the multiplier above i, up to one unit
 		pass p;
 		p.color = vec4(gain - float(i), alpha);
 		if (i > 0) {
@@ -68,9 +44,7 @@ void fixed_function(rdp) {
 	}
 }
 void fixed_function(gx, pica, legacygl) {
-	// GX: the dye exceeds 1.0 for any tint brighter than neutral, which a vertex colour cannot carry,
-	// so both the gray gain and the dye are folded in at a quarter strength and the TEV stage scales
-	// the result back up (x4 output scale)
+	// The gain doesn't fit a vertex color, so it's passed at quarter strength and scaled back up x4
 	pass p;
 	p.tev = MODULATE_X4;
 	p.color = vec4(1.5 * (1.0 + (COLOR.rgb - 0.5) * 4.0) * 0.25, 1.0 + (COLOR.a - 0.5) * 4.0);

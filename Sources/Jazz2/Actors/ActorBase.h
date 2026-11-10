@@ -807,7 +807,9 @@ namespace Jazz2::Actors
 		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
 		/** @brief Updates frozen state of the object, returns `true` if it thawed in this frame */
-		bool UpdateFrozenState(float timeMult);
+		bool UpdateFrozenState(float timeMult, bool frictionApplied = false);
+		/** @brief Slows a frozen object that keeps its momentum by one frame's friction */
+		void ApplyFrozenFriction(float timeMult);
 		/** @brief Ends the freeze at once, the ice breaks in the next @ref UpdateFrozenState() */
 		void ThawOnNextUpdate();
 		/** @brief Handles change of frozen state after collision with other object */

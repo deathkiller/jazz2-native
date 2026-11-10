@@ -147,6 +147,7 @@ namespace Jazz2::Multiplayer
 		BossHealth,			/**< Health of the currently active boss, drives the boss health bar on clients */
 		Weather,			/**< Current weather type and intensity */
 		Overtime,			/**< Time the remaining players have left to finish a race after the first one did */
+		Countdown,			/**< Step of the big countdown in the middle of the screen, shown by a game mode */
 
 		Count				/**< Count of supported property types */
 	};

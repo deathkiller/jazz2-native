@@ -53,6 +53,14 @@ namespace Jazz2::Rendering
 		BlurRenderPass _behindBlurPass1;
 		BlurRenderPass _behindBlurPass2;
 #endif
+		// The water in front of a layer behind the others, drawn in the middle of the scene (see DrawWater())
+		RenderCommand _waterCommand;
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The copy of the scene below the water the water is drawn over, taken in the middle of the scene, allocated only
+		// for a level whose water may be there - a split pass of the scene view, and its bit
+		BlurRenderPass _waterCopyPass;
+		std::uint32_t _waterCopyPasses = 0;
+#endif
 
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;	// Scene render target for the full tier; unused (null) on the direct tier
@@ -130,6 +138,38 @@ namespace Jazz2::Rendering
 			return &_layerEffects;
 		}
 #endif
+		/** @brief What the water needs, in the pixels of the view, shared by the combine pass and the water in the middle of the scene */
+		struct WaterView
+		{
+			/** @brief Waterline from the top edge of the view, negative when all of it is under the water */
+			float Level;
+			/** @brief Animation time of the wave, the ripple and the rays */
+			float Time;
+			/** @brief Position of the camera */
+			Vector2f CameraPos;
+			/** @brief Phases of the four sines of the wave at the left edge of the view, in cycles (`uWavePhase`) */
+			Vector4f WavePhase;
+			/** @brief Offset of the displacement lookup, the phase of the ripple at the top edge and the time axis of the low-power rays (`uWaterBase`) */
+			Vector4f Base;
+			/** @brief Noise coordinate of the low-power rays at the top left corner (`uRaysBase`) */
+			float RaysBase;
+		};
+
+		/** @brief Returns what the water needs in the current frame */
+		WaterView GetWaterView() const;
+		/** @brief Returns `true` if the water is drawn in the middle of the scene in the current frame, see @ref DrawWater() */
+		bool IsWaterInScene() const;
+		/** @brief Returns `true` if the viewport has what the water in the middle of the scene needs, or there's nothing to have */
+		bool HasWaterPasses() const;
+		/**
+		 * @brief Adds the water to the scene, while it's visited
+		 *
+		 * The water in front of a layer behind the others is drawn at its depth (see @ref LevelHandler::GetWaterDepth()), just
+		 * before the nearest layer in front, so all of that layer and the layers in front of it are drawn over it as they are.
+		 * On the shader tier it's drawn over a copy of the scene taken just before, the combine pass then adds the lighting to
+		 * all of it and the darkness above deep water. Does nothing if the combine pass draws the water in front of everything.
+		 */
+		void DrawWater(RenderQueue& renderQueue);
 		/** @brief Called at the end of each frame */
 		void OnEndFrame();
 		/** @brief Updates the camera position */

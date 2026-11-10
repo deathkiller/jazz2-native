@@ -19,12 +19,9 @@ varying vec4 vTexCoords;
 varying vec4 vColor;
 
 void vertex() {
-	// All lights of a viewport arrive as one vertex stream instead of one instanced quad each: the corners are
-	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
-	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
-	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
-	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
-	// of the far radius.
+	// All lights of a viewport in one vertex stream, corners in world space (see LightingRenderer::OnDraw).
+	// aTexCoords = near radius and ring radius (0 for a point light), in units of the far radius.
+	// The light centre isn't in the stream, normal mapping would need it added.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
 	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;

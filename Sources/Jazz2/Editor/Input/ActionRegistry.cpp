@@ -1,4 +1,5 @@
 ﻿#include "ActionRegistry.h"
+#include "ActionIds.h"
 
 #if defined(WITH_EDITOR)
 
@@ -252,11 +253,20 @@ namespace Jazz2::Editor
 		}
 #if !defined(WITH_MULTIPLAYER)
 		// The menus ask for the game modes and the reachability without multiplayer too, they're just left out then
-		if (id.hasPrefix("play."_s)) {
-			StringView mode = id.exceptPrefix("play."_s);
-			if (mode.hasPrefix("players"_s) || mode == "alone"_s || mode == "cooperation"_s || mode == "battle"_s ||
-				mode == "teamBattle"_s || mode == "race"_s || mode == "treasureHunt"_s || mode == "captureTheFlag"_s) {
-				return nullptr;
+		if (id.hasPrefix(ActionIds::PlayPlayersPrefix)) {
+			return nullptr;
+		} else if (id.hasPrefix("play."_s)) {
+			static const char* const GameModeIds[] = {
+				ActionIds::PlayAlone, ActionIds::PlayCooperation, ActionIds::PlayBattle, ActionIds::PlayTeamBattle, ActionIds::PlayRace,
+				ActionIds::PlayTeamRace, ActionIds::PlayTreasureHunt, ActionIds::PlayTeamTreasureHunt, ActionIds::PlayCaptureTheFlag,
+				ActionIds::PlayRoastTag, ActionIds::PlayLastRabbitStanding, ActionIds::PlayExtendedLastRabbitStanding, ActionIds::PlayPestilence,
+				ActionIds::PlayTeamLastRabbitStanding, ActionIds::PlayJailbreak, ActionIds::PlayDeathCaptureTheFlag, ActionIds::PlayFlagRun,
+				ActionIds::PlayDomination, ActionIds::PlayHeadHunters
+			};
+			for (const char* modeId : GameModeIds) {
+				if (id == modeId) {
+					return nullptr;
+				}
 			}
 		} else if (id.hasPrefix("view.reach"_s)) {
 			return nullptr;

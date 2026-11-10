@@ -8,6 +8,9 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace Jazz2::Rendering
 {
 	namespace
@@ -24,6 +27,9 @@ namespace Jazz2::Rendering
 #endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 			_behindCopyPass(this), _behindDownsamplePass(this), _behindBlurPass1(this), _behindBlurPass2(this),
+#endif
+#if defined(RHI_CAP_POSTPROCESSING)
+			_waterCopyPass(this),
 #endif
 			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _centerOnTargetProgress(0.0f),
 			_shakeDuration(0.0f), _cameraEaseProgress(1.0f), _cameraScale(1.0f), _freeCamera(false), _cameraFixedX(false), _cameraFixedY(false)
@@ -153,6 +159,15 @@ namespace Jazz2::Rendering
 #if defined(TILEMAP_LAYER_EFFECTS)
 		InitializeLayerEffects(w, h);
 #endif
+#if defined(RHI_CAP_POSTPROCESSING)
+		if (_levelHandler->MayDrawWaterInScene() && _levelHandler->_waterShader != nullptr) {
+			// Read 1:1 at the pixel the water is drawn at, nearest as the scene itself is by the combine pass
+			_waterCopyPass.InitializeCopy(_viewTexture.get(), w, h);
+			_waterCopyPass.GetTarget()->SetMagFiltering(SamplerFilter::Nearest);
+		} else {
+			_waterCopyPass.Dispose();
+		}
+#endif
 		// On the direct tier no lighting render target exists at all: lighting is composited on the CPU by
 		// CombineRenderer (the former inert _lightingView stub is gone)
 
@@ -179,10 +194,18 @@ namespace Jazz2::Rendering
 		}
 #endif
 
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The water copy goes first, a layer effect in front of the water samples the scene with the water in it
+		_view->RemoveSplitPasses();
+		_waterCopyPasses = 0;
+		if (_waterCopyPass.GetView() != nullptr) {
+			_waterCopyPass.Register();
+			_waterCopyPasses = _view->AddSplitPass(_waterCopyPass.GetView());
+		}
+#endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 		// The passes that blur what is behind the blur layers are drawn by the scene view itself, in the middle of its
 		// queue, so they are only in the chain to be visited and committed with the rest
-		_view->RemoveSplitPasses();
 		_layerEffects.CopyPasses = 0;
 		_layerEffects.BlurPasses = 0;
 		if (_layerEffects.BehindBlur != nullptr || _layerEffects.BehindCopy != nullptr) {
@@ -342,6 +365,163 @@ namespace Jazz2::Rendering
 	Actors::ActorBase* PlayerViewport::GetTargetActor() const
 	{
 		return _targetActor;
+	}
+
+	PlayerViewport::WaterView PlayerViewport::GetWaterView() const
+	{
+		const Rectf bounds = GetBounds();
+		const float viewW = std::max(bounds.W, 1.0f);
+		const float viewH = std::max(bounds.H, 1.0f);
+
+		WaterView water;
+		water.Level = (_levelHandler->_waterLevel - _cameraPos.Y) * _cameraScale + bounds.H * 0.5f;
+		water.Time = _levelHandler->_elapsedFrames * 0.0018f;
+		water.CameraPos = _cameraPos * _cameraScale;
+
+		// Wrapped into their periods in double precision, the camera and the time grow without bound
+		const auto frac = [](double value) {
+			return float(value - std::floor(value));
+		};
+		constexpr double InvTau = 0.15915494309189535;
+		const double cx = double(water.CameraPos.X) / viewW;
+		const double cy = double(water.CameraPos.Y) / viewH;
+		const double t = double(water.Time);
+		water.WavePhase = Vector4f(frac((cx - t) * 60.0 * InvTau + 0.25), frac((cx - 2.0 * t) * 20.0 * InvTau + 0.25),
+			frac((cx + 2.0 * t) * 35.0 * InvTau), frac((cx + 4.0 * t) * 70.0 * InvTau + 0.25));
+		const double displacement = std::fmod(t * 0.4, 2.0);
+		water.Base = Vector4f(frac(cx * 0.1 + displacement), frac(cy * 0.1 + displacement),
+			frac((t * 16.0 + cy * 20.0) * InvTau), frac((t * 5.0 + cy) * 0.125));
+		water.RaysBase = frac((cx * 6.0 + cy * 0.5 - 5.0) * 0.125);
+		return water;
+	}
+
+	bool PlayerViewport::IsWaterInScene() const
+	{
+		if (_levelHandler->GetWaterDepth() == 0) {
+			return false;
+		}
+		const Rectf bounds = GetBounds();
+		if ((_levelHandler->_waterLevel - _cameraPos.Y) * _cameraScale + bounds.H * 0.5f >= bounds.H) {
+			// Nothing of the view is under the water
+			return false;
+		}
+#if defined(RHI_CAP_POSTPROCESSING)
+		return (_waterCopyPasses != 0);
+#else
+		return true;
+#endif
+	}
+
+	bool PlayerViewport::HasWaterPasses() const
+	{
+#if defined(RHI_CAP_POSTPROCESSING)
+		return (_levelHandler->_waterShader == nullptr || _waterCopyPass.GetView() != nullptr);
+#else
+		return true;
+#endif
+	}
+
+	void PlayerViewport::DrawWater(RenderQueue& renderQueue)
+	{
+		if (!IsWaterInScene()) {
+			return;
+		}
+
+		auto& material = _waterCommand.GetMaterial();
+		if (material.SetShader(_levelHandler->_waterShader)) {
+			// Blended to keep its place among the commands of its depth, it's opaque
+			material.SetBlendingEnabled(true);
+			material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			material.ReserveUniformsDataMemory();
+			_waterCommand.SetType(RenderCommand::Type::TileMap);
+			_waterCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+			if (auto* uniform = material.Uniform(Material::TextureUniformName)) {
+				uniform->SetIntValue(0);
+			}
+			if (auto* uniform = material.Uniform("uTextureNoise")) {
+				uniform->SetIntValue(1);
+			}
+		}
+
+		const WaterView water = GetWaterView();
+		const Rectf bounds = GetBounds();
+		const Rectf cullingRect = _view->GetCullingRect();
+		const float invScale = 1.0f / _cameraScale;
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		// From just above the crests down, the copy also covers the rows the surface reflects
+		const float waveMax = 0.0092f * bounds.H;
+		const float top = std::clamp(water.Level - waveMax - 4.0f, 0.0f, bounds.H);
+		const float copyTop = std::clamp((water.Level > 0.0f ? water.Level * 0.97f : water.Level) - waveMax - 0.005f * bounds.H - 6.0f, 0.0f, bounds.H);
+		const Vector2i targetSize = _viewTexture->GetSize();
+		const std::int32_t copyTopTexel = std::clamp<std::int32_t>(std::int32_t(copyTop * targetSize.Y / std::max(bounds.H, 1.0f)), 0, targetSize.Y);
+		_waterCopyPass.SetScissor(Recti(0, copyTopTexel, targetSize.X, targetSize.Y - copyTopTexel));
+#else
+		// The console tiers rebuild the water over the whole view out of geometry (see Water.shader)
+		const float top = 0.0f;
+#endif
+
+		if (auto* instanceBlock = _waterCommand.GetInstanceBlock()) {
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(cullingRect.W, cullingRect.H - top * invScale);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		}
+		if (auto* uniform = material.Uniform("uViewSizeInv")) {
+			uniform->SetFloatValue(1.0f / std::max(bounds.W, 1.0f), 1.0f / std::max(bounds.H, 1.0f));
+		}
+		if (auto* uniform = material.Uniform("uWaterLevel")) {
+			uniform->SetFloatValue(water.Level / std::max(bounds.H, 1.0f));
+		}
+		if (auto* uniform = material.Uniform("uTime")) {
+			uniform->SetFloatValue(water.Time);
+		}
+		if (auto* uniform = material.Uniform("uCameraPos")) {
+			uniform->SetFloatValue(water.CameraPos.X, water.CameraPos.Y);
+		}
+		if (auto* uniform = material.Uniform("uWavePhase")) {
+			uniform->SetFloatVector(water.WavePhase.Data());
+		}
+		if (auto* uniform = material.Uniform("uWaterBase")) {
+			uniform->SetFloatVector(water.Base.Data());
+		}
+		if (auto* uniform = material.Uniform("uRaysBase")) {
+			uniform->SetFloatValue(water.RaysBase);
+		}
+		if (auto* uniform = material.Uniform("uAmbientColor")) {
+			uniform->SetFloatVector(_ambientLight.Data());
+		}
+		const Vector3f& colorTop = _levelHandler->_waterColorTop;
+		const Vector3f& colorBottom = _levelHandler->_waterColorBottom;
+		if (auto* uniform = material.Uniform("uWaterColorTop")) {
+			uniform->SetFloatValue(colorTop.X, colorTop.Y, colorTop.Z, 1.0f);
+		}
+		if (auto* uniform = material.Uniform("uWaterColorBottom")) {
+			uniform->SetFloatValue(colorBottom.X, colorBottom.Y, colorBottom.Z, 1.0f);
+		}
+
+		// After everything just behind the nearest layer in front (default visit order 0), before that layer
+		const std::uint16_t depth = _levelHandler->GetWaterDepth();
+		_waterCommand.SetLayer(std::uint16_t(depth - 1));
+		_waterCommand.SetVisitOrder(0xFFFF);
+		_waterCommand.SetTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y + top * invScale, 0.0f));
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		if (auto* uniform = material.Uniform("uTargetSizeInv")) {
+			uniform->SetFloatValue(1.0f / std::max(targetSize.X, 1), 1.0f / std::max(targetSize.Y, 1));
+		}
+		material.SetTexture(0, *_waterCopyPass.GetTarget());
+		if (!PreferencesCache::LowWaterQuality) {
+			material.SetTexture(1, *_levelHandler->_noiseTexture);
+		}
+		// Everything below the water is drawn and copied first, then the water over it and the rest over that
+		_view->RequestSplitAtKey(_waterCommand.GetLayerSortKey(), _waterCopyPasses);
+#elif defined(WITH_RHI_SOFTWARE)
+		// The software backend applies its per-row water to what is drawn so far when the scene gets to this draw
+		RHI::Device::SetPendingSoftwareWater(std::int32_t(bounds.X), std::int32_t(bounds.Y), std::int32_t(bounds.W), std::int32_t(bounds.H),
+			water.Level, water.Time, water.CameraPos.Y);
+#endif
+
+		renderQueue.AddCommand(&_waterCommand);
 	}
 
 	void PlayerViewport::OnEndFrame()

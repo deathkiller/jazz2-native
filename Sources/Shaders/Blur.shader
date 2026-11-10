@@ -6,9 +6,7 @@ uniform vec2 uPixelOffset;
 uniform vec2 uDirection;
 
 #if LOW_POWER_GPU
-// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): the four outer taps are offset per
-// vertex instead of per fragment, so every sample reads its coordinate straight from an interpolant - a read the
-// SGX issues before the fragment program even runs, where an offset added in the program makes it a dependent one
+// Low-power GPUs: outer taps are offset per vertex to avoid dependent texture reads
 varying vec2 vTap1;
 varying vec2 vTap2;
 varying vec2 vTap3;

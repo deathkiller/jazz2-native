@@ -28,22 +28,14 @@ void fragment() {
 }
 
 void fixed_function(pvr, gu, gs, rdp) {
-	// Console fixed-function tier: brightened but still shaded (the shader's luma x2.5), which the
-	// consoles express in two ways - and these four share the same one. Keep the sprite and lift it by a
-	// constant through the post-texture offset colour: on the PVR that is one specular-enabled draw, the
-	// GE and the GS reach the identical result because their SubmitQuad expands a pass carrying an
-	// offset colour into the modulated sprite plus an additive flat-colour pass over it, and the RDP
-	// delivers the add in its combiner's own D term with the constant in the ENV register. The GE and
-	// the GS lack the GX's output scale outright; the RDP's second combiner cycle could double like the
-	// GX does, but the offset-colour lift reaches the shader's tone just as well and is the one form
-	// all four express identically, so it is written once.
+	// The shader's luma x2.5 brightening, approximated by adding a constant offset color to the sprite
 	pass p;
 	p.color = COLOR;
 	p.offset_color = vec3(96.0 / 255.0);
 	submit_quad(p);
 }
 void fixed_function(gx, pica, legacygl) {
-	// GX: no post-texture add exists, so the combiner's clamped x2 output scale stands in for the boost
+	// No post-texture add here, so the clamped x2 output scale stands in for the boost
 	pass p;
 	p.tev = MODULATE_X2;
 	p.color = COLOR;

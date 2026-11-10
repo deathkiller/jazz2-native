@@ -1,9 +1,8 @@
 program Silhouette;
 variant USE_PALETTE;
 
-// The coverage of the actors behind an x-ray tile layer (see Rendering::XRayMaskRenderer): every sprite
-// arrives as one quad of a mesh in the 8-float layout of the tile-layer meshes, already in world space, and
-// only its alpha is written - premultiplied white, so overlapping sprites add up to their union.
+// Actor coverage behind an x-ray tile layer (see XRayMaskRenderer). Sprites come as world-space quads in the
+// tile-layer mesh layout; only premultiplied white alpha is written, so overlaps add up to their union.
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -35,14 +34,14 @@ void vertex() {
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
 	vTexCoords = aTexCoords;
 	vAlpha = aColor.a;
-	// Sprites of different palettes share a draw, so the palette offset rides in the vertex color
+	// Palette offset rides in the vertex color, sprites of different palettes share a draw
 	vPaletteOffset = aColor.r;
 }
 
 void fragment() {
 	vec4 src = texture(uTexture, vTexCoords);
 #if USE_PALETTE
-	// An indexed texel is transparent where its palette entry is, which the index alone doesn't tell
+	// Transparency of an indexed texel comes from its palette entry
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;

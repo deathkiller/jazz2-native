@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "IGameMode.h"
+#include "GameModeBase.h"
 
 namespace Jazz2::Multiplayer::GameModes
 {
@@ -15,7 +15,7 @@ namespace Jazz2::Multiplayer::GameModes
 		within their death limit. If the time runs out with overtime enabled, the first player to reach the
 		best score + 2 (never more than the kill target) wins.
 	*/
-	class BattleMode : public IGameMode
+	class BattleMode : public GameModeBase
 	{
 	public:
 		MpGameMode GetMode() const override {

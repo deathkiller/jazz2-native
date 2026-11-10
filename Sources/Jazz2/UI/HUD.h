@@ -230,9 +230,9 @@ namespace Jazz2::UI
 		/** @brief Draws a textured element */
 		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
-		/** @brief Draws an animation of any metadata, nothing for `nullptr` */
+		/** @brief Draws an animation of any metadata, nothing for `nullptr`, with `singleColor` all its pixels in @p color */
 		void DrawGraphics(const GraphicResource* res, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
-			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f);
+			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, float angle = 0.0f, bool singleColor = false);
 		/** @brief Returns the icon the level gives a weapon, `nullptr` for the icon of the game (see @ref CustomWeaponOptions::HudIcon) */
 		const GraphicResource* FindCustomWeaponIcon(Actors::Player* player, WeaponType weapon);
 		/** @brief Writes the ammo of a weapon as the screen shows it, returns a view of the buffer or of a literal */

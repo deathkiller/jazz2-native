@@ -485,6 +485,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PolylineRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/WaterRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/AnimationTables.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/Legacy/Animations.h

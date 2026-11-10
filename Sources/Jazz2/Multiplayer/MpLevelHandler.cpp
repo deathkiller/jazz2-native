@@ -3730,6 +3730,21 @@ namespace Jazz2::Multiplayer
 		SendMessageToAll(text, false);
 	}
 
+	void MpLevelHandler::ShowCountdownToAllPlayers(std::int32_t secsLeft)
+	{
+		static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(secsLeft);
+
+		if (_isServer && !_isLocalSession) {
+			MemoryStream packet(6);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Countdown);
+			packet.WriteVariableInt32(secsLeft);
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		}
+	}
+
 	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode)
 	{
 		if DEATH_UNLIKELY(!_isServer) {
@@ -5479,6 +5494,7 @@ namespace Jazz2::Multiplayer
 					// Build the game-mode rules object so this client can draw the mode-specific HUD; the
 					// game-mode logic itself stays server-authoritative.
 					_gameMode = CreateGameMode(gameMode);
+					ActivateDifficultyEvents(gameMode);
 
 					for (auto* player : _players) {
 						player->RefreshColorPalette();
@@ -5571,6 +5587,13 @@ namespace Jazz2::Multiplayer
 					_overtimeStarted = (_overtimeTimeLeft > 0.0f);
 					_modeOvertime = modeOvertime;
 					_overtimeScoreCap = scoreCap;
+				});
+				break;
+			}
+			case LevelPropertyType::Countdown: {
+				std::int32_t secsLeft = packet.ReadVariableInt32();
+				InvokeAsync([this, secsLeft]() {
+					static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(secsLeft);
 				});
 				break;
 			}
@@ -6463,9 +6486,15 @@ namespace Jazz2::Multiplayer
 				flags[i].CarrierActorId = packet.ReadVariableUint32();
 			}
 		}
+		SmallVector<std::int32_t, 0> teamExtras;
+		teamExtras.resize_for_overwrite(teamCount);
+		for (std::uint8_t i = 0; i < teamCount; i++) {
+			teamExtras[i] = packet.ReadVariableInt32();
+		}
 		// Applied on the main thread - UpdateCtfClient() iterates _ctfFlagStates and owns the visual actors there
-		InvokeAsync([this, isCtf, teamScores = Death::move(teamScores), flags = Death::move(flags)]() mutable {
+		InvokeAsync([this, isCtf, teamScores = Death::move(teamScores), teamExtras = Death::move(teamExtras), flags = Death::move(flags)]() mutable {
 			_teamScores = Death::move(teamScores);
+			_teamExtras = Death::move(teamExtras);
 			if (isCtf) {
 				// Update state/positions in place, preserving the client-local visual actor pointers
 				if (_ctfFlagStates.size() != flags.size()) {
@@ -9646,6 +9675,7 @@ namespace Jazz2::Multiplayer
 		// which the game mode is (re)applied, so it is also where the IGameMode is (re)built. It stays null for modes
 		// not yet migrated to IGameMode, in which case callers fall back to the legacy switch-based logic.
 		_gameMode = CreateGameMode(gameMode);
+		ActivateDifficultyEvents(gameMode);
 
 		if (gameMode == MpGameMode::Cooperation) {
 			// Everyone in a single team
@@ -10098,8 +10128,11 @@ namespace Jazz2::Multiplayer
 
 		std::uint8_t teamCount = GetTeamCount();
 		_teamScores.resize_for_overwrite(teamCount);
+		_teamExtras.resize_for_overwrite(teamCount);
 		for (std::uint8_t team = 0; team < teamCount; team++) {
 			_teamScores[team] = GetTeamScore(team);
+			std::uint32_t extra;
+			_teamExtras[team] = (_gameMode != nullptr && _gameMode->TryGetTeamExtra(*this, team, extra) ? (std::int32_t)extra : -1);
 		}
 
 		bool isCtf = UsesCtfFlags(serverConfig.GameMode);
@@ -10150,6 +10183,9 @@ namespace Jazz2::Multiplayer
 				packet.WriteVariableInt32((std::int32_t)flagState.DropPos.Y);
 				packet.WriteVariableUint32(flagState.CarrierActorId);
 			}
+		}
+		for (std::uint8_t team = 0; team < teamCount; team++) {
+			packet.WriteVariableInt32(_teamExtras[team]);
 		}
 
 		_networkManager->SendTo([this](const Peer& peer) {
@@ -10414,6 +10450,14 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::ActivateDifficultyEvents(MpGameMode gameMode)
+	{
+		// As measured in JJ2+, only Cooperation leaves out the events of the other difficulties
+		if (gameMode != MpGameMode::Cooperation && gameMode != MpGameMode::Unknown && _eventMap != nullptr && _tileMap != nullptr) {
+			_eventMap->ActivateSkippedDifficultyEvents(*_tileMap);
+		}
+	}
+
 	void MpLevelHandler::ClearGameModeObjects()
 	{
 		for (auto& visual : _gameModeObjectVisuals) {
@@ -10635,10 +10679,10 @@ namespace Jazz2::Multiplayer
 
 		_scoreboard.clear();
 
-		bool modeHasColumn = (_gameMode != nullptr && !_gameMode->GetScoreboardLabel().empty());
-		auto getExtra = [gameMode, modeHasColumn](const auto& peerDesc) -> std::uint32_t {
-			if (modeHasColumn) {
-				return peerDesc->ModePoints;
+		IGameMode* columnMode = (_gameMode != nullptr && !_gameMode->GetScoreboardLabel().empty() ? _gameMode.get() : nullptr);
+		auto getExtra = [gameMode, columnMode](const auto& peerDesc) -> std::uint32_t {
+			if (columnMode != nullptr) {
+				return columnMode->GetStateScore(*peerDesc);
 			}
 			switch (gameMode) {
 				case MpGameMode::Race:
@@ -11975,6 +12019,7 @@ namespace Jazz2::Multiplayer
 		// Every competitive round ends with the final standings on screen, which stay up longer than a plain
 		// "Winner is ..." alert. This also assigns the final position of every player, which decides the
 		// championship points awarded below.
+		SyncTeamScores();
 		BuildRoundResults();
 
 		float endingDuration = (_roundResults.empty() ? EndingDuration : EndingDurationWithResults);
@@ -12041,7 +12086,8 @@ namespace Jazz2::Multiplayer
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 
-		// Team modes end with the same final standings board as free-for-all ones (see EndGame)
+		// Team modes end with the same final standings board as free-for-all ones (see EndGame), the team scores on top
+		SyncTeamScores();
 		BuildRoundResults();
 
 		float endingDuration = (_roundResults.empty() ? EndingDuration : EndingDurationWithResults);

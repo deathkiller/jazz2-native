@@ -20,6 +20,7 @@ namespace Jazz2::ShadersGen
 R"__SHDR__(#line 1
 
 out vec2 vTexCoords;
+out vec2 vViewSize;
 out vec2 vViewSizeInv;
 
 uniform mat4 uProjectionMatrix;
@@ -35,6 +36,8 @@ layout (std140) uniform InstanceBlock
 
 
 
+uniform vec2 uCameraPos;
+
 void main()
 {
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
@@ -42,6 +45,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
 )__SHDR__";
@@ -53,6 +57,7 @@ R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
 
 varying vec2 vTexCoords;
+varying vec2 vViewSize;
 varying vec2 vViewSizeInv;
 varying vec2 vPixelPos;
 
@@ -66,6 +71,8 @@ uniform mat4 uViewMatrix;
 
 
 
+uniform vec2 uCameraPos;
+
 void main()
 {
 	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
@@ -73,6 +80,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 }
@@ -88,6 +96,7 @@ precision mediump float;
 #endif
 
 in vec2 vTexCoords;
+in vec2 vViewSize;
 in vec2 vViewSizeInv;
 
 uniform sampler2D uTexture;
@@ -97,6 +106,9 @@ uniform sampler2D uTextureBlurQuarter;
 
 uniform vec4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform vec4 uWavePhase;
+uniform vec2 uCameraPos;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -107,6 +119,26 @@ vec2 hash2D(in vec2 p) {
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime * 0.01);
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+}
+
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 sinCycles(vec4 cycles) {
+	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	vec4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 waterWavePhases(float x) {
+	return uWavePhase + x * vec4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(vec4 phases) {
+	return dot(sinCycles(phases), vec4(0.0016, 0.0032, 0.004, 0.0004));
 }
 
 out vec4 COLOR;
@@ -123,11 +155,18 @@ void main() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+	float darknessStrength = 1.0 - light.r;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+
 	COLOR = mix(mix(
 		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
-	), uAmbientColor, vec4(1.0 - light.r));
+	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 }
 
@@ -141,6 +180,7 @@ R"__SHDR__(#line 1
 precision mediump float;
 
 varying vec2 vTexCoords;
+varying vec2 vViewSize;
 varying vec2 vViewSizeInv;
 varying vec2 vPixelPos;
 
@@ -151,6 +191,9 @@ uniform sampler2D uTextureBlurQuarter;
 
 uniform vec4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform vec4 uWavePhase;
+uniform vec2 uCameraPos;
 
 float interleavedGradientNoise(vec2 p) {
 	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
@@ -160,6 +203,26 @@ vec2 lightingJitterLowPower() {
 	vec2 seed = vPixelPos + fract(uTime * 7.31) * 512.0;
 	vec2 offset = vec2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + vec2(37.0, 17.0))) * 2.0 - 1.0;
 	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 sinCycles(vec4 cycles) {
+	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	vec4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 waterWavePhases(float x) {
+	return uWavePhase + x * vec4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(vec4 phases) {
+	return dot(sinCycles(phases), vec4(0.0016, 0.0032, 0.004, 0.0004));
 }
 
 
@@ -176,11 +239,18 @@ void main() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+	float darknessStrength = 1.0 - light.r;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+
 	COLOR = mix(mix(
 		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
-	), uAmbientColor, vec4(1.0 - light.r));
+	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 	gl_FragColor = COLOR;
 }
@@ -191,8 +261,11 @@ void main() {
 	inline constexpr ShaderCompiler::Uniform Combine_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uAmbientColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWaterLevel", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWavePhase", ShaderCompiler::UniformType::Vec4, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember Combine_Block0_Members[] = {
@@ -218,6 +291,7 @@ void main() {
 R"__SHDR__(#line 1
 
 out vec2 vTexCoords;
+out vec2 vViewSize;
 out vec2 vViewSizeInv;
 
 uniform mat4 uProjectionMatrix;
@@ -233,6 +307,8 @@ layout (std140) uniform InstanceBlock
 
 
 
+uniform vec2 uCameraPos;
+
 #define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
 
 void main()
@@ -242,6 +318,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
 )__SHDR__";
@@ -253,6 +330,7 @@ R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
 
 varying vec2 vTexCoords;
+varying vec2 vViewSize;
 varying vec2 vViewSizeInv;
 varying vec2 vPixelPos;
 
@@ -266,6 +344,8 @@ uniform mat4 uViewMatrix;
 
 
 
+uniform vec2 uCameraPos;
+
 void main()
 {
 	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
@@ -273,6 +353,7 @@ void main()
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 }
@@ -288,6 +369,7 @@ precision mediump float;
 #endif
 
 in vec2 vTexCoords;
+in vec2 vViewSize;
 in vec2 vViewSizeInv;
 
 uniform sampler2D uTexture;
@@ -297,6 +379,9 @@ uniform sampler2D uTextureBlurQuarter;
 
 uniform vec4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform vec4 uWavePhase;
+uniform vec2 uCameraPos;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -307,6 +392,26 @@ vec2 hash2D(in vec2 p) {
 vec2 noiseTexCoords(vec2 position) {
 	vec2 seed = position + fract(uTime * 0.01);
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+}
+
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 sinCycles(vec4 cycles) {
+	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	vec4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 waterWavePhases(float x) {
+	return uWavePhase + x * vec4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(vec4 phases) {
+	return dot(sinCycles(phases), vec4(0.0016, 0.0032, 0.004, 0.0004));
 }
 
 #define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
@@ -338,11 +443,18 @@ void main() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+	float darknessStrength = 1.0 - light.r;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+
 	COLOR = mix(mix(
 		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
-	), uAmbientColor, vec4(1.0 - light.r));
+	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 }
@@ -357,6 +469,7 @@ R"__SHDR__(#line 1
 precision mediump float;
 
 varying vec2 vTexCoords;
+varying vec2 vViewSize;
 varying vec2 vViewSizeInv;
 varying vec2 vPixelPos;
 
@@ -367,6 +480,9 @@ uniform sampler2D uTextureBlurQuarter;
 
 uniform vec4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform vec4 uWavePhase;
+uniform vec2 uCameraPos;
 
 float interleavedGradientNoise(vec2 p) {
 	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
@@ -376,6 +492,26 @@ vec2 lightingJitterLowPower() {
 	vec2 seed = vPixelPos + fract(uTime * 7.31) * 512.0;
 	vec2 offset = vec2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + vec2(37.0, 17.0))) * 2.0 - 1.0;
 	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 sinCycles(vec4 cycles) {
+	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
+	vec4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+vec4 waterWavePhases(float x) {
+	return uWavePhase + x * vec4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(vec4 phases) {
+	return dot(sinCycles(phases), vec4(0.0016, 0.0032, 0.004, 0.0004));
 }
 
 
@@ -392,11 +528,18 @@ void main() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+	float darknessStrength = 1.0 - light.r;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+
 	COLOR = mix(mix(
 		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
-	), uAmbientColor, vec4(1.0 - light.r));
+	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 	gl_FragColor = COLOR;
 }
@@ -407,8 +550,11 @@ void main() {
 	inline constexpr ShaderCompiler::Uniform Combine_DITHER_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
+		{ "uCameraPos", ShaderCompiler::UniformType::Vec2, 0 },
 		{ "uAmbientColor", ShaderCompiler::UniformType::Vec4, 0 },
 		{ "uTime", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWaterLevel", ShaderCompiler::UniformType::Float, 0 },
+		{ "uWavePhase", ShaderCompiler::UniformType::Vec4, 0 },
 	};
 
 	inline constexpr ShaderCompiler::BlockMember Combine_DITHER_Block0_Members[] = {
@@ -436,7 +582,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			4, Combine_Uniforms, 1, Combine_Blocks, 4, Combine_Textures, 0, nullptr,
+			7, Combine_Uniforms, 1, Combine_Blocks, 4, Combine_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			Combine_Vs100, Combine_Fs100,
 #else
@@ -465,7 +611,7 @@ void main() {
 #else
 			nullptr, nullptr,
 #endif
-			4, Combine_DITHER_Uniforms, 1, Combine_DITHER_Blocks, 4, Combine_DITHER_Textures, 0, nullptr,
+			7, Combine_DITHER_Uniforms, 1, Combine_DITHER_Blocks, 4, Combine_DITHER_Textures, 0, nullptr,
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			Combine_DITHER_Vs100, Combine_DITHER_Fs100,
 #else

@@ -13,70 +13,6 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-varying vec2 vTexCoords;
-varying vec2 vViewSize;
-varying vec2 vViewSizeInv;
-#if LOW_POWER_GPU
-// The vertex stage of "Include/CombineVs.inc" is spelled out here because the low-power path needs these
-// on top of it, and an include cannot add to the vertex() it defines. Everything the fragment stage reads
-// through them is a linear function of the screen position, so the interpolators reproduce it exactly
-varying vec2 vLightingSeed;
-varying vec2 vDisplacementPos;
-varying vec2 vRaysPos;
-varying vec4 vWavePhases;
-varying vec4 vWaterLine;
-varying vec2 vConstants;
-#endif
-
-void vertex() {
-	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
-	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-
-	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vViewSize = spriteSize;
-	vViewSizeInv = vec2(1.0) / spriteSize;
-#if LOW_POWER_GPU
-	// Each term below is what fragment() would otherwise compute per fragment, split into a part that is
-	// constant over the viewport and a part linear in the position. The constant part is wrapped first -
-	// into a whole period of what reads it (a texture repeat, a sine cycle) - so the interpolated values
-	// stay small, and with them their precision, however long the level runs and wherever the camera is.
-	vec2 uvLocal = vTexCoords;
-	vec2 uvWorldCenter = uCameraPos * vViewSizeInv;
-	const float invTau = 0.15915494;
-
-	// The pixel position plus a per-frame offset seeds the lightmap jitter (see lightingJitterLowPower())
-	vLightingSeed = aPosition * spriteSize + fract(uTime * 7.31) * 512.0;
-
-	// The displacement lookup of fragment(), as a texture coordinate - which lets the read be issued before
-	// the fragment program runs, instead of as a dependent read
-	vec2 displacementBase = uvWorldCenter * 0.1 + mod(uTime * 0.4, 2.0);
-	vDisplacementPos = uvLocal * 0.1 + fract(displacementBase);
-
-	// The light rays' noise coordinate (noisePos, and the time as the second axis) in tiles of the noise
-	// texture, whose blue channel holds 8 units of tileable noise (see ContentResolver::GetNoiseTexture()).
-	// mod(..., 720.0) is dropped - no view this path renders is that large
-	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
-	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
-	vRaysPos = vec2(raysLinear * 0.125 + fract(raysBase * 0.125), fract((uTime * 5.0 + uvWorldCenter.y) * 0.125));
-
-	// The four phases of wave(), in cycles, with the cosines turned into sines a quarter cycle on
-	vec4 waveScale = vec4(60.0, 20.0, 35.0, 70.0) * invTau;
-	vec4 waveBase = vec4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25,
-		(uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
-	vWavePhases = uvLocal.x * waveScale + fract(waveBase);
-
-	// x: the phase of the underwater ripple, in cycles; y: the row relative to the water line; z: the row
-	// the surface reflection is read from; w: the extra darkness above deep water
-	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
-	vWaterLine = vec4(uvLocal.y * 20.0 * invTau + fract(rippleBase), uvLocal.y - uWaterLevel,
-		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
-
-	// x: the blur blend scale of the final composite; y: the slope of the anti-aliased edges, in rows
-	vConstants = vec2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
-#endif
-}
-
 uniform sampler2D uTexture : texture_unit(0);
 uniform sampler2D uTextureLighting : texture_unit(1);
 uniform sampler2D uTextureBlurHalf : texture_unit(2);
@@ -90,6 +26,45 @@ uniform float uWaterLevel;
 // Colors of the water at its surface and at the bottom of the view
 uniform vec4 uWaterColorTop;
 uniform vec4 uWaterColorBottom;
+// See Include/WaterFs.inc
+uniform vec4 uWavePhase;
+uniform vec4 uWaterBase;
+uniform float uRaysBase;
+
+varying vec2 vTexCoords;
+varying vec2 vViewSize;
+varying vec2 vViewSizeInv;
+#if LOW_POWER_GPU
+// Linear terms computed per vertex so texture reads aren't dependent
+varying vec2 vLightingSeed;
+varying vec2 vDisplacementPos;
+varying vec2 vRaysPos;
+varying vec4 vWavePhases;
+varying vec2 vConstants;
+varying float vRipple;
+#endif
+
+void vertex() {
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
+	vViewSizeInv = vec2(1.0) / spriteSize;
+#if LOW_POWER_GPU
+	vec2 uvLocal = vTexCoords;
+	vLightingSeed = aPosition * spriteSize + fract(uTime * 7.31) * 512.0;
+	vDisplacementPos = uvLocal * 0.1 + uWaterBase.xy;
+	// Rays come from the blue channel of the noise texture
+	float raysLinear = uvLocal.x * (1.4 + spriteSize.x * (6.0 / 720.0)) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	vRaysPos = vec2(raysLinear * 0.125 + uRaysBase, uWaterBase.w);
+	vWavePhases = uWavePhase + uvLocal.x * vec4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+	vRipple = uWaterBase.z + uvLocal.y * 3.1830989;
+	// x: blur blend scale, y: edge anti-aliasing slope in rows
+	vConstants = vec2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
+#endif
+}
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -102,48 +77,7 @@ vec2 noiseTexCoords(vec2 position) {
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 
-float wave(float x, float time) {
-	float waveOffset = cos((x - time) * 60.0) * 0.004
-						+ cos((x - 2.0 * time) * 20.0) * 0.008
-						+ sin((x + 2.0 * time) * 35.0) * 0.01
-						+ cos((x + 4.0 * time) * 70.0) * 0.001;
-	return waveOffset * 0.4;
-}
-
-float aastep(float threshold, float value) {
-	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
-}
-
-// Simplex Noise
-vec3 permute(vec3 x) {
-	return mod(((x*34.0)+1.0)*x, 289.0);
-}
-
-float snoise(vec2 v) {
-	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
-	vec2 i = floor(v + dot(v, C.yy));
-	vec2 x0 = v - i + dot(i, C.xx);
-	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-	vec4 x12 = x0.xyxy + C.xxzz;
-	x12.xy -= i1;
-	i = mod(i, 289.0);
-	vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0 ));
-	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw, x12.zw)), 0.0);
-	m = m * m;
-	m = m * m;
-	vec3 x = 2.0 * fract(p * C.www) - 1.0;
-	vec3 h = abs(x) - 0.5;
-	vec3 ox = floor(x + 0.5);
-	vec3 a0 = x - ox;
-	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
-	vec3 g;
-	g.x = a0.x * x0.x + h.x * x0.y;
-	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-	return 130.0 * dot(m, g);
-}
-
-// Low-power lighting jitter, see Combine.shader (the per-frame offset is already in the seed here)
+// Low-power lighting jitter, see Combine.shader
 float interleavedGradientNoise(vec2 p) {
 	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
@@ -153,19 +87,7 @@ vec2 lightingJitterLowPower() {
 	return offset * vViewSizeInv * 1.4;
 }
 
-// sin(2 * pi * cycles) as a parabola over the range-reduced phase, refined to within 0.001 of the real
-// curve - a few multiply-adds, where sin() is one of the most expensive things a USSE-class part runs
-float sinCycles(float cycles) {
-	float v = fract(cycles + 0.5) * 2.0 - 1.0;
-	float y = 4.0 * v * (1.0 - abs(v));
-	return y * (0.775 + 0.225 * abs(y));
-}
-
-vec4 sinCycles(vec4 cycles) {
-	vec4 v = fract(cycles + 0.5) * 2.0 - 1.0;
-	vec4 y = 4.0 * v * (1.0 - abs(v));
-	return y * (0.775 + 0.225 * abs(y));
-}
+#include "Include/WaterFs.inc"
 
 #if DITHER
 #include "Include/Dither565.inc"
@@ -173,96 +95,22 @@ vec4 sinCycles(vec4 cycles) {
 
 void fragment() {
 	vec2 uvLocal = vTexCoords;
-	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
+	float isTexelBelow;
+	vec2 uv;
 #if LOW_POWER_GPU
-	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile). The same effect, but this
-	// full-screen pass cost 16 ms over a plain copy on the SGX543 at 480x272 - the frame dropped to 39 fps -
-	// where each sin() and cos() costs about 0.6 ms of that, the simplex noise 3.8 ms, and a texture read
-	// whose coordinate the program computes cannot be issued before the program runs. This path is 4.7 ms:
-	// - the screen-linear terms come from the vertex stage, which makes the displacement and ray reads plain
-	//   interpolant reads and leaves the sines a polynomial over an interpolated phase (sinCycles());
-	// - the rays are read from tileable noise baked into the noise texture instead of simplex noise;
-	// - aastep() takes its width from the row height, which is exactly what its derivatives evaluate to
-	//   for a value that changes by one row per row, and ramps linearly over it;
-	// - the blur levels and the lightmap are read at the undisplaced position (a few pixels of ripple are
-	//   invisible in either), with the cheaper lightmap jitter from Combine.shader.
-	float waveHeight = dot(sinCycles(vWavePhases), vec4(0.004, 0.008, 0.01, 0.001) * 0.4);
-	float belowWaterLine = vWaterLine.y - waveHeight;
-	float aaSlope = vConstants.y;
-	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
-	float isTexelAbove = 1.0 - isTexelBelow;
-
-	// Displacement
-	vec2 dis = (texture(uTextureNoise, vDisplacementPos).xy - vec2(0.5)) * vec2(0.01);
-
-	vec2 uv = uvLocal + (vec2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * vec2(isTexelBelow);
-	vec4 main = texture(uTexture, uv);
-
-	// Chromatic Aberration
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
-	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
-	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
-
-	// Rays, (noise + 1) / 2 in the blue channel
-	float rays = texture(uTextureNoise, vRaysPos).b * 1.1 - 0.25;
-	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
-
-	// Waves
-	float topDist = abs(belowWaterLine);
-	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
-	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
-
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x, vWaterLine.z - waveHeight)).rgb, vec3(topColorBlendFac));
-	main.rgb += vec3(0.2 * isVeryNearTop);
-
-	// Lighting
+	vec3 main = waterScene(uvLocal, waterWave(vWavePhases), vConstants.y, vViewSizeInv.y, vDisplacementPos, vRipple, vRaysPos, isTexelBelow, uv);
+	// Blur and lightmap are read undisplaced, the ripple isn't visible in them
 	vec4 blur1 = texture(uTextureBlurHalf, uvLocal);
 	vec4 blur2 = texture(uTextureBlurQuarter, uvLocal);
 	vec4 light = texture(uTextureLighting, uvLocal + lightingJitterLowPower());
+	float blurScale = vConstants.x;
 #else
-	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
-	vec2 uvWorld = uvLocal + uvWorldCenter;
-
-	float waveHeight = wave(uvWorld.x, uTime);
-	float isTexelBelow = aastep(waveHeight, uvLocal.y - uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-
-	// Displacement
-	vec2 disPos = uvWorld * vec2(0.1) + vec2(mod(uTime * 0.4, 2.0));
-	vec2 dis = (texture(uTextureNoise, disPos).xy - vec2(0.5)) * vec2(0.01);
-
-	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
-	vec4 main = texture(uTexture, uv);
-
-	// Chromatic Aberration
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
-	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
-	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
-
-	// Rays
-	vec2 uvNormalized = mod(uvLocal / vViewSizeInv, 720.0) / 720.0;
-	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
-	float rays = snoise(vec2(noisePos, uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
-	main.rgb += vec3(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6);
-
-	// Waves
-	float topDist = abs(uvLocal.y - uWaterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(vViewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
-
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
-		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
-	)).rgb, vec3(topColorBlendFac));
-	main.rgb += vec3(0.2 * isVeryNearTop);
-
-	// Lighting
+	vec3 main = waterScene(uvLocal, waterWave(waterWavePhases(uvLocal.x)), 0.70710678 * vViewSize.y, vViewSizeInv.y,
+		uvLocal * 0.1 + uWaterBase.xy, uWaterBase.z + uvLocal.y * 3.1830989, waterRaysPos(uvLocal, vViewSizeInv), isTexelBelow, uv);
 	vec4 blur1 = texture(uTextureBlurHalf, uv);
 	vec4 blur2 = texture(uTextureBlurQuarter, uv);
 	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
+	float blurScale = 1.0 / sqrt(max(uAmbientColor.w, 0.35));
 #endif
 
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
@@ -270,47 +118,30 @@ void fragment() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
-	float darknessStrength = (1.0 - light.r);
+	// Includes darkness above deep water
+	float darknessStrength = min(1.0, (1.0 - light.r) + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
 
-	// Darkness above water
-#if LOW_POWER_GPU
-	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
-#else
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-#endif
-
-#if LOW_POWER_GPU
 	COLOR = mix(mix(
-		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
+		vec4(main, 1.0) * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
-		vec4(clamp((1.0 - light.r) * vConstants.x, 0.0, 1.0))
+		vec4(clamp((1.0 - light.r) * blurScale, 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
-#else
-	COLOR = mix(mix(
-		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
-		blur,
-		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
-	), uAmbientColor, vec4(darknessStrength));
-#endif
 	COLOR.a = 1.0;
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	// The whole scene in the colors of the 16-bit renderer of JJ2+, the HUD is drawn after it
+	// Reduce to 16-bit colors like JJ2+ (HUD is drawn later)
 	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 #endif
 }
 
 void fixed_function(gx, pica, gu, gs, legacygl) {
-	// Water at the fidelity this tier can afford, rebuilt out of geometry over the composited scene - the
-	// LOW-quality variant carries the same blocks (see the include)
+	// Water built from geometry over the composited scene
+	pipeline lighting_combine;
 #include "Include/CombineWaterFixedFunction.inc"
 }
 
 void fixed_function(rdp) {
-	// The light variant with 10 columns along the wave: every triangle costs this CPU ~25 us to set up
-	// for the RSP, against a few for a whole full-screen rectangle (see the include)
+	// Lite variant with fewer triangles, they are expensive to set up here
+	pipeline lighting_combine;
 #define WATER_STRIP_SEGMENTS 5
 #define WATER_STRIPS 2
 #define WATER_LITE
@@ -318,7 +149,8 @@ void fixed_function(rdp) {
 }
 
 void fixed_function(pvr) {
-	// The same water, cut into the shorter strips the PVR's 8-vertex scratch holds
+	// Shorter strips to fit the 8-vertex buffer
+	pipeline lighting_combine;
 #define WATER_STRIP_SEGMENTS 3
 #define WATER_STRIPS 9
 #include "Include/CombineWaterFixedFunction.inc"

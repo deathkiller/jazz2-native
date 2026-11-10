@@ -8,7 +8,7 @@ shader_type canvas_item;
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 
-// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+// Diffuse color, through the palette when the sprite is indexed
 vec4 maskSample(vec2 uv) {
 	vec4 src = texture(TEXTURE, uv);
 #if USE_PALETTE
@@ -29,10 +29,7 @@ void fragment() {
 }
 
 void fixed_function() {
-	// Console fixed-function tier: the shader saturates the luma (x6) into a flat mask of the instance
-	// colour, which the offset colour reproduces by adding it on top of the black-modulated sprite
-	// (oargb+specular on the PVR, the silhouette TEV preset on the GX); the alpha still comes from the
-	// texture
+	// Flat mask of the instance color: black-modulated sprite plus the color as offset, alpha from the texture
 	pass p;
 	p.color = vec4(0.0, 0.0, 0.0, COLOR.a);
 	p.offset_color = COLOR.rgb;

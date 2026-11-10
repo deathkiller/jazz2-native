@@ -77,7 +77,7 @@ namespace nCine
 	}
 
 #if defined(RHI_CAP_POSTPROCESSING)
-	void RenderQueue::SortAndCommit(ArrayView<const std::uint32_t> splitLayers)
+	void RenderQueue::SortAndCommit(ArrayView<const std::uint32_t> splitKeys)
 #else
 	void RenderQueue::SortAndCommit()
 #endif
@@ -101,8 +101,8 @@ namespace nCine
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
 #if defined(RHI_CAP_POSTPROCESSING)
-			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue, splitLayers);
-			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue, splitLayers);
+			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue, splitKeys);
+			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue, splitKeys);
 #else
 			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue);
 			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue);
@@ -141,7 +141,7 @@ namespace nCine
 		return { opaqueCount, opaqueCount, 0, 0 };
 	}
 
-	RenderQueue::Part RenderQueue::NextPart(const Part& previous, std::uint32_t endLayer) const
+	RenderQueue::Part RenderQueue::NextPart(const Part& previous, std::uint32_t endKey) const
 	{
 		const ArrayView<RenderCommand* const> opaques = GetOpaques();
 		const ArrayView<RenderCommand* const> transparents = GetTransparents();
@@ -149,16 +149,16 @@ namespace nCine
 		Part part;
 		part.OpaqueEnd = previous.OpaqueBegin;
 		part.TransparentBegin = previous.TransparentEnd;
-		if (endLayer >= NoSplitLayer) {
+		if (endKey == NoSplitKey) {
 			part.OpaqueBegin = 0;
 			part.TransparentEnd = std::uint32_t(transparents.size());
 		} else {
-			// The queues are sorted by the layer first (see RenderCommand::CalculateMaterialSortKey()), a batch takes the layer
-			// of its first command, so the commands of the layers drawn are a range of each queue - found by halving
+			// The queues are sorted by the layer sort key first (see RenderCommand::CalculateMaterialSortKey()), a batch takes
+			// the key of its first command, so the commands of the layers drawn are a range of each queue - found by halving
 			part.OpaqueBegin = std::uint32_t(std::partition_point(opaques.begin(), opaques.begin() + part.OpaqueEnd,
-				[endLayer](const RenderCommand* command) { return command->GetLayer() >= endLayer; }) - opaques.begin());
+				[endKey](const RenderCommand* command) { return command->GetLayerSortKey() >= endKey; }) - opaques.begin());
 			part.TransparentEnd = std::uint32_t(std::partition_point(transparents.begin() + part.TransparentBegin, transparents.end(),
-				[endLayer](const RenderCommand* command) { return command->GetLayer() < endLayer; }) - transparents.begin());
+				[endKey](const RenderCommand* command) { return command->GetLayerSortKey() < endKey; }) - transparents.begin());
 		}
 		return part;
 	}

@@ -967,6 +967,8 @@ namespace Jazz2::Tiles
 		StringView GetLayerName(std::int32_t layerIndex) const;
 		/** @brief Returns the number of a layer in the original game (see @ref TileMapLayer::OriginalNumber), 0 if it has none */
 		std::uint8_t GetLayerOriginalNumber(std::int32_t layerIndex) const;
+		/** @brief Returns the depth of the nearest visible layer in front of a layer, `0` if there is none */
+		std::uint16_t GetDepthInFrontOfLayer(std::int32_t layerIndex) const;
 		/** @brief Sets the name and the number in the original game of a layer, which only scripts use */
 		void SetLayerIdentity(std::int32_t layerIndex, StringView name, std::uint8_t originalNumber);
 		/**

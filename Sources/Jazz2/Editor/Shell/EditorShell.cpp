@@ -632,8 +632,13 @@ namespace Jazz2::Editor
 			addSubmenu(entries, _("Character"), EditorIcon::None, { ActionIds::PlayJazz, ActionIds::PlaySpaz, ActionIds::PlayLori });
 			addSubmenu(entries, _("Difficulty"), EditorIcon::None, { ActionIds::PlayEasy, ActionIds::PlayNormal, ActionIds::PlayHard });
 #if defined(WITH_MULTIPLAYER)
-			addSubmenu(entries, _("Game Mode"), EditorIcon::None, { ActionIds::PlayAlone, ActionIds::PlayCooperation, ActionIds::PlayBattle, ActionIds::PlayTeamBattle,
-				ActionIds::PlayRace, ActionIds::PlayTreasureHunt, ActionIds::PlayCaptureTheFlag, nullptr, ActionIds::PlayPlayers1, ActionIds::PlayPlayers2, ActionIds::PlayPlayers3, ActionIds::PlayPlayers4 });
+			addSubmenu(entries, _("Game Mode"), EditorIcon::None, { ActionIds::PlayAlone, ActionIds::PlayCooperation, nullptr,
+				ActionIds::PlayBattle, ActionIds::PlayTeamBattle, ActionIds::PlayRace, ActionIds::PlayTeamRace, ActionIds::PlayTreasureHunt, ActionIds::PlayTeamTreasureHunt,
+				ActionIds::PlayCaptureTheFlag, nullptr,
+				ActionIds::PlayRoastTag, ActionIds::PlayLastRabbitStanding, ActionIds::PlayExtendedLastRabbitStanding, ActionIds::PlayPestilence,
+				ActionIds::PlayTeamLastRabbitStanding, ActionIds::PlayJailbreak, ActionIds::PlayDeathCaptureTheFlag, ActionIds::PlayFlagRun,
+				ActionIds::PlayDomination, ActionIds::PlayHeadHunters, nullptr,
+				ActionIds::PlayPlayers1, ActionIds::PlayPlayers2, ActionIds::PlayPlayers3, ActionIds::PlayPlayers4 });
 #endif
 			addActions(entries, { ActionIds::PlayReforged, ActionIds::PlayLedgeClimb, nullptr, ActionIds::ViewPlayPath, ActionIds::ViewDeaths, ActionIds::PlayClearPaths });
 		});

@@ -1,16 +1,12 @@
 program TileMapMeshChromaKey;
 variant USE_PALETTE;
 
-// The blend modes (see BlendModes.inc) dither and hash by the position of the pixel on screen, which needs more than
-// half precision
+// Blend modes (see BlendModes.inc) dither and hash by screen position, which needs more than half precision
 precision highp;
 
-// A chroma key layer (see Tiles::LayerBlend::ChromaKey), or one of a blend mode that takes the scene behind it, in the
-// tile-layer mesh. With the key, the tiles are drawn as usual,
-// but only over the pixels of the scene behind them that are of the key color, as SPRITE::CHROMAKEY of JJ2+ - so the
-// layer shows through a part of the scene painted in that color, a window of a single color in the tiles in front
-// of it. A transparent pixel of a tile is black there, as measured in JJ2+ - only where there's no tile at all does the
-// key stay for the layers in front
+// Chroma key layer (see Tiles::LayerBlend::ChromaKey), or a blend mode that reads the scene behind it. With the key,
+// tiles are drawn only over scene pixels of the key color, like SPRITE::CHROMAKEY of JJ2+. Transparent tile pixels
+// draw black there; only where there's no tile does the key stay for the layers in front.
 
 #include "Include/TileMapVs.inc"
 #include "Include/BlendModes.inc"
@@ -21,13 +17,11 @@ uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 // A sharp copy of the scene behind the layer
 uniform sampler2D uTextureBehind : texture_unit(2);
-// One over the size of the target being drawn into. The copy is smaller or the same size, but it covers the same view
+// One over the target size; the copy may be smaller but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel of the scene may be from it in alpha - the copy can have
-// fewer bits per channel than the palette has
+// Key color in rgb, per-channel tolerance in alpha (the copy may have fewer bits per channel)
 uniform vec4 uKeyColor;
-// Or the blend mode the tiles are mixed with the scene behind them by instead of the key in x (see BlendModes.inc), 0 for the
-// key, and in y non-zero if its opacity is an ordered pattern of whole pixels
+// x: blend mode (see BlendModes.inc), 0 for the key; y: non-zero for ordered-dither opacity
 uniform vec2 uBlendMode;
 
 void fragment() {

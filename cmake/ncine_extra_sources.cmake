@@ -2203,6 +2203,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/WebhookClient.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/MpPlayerState.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/IGameMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/GameModeBase.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/GameModeFactory.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CooperationMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/BattleMode.h

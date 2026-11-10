@@ -5,19 +5,16 @@ variant KEYED;
 shader_type canvas_item;
 precision highp;
 
-// The wave of JJ2+ (see Tiles::LayerRendererType::Wave): the texture repeated where the tiles of the layer would be, each
-// row of it moved left or right by the horizontal waves and each column up or down by the vertical ones, as measured in
-// the original - by whole pixels, and by the waves of where the pixel is in the texture before it's moved, so the waves
-// follow the texture, not the view
+// JJ2+ wave: the texture tiled like the layer, rows moved by the horizontal waves and columns by the vertical ones,
+// in whole pixels and by texture position, so the waves follow the texture, not the view
 
-// Size of the view in the pixels of the level
+// View size in level pixels
 uniform vec2 uViewSize;
-// The pixel of the layer at the top left of the view, as its tiles would be drawn there
+// Layer pixel at the top left of the view
 uniform vec2 uShift;
-// xy: how far the horizontal and the vertical waves move the texture, in pixels (0 for no waves), zw: one over the period
-// of each, in pixels of the texture
+// xy: horizontal/vertical wave amplitude in pixels (0 for none), zw: 1 / period in texels
 uniform vec4 uWave;
-// How far the horizontal and the vertical waves have moved, in periods
+// Horizontal/vertical wave phase, in periods
 uniform vec2 uWavePhase;
 
 #include "Include/TexturedBackgroundKey.inc"
@@ -27,16 +24,16 @@ uniform vec2 uWavePhase;
 #define TAU 6.28318530718
 
 void fragment() {
-	// How opaque a layer drawn screened or multiplied is, the alpha of the instance color (see TileMap::RenderTexturedBackground())
+	// Opacity of screened or multiplied layers, from the instance color alpha
 	float opacity = COLOR.a;
-	// The pixel of the texture this pixel of the view shows, the texture repeats
+	// Texel this pixel shows, the texture repeats
 	vec2 pos = mod(floor(uShift + UV * uViewSize), TEXTURE_SIZE);
 
-	// A row moves by the horizontal waves at its row of the texture, a column by the vertical ones at its column
+	// Rows move by the horizontal wave at their texture row, columns by the vertical one at their column
 	vec2 moved = floor(uWave.xy * vec2(cos(TAU * (pos.y * uWave.z + uWavePhase.x)), sin(TAU * (pos.x * uWave.w + uWavePhase.y))));
 	vec2 texel = mod(pos + moved, TEXTURE_SIZE);
 
-	// V runs up the layer in the texture (see TileMap::TexturedBackgroundPass), the middle of the texel is taken
+	// V runs up the layer, sample the texel center
 	vec2 texturePos = vec2((texel.x + 0.5) / TEXTURE_SIZE, 1.0 - (texel.y + 0.5) / TEXTURE_SIZE);
 	vec3 color = texture(TEXTURE, texturePos).rgb;
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
@@ -45,7 +42,7 @@ void fragment() {
 #if KEYED
 	COLOR = keyedColor(color);
 #else
-	// Premultiplied, which the blending of the sprite modes takes as it is
+	// Premultiplied for the sprite blend modes
 	COLOR = vec4(color * opacity, opacity);
 #endif
 }

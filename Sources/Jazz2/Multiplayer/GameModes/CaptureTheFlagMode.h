@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "IGameMode.h"
+#include "GameModeBase.h"
 
 namespace Jazz2::Multiplayer::GameModes
 {
@@ -14,7 +14,7 @@ namespace Jazz2::Multiplayer::GameModes
 		round logic --- flag bases, carrying/dropping/capturing and the capture win condition --- is still handled
 		by the host for now, so @ref OwnsRoundLogic returns `false` and the gameplay hooks below are not yet invoked.
 	*/
-	class CaptureTheFlagMode : public IGameMode
+	class CaptureTheFlagMode : public GameModeBase
 	{
 	public:
 		MpGameMode GetMode() const override {

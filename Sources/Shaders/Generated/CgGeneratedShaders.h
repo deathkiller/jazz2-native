@@ -636,6 +636,7 @@ float4 main(PsInput _input) : COLOR
 			{ "Combine", "",
 				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uCameraPos;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -645,6 +646,7 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 
@@ -657,8 +659,9 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 VsOutput main(VsInput _input)
@@ -668,11 +671,13 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vPixelPos = vPixelPos;
 	return _output;
@@ -680,6 +685,9 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform float4 uWavePhase;
+uniform float2 uCameraPos;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -687,6 +695,7 @@ uniform sampler2D uTextureBlurHalf : TEXUNIT2;
 uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 static float4 COLOR;
@@ -695,8 +704,9 @@ struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -711,9 +721,34 @@ float2 lightingJitterLowPower()
 	return offset * vViewSizeInv * 1.4;
 }
 
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
 	float4 blur1 = tex2D(uTextureBlurHalf, vTexCoords);
@@ -723,7 +758,13 @@ float4 main(PsInput _input) : COLOR
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
+	float darknessStrength = 1.0 - light.x;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -731,6 +772,7 @@ float4 main(PsInput _input) : COLOR
 			{ "Combine", "DITHER",
 				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uCameraPos;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -740,6 +782,7 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 
@@ -752,8 +795,9 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 VsOutput main(VsInput _input)
@@ -763,11 +807,13 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vPixelPos = vPixelPos;
 	return _output;
@@ -775,6 +821,9 @@ VsOutput main(VsInput _input)
 )",
 				R"(uniform float4 uAmbientColor;
 uniform float uTime;
+uniform float uWaterLevel;
+uniform float4 uWavePhase;
+uniform float2 uCameraPos;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -782,6 +831,7 @@ uniform sampler2D uTextureBlurHalf : TEXUNIT2;
 uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 static float4 COLOR;
@@ -790,8 +840,9 @@ struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -806,9 +857,34 @@ float2 lightingJitterLowPower()
 	return offset * vViewSizeInv * 1.4;
 }
 
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
 	float4 blur1 = tex2D(uTextureBlurHalf, vTexCoords);
@@ -818,7 +894,13 @@ float4 main(PsInput _input) : COLOR
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)(1.0 - light.x)));
+	float darknessStrength = 1.0 - light.x;
+	if (uWaterLevel < 0.4) {
+		float waveHeight = waterWave(waterWavePhases(vTexCoords.x));
+		float isTexelAbove = clamp(0.5 - (vTexCoords.y - uWaterLevel - waveHeight) * vViewSize.y * 0.70710678, 0.0, 1.0);
+		darknessStrength = min(1.0, darknessStrength + isTexelAbove * (0.4 - uWaterLevel));
+	}
+	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -828,8 +910,9 @@ float4 main(PsInput _input) : COLOR
 uniform float4x4 uViewMatrix;
 uniform float4 uAmbientColor;
 uniform float uTime;
-uniform float2 uCameraPos;
-uniform float uWaterLevel;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
+uniform float uRaysBase;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -839,13 +922,14 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vLightingSeed;
 static float2 vDisplacementPos;
 static float2 vRaysPos;
 static float4 vWavePhases;
-static float4 vWaterLine;
 static float2 vConstants;
+static float vRipple;
 
 struct VsInput
 {
@@ -856,13 +940,14 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vLightingSeed : TEXCOORD2;
-	float2 vDisplacementPos : TEXCOORD3;
-	float2 vRaysPos : TEXCOORD4;
-	float4 vWavePhases : TEXCOORD5;
-	float4 vWaterLine : TEXCOORD6;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vLightingSeed : TEXCOORD3;
+	float2 vDisplacementPos : TEXCOORD4;
+	float2 vRaysPos : TEXCOORD5;
+	float4 vWavePhases : TEXCOORD6;
 	float2 vConstants : TEXCOORD7;
+	float vRipple : TEXCOORD8;
 };
 
 VsOutput main(VsInput _input)
@@ -872,36 +957,32 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	float2 uvLocal = vTexCoords;
-	float2 uvWorldCenter = uCameraPos * vViewSizeInv;
-	const float invTau = 0.15915494;
 	vLightingSeed = aPosition * spriteSize + frac(uTime * 7.31) * 512.0;
-	float2 displacementBase = uvWorldCenter * 0.1 + (uTime * 0.4 - (2.0) * floor((uTime * 0.4) / (2.0)));
-	vDisplacementPos = uvLocal * 0.1 + frac(displacementBase);
-	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
-	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
-	vRaysPos = float2(raysLinear * 0.125 + frac(raysBase * 0.125), frac((uTime * 5.0 + uvWorldCenter.y) * 0.125));
-	float4 waveScale = float4(60.0, 20.0, 35.0, 70.0) * invTau;
-	float4 waveBase = float4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25, (uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
-	vWavePhases = uvLocal.x * waveScale + frac(waveBase);
-	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
-	vWaterLine = float4(uvLocal.y * 20.0 * invTau + frac(rippleBase), uvLocal.y - uWaterLevel, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
+	vDisplacementPos = uvLocal * 0.1 + uWaterBase.xy;
+	float raysLinear = uvLocal.x * (1.4 + spriteSize.x * (6.0 / 720.0)) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	vRaysPos = float2(raysLinear * 0.125 + uRaysBase, uWaterBase.w);
+	vWavePhases = uWavePhase + uvLocal.x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+	vRipple = uWaterBase.z + uvLocal.y * 3.1830989;
 	vConstants = float2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vLightingSeed = vLightingSeed;
 	_output.vDisplacementPos = vDisplacementPos;
 	_output.vRaysPos = vRaysPos;
 	_output.vWavePhases = vWavePhases;
-	_output.vWaterLine = vWaterLine;
 	_output.vConstants = vConstants;
+	_output.vRipple = vRipple;
 	return _output;
 }
 )",
 				R"(uniform float4 uAmbientColor;
+uniform float2 uCameraPos;
 uniform float uWaterLevel;
 uniform float4 uWaterColorTop;
 uniform float4 uWaterColorBottom;
@@ -913,26 +994,28 @@ uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 uniform sampler2D uTextureNoise : TEXUNIT4;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vLightingSeed;
 static float2 vDisplacementPos;
 static float2 vRaysPos;
 static float4 vWavePhases;
-static float4 vWaterLine;
 static float2 vConstants;
+static float vRipple;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vLightingSeed : TEXCOORD2;
-	float2 vDisplacementPos : TEXCOORD3;
-	float2 vRaysPos : TEXCOORD4;
-	float4 vWavePhases : TEXCOORD5;
-	float4 vWaterLine : TEXCOORD6;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vLightingSeed : TEXCOORD3;
+	float2 vDisplacementPos : TEXCOORD4;
+	float2 vRaysPos : TEXCOORD5;
+	float4 vWavePhases : TEXCOORD6;
 	float2 vConstants : TEXCOORD7;
+	float vRipple : TEXCOORD8;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -960,47 +1043,68 @@ float4 sinCycles(float4 cycles)
 	return y * (0.775 + 0.225 * abs(y));
 }
 
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float2 waterDisplacement(float2 pos)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (tex2D(uTextureNoise, (i + f - 0.5) * 0.015625).xy - ((float2)0.5)) * ((float2)0.01);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos)) * ((float2)isTexelBelow), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
+	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
+	main = lerp(main, waterColorAt(uvLocal.y) * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
+	float rays = tex2D(uTextureNoise, raysPos).z * 1.1 - 0.25;
+	main += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main = lerp(main, tex2D(uTexture, float2(uvLocal.x, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, ((float3)(isNearTop * isTexelBelow * 0.6)));
+	return main + ((float3)(0.2 * isVeryNearTop));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vLightingSeed = _input.vLightingSeed;
 	vDisplacementPos = _input.vDisplacementPos;
 	vRaysPos = _input.vRaysPos;
 	vWavePhases = _input.vWavePhases;
-	vWaterLine = _input.vWaterLine;
 	vConstants = _input.vConstants;
+	vRipple = _input.vRipple;
 	float2 uvLocal = vTexCoords;
-	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
-	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
-	float belowWaterLine = vWaterLine.y - waveHeight;
-	float aaSlope = vConstants.y;
-	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 dis = (tex2D(uTextureNoise, vDisplacementPos).xy - ((float2)0.5)) * ((float2)0.01);
-	float2 uv = uvLocal + (float2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * ((float2)isTexelBelow);
-	float4 main = tex2D(uTexture, uv);
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
-	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
-	main.xyz = lerp(main.xyz, waterColor * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
-	float rays = tex2D(uTextureNoise, vRaysPos).z * 1.1 - 0.25;
-	main.xyz += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
-	float topDist = abs(belowWaterLine);
-	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
-	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.xyz = lerp(main.xyz, tex2D(uTexture, float2(uvLocal.x, vWaterLine.z - waveHeight)).xyz, ((float3)topColorBlendFac));
-	main.xyz += ((float3)(0.2 * isVeryNearTop));
+	float isTexelBelow;
+	float2 uv;
+	float3 main = waterScene(uvLocal, waterWave(vWavePhases), vConstants.y, vViewSizeInv.y, vDisplacementPos, vRipple, vRaysPos, isTexelBelow, uv);
 	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
 	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
 	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
+	float blurScale = vConstants.x;
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
+	COLOR = lerp(lerp(float4(main, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * blurScale, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1010,8 +1114,9 @@ float4 main(PsInput _input) : COLOR
 uniform float4x4 uViewMatrix;
 uniform float4 uAmbientColor;
 uniform float uTime;
-uniform float2 uCameraPos;
-uniform float uWaterLevel;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
+uniform float uRaysBase;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -1021,13 +1126,14 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vLightingSeed;
 static float2 vDisplacementPos;
 static float2 vRaysPos;
 static float4 vWavePhases;
-static float4 vWaterLine;
 static float2 vConstants;
+static float vRipple;
 
 struct VsInput
 {
@@ -1038,13 +1144,14 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vLightingSeed : TEXCOORD2;
-	float2 vDisplacementPos : TEXCOORD3;
-	float2 vRaysPos : TEXCOORD4;
-	float4 vWavePhases : TEXCOORD5;
-	float4 vWaterLine : TEXCOORD6;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vLightingSeed : TEXCOORD3;
+	float2 vDisplacementPos : TEXCOORD4;
+	float2 vRaysPos : TEXCOORD5;
+	float4 vWavePhases : TEXCOORD6;
 	float2 vConstants : TEXCOORD7;
+	float vRipple : TEXCOORD8;
 };
 
 VsOutput main(VsInput _input)
@@ -1054,36 +1161,32 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	float2 uvLocal = vTexCoords;
-	float2 uvWorldCenter = uCameraPos * vViewSizeInv;
-	const float invTau = 0.15915494;
 	vLightingSeed = aPosition * spriteSize + frac(uTime * 7.31) * 512.0;
-	float2 displacementBase = uvWorldCenter * 0.1 + (uTime * 0.4 - (2.0) * floor((uTime * 0.4) / (2.0)));
-	vDisplacementPos = uvLocal * 0.1 + frac(displacementBase);
-	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
-	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
-	vRaysPos = float2(raysLinear * 0.125 + frac(raysBase * 0.125), frac((uTime * 5.0 + uvWorldCenter.y) * 0.125));
-	float4 waveScale = float4(60.0, 20.0, 35.0, 70.0) * invTau;
-	float4 waveBase = float4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25, (uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
-	vWavePhases = uvLocal.x * waveScale + frac(waveBase);
-	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
-	vWaterLine = float4(uvLocal.y * 20.0 * invTau + frac(rippleBase), uvLocal.y - uWaterLevel, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
+	vDisplacementPos = uvLocal * 0.1 + uWaterBase.xy;
+	float raysLinear = uvLocal.x * (1.4 + spriteSize.x * (6.0 / 720.0)) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	vRaysPos = float2(raysLinear * 0.125 + uRaysBase, uWaterBase.w);
+	vWavePhases = uWavePhase + uvLocal.x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+	vRipple = uWaterBase.z + uvLocal.y * 3.1830989;
 	vConstants = float2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vLightingSeed = vLightingSeed;
 	_output.vDisplacementPos = vDisplacementPos;
 	_output.vRaysPos = vRaysPos;
 	_output.vWavePhases = vWavePhases;
-	_output.vWaterLine = vWaterLine;
 	_output.vConstants = vConstants;
+	_output.vRipple = vRipple;
 	return _output;
 }
 )",
 				R"(uniform float4 uAmbientColor;
+uniform float2 uCameraPos;
 uniform float uWaterLevel;
 uniform float4 uWaterColorTop;
 uniform float4 uWaterColorBottom;
@@ -1095,26 +1198,28 @@ uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 uniform sampler2D uTextureNoise : TEXUNIT4;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vLightingSeed;
 static float2 vDisplacementPos;
 static float2 vRaysPos;
 static float4 vWavePhases;
-static float4 vWaterLine;
 static float2 vConstants;
+static float vRipple;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vLightingSeed : TEXCOORD2;
-	float2 vDisplacementPos : TEXCOORD3;
-	float2 vRaysPos : TEXCOORD4;
-	float4 vWavePhases : TEXCOORD5;
-	float4 vWaterLine : TEXCOORD6;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vLightingSeed : TEXCOORD3;
+	float2 vDisplacementPos : TEXCOORD4;
+	float2 vRaysPos : TEXCOORD5;
+	float4 vWavePhases : TEXCOORD6;
 	float2 vConstants : TEXCOORD7;
+	float vRipple : TEXCOORD8;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -1142,47 +1247,68 @@ float4 sinCycles(float4 cycles)
 	return y * (0.775 + 0.225 * abs(y));
 }
 
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float2 waterDisplacement(float2 pos)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (tex2D(uTextureNoise, (i + f - 0.5) * 0.015625).xy - ((float2)0.5)) * ((float2)0.01);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos)) * ((float2)isTexelBelow), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
+	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
+	main = lerp(main, waterColorAt(uvLocal.y) * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
+	float rays = tex2D(uTextureNoise, raysPos).z * 1.1 - 0.25;
+	main += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main = lerp(main, tex2D(uTexture, float2(uvLocal.x, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, ((float3)(isNearTop * isTexelBelow * 0.6)));
+	return main + ((float3)(0.2 * isVeryNearTop));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vLightingSeed = _input.vLightingSeed;
 	vDisplacementPos = _input.vDisplacementPos;
 	vRaysPos = _input.vRaysPos;
 	vWavePhases = _input.vWavePhases;
-	vWaterLine = _input.vWaterLine;
 	vConstants = _input.vConstants;
+	vRipple = _input.vRipple;
 	float2 uvLocal = vTexCoords;
-	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
-	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
-	float belowWaterLine = vWaterLine.y - waveHeight;
-	float aaSlope = vConstants.y;
-	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 dis = (tex2D(uTextureNoise, vDisplacementPos).xy - ((float2)0.5)) * ((float2)0.01);
-	float2 uv = uvLocal + (float2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * ((float2)isTexelBelow);
-	float4 main = tex2D(uTexture, uv);
-	float aberration = abs(uvLocal.x - 0.5) * 0.012;
-	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
-	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
-	main.xyz = lerp(main.xyz, waterColor * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
-	float rays = tex2D(uTextureNoise, vRaysPos).z * 1.1 - 0.25;
-	main.xyz += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
-	float topDist = abs(belowWaterLine);
-	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
-	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
-	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.xyz = lerp(main.xyz, tex2D(uTexture, float2(uvLocal.x, vWaterLine.z - waveHeight)).xyz, ((float3)topColorBlendFac));
-	main.xyz += ((float3)(0.2 * isVeryNearTop));
+	float isTexelBelow;
+	float2 uv;
+	float3 main = waterScene(uvLocal, waterWave(vWavePhases), vConstants.y, vViewSizeInv.y, vDisplacementPos, vRipple, vRaysPos, isTexelBelow, uv);
 	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
 	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
 	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
+	float blurScale = vConstants.x;
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
+	COLOR = lerp(lerp(float4(main, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * blurScale, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1190,6 +1316,7 @@ float4 main(PsInput _input) : COLOR
 			{ "CombineWithWaterLow", "",
 				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uCameraPos;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -1199,6 +1326,7 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 
@@ -1211,8 +1339,9 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 VsOutput main(VsInput _input)
@@ -1222,11 +1351,13 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vPixelPos = vPixelPos;
 	return _output;
@@ -1238,6 +1369,8 @@ uniform float2 uCameraPos;
 uniform float uWaterLevel;
 uniform float4 uWaterColorTop;
 uniform float4 uWaterColorBottom;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1245,6 +1378,7 @@ uniform sampler2D uTextureBlurHalf : TEXUNIT2;
 uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 static float4 COLOR;
@@ -1253,8 +1387,9 @@ struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -1276,36 +1411,59 @@ float sinCycles(float cycles)
 	return y * (0.775 + 0.225 * abs(y));
 }
 
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return lerp(main, waterColorAt(uvLocal.y), ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
 	float2 uvLocal = vTexCoords;
-	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
-	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = uvLocal + float2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
-	float4 main = tex2D(uTexture, uv);
-	float topDist = abs(uvLocal.y - uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
-	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+	float isTexelBelow;
+	float2 uv;
+	float3 main = waterSceneLow(uvLocal, waterWave(waterWavePhases(uvLocal.x)), 0.70710678 * vViewSize.y, vViewSizeInv.y, uWaterBase.z + uvLocal.y * 3.1830989, isTexelBelow, uv);
 	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
 	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
 	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
+	COLOR = lerp(lerp(float4(main, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -1313,6 +1471,7 @@ float4 main(PsInput _input) : COLOR
 			{ "CombineWithWaterLow", "DITHER",
 				R"(uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uCameraPos;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -1322,6 +1481,7 @@ uniform float2 spriteSize;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 
@@ -1334,8 +1494,9 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 VsOutput main(VsInput _input)
@@ -1345,11 +1506,13 @@ VsOutput main(VsInput _input)
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSize = spriteSize;
 	vViewSizeInv = ((float2)1.0) / spriteSize;
 	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vViewSize = vViewSize;
 	_output.vViewSizeInv = vViewSizeInv;
 	_output.vPixelPos = vPixelPos;
 	return _output;
@@ -1361,6 +1524,8 @@ uniform float2 uCameraPos;
 uniform float uWaterLevel;
 uniform float4 uWaterColorTop;
 uniform float4 uWaterColorBottom;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -1368,6 +1533,7 @@ uniform sampler2D uTextureBlurHalf : TEXUNIT2;
 uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
+static float2 vViewSize;
 static float2 vViewSizeInv;
 static float2 vPixelPos;
 static float4 COLOR;
@@ -1376,8 +1542,9 @@ struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-	float2 vPixelPos : TEXCOORD2;
+	float2 vViewSize : TEXCOORD1;
+	float2 vViewSizeInv : TEXCOORD2;
+	float2 vPixelPos : TEXCOORD3;
 };
 
 float interleavedGradientNoise(float2 p)
@@ -1399,36 +1566,59 @@ float sinCycles(float cycles)
 	return y * (0.775 + 0.225 * abs(y));
 }
 
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return lerp(main, waterColorAt(uvLocal.y), ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+}
+
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
+	vViewSize = _input.vViewSize;
 	vViewSizeInv = _input.vViewSizeInv;
 	vPixelPos = _input.vPixelPos;
 	float2 uvLocal = vTexCoords;
-	float3 waterColor = lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
-	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = uvLocal + float2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
-	float4 main = tex2D(uTexture, uv);
-	float topDist = abs(uvLocal.y - uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
-	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+	float isTexelBelow;
+	float2 uv;
+	float3 main = waterSceneLow(uvLocal, waterWave(waterWavePhases(uvLocal.x)), 0.70710678 * vViewSize.y, vViewSizeInv.y, uWaterBase.z + uvLocal.y * 3.1830989, isTexelBelow, uv);
 	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
 	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
 	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = lerp(lerp(main * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	float darknessStrength = min(1.0, 1.0 - light.x + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
+	COLOR = lerp(lerp(float4(main, 1.0) * (1.0 + 0.607 * light.y) + (0.2 * light.y + max(light.y - 0.7, 0.0)) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -10356,6 +10546,249 @@ float4 main(PsInput _input) : COLOR
 	float mixValue = ease(distance_);
 	float noise = 1.0 + rand(uv) * 0.1;
 	COLOR = float4(0.0, 0.0, 0.0, mixValue * noise);
+	return COLOR;
+}
+)" },
+			{ "Water", "",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	return _output;
+}
+)",
+				R"(uniform float2 uTargetSizeInv;
+uniform float2 uViewSizeInv;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
+uniform float uRaysBase;
+uniform float4 uAmbientColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureNoise : TEXUNIT1;
+
+static float4 gl_FragCoord;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+};
+
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float2 waterDisplacement(float2 pos)
+{
+	float2 p = pos * 64.0 + 0.5;
+	float2 i = floor(p);
+	float2 f = p - i;
+	f = f * f * (3.0 - 2.0 * f);
+	return (tex2D(uTextureNoise, (i + f - 0.5) * 0.015625).xy - ((float2)0.5)) * ((float2)0.01);
+}
+
+float3 waterScene(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float2 displacementPos, float rippleCycles, float2 raysPos, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + (float2(0.004 * sinCycles(rippleCycles), 0.0) + waterDisplacement(displacementPos)) * ((float2)isTexelBelow), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
+	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
+	main = lerp(main, waterColorAt(uvLocal.y) * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
+	float rays = tex2D(uTextureNoise, raysPos).z * 1.1 - 0.25;
+	main += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - rowSize * 2.8) * rowSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize * (0.8 - 100.0 * waveHeight)) * rowSlope, 0.0, 1.0);
+	main = lerp(main, tex2D(uTexture, float2(uvLocal.x, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + rowSize)).xyz, ((float3)(isNearTop * isTexelBelow * 0.6)));
+	return main + ((float3)(0.2 * isVeryNearTop));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	float2 uvLocal = gl_FragCoord.xy * uTargetSizeInv;
+	float waveHeight = waterWave(waterWavePhases(uvLocal.x));
+	float rowSlope = 0.70710678 / uViewSizeInv.y;
+	float rippleCycles = uWaterBase.z + uvLocal.y * 3.1830989;
+	float isTexelBelow;
+	float2 uv;
+	float raysLinear = uvLocal.x * (1.4 + 6.0 / (720.0 * uViewSizeInv.x)) + uvLocal.y * (5.0 / (720.0 * uViewSizeInv.y));
+	float2 raysPos = float2(raysLinear * 0.125 + uRaysBase, uWaterBase.w);
+	float3 main = waterScene(uvLocal, waveHeight, rowSlope, uViewSizeInv.y, uvLocal * 0.1 + uWaterBase.xy, rippleCycles, raysPos, isTexelBelow, uv);
+	COLOR = float4(main, 1.0);
+	return COLOR;
+}
+)" },
+			{ "Water", "LOW",
+				R"(uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	return _output;
+}
+)",
+				R"(uniform float2 uTargetSizeInv;
+uniform float2 uViewSizeInv;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
+uniform float4 uWaterColorTop;
+uniform float4 uWaterColorBottom;
+uniform float4 uWavePhase;
+uniform float4 uWaterBase;
+uniform float uRaysBase;
+uniform float4 uAmbientColor;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureNoise : TEXUNIT1;
+
+static float4 gl_FragCoord;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+};
+
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 sinCycles(float4 cycles)
+{
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
+float4 waterWavePhases(float x)
+{
+	return uWavePhase + x * float4(9.5492966, 3.1830989, 5.5704230, 11.140846);
+}
+
+float waterWave(float4 phases)
+{
+	return dot(sinCycles(phases), float4(0.0016, 0.0032, 0.004, 0.0004));
+}
+
+float3 waterColorAt(float y)
+{
+	return lerp(uWaterColorTop.xyz, uWaterColorBottom.xyz, ((float3)(clamp((y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0))));
+}
+
+float3 waterSceneLow(float2 uvLocal, float waveHeight, float rowSlope, float rowSize, float rippleCycles, out float isTexelBelow, out float2 uv)
+{
+	float belowWaterLine = uvLocal.y - uWaterLevel - waveHeight;
+	isTexelBelow = clamp(belowWaterLine * rowSlope + 0.5, 0.0, 1.0);
+	uv = clamp(uvLocal + float2(0.008 * sinCycles(rippleCycles) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
+	float3 main = tex2D(uTexture, uv).xyz;
+	float topDist = abs(belowWaterLine);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = clamp(0.5 - (topDist - rowSize) * rowSlope, 0.0, 1.0);
+	return lerp(main, waterColorAt(uvLocal.y), ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	gl_FragCoord = _input._fragCoord;
+	float2 uvLocal = gl_FragCoord.xy * uTargetSizeInv;
+	float waveHeight = waterWave(waterWavePhases(uvLocal.x));
+	float rowSlope = 0.70710678 / uViewSizeInv.y;
+	float rippleCycles = uWaterBase.z + uvLocal.y * 3.1830989;
+	float isTexelBelow;
+	float2 uv;
+	float3 main = waterSceneLow(uvLocal, waveHeight, rowSlope, uViewSizeInv.y, rippleCycles, isTexelBelow, uv);
+	COLOR = float4(main, 1.0);
 	return COLOR;
 }
 )" },

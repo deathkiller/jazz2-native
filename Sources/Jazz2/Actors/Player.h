@@ -1583,10 +1583,12 @@ namespace Jazz2::Actors
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
-		void OnUpdatePhysics(float timeMult);
+		void OnUpdatePhysics(float timeMult, bool frozenFrictionApplied);
 		void OnUpdateTimers(float timeMult);
-		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);
+		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev, bool steeredBeforeMove);
+		void UpdateRunAction();
 		void HandleHorizontalMovement(float timeMult);
+		void UpdateHorizontalSpeed(float timeMult);
 		// Bird flight on both axes, its own pull instead of gravity, no jump or special move
 		void HandleBirdMovement(float timeMult);
 		// Bird flight cap on either axis in the current mode

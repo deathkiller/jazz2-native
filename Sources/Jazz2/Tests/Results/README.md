@@ -181,7 +181,9 @@ figures each produces alone, at 65% CPU. A four-rate validation is
 therefore ~70 minutes, not four and a half hours. Measure the rate *within* a scenario, though: `ms` does
 not advance across the reset between scenarios, so a naive diff reports the gap as a 300 ms frame.
 
-**Most of that spread is one artefact, and it is not movement.** Pressed against a wall the original reads
+**Most of that spread is one artefact, and it is not movement** (gone at 60 FPS since horizontal steering
+moved before the move, see *The keys steer the tick they are read on* in the reference; the other rates were
+not re-run). Pressed against a wall the original reads
 `xs` = 0.0000 and this engine reads one acceleration step, which is `accel * timeMult` and therefore
 proportional to the frame time: **0.2081 px/frame at 144, 0.4988 at 60, 0.9973 at 30**, or 12.5, 29.9 and
 59.8 px/s. Those are exactly the scores ten of the affected scenarios move between, and the player does not

@@ -11,7 +11,7 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-// In the pixels of the whole view and across it, both beyond what half precision can tell apart
+// highp - pixel coordinates of the whole view exceed half precision
 varying highp vec2 vPixelCoords;
 varying highp vec2 vTexCoords0;
 varying highp vec4 vTexCoords1;
@@ -57,9 +57,7 @@ const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture : texture_unit(0);
 
-// A pixel packed into one number, so pixels are compared exactly by comparing the numbers - it takes the 24 bits of a
-// pixel, more than half precision has, so the packed numbers are highp (an operand of highp makes the whole dot product
-// highp) while everything else in the shader can be of half precision
+// Packs a pixel into one number for exact comparison; needs 24 bits, so highp
 const highp vec3 ReduceWeights = vec3(65536.0, 256.0, 1.0);
 
 float DistYCbCr(vec3 pixA, vec3 pixB) {

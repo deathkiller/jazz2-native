@@ -4,7 +4,6 @@ program TileMapMesh;
 #include "Include/DefaultSpriteFs.inc"
 
 void fixed_function() {
-	// A whole visible layer arrives as one vertex stream (the 8-float TileMap::AppendTileQuad
-	// contract) - consumed by the backend's tile-mesh pipeline stage, bound here by name
+	// The whole layer as one vertex stream (8 floats per vertex, see TileMap::AppendTileQuad)
 	pipeline tile_map_mesh;
 }

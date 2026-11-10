@@ -4,6 +4,7 @@
 
 #include "../ServerInitialization.h"
 #include "../../Actors/Player.h"
+#include "../../UI/Font.h"
 #include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
@@ -194,7 +195,29 @@ namespace Jazz2::Multiplayer::GameModes
 
 	void DominationMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
-		DrawScoreLine(ctx, hud, view, _("Roasts"), ctx.GetPlayerState(player).Kills, false);
+		// The control points in their order under the team scores, "o" in the color of the team that holds it, "x" while neutral
+		std::int32_t pointCount = 0;
+		for (const auto& obj : ctx.GetGameModeObjects()) {
+			if (obj.Type == GameModeObjectType::ControlPoint) {
+				pointCount++;
+			}
+		}
+		if (pointCount > 0) {
+			constexpr float Spacing = 10.0f;
+			float x = view.X + view.W * 0.5f - Spacing * (pointCount - 1) * 0.5f;
+			float y = view.Y + 26.0f;
+			// TRANSLATORS: Label of the control points in the HUD in Domination, short for "control points"
+			hud.DrawHudText(GameModeFontType::Small, _("CPs:"), x - 8.0f, y, 1.0f, UI::Alignment::TopRight, UI::Font::DefaultColor, 0.7f, 0.88f);
+			for (const auto& obj : ctx.GetGameModeObjects()) {
+				if (obj.Type != GameModeObjectType::ControlPoint) {
+					continue;
+				}
+				bool held = (obj.Team != GameModeObject::NeutralTeam);
+				hud.DrawHudText(GameModeFontType::Small, held ? "o"_s : "x"_s, x, y, 1.0f, UI::Alignment::Top,
+					held ? GetTeamColor(obj.Team) : Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.7f, 0.88f);
+				x += Spacing;
+			}
+		}
 
 		// The arrow points to the nearest point the team doesn't hold, or to the nearest one if it holds all,
 		// transparent white for a neutral one (the objects are synchronized, so this works on clients too)

@@ -507,11 +507,13 @@ namespace Jazz2::UI::Multiplayer
 		float playerY = view.Y + (playerPos.Y - camera.Y) * (view.H / std::max(camera.H, 1.0f));
 		Vector2f diff = targetPos - playerPos;
 		float angle = std::atan2(diff.Y, diff.X);
-		float distance = 46.0f * _hudScale;
-		float x = std::round(playerX + std::cos(angle) * distance);
-		float y = std::round(playerY - 12.0f + std::sin(angle) * distance);
-		DrawElement(Resources::TargetArrow, 0, x, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.4f * color.A), _hudScale, _hudScale, false, angle);
-		DrawElement(Resources::TargetArrow, 0, x, y, MainLayer, Alignment::Center, color, _hudScale, _hudScale, false, angle);
+		float distance = 50.0f * _hudScale;
+		float x = std::round(playerX + 4.0f + std::cos(angle) * distance);
+		float y = std::round(playerY - 4.0f + std::sin(angle) * distance);
+		// The arrow is drawn in the color alone, the sprite has its own colors
+		const GraphicResource* res = _metadata->FindAnimation(Resources::TargetArrow);
+		DrawGraphics(res, 0, x, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.4f * color.A), _hudScale, _hudScale, false, angle, true);
+		DrawGraphics(res, 0, x, y, MainLayer, Alignment::Center, color, _hudScale, _hudScale, false, angle, true);
 	}
 
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
@@ -681,9 +683,13 @@ namespace Jazz2::UI::Multiplayer
 		bool isRace = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
 		bool teamMode = IsTeamGameMode(gameMode);
 
-		// What the right-hand column of the board shows
+		// What the right-hand column of the board shows, a mode with its own score names it
 		StringView scoreLabel;
-		switch (gameMode) {
+		auto* activeMode = mpLevelHandler->GetActiveGameMode();
+		StringView modeLabel = (activeMode != nullptr ? activeMode->GetScoreboardLabel() : StringView{});
+		if (!modeLabel.empty()) {
+			scoreLabel = modeLabel;
+		} else switch (gameMode) {
 			case MpGameMode::Race:
 			// TRANSLATORS: Column header in the final standings shown at the end of a multiplayer round (race finishing time), keep it short
 			case MpGameMode::TeamRace: scoreLabel = _("Time"); break;
@@ -697,6 +703,24 @@ namespace Jazz2::UI::Multiplayer
 		constexpr float RowHeight = 17.0f;
 		constexpr float TitleHeight = 38.0f;	// Title row, measured from the top of the content box
 		constexpr float LabelHeight = 18.0f;	// Column label row, right above the first result
+		constexpr float TeamGap = 8.0f;			// Space between the team rows and the column label row
+
+		// In team modes the teams come first, ordered by their score
+		std::uint8_t teamOrder[MaxTeamCount];
+		std::uint8_t teamCount = 0;
+		if (teamMode) {
+			teamCount = (std::uint8_t)std::min<std::size_t>(mpLevelHandler->_teamScores.size(), MaxTeamCount);
+			for (std::uint8_t team = 0; team < teamCount; team++) {
+				teamOrder[team] = team;
+			}
+			std::stable_sort(teamOrder, teamOrder + teamCount, [mpLevelHandler](std::uint8_t a, std::uint8_t b) {
+				return (mpLevelHandler->_teamScores[a] > mpLevelHandler->_teamScores[b]);
+			});
+			if (teamCount < 2) {
+				teamCount = 0;
+			}
+		}
+		float teamsHeight = (teamCount > 0 ? teamCount * RowHeight + TeamGap : 0.0f);
 
 		// The whole screen is dimmed (the round is over, there is nothing left to look at behind it). It goes below
 		// the level text layer, so the "Winner is ..." alert at the top of the screen stays readable over it.
@@ -706,7 +730,7 @@ namespace Jazz2::UI::Multiplayer
 		// bounded by the safe area
 		Rectf safeView = GetSafeView();
 		float boxWidth = std::min(272.0f, safeView.W - 40.0f);
-		float boxHeight = TitleHeight + LabelHeight + (float)results.size() * RowHeight;
+		float boxHeight = TitleHeight + teamsHeight + LabelHeight + (float)results.size() * RowHeight;
 		float boxX = safeView.X + safeView.W * 0.5f - boxWidth * 0.5f;
 		float boxY = safeView.Y + safeView.H * 0.5f - boxHeight * 0.5f;
 
@@ -732,10 +756,33 @@ namespace Jazz2::UI::Multiplayer
 		const float nameX = boxX + 36.0f;
 		const float scoreX = boxX + boxWidth - 14.0f;
 
-		_smallFont->DrawString(this, scoreLabel, charOffset, scoreX, boxY + TitleHeight, FontLayer + 20,
+		float y = boxY + TitleHeight;
+		for (std::uint8_t i = 0; i < teamCount; i++) {
+			std::uint8_t team = teamOrder[i];
+			// TRANSLATORS: Row of a team in the final standings shown at the end of a multiplayer round, {} is the team color name in English (Blue, Red, Green or Yellow)
+			String teamName = _f("{} team", GetTeamName(team));
+			std::size_t length = formatInto(stringBuffer, "{}", mpLevelHandler->_teamScores[team]);
+			Colorf teamColor = GetTeamColor(team);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, teamName, charOffsetShadow, nameX, y + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, scoreX, y + 1.0f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
+			_smallFont->DrawString(this, teamName, charOffset, nameX, y, FontLayer + 20,
+				Alignment::TopLeft, teamColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, scoreX, y, FontLayer + 20,
+				Alignment::TopRight, teamColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			y += RowHeight;
+		}
+		if (teamCount > 0) {
+			y += TeamGap;
+		}
+
+		_smallFont->DrawString(this, scoreLabel, charOffset, scoreX, y, FontLayer + 20,
 			Alignment::TopRight, SecondaryColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-		float y = boxY + TitleHeight + LabelHeight;
+		y += LabelHeight;
 		for (const auto& result : results) {
 			std::size_t length = formatInto(stringBuffer, "{}.", result.Position);
 			if constexpr (Font::ShadowsEnabled) {
@@ -771,7 +818,7 @@ namespace Jazz2::UI::Multiplayer
 					// Players that didn't complete the race are listed with the laps they managed instead of a time
 					length = formatInto(stringBuffer, "{}/{}", result.Score, mpLevelHandler->GetTotalLaps());
 				}
-			} else if (gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt) {
+			} else if (!modeLabel.empty() || gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt) {
 				length = formatInto(stringBuffer, "{}", result.Score);
 			} else {
 				// Kills and deaths

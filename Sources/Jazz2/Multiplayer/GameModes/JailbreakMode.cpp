@@ -62,15 +62,12 @@ namespace Jazz2::Multiplayer::GameModes
 			std::int32_t secsLeft = (std::int32_t)std::ceil(_releaseTimeLeft / FrameTimer::FramesPerSecond);
 			if (secsLeft != _lastCountdown && secsLeft > 0 && secsLeft <= (std::int32_t)ReleaseCountdownSecs) {
 				_lastCountdown = secsLeft;
-				char buffer[32];
-				std::size_t length = (secsLeft == (std::int32_t)ReleaseCountdownSecs
-					? formatInto(buffer, "Release in {}...", secsLeft)
-					: formatInto(buffer, "{}...", secsLeft));
-				ctx.SendMessageToAllPlayers({ buffer, length });
+				ctx.ShowCountdownToAllPlayers(secsLeft);
 			}
 			if (_releaseTimeLeft <= 0.0f) {
 				_releaseTimeLeft = 0.0f;
 				_lastCountdown = 0;
+				ctx.ShowCountdownToAllPlayers(0);
 				ReleaseAll(ctx);
 			}
 		}
@@ -205,19 +202,17 @@ namespace Jazz2::Multiplayer::GameModes
 
 	void JailbreakMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
-		// The top left corner shows how many players of each team are in jail
+		// How many players of each team are in jail, under its score
 		std::uint8_t teamCount = ctx.GetTeamCount();
 		for (std::uint8_t team = 0; team < teamCount; team++) {
-			// TRANSLATORS: Shown in the HUD in Jailbreak, {} is the number of players of a team in jail
-			String text = _f("Jailed: {}", ctx.CountPlayersWithRole(PlayerModeFlags::Jailed, team));
-			hud.DrawHudText(GameModeFontType::Small, text, view.X + 14.0f, view.Y + 5.0f + team * 14.0f, 1.0f,
-				UI::Alignment::TopLeft, GetTeamColor(team), 0.8f, 0.88f);
+			// TRANSLATORS: Shown in the HUD in Jailbreak under the score of a team, first {} is the number of its players in jail, second {} is the number of all its players
+			DrawUnderTeamScore(ctx, hud, view, team, _f("jailed {}/{}", ctx.CountPlayersWithRole(PlayerModeFlags::Jailed, team),
+				ctx.CountPlayersWithRole(PlayerModeFlags::None, team)));
 		}
 
 		if (HasFlag(ctx, player, PlayerModeFlags::Jailed)) {
 			// TRANSLATORS: Status shown in the HUD in Jailbreak to a jailed player
-			hud.DrawHudText(GameModeFontType::Small, _("You are in jail!"), view.X + 14.0f, view.Y + 5.0f + teamCount * 14.0f + 4.0f, 1.0f,
-				UI::Alignment::TopLeft, Colorf(0.68f, 0.36f, 0.36f), 0.8f, 0.88f);
+			DrawStatusLine(hud, view, _("You are in jail!"), Colorf(0.68f, 0.36f, 0.36f));
 		}
 	}
 

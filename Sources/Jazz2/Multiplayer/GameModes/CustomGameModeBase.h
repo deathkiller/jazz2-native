@@ -2,7 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "IGameMode.h"
+#include "GameModeBase.h"
 
 namespace Jazz2::Multiplayer::GameModes
 {
@@ -13,7 +13,7 @@ namespace Jazz2::Multiplayer::GameModes
 		is @ref MpPlayerState::ModePoints and the configured @ref ServerConfiguration::TotalKills is the score to reach.
 		When the time runs out, the best player or team wins, a tie is a draw.
 	*/
-	class CustomGameModeBase : public IGameMode
+	class CustomGameModeBase : public GameModeBase
 	{
 	public:
 		bool SkipsPreGameCountdown() const override {
@@ -106,6 +106,8 @@ namespace Jazz2::Multiplayer::GameModes
 		void DrawScoreLine(IGameModeContext& ctx, IGameModeHUD& hud, const Rectf& view, StringView label, std::uint32_t value, bool withTarget);
 		/** @brief Draws a status line below the score line */
 		void DrawStatusLine(IGameModeHUD& hud, const Rectf& view, StringView text, const Colorf& color);
+		/** @brief Draws a short text under the score of the team in the team score header, as the flag state in Capture The Flag */
+		void DrawUnderTeamScore(IGameModeContext& ctx, IGameModeHUD& hud, const Rectf& view, std::uint8_t team, StringView text);
 	};
 }
 

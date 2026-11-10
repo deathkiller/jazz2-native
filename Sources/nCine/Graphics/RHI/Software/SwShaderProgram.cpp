@@ -38,6 +38,11 @@ namespace nCine::RHI::Software
 			{ "Combine", SwEffect::Combine, false },
 			{ "CombineWithWater", SwEffect::Combine, false },
 			{ "CombineWithWaterLow", SwEffect::Combine, false },
+			{ "CombineDither", SwEffect::Combine, true },
+			{ "CombineWithWaterDither", SwEffect::Combine, true },
+			{ "CombineWithWaterLowDither", SwEffect::Combine, true },
+			{ "Water", SwEffect::Water, false },
+			{ "WaterLow", SwEffect::Water, false },
 			{ "TexturedBackground", SwEffect::TexturedBackground, false },
 			{ "TexturedBackgroundDither", SwEffect::TexturedBackground, true },
 			{ "TexturedBackgroundTunnel", SwEffect::TexturedBackgroundTunnel, false },
@@ -49,6 +54,7 @@ namespace nCine::RHI::Software
 			{ "TexturedBackgroundCylinder", SwEffect::TexturedBackgroundCylinder, false },
 			{ "TexturedBackgroundCylinderDither", SwEffect::TexturedBackgroundCylinder, true },
 			{ "TexturedBackgroundWave", SwEffect::TexturedBackgroundWave, false },
+			{ "TexturedBackgroundWaveDither", SwEffect::TexturedBackgroundWave, true },
 			{ "PaletteRemap", SwEffect::PaletteRemap, false },
 			{ "BatchedPaletteRemap", SwEffect::BatchedPaletteRemap, false },
 		};
@@ -89,6 +95,9 @@ namespace nCine::RHI::Software
 			// Viewport compositor (the plain and water variants share the base composite in C++)
 			if (Contains(label, "Combine")) {
 				return SwEffect::Combine;
+			}
+			if (Contains(label, "Water")) {
+				return SwEffect::Water;
 			}
 
 			// No-texture solid-colour sprite family (labels "Sprite_NoTexture" / "Batched_Sprites_NoTexture").

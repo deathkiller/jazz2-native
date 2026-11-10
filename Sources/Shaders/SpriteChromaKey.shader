@@ -4,18 +4,16 @@ variant USE_PALETTE;
 shader_type canvas_item;
 precision highp;
 
-// A sprite of SPRITE::CHROMAKEY of JJ2+, drawn as usual but only over the pixels of what is drawn behind it that are of
-// the key color (a script draws the teeth of a boss only inside its mouth so)
+// JJ2+ SPRITE::CHROMAKEY: the sprite shows only where the pixel behind it matches the key color
 
 #if USE_PALETTE
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 // A sharp copy of what is drawn behind the sprite
 uniform sampler2D uTextureBehind : texture_unit(2);
-// One over the size of the target being drawn into, the copy is smaller or the same size, but covers the same view
+// One over the target size - the copy may be smaller but covers the same view
 uniform vec2 uTargetSizeInv;
-// The key color in rgb, and how far each channel of a pixel behind may be from it in alpha - the copy can have fewer bits
-// per channel than the palette has
+// Key color in rgb, per-channel tolerance in alpha (the copy may have fewer bits than the palette)
 uniform vec4 uKeyColor;
 
 void fragment() {
@@ -30,7 +28,7 @@ void fragment() {
 	vec4 color = src;
 #endif
 #if SOFTWARE_RENDERER
-	// The software renderer can't copy what is behind a sprite, it's drawn as usual there
+	// The software renderer can't copy what's behind, so draw as usual
 	float keyed = 1.0;
 #else
 	vec3 behind = texture(uTextureBehind, gl_FragCoord.xy * uTargetSizeInv).rgb;

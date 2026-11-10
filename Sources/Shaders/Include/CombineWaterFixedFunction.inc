@@ -1,5 +1,10 @@
 // Console rebuild of the underwater effect out of geometry, shared by every void fixed_function block of
-// CombineWithWater.shader and CombineWithWaterLow.shader.
+// CombineWithWater.shader and CombineWithWaterLow.shader, and in halves by Combine.shader and Water.shader.
+// The block binds the lighting stage itself before including this, if it has one.
+//
+// The water drawn in front of a layer behind the others splits it: Water.shader draws the underwater part in the
+// middle of the scene, where the layers in front are drawn over it (WATER_NO_DARKNESS), and Combine.shader the
+// darkness above deep water after the lighting, over all of them (WATER_NO_UNDERWATER).
 //
 // The lightmap half of the composite stays in the backend stage: converting the compositor's
 // half-resolution float lightmap into a factor texture is a per-texel loop over the whole map every
@@ -38,8 +43,6 @@
 #ifndef WATER_STRIPS
 #define WATER_STRIPS 4
 #endif
-
-pipeline lighting_combine;
 
 if (has_uniform(uWaterLevel)) {
 	// The Combine draw's quad IS the viewport, so the sprite axes are its rectangle in raster space:
@@ -88,6 +91,7 @@ if (has_uniform(uWaterLevel)) {
 	// the crests, then a wavy band down to the surface the tint starts at. WATER_LITE ends the quad at the
 	// undisturbed waterline instead: it is drawn before the tint, so where a crest rises above that line
 	// the surface's bright edge goes over the darkness, and the troughs leave a sliver of a row or two.
+#ifndef WATER_NO_DARKNESS
 	if (level < 0.4 && level > 0.0) {
 		vec4 above = vec4(ambient.r, ambient.g, ambient.b, 0.4 - level);
 #ifdef WATER_LITE
@@ -124,7 +128,9 @@ if (has_uniform(uWaterLevel)) {
 		}
 #endif
 	}
+#endif
 
+#ifndef WATER_NO_UNDERWATER
 	if (level < 1.0) {
 		// Underwater: mix(main, (0.4, 0.6, 0.8), 0.4) plus the glow g toward white - out = main * 0.6 * (1 - g) +
 		// (waterColor * 0.4 * (1 - g) + g), which as one blend is alpha 0.4 + 0.6 * g and a colour that is a
@@ -295,4 +301,5 @@ if (has_uniform(uWaterLevel)) {
 		}
 #endif
 	}
+#endif
 }

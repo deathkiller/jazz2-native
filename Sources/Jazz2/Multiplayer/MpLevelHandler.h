@@ -219,6 +219,7 @@ namespace Jazz2::Multiplayer
 		Vector2f GetTeamBasePosition(std::uint8_t team) override;
 		void ShowAlertToAllPlayers(StringView text) override;
 		void SendMessageToAllPlayers(StringView text) override;
+		void ShowCountdownToAllPlayers(std::int32_t secsLeft) override;
 		void SyncPlayerModeState(Actors::Player* player) override;
 		void SyncTeamScores() override;
 		SmallVectorImpl<GameModes::GameModeObject>& GetGameModeObjects() override;
@@ -247,6 +248,13 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns the score of the team as the HUD shows it, on clients as last synchronized */
 		std::uint32_t GetSyncedTeamScore(std::uint8_t team) const {
 			return (team < _teamScores.size() ? _teamScores[team] : 0);
+		}
+		bool GetSyncedTeamExtra(std::uint8_t team, std::uint32_t& value) const override {
+			if (team >= _teamExtras.size() || _teamExtras[team] < 0) {
+				return false;
+			}
+			value = (std::uint32_t)_teamExtras[team];
+			return true;
 		}
 
 		/** @brief Returns `true` if @p attacker may hurt @p victim under the rules of the current game mode */
@@ -652,6 +660,7 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<std::uint32_t, 0> _teamScores;	// Server: computed each check; Client: mirrored for the HUD (index = team id)
+		SmallVector<std::int32_t, 0> _teamExtras;	// Server + Client: second number of each team the HUD shows, -1 for none
 		SmallVector<CtfFlag, 0> _ctfFlags;			// Server: one flag per team in Capture The Flag
 		std::uint32_t _ctfCaptures[MaxTeamCount];	// Server: per-team capture count (used as the team score in CTF)
 		std::uint32_t _teamKills[MaxTeamCount];		// Server: per-team kill count credited at kill time (team score in TeamBattle; independent of current membership so switching teams can't transfer a score)
@@ -783,6 +792,8 @@ namespace Jazz2::Multiplayer
 		void UpdateGameModeObjectVisuals();
 		/** @brief Destroys all objects of the game mode and their actors */
 		void ClearGameModeObjects();
+		/** @brief Puts the easy-only and hard-only events back into the level in every mode but Cooperation */
+		void ActivateDifficultyEvents(MpGameMode gameMode);
 
 		void BuildCtfBases();
 		void UpdateCtf(float timeMult);

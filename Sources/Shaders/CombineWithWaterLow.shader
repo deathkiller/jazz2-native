@@ -15,6 +15,9 @@ uniform float uWaterLevel;
 // Colors of the water at its surface and at the bottom of the view
 uniform vec4 uWaterColorTop;
 uniform vec4 uWaterColorBottom;
+// See Include/WaterFs.inc
+uniform vec4 uWavePhase;
+uniform vec4 uWaterBase;
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -38,13 +41,7 @@ vec2 lightingJitterLowPower() {
 	return offset * vViewSizeInv * 1.4;
 }
 
-// sin(2 * pi * cycles) as a parabola over the range-reduced phase, refined to within 0.001 of the real
-// curve - a few multiply-adds, where sin() is one of the most expensive things a USSE-class part runs
-float sinCycles(float cycles) {
-	float v = fract(cycles + 0.5) * 2.0 - 1.0;
-	float y = 4.0 * v * (1.0 - abs(v));
-	return y * (0.775 + 0.225 * abs(y));
-}
+#include "Include/WaterFs.inc"
 
 #if DITHER
 #include "Include/Dither565.inc"
@@ -52,36 +49,13 @@ float sinCycles(float cycles) {
 
 void fragment() {
 	vec2 uvLocal = vTexCoords;
-	vec3 waterColor = mix(uWaterColorTop.rgb, uWaterColorBottom.rgb, clamp((uvLocal.y - uWaterLevel) / max(1.0 - uWaterLevel, 0.05), 0.0, 1.0));
-	vec2 uvWorldCenter = (uCameraPos.xy * vViewSizeInv.xy);
-	vec2 uvWorld = uvLocal + uvWorldCenter;
-
-	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
+	float isTexelBelow;
+	vec2 uv;
+	vec3 main = waterSceneLow(uvLocal, waterWave(waterWavePhases(uvLocal.x)), 0.70710678 * vViewSize.y, vViewSizeInv.y,
+		uWaterBase.z + uvLocal.y * 3.1830989, isTexelBelow, uv);
 
 #if LOW_POWER_GPU
-	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): sin() as a polynomial,
-	// and no clamp - the view is sampled with clamp-to-edge anyway
-	vec2 uv = uvLocal + vec2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
-#else
-	vec2 uv = clamp(uvLocal + vec2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), vec2(0.0), vec2(1.0));
-#endif
-	vec4 main = texture(uTexture, uv);
-
-	// Waves
-	float topDist = abs(uvLocal.y - uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
-	main.rgb = mix(main.rgb, waterColor, vec3(isTexelBelow * 0.4)) + vec3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
-
-	// Lighting
-#if LOW_POWER_GPU
-	// The blurred levels and the lightmap are read at the undisplaced position: a few pixels of ripple are
-	// invisible in either, and a coordinate taken straight from an interpolant lets the blur reads be issued
-	// before the program even runs, rather than as dependent reads. With the lightmap jitter from
-	// Combine.shader and the sine above, this pass costs 3.2 ms over a plain copy on the SGX543 at 480x272
-	// instead of 5.3.
+	// Blur and lightmap are read undisplaced to avoid dependent reads, the ripple isn't visible in them
 	vec4 blur1 = texture(uTextureBlurHalf, uvLocal);
 	vec4 blur2 = texture(uTextureBlurQuarter, uvLocal);
 	vec4 light = texture(uTextureLighting, uvLocal + lightingJitterLowPower());
@@ -96,35 +70,30 @@ void fragment() {
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
-	float darknessStrength = (1.0 - light.r);
-
-	// Darkness above water
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
+	// Includes darkness above deep water
+	float darknessStrength = min(1.0, (1.0 - light.r) + (1.0 - isTexelBelow) * max(0.4 - uWaterLevel, 0.0));
 
 	COLOR = mix(mix(
-		main * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
+		vec4(main, 1.0) * (1.0 + 0.607 * light.g) + (0.2 * light.g + max(light.g - 0.7, 0.0)) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
-	// The whole scene in the colors of the 16-bit renderer of JJ2+, the HUD is drawn after it
+	// Reduce to 16-bit colors like JJ2+ (HUD is drawn later)
 	COLOR.rgb = reduceColors(COLOR.rgb, mod(gl_FragCoord.xy, 4.0));
 #endif
 }
 
 void fixed_function(gx, pica, gu, gs, legacygl) {
-	// Water at the fidelity this tier can afford, rebuilt out of geometry over the composited scene - the
-	// HIGH-quality variant carries the same blocks (see the include)
+	// Water built from geometry over the composited scene
+	pipeline lighting_combine;
 #include "Include/CombineWaterFixedFunction.inc"
 }
 
 void fixed_function(rdp) {
-	// The light variant with 10 columns along the wave: every triangle costs this CPU ~25 us to set up
-	// for the RSP, against a few for a whole full-screen rectangle (see the include)
+	// Lite variant with fewer triangles, they are expensive to set up here
+	pipeline lighting_combine;
 #define WATER_STRIP_SEGMENTS 5
 #define WATER_STRIPS 2
 #define WATER_LITE
@@ -132,7 +101,8 @@ void fixed_function(rdp) {
 }
 
 void fixed_function(pvr) {
-	// The same water, cut into the shorter strips the PVR's 8-vertex scratch holds
+	// Shorter strips to fit the 8-vertex buffer
+	pipeline lighting_combine;
 #define WATER_STRIP_SEGMENTS 3
 #define WATER_STRIPS 9
 #include "Include/CombineWaterFixedFunction.inc"

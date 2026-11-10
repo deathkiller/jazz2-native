@@ -3,6 +3,7 @@
 #include "PreferencesCache.h"
 #include "Formats/LevelTextsChunk.h"
 #include "Rendering/PlayerViewport.h"
+#include "Rendering/WaterRenderer.h"
 #include "UI/DiscordRpcClient.h"
 #include "UI/HUD.h"
 #include "UI/InGameConsole.h"
@@ -564,7 +565,32 @@ namespace Jazz2
 		}
 		_waterInteraction = (settings.Movement == LevelSettingsChunk::WaterMovement::LowGravity ? WaterInteraction::LowGravity : WaterInteraction::Swim);
 		_waterLighting = settings.Lighting;
-		_waterHidden = (settings.WaterLayer == LevelSettingsChunk::WaterHidden);
+		SetWaterLayer(settings.WaterLayer);
+	}
+
+	void LevelHandler::SetWaterLayer(std::int32_t layerIndex)
+	{
+		using Formats::LevelSettingsChunk;
+
+		_waterHidden = (layerIndex == LevelSettingsChunk::WaterHidden);
+		_waterLayer = (layerIndex >= 0 ? layerIndex : LevelSettingsChunk::WaterInFront);
+		// The copy of the scene the water is drawn over is allocated with the viewports, only once a level needs it
+		if (MayDrawWaterInScene() && !_assignedViewports.empty() && !_assignedViewports[0]->HasWaterPasses()) {
+			CommitViewports();
+		}
+	}
+
+	std::uint16_t LevelHandler::GetWaterDepth() const
+	{
+		if (_waterHidden || _waterLayer < 0 || _waterShader == nullptr || _tileMap == nullptr) {
+			return 0;
+		}
+		return _tileMap->GetDepthInFrontOfLayer(_waterLayer);
+	}
+
+	bool LevelHandler::MayDrawWaterInScene() const
+	{
+		return (!_waterHidden && _waterLayer >= 0);
 	}
 
 	WaterInteraction LevelHandler::GetWaterInteraction() const
@@ -815,6 +841,8 @@ namespace Jazz2
 		_tileMap = Death::move(descriptor.TileMap);
 		_tileMap->SetOwner(this);
 		_tileMap->SetParent(_rootNode.get());
+		_waterRenderer = std::make_unique<Rendering::WaterRenderer>(this);
+		_waterRenderer->SetParent(_rootNode.get());
 
 		_eventMap = Death::move(descriptor.EventMap);
 		_eventMap->SetLevelHandler(this);
@@ -1367,6 +1395,8 @@ namespace Jazz2
 				LOGW("PrecompiledShader::CombineWithWater failed");
 			}
 		}
+		// The water in front of a layer behind the others, on every tier as well - the console blocks of this program draw it
+		_waterShader = resolver.GetShader(PreferencesCache::LowWaterQuality ? PrecompiledShader::WaterLow : PrecompiledShader::Water);
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];

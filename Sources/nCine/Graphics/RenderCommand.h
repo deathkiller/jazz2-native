@@ -74,6 +74,10 @@ namespace nCine
 		inline void SetVisitOrder(std::uint16_t visitOrder) {
 			_visitOrder = visitOrder;
 		}
+		/** @brief Returns the key the queue is sorted by first, the layer in the upper half and the visit order in the lower one */
+		inline std::uint32_t GetLayerSortKey() const {
+			return (std::uint32_t(_layer) << 16) + _visitOrder;
+		}
 
 		/** @brief Returns the material sort key for the queue */
 		inline std::uint64_t GetMaterialSortKey() const {
@@ -223,11 +227,6 @@ namespace nCine
 		Matrix4x4f _modelMatrix;
 		Material _material;
 		Geometry _geometry;
-
-		/** @brief Returns the final layer sort key for this command */
-		inline std::uint32_t GetLayerSortKey() const {
-			return std::uint32_t(_layer << 16) + _visitOrder;
-		}
 
 		// Re-resolves the cached uniform pointers if the material's shader program has changed
 		void RefreshCachedUniforms();

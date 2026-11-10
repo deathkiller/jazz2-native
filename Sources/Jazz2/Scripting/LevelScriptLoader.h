@@ -541,7 +541,7 @@ namespace Jazz2::Scripting
 		float _waterTarget = -1.0f;
 		float _waterChangeSpeed = 1.0f;
 		std::int32_t _waterTick = -1;
-		// The layer `jjWaterLayer` puts the water in front of, the water isn't drawn for one that isn't 1 to 8
+		// The layer number `jjWaterLayer` puts the water in front of (see LevelHandler::SetWaterLayer())
 		std::int32_t _waterLayer = 1;
 
 		// `WATERLIGHT::wl` of JJ2+

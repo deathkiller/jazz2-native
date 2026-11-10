@@ -32,6 +32,7 @@ namespace Jazz2::Multiplayer::GameModes
 		GameEndResult CheckGameEnds(IGameModeContext& ctx) override;
 		std::uint32_t GetStateScore(const MpPlayerState& state) const override;
 		void OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view) override;
+		StringView GetScoreboardLabel() const override;
 		bool HasDamageAmplifierInOvertime() const override {
 			return true;
 		}

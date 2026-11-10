@@ -130,6 +130,7 @@ namespace nCine::RHI::Software
 	std::int32_t SwDevice::_defaultFbStride = 0;
 	std::vector<std::uint8_t> SwDevice::_screenPixels;
 	std::vector<SwDevice::PendingSoftwareLight> SwDevice::_pendingSoftwareLights;
+	std::vector<SwDevice::PendingSoftwareLight> SwDevice::_pendingSoftwareWater;
 
 	void SwDevice::SetBlendingEnabled(bool enabled)
 	{
@@ -428,11 +429,29 @@ namespace nCine::RHI::Software
 			}
 			_pendingSoftwareLights.clear();
 		}
+		// The water of a scene that wasn't drawn (or whose draw was culled) is simply dropped
+		_pendingSoftwareWater.clear();
+	}
+
+	void SwDevice::SetPendingSoftwareWater(std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH,
+		float waterLevelPx, float waterTime, float waterCamY)
+	{
+		PendingSoftwareLight entry;
+		entry.VpX = vpX;
+		entry.VpY = vpY;
+		entry.VpW = vpW;
+		entry.VpH = vpH;
+		entry.WaterActive = true;
+		entry.WaterInScene = true;
+		entry.WaterLevelPx = waterLevelPx;
+		entry.WaterTime = waterTime;
+		entry.WaterCamY = waterCamY;
+		_pendingSoftwareWater.push_back(entry);
 	}
 
 	void SwDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
-		bool waterActive, float waterLevelPx, float waterTime, float waterCamY)
+		bool waterActive, float waterLevelPx, float waterTime, float waterCamY, bool waterInScene)
 	{
 		PendingSoftwareLight entry;
 		entry.Lightmap = lightmap;
@@ -447,6 +466,7 @@ namespace nCine::RHI::Software
 		entry.AmbG = ambG;
 		entry.AmbB = ambB;
 		entry.WaterActive = waterActive;
+		entry.WaterInScene = waterInScene;
 		entry.WaterLevelPx = waterLevelPx;
 		entry.WaterTime = waterTime;
 		entry.WaterCamY = waterCamY;
@@ -486,6 +506,38 @@ namespace nCine::RHI::Software
 				std::memcpy(row + (std::size_t)x * 4, edge, 4);
 			}
 		}
+	}
+
+	// The water of one row below the waterline, counted bottom-up inside the viewport (see ApplyPendingSoftwareLighting())
+	static void ApplyUnderwaterRow(std::uint8_t* px, std::int32_t vpW, std::int32_t y, float waterRowLimit, float invVpH,
+		float waveAmplitudePx, float wavePhaseBase, float wavePhasePerRow)
+	{
+		constexpr float WaterColorR = 0.4f, WaterColorG = 0.6f, WaterColorB = 0.8f;
+
+		// Horizontal wave displacement, constant per row
+		const float phase = wavePhaseBase + wavePhasePerRow * (float)y;
+		const std::int32_t shift = (std::int32_t)std::lround(waveAmplitudePx * sinApprox(phase));
+		ShiftRowHorizontal(px, vpW, shift);
+
+		// Water tint + surface glow folded into one constant blend: out = main * 0.6 * (1 - glow) +
+		// (waterColor * 0.4 * (1 - glow) + glow). Solving out = mix(main, src, a) for the blend kernel
+		// gives a = 0.4 + 0.6 * glow and src = (waterColor * 0.4 * (1 - glow) + glow) / a, with src
+		// always inside [0, 1] because it is a convex combination of waterColor and white.
+		const float topDist = (waterRowLimit - (float)y) * invVpH;
+		const float topGradient = std::max(1.0f - topDist, 0.0f);
+		float glow = 0.2f * topGradient * topGradient;
+		if (waterRowLimit - (float)y < 1.0f) {
+			glow += 0.2f;	// The waterline row itself gets an extra highlight
+		}
+		const float a = 0.4f + 0.6f * glow;
+		const float tintScale = 0.4f * (1.0f - glow) / a;
+		const float glowTerm = glow / a;
+		std::uint8_t tintBlend[4];
+		tintBlend[0] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorR * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+		tintBlend[1] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorG * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+		tintBlend[2] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorB * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+		tintBlend[3] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(a * 255.0f + 0.5f), 1, 254);
+		BlendScanlineConstSrcAlpha(px, vpW, tintBlend);
 	}
 
 #if defined(RHI_USE_FB16)
@@ -569,7 +621,6 @@ namespace nCine::RHI::Software
 				aboveWaterBlend[3] = (std::uint8_t)std::clamp<std::int32_t>(a, 0, 254);
 			}
 		}
-		constexpr float WaterColorR = 0.4f, WaterColorG = 0.6f, WaterColorB = 0.8f;
 
 		// In-place combine over the viewport region, matching the core of Combine(WithWater).shader with the
 		// (heavy, blur-dependent) grayscale night-vision term dropped:
@@ -595,31 +646,9 @@ namespace nCine::RHI::Software
 #endif
 
 			const bool isUnderwaterRow = (hasWater && y < belowEndExcl);
-			if (isUnderwaterRow) {
-				// Horizontal wave displacement, constant per row
-				const float phase = wavePhaseBase + wavePhasePerRow * (float)y;
-				const std::int32_t shift = (std::int32_t)std::lround(waveAmplitudePx * sinApprox(phase));
-				ShiftRowHorizontal(px, vpW, shift);
-
-				// Water tint + surface glow folded into one constant blend: out = main * 0.6 * (1 - glow) +
-				// (waterColor * 0.4 * (1 - glow) + glow). Solving out = mix(main, src, a) for the blend kernel
-				// gives a = 0.4 + 0.6 * glow and src = (waterColor * 0.4 * (1 - glow) + glow) / a, with src
-				// always inside [0, 1] because it is a convex combination of waterColor and white.
-				const float topDist = (waterRowLimit - (float)y) * invVpH;
-				const float topGradient = std::max(1.0f - topDist, 0.0f);
-				float glow = 0.2f * topGradient * topGradient;
-				if (waterRowLimit - (float)y < 1.0f) {
-					glow += 0.2f;	// The waterline row itself gets an extra highlight
-				}
-				const float a = 0.4f + 0.6f * glow;
-				const float tintScale = 0.4f * (1.0f - glow) / a;
-				const float glowTerm = glow / a;
-				std::uint8_t tintBlend[4];
-				tintBlend[0] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorR * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[1] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorG * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[2] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorB * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[3] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(a * 255.0f + 0.5f), 1, 254);
-				BlendScanlineConstSrcAlpha(px, vpW, tintBlend);
+			// The water drawn in the middle of the scene leaves only the darkness above it to this pass
+			if (isUnderwaterRow && !light.WaterInScene) {
+				ApplyUnderwaterRow(px, vpW, y, waterRowLimit, invVpH, waveAmplitudePx, wavePhaseBase, wavePhasePerRow);
 			}
 
 			if (hasLighting) {
@@ -634,6 +663,58 @@ namespace nCine::RHI::Software
 
 #if defined(RHI_USE_FB16)
 			SwStoreFbSpan565(fbRow16, g_fb16RowStage, vpW);
+#endif
+		}
+	}
+
+	void SwDevice::ApplyPendingSoftwareWater()
+	{
+		if (_pendingSoftwareWater.empty()) {
+			return;
+		}
+		// The scene being drawn is the one of the viewport it's drawn into
+		std::size_t index = 0;
+		for (std::size_t i = 0; i < _pendingSoftwareWater.size(); i++) {
+			if (_pendingSoftwareWater[i].VpX == _viewport.X && _pendingSoftwareWater[i].VpY == _viewport.Y) {
+				index = i;
+				break;
+			}
+		}
+		const PendingSoftwareLight water = _pendingSoftwareWater[index];
+		_pendingSoftwareWater.erase(_pendingSoftwareWater.begin() + std::ptrdiff_t(index));
+
+		// What is drawn so far has to be in the buffer, and what is drawn next goes over the water
+		FlushSoftwareRenderer();
+		const Framebuffer fb = GetScreenFramebuffer();
+		if (fb.pixels == nullptr) {
+			return;
+		}
+
+		const std::int32_t vpX = std::max<std::int32_t>(0, water.VpX);
+		const std::int32_t vpY = std::max<std::int32_t>(0, water.VpY);
+		const std::int32_t vpW = std::min(water.VpW, fb.width - vpX);
+		const std::int32_t vpH = std::min(water.VpH, fb.height - vpY);
+		if (vpW <= 0 || vpH <= 0) {
+			return;
+		}
+
+		// The same rows as ApplyPendingSoftwareLighting() would tint, only those below the waterline are touched
+		const float invVpH = 1.0f / (float)vpH;
+		const float waterRowLimit = (float)vpH - water.WaterLevelPx;
+		const std::int32_t belowEndExcl = std::min(vpH, (std::int32_t)std::ceil(waterRowLimit));
+		const float waveAmplitudePx = 0.008f * (float)vpW;
+		const float wavePhaseBase = water.WaterTime * 16.0f + (water.WaterCamY + (float)vpH) * invVpH * 20.0f;
+		const float wavePhasePerRow = -20.0f * invVpH;
+		for (std::int32_t y = 0; y < belowEndExcl; y++) {
+			const std::size_t fbRow = (std::size_t)(vpY + vpH - 1 - y);
+#if defined(RHI_USE_FB16)
+			std::uint8_t* fbRow16 = fb.pixels + fbRow * fb.strideBytes + (std::size_t)vpX * 2;
+			SwLoadFbSpan565(g_fb16RowStage, fbRow16, vpW);
+			ApplyUnderwaterRow(g_fb16RowStage, vpW, y, waterRowLimit, invVpH, waveAmplitudePx, wavePhaseBase, wavePhasePerRow);
+			SwStoreFbSpan565(fbRow16, g_fb16RowStage, vpW);
+#else
+			std::uint8_t* px = fb.pixels + fbRow * fb.strideBytes + (std::size_t)vpX * 4;
+			ApplyUnderwaterRow(px, vpW, y, waterRowLimit, invVpH, waveAmplitudePx, wavePhaseBase, wavePhasePerRow);
 #endif
 		}
 	}
@@ -835,6 +916,11 @@ namespace nCine::RHI::Software
 		// screen buffer. Combine is only ever the compositor, so every Combine draw is intercepted here.
 		if (effect == SwEffect::Combine) {
 			ApplyPendingSoftwareLighting();
+			return;
+		}
+		// The water drawn in the middle of the scene, the same per-row water applied to what is drawn so far
+		if (effect == SwEffect::Water) {
+			ApplyPendingSoftwareWater();
 			return;
 		}
 

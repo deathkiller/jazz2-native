@@ -270,6 +270,18 @@ namespace Jazz2::Multiplayer::GameModes
 			UI::Alignment::TopLeft, color, 0.8f, 1.0f);
 	}
 
+	void CustomGameModeBase::DrawUnderTeamScore(IGameModeContext& ctx, IGameModeHUD& hud, const Rectf& view, std::uint8_t team, StringView text)
+	{
+		// The same place and look as the flag state in Capture The Flag (see CaptureTheFlagMode::OnDrawHUD())
+		std::uint8_t teamCount = ctx.GetTeamCount();
+		if (teamCount < 2 || team >= teamCount) {
+			return;
+		}
+		constexpr float Spacing = 54.0f;
+		float x = view.X + view.W * 0.5f - Spacing * (teamCount - 1) * 0.5f + team * Spacing;
+		hud.DrawHudText(GameModeFontType::Small, text, x, view.Y + 26.0f, 1.0f, UI::Alignment::Top, GetTeamColor(team), 0.7f, 0.88f);
+	}
+
 	void CustomGameModeBase::DrawStatusLine(IGameModeHUD& hud, const Rectf& view, StringView text, const Colorf& color)
 	{
 		hud.DrawHudText(GameModeFontType::Small, text, view.X + 14.0f, view.Y + 26.0f, 1.0f,

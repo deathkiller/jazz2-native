@@ -52,6 +52,7 @@
 #include "Tinted.h"
 #include "TouchCircle.h"
 #include "Transition.h"
+#include "Water.h"
 #include "WhiteMask.h"
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -110,6 +111,7 @@ namespace Jazz2::ShadersGen
 		&BatchedTinted,
 		&TouchCircle,
 		&Transition,
+		&Water,
 		&WhiteMask,
 		&BatchedWhiteMask,
 	};

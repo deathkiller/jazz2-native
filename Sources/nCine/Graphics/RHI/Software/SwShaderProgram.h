@@ -44,7 +44,8 @@ namespace nCine::RHI::Software
 		TexturedBackgroundWave,	/**< The wave variant of the textured background */
 		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
 		BatchedPaletteRemap,	/**< The palette-remap effect over an array of batched instances */
-		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
+		Combine,				/**< The viewport compositor (scene + lighting + blur + ambient) */
+		Water					/**< The water drawn in the middle of the scene, in front of a layer behind the others */
 	};
 
 	/**

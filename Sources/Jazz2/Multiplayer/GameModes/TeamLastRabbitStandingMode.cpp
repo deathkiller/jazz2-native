@@ -163,14 +163,36 @@ namespace Jazz2::Multiplayer::GameModes
 		return true;
 	}
 
+	bool TeamLastRabbitStandingMode::TryGetTeamExtra(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& value)
+	{
+		// The lives in the reserve of the team
+		value = (team < MaxTeamCount ? (std::uint32_t)std::max<std::int32_t>(_reserve[team], 0) : 0);
+		return true;
+	}
+
 	std::uint32_t TeamLastRabbitStandingMode::GetStateScore(const MpPlayerState& state) const
 	{
 		return (std::uint32_t)std::max<std::int32_t>(state.ModeLives, 0);
 	}
 
+	StringView TeamLastRabbitStandingMode::GetScoreboardLabel() const
+	{
+		return _("Lives");
+	}
+
 	void TeamLastRabbitStandingMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
 		DrawScoreLine(ctx, hud, view, _("Lives"), (std::uint32_t)std::max<std::int32_t>(ctx.GetPlayerState(player).ModeLives, 0), false);
+
+		// The lives left in the reserve of each team, under its score
+		std::uint8_t teamCount = ctx.GetTeamCount();
+		for (std::uint8_t team = 0; team < teamCount; team++) {
+			std::uint32_t reserve;
+			if (ctx.GetSyncedTeamExtra(team, reserve)) {
+				// TRANSLATORS: Shown in the HUD in Team Last Rabbit Standing under the lives of a team, {} is the number of lives in its reserve
+				DrawUnderTeamScore(ctx, hud, view, team, _f("reserve {}", reserve));
+			}
+		}
 	}
 
 	void TeamLastRabbitStandingMode::TakeOut(IGameModeContext& ctx, Actors::Player* player)

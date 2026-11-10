@@ -106,19 +106,19 @@ namespace nCine
 		return (1u << (_splitPasses.size() - 1));
 	}
 
-	void Viewport::RequestSplit(std::uint16_t layer, std::uint32_t passes)
+	void Viewport::RequestSplitAtKey(std::uint32_t sortKey, std::uint32_t passes)
 	{
-		if (passes == 0) {
+		if (passes == 0 || sortKey == RenderQueue::NoSplitKey) {
 			return;
 		}
 		std::size_t i = 0;
-		while (i < _splitLayers.size() && _splitLayers[i] < layer) {
+		while (i < _splitLayers.size() && _splitLayers[i] < sortKey) {
 			i++;
 		}
-		if (i < _splitLayers.size() && _splitLayers[i] == layer) {
+		if (i < _splitLayers.size() && _splitLayers[i] == sortKey) {
 			_splitLayerPasses[i] |= passes;
 		} else {
-			_splitLayers.insert(_splitLayers.begin() + i, layer);
+			_splitLayers.insert(_splitLayers.begin() + i, sortKey);
 			_splitLayerPasses.insert(_splitLayerPasses.begin() + i, passes);
 		}
 	}
@@ -511,7 +511,7 @@ namespace nCine
 				RenderQueue::Part part = _renderQueue.StartPart();
 				std::uint32_t pending = 0, upToDate = 0;
 				for (std::size_t i = 0; i <= _splitLayers.size(); i++) {
-					part = _renderQueue.NextPart(part, i < _splitLayers.size() ? _splitLayers[i] : RenderQueue::NoSplitLayer);
+					part = _renderQueue.NextPart(part, i < _splitLayers.size() ? _splitLayers[i] : RenderQueue::NoSplitKey);
 					if (!part.IsEmpty()) {
 						if (pending != 0) {
 							DrawSplitPasses(pending);

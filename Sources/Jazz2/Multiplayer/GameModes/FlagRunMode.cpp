@@ -172,9 +172,8 @@ namespace Jazz2::Multiplayer::GameModes
 
 	void FlagRunMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{
+		// The team scores are in the header like in Capture The Flag, the points of the player in the scoreboard
 		auto& state = ctx.GetPlayerState(player);
-		// TRANSLATORS: Label of the score in the HUD of multiplayer game modes, followed by the score and the score to reach
-		DrawScoreLine(ctx, hud, view, _("Score"), state.ModePoints, false);
 		// A transparent white arrow points to the nearest capture point while nobody carries the flag
 		const GameModeObject* nearest = nullptr;
 		float nearestDistance = FLT_MAX;

@@ -37,7 +37,9 @@ namespace Jazz2::Multiplayer::GameModes
 		RespawnDecision DecideRespawn(IGameModeContext& ctx, Actors::Player* player) override;
 		GameEndResult CheckGameEnds(IGameModeContext& ctx) override;
 		bool TryGetTeamScore(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& score) override;
+		bool TryGetTeamExtra(IGameModeContext& ctx, std::uint8_t team, std::uint32_t& value) override;
 		std::uint32_t GetStateScore(const MpPlayerState& state) const override;
+		StringView GetScoreboardLabel() const override;
 		void OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view) override;
 		bool HasDamageAmplifierInOvertime() const override {
 			return true;

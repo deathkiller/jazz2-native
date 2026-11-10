@@ -498,6 +498,8 @@ namespace Jazz2::Resources
 		CombineDither,						/**< @ref Combine in the colors of the 16-bit renderer of JJ2+, see @ref DitheringScope::Screen */
 		CombineWithWaterDither,				/**< @ref CombineWithWater in the colors of the 16-bit renderer of JJ2+ */
 		CombineWithWaterLowDither,			/**< @ref CombineWithWaterLow in the colors of the 16-bit renderer of JJ2+ */
+		Water,								/**< Water in front of a layer behind the others, drawn in the middle of the scene */
+		WaterLow,							/**< Low quality variant of @ref Water */
 
 		TexturedBackground,					/**< Textured background */
 		TexturedBackgroundDither,			/**< Textured background with dithering */

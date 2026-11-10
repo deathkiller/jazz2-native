@@ -1,11 +1,9 @@
 program TileMapMeshHeat;
 variant USE_PALETTE;
 
-// The tiles of the heat effect (the tile type of JJ2+, see Tiles::LayerTileFlags::Heat): every row of pixels of a tile is
-// drawn moved left or right by a few pixels, by a fixed table of 32 rows that scrolls up a row every 4 game ticks, as
-// measured in the original - each row moves into the tiles next to it, so the quad reaches 2 pixels past the tile on
-// either side. The 12-float vertex is the tile-layer mesh layout with the position in the tile added: x and y in its
-// pixels (x from -2 to 34), and how far the texture coordinates move for a pixel to the right.
+// Heat effect tiles (see Tiles::LayerTileFlags::Heat): each pixel row is shifted sideways by a 32-row table that scrolls
+// up a row every 4 game ticks, so the quad reaches 2 px past the tile on each side. The 12-float vertex adds x and y
+// within the tile in pixels (x from -2 to 34) and the texture coordinate step per pixel.
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -36,9 +34,8 @@ uniform sampler2D uTexturePalette : texture_unit(1);
 // How many rows the table has scrolled, 0 to 31
 uniform float uHeatPhase;
 
-// How far the row k of the table (0 to 31) is taken from the right, in pixels: the table as the sum of its steps, so it
-// needs neither an array nor a texture - 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1,
-// 0, 0, 1, 1, 0, -1, -2, -1, 0
+// Shift of table row k (0 to 31) in pixels, summed from steps so it needs no array or texture:
+// 0, 1, 1, 2, 2, -1, -1, 0, -2, 1, 0, 0, 0, -1, -1, -2, -2, -1, 1, 2, 1, -1, -1, 0, 0, 1, 1, 0, -1, -2, -1, 0
 float heatShift(float k) {
 	vec4 row = vec4(k);
 	return dot(vec4(1.0, 1.0, -3.0, 1.0), step(vec4(1.0, 3.0, 5.0, 7.0), row)) +
@@ -59,7 +56,7 @@ void vertex() {
 
 void fragment() {
 	float shift = heatShift(mod(floor(vHeat.y) + uHeatPhase, 32.0));
-	// The pixel of the tile this one shows, nothing where the row moved away from it
+	// The tile pixel shown here, empty where the row moved away
 	float source = vHeat.x + shift;
 	float inside = step(0.0, source) * step(source, 31.999);
 

@@ -139,9 +139,16 @@ namespace Jazz2::Events
 		/**
 		 * @brief Collects all events meant only for the easy or only for the hard difficulty
 		 *
-		 * Includes those left out in the current difficulty, JJ2+ multiplayer modes use them as control points.
+		 * Includes those left out in the current difficulty, multiplayer modes use them as control points.
 		 */
 		void CollectEasyOrHardEvents(SmallVectorImpl<DifficultyEventInfo>& events) const;
+		/**
+		 * @brief Puts the easy-only and hard-only events left out in the current difficulty back into the level
+		 *
+		 * Every multiplayer mode but Cooperation keeps these events working, the level may rely on them (e.g., a warp
+		 * out of the room of a capture point).
+		 */
+		void ActivateSkippedDifficultyEvents(Tiles::TileMap& tileMap);
 		/**
 		 * @brief Returns the start or the warp target on specified tile position, which aren't kept in the tiles
 		 *
@@ -365,8 +372,13 @@ namespace Jazz2::Events
 			std::uint8_t Difficulty;
 		};
 		SmallVector<DifficultyEvent, 0> _difficultyEvents;
-		/// Easy-only and hard-only events left out in the current difficulty
-		SmallVector<DifficultyEventInfo, 0> _skippedDifficultyEvents;
+		/// Easy-only and hard-only events left out in the current difficulty, with all they need to be put back
+		struct SkippedDifficultyEvent {
+			DifficultyEventInfo Info;
+			Actors::ActorState Flags;
+			std::uint8_t EventParams[EventSpawner::SpawnParamsSize];
+		};
+		SmallVector<SkippedDifficultyEvent, 0> _skippedDifficultyEvents;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
 		/// Positions of the off-grid events in pixels, the tile of the event `i` is `_layoutSize.X * _layoutSize.Y + i`

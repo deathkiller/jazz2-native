@@ -240,8 +240,20 @@ namespace Jazz2::Editor
 		constexpr const char* PlayBattle = "play.battle";
 		constexpr const char* PlayTeamBattle = "play.teamBattle";
 		constexpr const char* PlayRace = "play.race";
+		constexpr const char* PlayTeamRace = "play.teamRace";
 		constexpr const char* PlayTreasureHunt = "play.treasureHunt";
+		constexpr const char* PlayTeamTreasureHunt = "play.teamTreasureHunt";
 		constexpr const char* PlayCaptureTheFlag = "play.captureTheFlag";
+		constexpr const char* PlayRoastTag = "play.roastTag";
+		constexpr const char* PlayLastRabbitStanding = "play.lastRabbitStanding";
+		constexpr const char* PlayExtendedLastRabbitStanding = "play.extendedLastRabbitStanding";
+		constexpr const char* PlayPestilence = "play.pestilence";
+		constexpr const char* PlayTeamLastRabbitStanding = "play.teamLastRabbitStanding";
+		constexpr const char* PlayJailbreak = "play.jailbreak";
+		constexpr const char* PlayDeathCaptureTheFlag = "play.deathCaptureTheFlag";
+		constexpr const char* PlayFlagRun = "play.flagRun";
+		constexpr const char* PlayDomination = "play.domination";
+		constexpr const char* PlayHeadHunters = "play.headHunters";
 		// Followed by the number of players (1 to LevelInitialization::MaxPlayerCount), the menu names each of them
 		constexpr const char* PlayPlayersPrefix = "play.players";
 		constexpr const char* PlayPlayers1 = "play.players1";

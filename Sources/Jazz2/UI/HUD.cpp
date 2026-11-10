@@ -1441,7 +1441,7 @@ namespace Jazz2::UI
 		return (res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr ? res : nullptr);
 	}
 
-	void HUD::DrawGraphics(const GraphicResource* res, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle)
+	void HUD::DrawGraphics(const GraphicResource* res, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, float angle, bool singleColor)
 	{
 		if (res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
 			return;
@@ -1470,7 +1470,8 @@ namespace Jazz2::UI
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending ? BlendMode::Additive : BlendMode::Normal, angle, paletteOffset);
+		Shader* shader = (singleColor ? ContentResolver::Get().GetShader(paletteOffset >= 0 ? PrecompiledShader::WhiteMaskPalette : PrecompiledShader::WhiteMask) : nullptr);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending ? BlendMode::Additive : BlendMode::Normal, angle, paletteOffset, shader);
 	}
 
 	bool HUD::DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float paletteOffset, float scaleX, float scaleY)

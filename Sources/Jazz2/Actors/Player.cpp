@@ -418,7 +418,20 @@ namespace Jazz2::Actors
 
 		bool canJumpPrev = CanJump();
 		_frameStartSpeedY = _speed.Y;
-		OnUpdatePhysics(timeMult);
+
+		// Measured in the original: the keys steer this tick's move, not the next one
+		bool steerBeforeMove = (!_levelHandler->IsReforged() && !IsBird() && _health > 0);
+		// Counted like UpdateFrozenState(), which decrements before it brakes
+		bool frozenFrictionApplied = (steerBeforeMove && _frozenTimeLeft > timeMult);
+		if (steerBeforeMove) {
+			UpdateRunAction();
+			if (frozenFrictionApplied) {
+				ApplyFrozenFriction(timeMult);
+			}
+			HandleHorizontalMovement(timeMult);
+		}
+
+		OnUpdatePhysics(timeMult, frozenFrictionApplied);
 
 		UpdateAnimation(timeMult);
 		CheckSuspendState(timeMult);
@@ -444,7 +457,7 @@ namespace Jazz2::Actors
 		}
 
 		OnUpdateTimers(timeMult);
-		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
+		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev, steerBeforeMove);
 
 #if defined(WITH_AUDIO)
 		if (_airboardTurnSound != nullptr && !_airboardTurnSound->IsPlaying()) {
@@ -509,7 +522,7 @@ namespace Jazz2::Actors
 			: LegacyRiseGravityReleasedNearApex);
 	}
 
-	void Player::OnUpdatePhysics(float timeMult)
+	void Player::OnUpdatePhysics(float timeMult, bool frozenFrictionApplied)
 	{
 		// Force collisions every frame even if player doesn't move
 		SetState(ActorState::IsDirty, true);
@@ -712,7 +725,7 @@ namespace Jazz2::Actors
 			_fireReleasedWhileFrozen = false;
 		}
 
-		if (UpdateFrozenState(timeMult)) {
+		if (UpdateFrozenState(timeMult, frozenFrictionApplied)) {
 			if (_controllableTimeout > 0.0f) {
 				_controllableTimeout = 0.01f;
 			}
@@ -1025,22 +1038,10 @@ namespace Jazz2::Actors
 		}
 	}
 
-	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev)
+	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev, bool steeredBeforeMove)
 	{
-		// Move
-		if (PreferencesCache::ToggleRunAction) {
-			if (!_runActionSeeded) {
-				// Run held at level start gives no rising edge, so follow the live key until it's first seen down
-				_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
-				_runActionSeeded = _isRunPressed;
-			} else if (_levelHandler->PlayerActionHit(this, PlayerAction::Run)) {
-				_isRunPressed = !_isRunPressed;
-			}
-		} else {
-			_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
-		}
-		if (_isRunPressed && !_characterProfile.CanRun) {
-			_isRunPressed = false;
+		if (!steeredBeforeMove) {
+			UpdateRunAction();
 		}
 
 		if (_health <= 0) {
@@ -1051,7 +1052,7 @@ namespace Jazz2::Actors
 
 		if (IsBird()) {
 			HandleBirdMovement(timeMult);
-		} else {
+		} else if (!steeredBeforeMove) {
 			HandleHorizontalMovement(timeMult);
 		}
 
@@ -1088,6 +1089,24 @@ namespace Jazz2::Actors
 		// A buttstomp started this frame blocks the shot like the check above, or the shoot pose cancels its start
 		if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
 			HandleWeaponFire(areaWeaponAllowed);
+		}
+	}
+
+	void Player::UpdateRunAction()
+	{
+		if (PreferencesCache::ToggleRunAction) {
+			if (!_runActionSeeded) {
+				// Run held at level start gives no rising edge, so follow the live key until it's first seen down
+				_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
+				_runActionSeeded = _isRunPressed;
+			} else if (_levelHandler->PlayerActionHit(this, PlayerAction::Run)) {
+				_isRunPressed = !_isRunPressed;
+			}
+		} else {
+			_isRunPressed = _levelHandler->PlayerActionPressed(this, PlayerAction::Run);
+		}
+		if (_isRunPressed && !_characterProfile.CanRun) {
+			_isRunPressed = false;
 		}
 	}
 
@@ -1462,7 +1481,8 @@ namespace Jazz2::Actors
 
 	bool Player::IsDashActive() const
 	{
-		return (_isRunPressed || _dashGraceLeft > 0.0f);
+		// Non-Reforged reads the state the previous tick left, see UpdateDashState()
+		return (_levelHandler->IsReforged() ? _isRunPressed : _dashGraceLeft > 0.0f);
 	}
 
 	bool Player::IsButtstompStarting() const
@@ -1576,8 +1596,14 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		UpdateHorizontalSpeed(timeMult);
+		// Measured in the original: the dash state follows the speed change, so Run speeds up from the next tick
+		// and the end of the grace snaps after the brake
 		UpdateDashState(timeMult);
+	}
 
+	void Player::UpdateHorizontalSpeed(float timeMult)
+	{
 		if (_keepRunningTime <= 0.0f) {
 			// An RF blast owns the horizontal speed while it carries the player
 			if (_rfBlastLeft > 0.0f) {
@@ -1673,7 +1699,7 @@ namespace Jazz2::Actors
 						}
 					} else if (_inWater && !_levelHandler->IsReforged()) {
 						// Water has its own cap and acceleration, keyed on Run; the original settles one step above the cap
-						float maxWaterSpeed = LegacyWaterSpeed * (_isRunPressed ? 2.0f : 1.0f) + LegacyWaterAccelX;
+						float maxWaterSpeed = LegacyWaterSpeed * (_isRunPressed ? 2.0f : 1.0f) + LegacyWaterAccelX / LegacyFrameRateScale;
 						_speed.X = std::clamp(_speed.X + LegacyWaterAccelX * timeMult * (isFacingLeft ? -1 : 1), -maxWaterSpeed * playerMovementVelocity, maxWaterSpeed * playerMovementVelocity);
 					} else if (_suspendType != SuspendType::Hook) {
 						float maxRunSpeed = (_levelHandler->IsReforged() ? MaxRunningSpeed : LegacyWalkSpeed);
@@ -1772,7 +1798,6 @@ namespace Jazz2::Actors
 				_speed.X = std::clamp(_speed.X, -exitCap, exitCap);
 			}
 		}
-
 	}
 
 	void Player::HandleBirdMovement(float timeMult)
@@ -2079,8 +2104,9 @@ namespace Jazz2::Actors
 					accel += LegacyWaterAccelY * runMult * (playerMovement > 0.0f ? 1.0f : -1.0f);
 					max *= runMult * playerMovementVelocity;
 				}
-				// The cap is one net acceleration step above nominal, which gives the original's asymmetry
-				max += std::abs(accel);
+				// The cap is one net acceleration step above nominal, which gives the original's asymmetry; one tick's
+				// step as a speed, so the acceleration scale comes off once
+				max += std::abs(accel) / LegacyFrameRateScale;
 				_speed.Y = std::clamp(_speed.Y + accel * timeMult, -max, max);
 				// Standing on the bottom means no vertical speed
 				if (_speed.Y > 0.0f && GetState(ActorState::CanJump)) {

@@ -1,11 +1,9 @@
 program TileMapMeshXRay;
 variant USE_PALETTE;
 
-// The animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each one carries both of
-// its frames, and the coverage of the actors behind the layer decides per pixel which one is shown. The
-// 12-float vertex is the tile-layer mesh layout with the second frame's texture coordinates and the two
-// frames' weights added - a weight of zero is the empty tile, which is how a frame cuts the actor out of
-// the layer or shows the tile only over it.
+// Animated tiles of an x-ray layer (see Tiles::LayerRendererType::XRay): each carries both frames, and coverage of
+// the actors behind the layer picks one per pixel. The 12-float vertex adds the second frame's texture coordinates
+// and both frames' weights; a weight of 0 means the empty tile.
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -36,10 +34,10 @@ uniform sampler2D uTexture : texture_unit(0);
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 uniform sampler2D uTextureMask : texture_unit(2);
-// One over the size of the target being drawn into, which the mask has too
+// One over the target size, same as the mask size
 uniform highp vec2 uTargetSizeInv;
 
-// A texel of a tile in its colors, read by the caller with the texture coordinates at their own precision
+// Texel to tile color; the caller samples so the texture coordinates keep their precision
 vec4 tileSample(vec4 src) {
 #if USE_PALETTE
 	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
@@ -64,11 +62,10 @@ void vertex() {
 void fragment() {
 	vec4 frame0 = tileSample(texture(uTexture, vTexCoords));
 	vec4 frame1 = tileSample(texture(uTexture, vTexCoords1));
-	// Mixed premultiplied, so a partly covered pixel blends the two frames instead of darkening towards the
-	// black of the empty one
+	// Premultiplied, so partial coverage blends the frames instead of darkening toward the empty one
 	frame0 = vec4(frame0.rgb * frame0.a, frame0.a) * vWeights.x;
 	frame1 = vec4(frame1.rgb * frame1.a, frame1.a) * vWeights.y;
-	// The mask and the target are the same size, so the fragment's own position is its texel in the mask
+	// Mask matches the target size, so the fragment position is its mask texel
 	float mask = texture(uTextureMask, gl_FragCoord.xy * uTargetSizeInv).r;
 	vec4 tile = mix(frame0, frame1, mask);
 	COLOR = vec4(tile.rgb * vColor.rgb, tile.a) * vColor.a;

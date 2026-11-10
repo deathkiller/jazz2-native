@@ -145,7 +145,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 22;
+	static constexpr std::uint64_t ShadersVersion = 24;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -3647,6 +3647,8 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineDither] = CompileShader("CombineDither", ShadersGen::Combine, "DITHER");
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterDither] = CompileShader("CombineWithWaterDither", ShadersGen::CombineWithWater, "DITHER");
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLowDither] = CompileShader("CombineWithWaterLowDither", ShadersGen::CombineWithWaterLow, "DITHER");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Water] = CompileShader("Water", ShadersGen::Water);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WaterLow] = CompileShader("WaterLow", ShadersGen::Water, "LOW");
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", ShadersGen::TexturedBackground);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", ShadersGen::TexturedBackground, "DITHER");

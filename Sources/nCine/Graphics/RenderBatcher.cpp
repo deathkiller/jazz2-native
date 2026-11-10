@@ -134,18 +134,18 @@ namespace nCine
 
 #if defined(RHI_CAP_POSTPROCESSING)
 	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
-		ArrayView<const std::uint32_t> splitLayers)
+		ArrayView<const std::uint32_t> splitKeys)
 #else
 	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
 #endif
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
-		// Whether a split layer lies between two layers, which the queue sort keeps adjacent
-		const auto isSplitBetween = [splitLayers](std::uint32_t prevLayer, std::uint32_t layer) {
-			const std::uint32_t lower = std::min(prevLayer, layer), upper = std::max(prevLayer, layer);
-			for (std::uint32_t splitLayer : splitLayers) {
-				if (splitLayer > lower) {
-					return (splitLayer <= upper);
+		// Whether a split key lies between the layer sort keys of two commands, which the queue sort keeps adjacent
+		const auto isSplitBetween = [splitKeys](std::uint32_t prevKey, std::uint32_t key) {
+			const std::uint32_t lower = std::min(prevKey, key), upper = std::max(prevKey, key);
+			for (std::uint32_t splitKey : splitKeys) {
+				if (splitKey > lower) {
+					return (splitKey <= upper);
 				}
 			}
 			return false;
@@ -171,7 +171,7 @@ namespace nCine
 			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive ||
 				primitive == PrimitiveType::LineStrip
 #if defined(RHI_CAP_POSTPROCESSING)
-				|| (prevCommand->GetLayer() != command->GetLayer() && isSplitBetween(prevCommand->GetLayer(), command->GetLayer()))
+				|| (prevCommand->GetLayerSortKey() != command->GetLayerSortKey() && isSplitBetween(prevCommand->GetLayerSortKey(), command->GetLayerSortKey()))
 #endif
 				);
 

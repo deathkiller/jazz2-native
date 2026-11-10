@@ -11,7 +11,7 @@ layout (std140) uniform InstanceBlock
 	vec2 spriteSize;
 };
 
-// In the pixels of the whole view and across it, both beyond what half precision can tell apart
+// highp - pixel coordinates of the whole view exceed half precision
 varying highp vec2 vPixelCoords;
 varying highp vec2 vTexCoords;
 
@@ -26,9 +26,8 @@ void vertex() {
 
 uniform sampler2D uTexture : texture_unit(0);
 
-// @p cell is the position in the 4x4 pattern, mod(vPixelCoords, 4.0) taken at the precision of the pixel coordinates.
-// The threshold is the ordered pattern from 1/16 to 1, worked out instead of looked up - a table indexed by the pixel
-// doesn't compile for OpenGL|ES 2.0 or the PlayStation 3
+// @p cell is the position in the 4x4 pattern; Bayer threshold is computed, not looked up
+// (indexed tables don't compile on GLES 2.0 or PS3)
 float dither4x4(vec2 cell, float brightness) {
 	vec2 fine = floor(cell);
 	vec2 coarse = floor(fine * 0.5);
