@@ -17,6 +17,9 @@
 #	include <CommonWindows.h>
 #	include <Utf8.h>
 #endif
+#if defined(DEATH_TARGET_IOS) && defined(WITH_SDL2)
+#	include <SDL.h>	// SDL_GameControllerMappingForDeviceIndex(), see OnJoyConnected()
+#endif
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
@@ -641,6 +644,22 @@ namespace nCine
 			}
 		}
 #elif !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(DEATH_TARGET_IOS) && defined(WITH_SDL2)
+		// The database has no iOS entries, and the MFi driver's button order depends on which buttons the controller
+		// has, so a mapping matched by name (from another platform) or the XInput one is wrong; SDL generates the exact
+		// one from the driver (joyId is the SDL device index here)
+		if (!mapping.isValid) {
+			if (char* sdlMapping = SDL_GameControllerMappingForDeviceIndex(event.JoyId)) {
+				MappedJoystick sdlMapped;
+				if (ParseMappingFromString(sdlMapping, sdlMapped, true)) {
+					mapping.isValid = true;
+					mapping.desc = sdlMapped.desc;
+					LOGI("Gamepad mapping for \"{}\" ({}) provided by SDL: {}", joyName, event.JoyId, sdlMapping);
+				}
+				SDL_free(sdlMapping);
+			}
+		}
+#	endif
 		if (!mapping.isValid) {
 			const std::int32_t index = FindMappingByName(joyName);
 			if (index != -1) {

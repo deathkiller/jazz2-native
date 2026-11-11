@@ -79,7 +79,7 @@ endif()
 include(ncine_options)
 include(ncine_get_version)
 
-if(NCINE_PREFERRED_RHI STREQUAL "Metal")
+if(NCINE_PREFERRED_RHI STREQUAL "Metal" OR IOS)	# iOS also for the scene delegate (IosSceneDelegate.mm)
 	# For the Metal backend's one Objective-C++ file (the CAMetalLayer bridge). Enabled before any dependency
 	# subdirectory is added, and together with OBJC: enabling only OBJCXX later would claim SDL2's `.m` files as
 	# Objective-C++ in a directory that never loaded the language ("CMAKE_OBJCXX_COMPILE_OBJECT not set").

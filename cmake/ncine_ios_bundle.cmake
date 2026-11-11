@@ -71,6 +71,9 @@ endif()
 
 # The bundle directory itself (the ".app"); for an iOS bundle TARGET_BUNDLE_CONTENT_DIR is the same directory
 set(_iosBundleDir "$<TARGET_BUNDLE_CONTENT_DIR:${NCINE_APP}>")
+# With Xcode the path above would contain ${EFFECTIVE_PLATFORM_NAME}, which the post-build scripts escape, so the files
+# landed in a literal "Debug${EFFECTIVE_PLATFORM_NAME}" directory instead of the bundle; emit plain "Debug" paths instead
+set_property(GLOBAL PROPERTY XCODE_EMIT_EFFECTIVE_PLATFORM_NAME OFF)
 
 # Game content, next to the executable
 if(IS_DIRECTORY "${NCINE_CONTENT_DIR}")

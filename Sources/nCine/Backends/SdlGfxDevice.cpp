@@ -15,6 +15,9 @@
 #endif
 
 #include "../Graphics/RHI/Rhi.h"
+#if defined(DEATH_TARGET_IOS) && defined(WITH_SDL2)
+#	include "IosSceneDelegate.h"
+#endif
 #if defined(WITH_RHI_GXM)
 #	include "../Application.h"	// setDrawableSize() re-lays the application out for the resized frame surface
 #endif
@@ -648,6 +651,9 @@ namespace nCine::Backends
 #	else
 		_windowHandle = SDL_CreateWindow("", windowPosX, windowPosY, _width, _height, windowFlags);
 		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
+#		if defined(DEATH_TARGET_IOS)
+		Backends::IosAttachToWindowScene(_windowHandle);
+#		endif
 #	endif
 		SDL_SetWindowResizable(_windowHandle, NCINE_SDL_BOOL(isResizable));
 		// Resolution should be set to current screen size when it was left unspecified
