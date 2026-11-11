@@ -24,10 +24,21 @@ namespace Jazz2::Actors::Collectibles
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		std::int32_t _coinValue;
+		bool _isGold;
+		bool _transmuted;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+		void OnUpdate(float timeMult) override;
+		void OnUpdateHitbox() override;
 		void OnCollect(Player* player) override;
+
+	private:
+		// Turns the coin into the gem a bonus warp makes of it
+		void Transmute();
+
+		std::int32_t GetCoinValue() const {
+			return (_transmuted ? 0 : (_isGold ? 5 : 1));
+		}
 	};
 }

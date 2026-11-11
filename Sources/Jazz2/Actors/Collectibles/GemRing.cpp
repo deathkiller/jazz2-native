@@ -23,6 +23,7 @@ namespace Jazz2::Actors::Collectibles
 		async_await CollectibleBase::OnActivatedAsync(details);
 
 		std::int32_t length = (details.Params[0] > 0 ? details.Params[0] : 8);
+		_gemCount = length;
 		_speed = (details.Params[1] > 0 ? details.Params[1] : 8) * 0.00625f;
 		_untouched = false;
 
@@ -164,8 +165,9 @@ namespace Jazz2::Actors::Collectibles
 			_collected = true;
 			SetState(ActorState::CollideWithOtherActors, false);
 
-			player->AddGems(0, (std::int32_t)_pieces.size());
-			player->AddScore(800);
+			// A gem for every piece of the ring, each worth a red gem
+			player->AddGems(0, _gemCount);
+			player->AddScore(_gemCount * 100);
 		}
 	}
 }

@@ -81,8 +81,7 @@ namespace Jazz2::Multiplayer::GameModes
 			}
 			if (taker != nullptr) {
 				PickUp(ctx, taker, CaptureTimeSecs, 0, takerPoint);
-				// TRANSLATORS: Message shown to all players in Flag Run when a player took the flag, {} is player name, keep the leading line breaks
-				ctx.ShowAlertToAllPlayers(_f("\n\n{} took the flag!", ctx.GetPlayerName(taker)));
+				ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FlagRunTookFlag, ctx.GetPlayerName(taker)));
 			}
 			return;
 		}
@@ -96,8 +95,7 @@ namespace Jazz2::Multiplayer::GameModes
 		float prevSecs = std::ceil(_timeLeft / FrameTimer::FramesPerSecond);
 		_timeLeft -= timeMult;
 		if (_timeLeft <= 0.0f) {
-			// TRANSLATORS: Message shown to all players in Flag Run when the flag carrier ran out of time, {} is player name, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} ran out of time!", ctx.GetPlayerName(carrier)));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FlagRunOutOfTime, ctx.GetPlayerName(carrier)));
 			ReturnFlag(ctx);
 			ctx.KillPlayer(carrier);
 			return;
@@ -117,8 +115,7 @@ namespace Jazz2::Multiplayer::GameModes
 					player->GetHealth() > 0 && player->GetHealth() >= player->GetMaxHealth() && (player->GetPos() - carrier->GetPos()).Length() <= TouchRadius) {
 					float timeLeftSecs = _timeLeft / FrameTimer::FramesPerSecond;
 					PickUp(ctx, player, timeLeftSecs, 1, player->GetPos());
-					// TRANSLATORS: Message shown to all players in Flag Run when an injured carrier passed the flag, first {} is name of the carrier, second {} name of the teammate, keep the leading line breaks
-					ctx.ShowAlertToAllPlayers(_f("\n\n{} passed the flag to {}!", ctx.GetPlayerName(carrier), ctx.GetPlayerName(player)));
+					ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FlagRunPassedFlag, ctx.GetPlayerName(carrier), ctx.GetPlayerName(player)));
 					return;
 				}
 			}
@@ -136,8 +133,7 @@ namespace Jazz2::Multiplayer::GameModes
 			AddPoints(ctx, carrier, (std::int32_t)points);
 			AddCapture(carrier);
 
-			// TRANSLATORS: Message shown to all players in Flag Run when the flag was delivered, first {} is player name, second {} is number of points, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} scored {} points!", ctx.GetPlayerName(carrier), points));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FlagRunScored, ctx.GetPlayerName(carrier), points));
 			ReturnFlag(ctx);
 			ctx.SyncTeamScores();
 			ctx.CheckGameEnds();
@@ -154,8 +150,7 @@ namespace Jazz2::Multiplayer::GameModes
 			// With less than 16 seconds left
 			if (killerIsEnemy && _timeLeft < StealWindowSecs * FrameTimer::FramesPerSecond) {
 				PickUp(ctx, killer, StealTimeSecs, 1, killer->GetPos());
-				// TRANSLATORS: Message shown to all players in Flag Run when a player stole the flag, {} is player name, keep the leading line breaks
-				ctx.ShowAlertToAllPlayers(_f("\n\n{} stole the flag!", ctx.GetPlayerName(killer)));
+				ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FlagRunStoleFlag, ctx.GetPlayerName(killer)));
 			} else {
 				ReturnFlag(ctx);
 			}

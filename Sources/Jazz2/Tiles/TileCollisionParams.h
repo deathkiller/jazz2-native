@@ -24,6 +24,8 @@ namespace Jazz2::Tiles
 		std::int32_t WeaponStrength;
 		/** @brief Movement speed */
 		float Speed;
+		/** @brief Centre of the column in which a fast vertical move breaks speed tiles, 0 for none */
+		float SpeedColumnX;
 		/** @brief Number of destroyed tiles */
 		/*out*/ std::int32_t TilesDestroyed;
 	};

@@ -64,13 +64,13 @@ namespace Jazz2::Actors::Collectibles
 	}
 
 	CollectibleBase::CollectibleBase()
-		: _untouched(true), _scoreValue(0), _phase(0.0f), _timeLeft(0.0f), _startingY(0.0f)
+		: _scoreValue(0), _timeLeft(0.0f), _phase(0.0f), _startingY(0.0f), _untouched(true)
 	{
 	}
 
 	Task<bool> CollectibleBase::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_elasticity = 0.6f;
+		_elasticity = 0.5f;
 
 		// Collected by the pixels of both frames, as measured in the original
 		SetState(ActorState::SkipPerPixelCollisions, false);
@@ -93,7 +93,8 @@ namespace Jazz2::Actors::Collectibles
 		}
 
 		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {
-			_illuminateLights.Create(_levelHandler->GetElapsedFrames());
+			_illuminateLights = std::make_unique<IlluminateLights>();
+			_illuminateLights->Create(_levelHandler->GetElapsedFrames());
 		}
 
 		async_return true;
@@ -102,6 +103,10 @@ namespace Jazz2::Actors::Collectibles
 	void CollectibleBase::OnUpdate(float timeMult)
 	{
 		ActorBase::OnUpdate(timeMult);
+
+		if (_pickupDelay > 0.0f) {
+			_pickupDelay -= timeMult;
+		}
 
 		if (_untouched) {
 			_phase += timeMult * 0.15f;
@@ -124,7 +129,9 @@ namespace Jazz2::Actors::Collectibles
 			}
 		}
 
-		_illuminateLights.OnUpdate(timeMult);
+		if (_illuminateLights != nullptr) {
+			_illuminateLights->OnUpdate(timeMult);
+		}
 	}
 
 	void CollectibleBase::OnSerializeState(Stream& dest)
@@ -151,12 +158,17 @@ namespace Jazz2::Actors::Collectibles
 
 	void CollectibleBase::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		_illuminateLights.OnEmitLights(lights, _pos);
+		if (_illuminateLights != nullptr) {
+			_illuminateLights->OnEmitLights(lights, _pos);
+		}
 	}
 
 	bool CollectibleBase::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* player = runtime_cast<Player>(other)) {
+			if (_pickupDelay > 0.0f) {
+				return false;
+			}
 			OnCollect(player);
 			return true;
 		} else {

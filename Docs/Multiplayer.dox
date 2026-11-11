@@ -213,7 +213,7 @@ Group | Properties
 Identity and reachability | @cpp "ServerName" @ce, @cpp "ServerPort" @ce, @cpp "ServerAddressOverride" @ce, @cpp "IsPrivate" @ce, WebSocket: @cpp "WsPort" @ce, @cpp "WsCertPath" @ce, @cpp "WsKeyPath" @ce
 Access control | @cpp "ServerPassword" @ce, @cpp "MaxPlayerCount" @ce, @cpp "AllowedPlayerTypes" @ce, @cpp "RequiresDiscordAuth" @ce, player ID lists (see @ref multiplayer-config-access)
 Round rules | @cpp "GameMode" @ce, @cpp "InitialPlayerHealth" @ce, @cpp "TotalKills" @ce, @cpp "TotalLaps" @ce, @cpp "TotalTreasureCollected" @ce, @cpp "MaxGameTimeSecs" @ce, @cpp "Elimination" @ce, game mode options (see @ref multiplayer-modes-options), team properties, gameplay switches such as @cpp "ReforgedGameplay" @ce, @cpp "AllowLedgeClimb" @ce, @cpp "PlayerStacking" @ce
-Session flow | @cpp "MinPlayerCount" @ce and @cpp "PreGameSecs" @ce (when a round starts), @cpp "TotalPlayerPoints" @ce (championship length), @cpp "AllowJoinDuringRound" @ce, @cpp "JoinCooldownSecs" @ce, @cpp "ReconnectWindowSecs" @ce, @cpp "IdleKickTimeSecs" @ce
+Session flow | @cpp "MinPlayerCount" @ce and @cpp "PreGameSecs" @ce (when a round starts), @cpp "TotalPlayerPoints" @ce (championship length), @cpp "AllowJoinDuringRound" @ce, @cpp "JoinCooldownSecs" @ce, @cpp "ReconnectWindowSecs" @ce, @cpp "IdleSpectateTimeSecs" @ce, @cpp "IdleKickTimeSecs" @ce
 Operations | @cpp "AllowAssetStreaming" @ce (clients download missing levels from the server), @cpp "WebhookUrl" @ce and @cpp "WebhookEvents" @ce (post selected events to a <b>Discord</b> channel)
 
 @m_class{m-noindent}

@@ -4,19 +4,22 @@
 #include "../Player.h"
 #include "../Explosion.h"
 #include "../Enemies/EnemyBase.h"
+#include "../../Tiles/TileMap.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/CommonConstants.h"
 
 #include <float.h>
+#include <algorithm>
+#include <vector>
 
 using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors::Weapons
 {
 	SeekerShot::SeekerShot()
-		: _fired(0), _followRecomputeTime(0.0f)
+		: _fired(0), _searchTicks(1.0f), _hasTarget(false), _targetPos(Vector2f::Zero)
 	{
 	}
 
@@ -31,14 +34,11 @@ namespace Jazz2::Actors::Weapons
 		async_await RequestMetadataAsync("Weapon/Seeker"_s);
 
 		AnimState state = AnimState::Idle;
+		_timeLeft = 140.0f * TicksToFrames;
 		if ((_upgrades & 0x1) != 0) {
-			_timeLeft = 188.0f;
-			_defaultRecomputeTime = 6.0f;
 			_strength = 3;
 			state |= (AnimState)1;
 		} else {
-			_timeLeft = 144.0f;
-			_defaultRecomputeTime = 10.0f;
 			_strength = 2;
 		}
 
@@ -58,15 +58,17 @@ namespace Jazz2::Actors::Weapons
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
 		// Upgraded rockets are slower
-		float baseSpeed = ((_upgrades & 0x1) != 0 ? 1.7f : 1.85f);
+		float baseSpeed = ((_upgrades & 0x1) != 0 ? 1.5f : 2.0f) * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X * 0.06f) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X * 0.06f) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
 		_speed.Y = sinAngle * baseSpeed;
+		// The player's speed joins the rocket's own until a target takes over
+		bool up = (std::abs(sinAngle) > 0.99f);
+		if (!up) {
+			_speed.X += std::clamp(speed.X, -MaxCarriedSpeed * TickSpeedScale, MaxCarriedSpeed * TickSpeedScale);
+		}
+		ShortenUpShotLifetime(sinAngle);
 
 		_renderer.SetRotation(angle);
 		_renderer.SetDrawEnabled(false);
@@ -89,10 +91,7 @@ namespace Jazz2::Actors::Weapons
 		FollowNeareastEnemy(timeMult);
 
 		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.SetDrawEnabled(true);
-		}
+		RevealPastMuzzle(_gunspotPos);
 
 		ShotBase::OnUpdate(timeMult);
 	}
@@ -141,33 +140,100 @@ namespace Jazz2::Actors::Weapons
 	{
 	}
 
-	void SeekerShot::FollowNeareastEnemy(float timeMult)
+	bool SeekerShot::HasClearLine(Vector2f target) const
 	{
-		if (_followRecomputeTime > 0.0f) {
-			_followRecomputeTime -= timeMult;
-			return;
+		auto* tiles = _levelHandler->TileMap();
+		if (tiles == nullptr) {
+			return true;
 		}
 
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-		float targetDistance = FLT_MAX;
-
-		// Max. distance is ~8 tiles
-		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 260.0f, [this, &targetPos, &targetDistance](ActorBase* actor) {
-			if (actor->CanCauseDamage(this)) {
-				Vector2f newPos = actor->GetPos();
-				float distance = (_pos - newPos).Length();
-				if (distance < 260.0f && distance < targetDistance) {
-					targetPos = newPos;
-					targetDistance = distance;
-				}
+		// About 8 px per sample, at least 2
+		std::int32_t Steps = std::max<std::int32_t>((std::int32_t)std::ceil((target - _pos).Length() / 8.0f), 2);
+		Vector2f step = (target - _pos) / float(Steps);
+		TileCollisionParams params = { TileDestructType::None, false };
+		for (std::int32_t i = 1; i <= Steps; i++) {
+			Vector2f p = _pos + step * float(i);
+			if (!tiles->IsTileEmpty(AABBf(p.X - 0.5f, p.Y - 0.5f, p.X + 0.5f, p.Y + 0.5f), params)) {
+				return false;
 			}
-			return true;
-		});
+		}
+		return true;
+	}
 
-		if (targetDistance < 260.0f) {
-			Vector2f speed = (Vector2f(_speed.X, _speed.Y) + (targetPos - _pos).Normalized() * 2.0f).Normalized();
-			_speed.X = speed.X * 2.6f;
-			_speed.Y = speed.Y * 2.6f;
+	void SeekerShot::FollowNeareastEnemy(float timeMult)
+	{
+		// The original looks again every tick, the nearest enemy with a clear line wins
+		// The search runs once per original tick, the last result is reused in between
+		_searchTicks += timeMult * (70.0f / 60.0f);
+		if (_searchTicks >= 1.0f) {
+			_searchTicks -= std::floor(_searchTicks);
+
+			static constexpr std::int32_t Capacity = 16;
+			float candDist2[Capacity];
+			Vector2f candPos[Capacity];
+			std::int32_t count = 0;
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, TargetRange, [this, &candDist2, &candPos, &count](ActorBase* actor) {
+				if (actor->CanCauseDamage(this)) {
+					Vector2f newPos = actor->GetPos();
+					float d2 = (_pos - newPos).SqrLength();
+					if (d2 < TargetRange * TargetRange) {
+						if (count < Capacity) {
+							candDist2[count] = d2;
+							candPos[count] = newPos;
+							count++;
+						} else {
+							// Full, replace the farthest one if this is nearer
+							std::int32_t worst = 0;
+							for (std::int32_t i = 1; i < Capacity; i++) {
+								if (candDist2[i] > candDist2[worst]) {
+									worst = i;
+								}
+							}
+							if (d2 < candDist2[worst]) {
+								candDist2[worst] = d2;
+								candPos[worst] = newPos;
+							}
+						}
+					}
+				}
+				return true;
+			});
+
+			_hasTarget = false;
+			while (count > 0) {
+				std::int32_t best = 0;
+				for (std::int32_t i = 1; i < count; i++) {
+					if (candDist2[i] < candDist2[best]) {
+						best = i;
+					}
+				}
+				if (HasClearLine(candPos[best])) {
+					_hasTarget = true;
+					_targetPos = candPos[best];
+					break;
+				}
+				count--;
+				candDist2[best] = candDist2[count];
+				candPos[best] = candPos[count];
+			}
+		}
+
+		if (_hasTarget) {
+			Vector2f delta = _targetPos - _pos;
+			Vector2f pull;
+			float distance = delta.Length();
+			if (distance <= 4.0f) {
+				pull = delta;
+			} else if (distance < PullLinearDistance) {
+				pull = delta * (PullLength / distance);
+			} else {
+				pull = delta * PullLinearFactor;
+			}
+
+			float keep = std::pow(SpeedKeep, timeMult * TickSpeedScale);
+			Vector2f speedPerTick = _speed / TickSpeedScale;
+			speedPerTick = speedPerTick * keep + (pull / 7.0f) * (1.0f - keep);
+			_speed = speedPerTick * TickSpeedScale;
 		}
 
 		if (_speed.X < 0.0f) {
@@ -177,7 +243,5 @@ namespace Jazz2::Actors::Weapons
 			SetFacingLeft(false);
 			_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 		}
-
-		_followRecomputeTime = _defaultRecomputeTime;
 	}
 }

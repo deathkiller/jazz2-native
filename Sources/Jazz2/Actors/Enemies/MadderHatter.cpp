@@ -6,12 +6,15 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <algorithm>
+
 namespace Jazz2::Actors::Enemies
 {
 	MadderHatter::MadderHatter()
 		:
-		_attackTime(0.0f),
-		_stuck(false)
+		_attackTime(WalkTicks / TicksPerFrame),
+		_stuck(false),
+		_extraLoops(0)
 	{
 	}
 
@@ -55,30 +58,13 @@ namespace Jazz2::Actors::Enemies
 					}
 
 					Vector2f newPos = player->GetPos();
-					if ((newPos - _pos).Length() <= 200.0f) {
+					if ((newPos - _pos).Length() <= SpitDistance) {
 						SetFacingLeft(newPos.X < _pos.X);
 						_speed.X = 0.0f;
 
-						SetAnimation((AnimState)1073741824);
-						SetTransition((AnimState)1073741824, false, [this]() {
-							PlaySfx("Spit"_s);
-
-							std::shared_ptr<BulletSpit> bulletSpit = std::make_shared<BulletSpit>();
-							uint8_t bulletSpitParams[1];
-							bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
-							bulletSpit->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
-								bulletSpitParams
-							));
-							_levelHandler->AddActor(bulletSpit);
-
-							SetAnimation(AnimState::Walk);
-							SetTransition((AnimState)1073741825, false, [this]() {
-								_attackTime = WalkTicks / TicksPerFrame;
-								_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
-							});
-						});
+						// The original repeats the attack up to three more times, but spits only in the first few
+						_extraLoops = static_cast<std::uint8_t>(Random().Next(0, MaxExtraLoops + 1));
+						Attack(0);
 						break;
 					}
 				}
@@ -100,6 +86,36 @@ namespace Jazz2::Actors::Enemies
 				}
 			}
 		}
+	}
+
+	void MadderHatter::Attack(std::int32_t loop)
+	{
+		SetAnimation((AnimState)1073741824);
+		SetTransition((AnimState)1073741824, false, [this, loop]() {
+			if (loop < std::max<std::int32_t>(_extraLoops, 1)) {
+				PlaySfx("Spit"_s);
+
+				std::shared_ptr<BulletSpit> bulletSpit = std::make_shared<BulletSpit>();
+				uint8_t bulletSpitParams[1];
+				bulletSpitParams[0] = (IsFacingLeft() ? 1 : 0);
+				bulletSpit->OnActivated(ActorActivationDetails(
+					_levelHandler,
+					Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -42 : 42), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
+					bulletSpitParams
+				));
+				_levelHandler->AddActor(bulletSpit);
+			}
+
+			SetAnimation(AnimState::Walk);
+			SetTransition((AnimState)1073741825, false, [this, loop]() {
+				if (loop < _extraLoops) {
+					Attack(loop + 1);
+				} else {
+					_attackTime = WalkTicks / TicksPerFrame;
+					_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
+				}
+			});
+		});
 	}
 
 	void MadderHatter::OnSerializeState(Stream& dest)
@@ -205,9 +221,7 @@ namespace Jazz2::Actors::Enemies
 
 	bool MadderHatter::BulletSpit::OnPerish(ActorBase* collider)
 	{
-		if (!_levelHandler->IsReforged()) {
-			Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
-		}
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.GetLayer() + 2), Explosion::Type::Small);
 
 		return EnemyBase::OnPerish(collider);
 	}

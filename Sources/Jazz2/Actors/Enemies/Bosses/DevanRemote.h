@@ -31,7 +31,12 @@ namespace Jazz2::Actors::Bosses
 		void OnUpdate(float timeMult) override;
 
 	private:
+		/** @brief Delay in frames between the end of the explosions and the warp out (71 ticks) */
+		static constexpr float WarpOutDelay = 71.0f / TicksPerFrame;
+
 		std::uint8_t _introText, _endText;
+		bool _ending;
+		float _endDelay;
 		std::shared_ptr<Robot> _robot;
 	};
 }

@@ -66,8 +66,7 @@ namespace Jazz2::Multiplayer::GameModes
 			ctx.SyncPlayerModeState(player);
 			scoreChanged = true;
 
-			// TRANSLATORS: Message shown to all players in Head Hunters when gems were delivered, first {} is player name, second {} is number of gems, third {} is number of points, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} delivered {} gems for {} points!", ctx.GetPlayerName(player), gems, points));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::HeadHuntersDelivered, ctx.GetPlayerName(player), gems, points));
 		}
 
 		if (scoreChanged) {

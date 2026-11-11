@@ -51,13 +51,9 @@ namespace Jazz2::Actors::Weapons
 		WeaponType _basedOn;
 		WeaponShotOptions _options;
 		Vector2f _gunspotPos;
-		std::int32_t _fired;
 		std::int32_t _pierceLeft;
 		std::int32_t _bouncesLeft;
 		std::int32_t _baseStrength;
-		bool _detonated;
-		bool _bubbleInWater;
-		bool _flipX;
 		// Frames since it was fired and since the last sparks, see ShotLook::Electro
 		float _lookStep;
 		float _particleSpawnTime;
@@ -67,6 +63,10 @@ namespace Jazz2::Actors::Weapons
 		Vector2f _direction;
 		// Identity only, never dereferenced, an enemy is hit once while the shot passes through it
 		SmallVector<const ActorBase*, MaxRememberedHits> _hitActors;
+		std::uint8_t _fired;
+		bool _detonated;
+		bool _bubbleInWater;
+		bool _flipX;
 
 		void TurnTo(bool left);
 		void Move(float timeMult, Tiles::TileCollisionParams& params);

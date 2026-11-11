@@ -513,6 +513,10 @@ namespace Jazz2::Multiplayer
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 
 		if (_isServer) {
+			// Applied after the loop, the peer map stays locked while iterating and SetPlayerSpectateMode() looks up peers
+			SmallVector<Peer, 0> idleSpectatePeers;
+			bool canIdleSpectate = (serverConfig.IdleSpectateTimeSecs > 0 && _levelState != LevelState::Ending && _levelState != LevelState::Ended);
+
 			// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
 			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 				if (peerDesc->RemotePeer && !peerDesc->IsAuthenticated) {
@@ -534,15 +538,26 @@ namespace Jazz2::Multiplayer
 					}
 
 					if (remotePlayerOnServer->PressedKeys == 0) {
+						// Both timeouts count from the last input, spectating doesn't reset it, so the kick still follows
 						peerDesc->IdleElapsedFrames += timeMult;
-						if (serverConfig.IdleKickTimeSecs > 0 && serverConfig.IdleKickTimeSecs <= (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame)) {
+						std::int32_t idleSecs = (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame);
+						if (serverConfig.IdleKickTimeSecs > 0 && serverConfig.IdleKickTimeSecs <= idleSecs) {
 							peerDesc->IdleElapsedFrames = 0.0f;
 							_networkManager->Kick(peer, Reason::Idle);
+						} else if (canIdleSpectate && peerDesc->IsSpectating == SpectateMode::None && serverConfig.IdleSpectateTimeSecs <= idleSecs) {
+							idleSpectatePeers.push_back(peer);
 						}
 					} else {
 						peerDesc->IdleElapsedFrames = 0.0f;
 					}
 				}
+			}
+
+			if DEATH_UNLIKELY(!idleSpectatePeers.empty()) {
+				for (const Peer& peer : idleSpectatePeers) {
+					MoveIdlePlayerToSpectate(peer);
+				}
+				CheckGameEnds();
 			}
 
 			if DEATH_UNLIKELY(_activePoll != VoteType::None) {
@@ -663,8 +678,7 @@ namespace Jazz2::Multiplayer
 							if (serverConfig.GameMode == MpGameMode::Jailbreak) {
 								SetTrigger(30, true);
 							}
-							// TRANSLATORS: Message shown to all players in multiplayer when the pre-game phase of a round starts, keep the leading line breaks
-							ShowAlertToAllPlayers(_("\n\nThe game will begin shortly!"));
+							ShowAlertToAllPlayers(ServerMessage(ServerMessageType::GameWillBeginShortly));
 						}
 
 						if (auto* webhook = _networkManager->GetWebhook()) {
@@ -869,8 +883,7 @@ namespace Jazz2::Multiplayer
 						}
 
 						if (hasChampion) {
-							// TRANSLATORS: Message shown to all players in multiplayer when a player reaches the target points of the whole playlist, {} is player name, keep the leading line breaks
-							ShowAlertToAllPlayers(_f("\n\n{} won the championship!", championName));
+							ShowAlertToAllPlayers(ServerMessage(ServerMessageType::ChampionshipWon, championName));
 							LOGW("Champion is \"{}\" [{}] ({} points)", championName, championPeerRef, championPoints);
 
 							if (auto* webhook = _networkManager->GetWebhook()) {
@@ -2605,8 +2618,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::SetOvertimeScoreCap(std::uint32_t score)
 	{
 		_overtimeScoreCap = score;
-		// TRANSLATORS: Message shown to all players when the overtime starts, {} is the score that wins it, keep the leading line breaks
-		ShowAlertToAllPlayers(_f("\n\nFirst to reach {} points wins!", score));
+		ShowAlertToAllPlayers(ServerMessage(ServerMessageType::FirstToReachPointsWins, score));
 	}
 
 	bool MpLevelHandler::CanFreezeActor(Actors::ActorBase* actor, Actors::ActorBase* shooter)
@@ -3296,8 +3308,7 @@ namespace Jazz2::Multiplayer
 					value = value.trimmed();
 					auto intValue = stou32(value.data(), value.size());
 					if (intValue < 2 || intValue > MaxTeamCount) {
-						// TRANSLATORS: Reply in the console to the /set teamcount command of a server admin, {} is the maximum number of teams
-						SendMessage(peer, UI::MessageLevel::Confirm, _f("Value out of range (2-{})", MaxTeamCount));
+						SendMessage(peer, UI::MessageLevel::Confirm, ServerMessage(ServerMessageType::TeamCountOutOfRange, (std::int32_t)MaxTeamCount));
 						return true;
 					}
 
@@ -3373,18 +3384,16 @@ namespace Jazz2::Multiplayer
 			} else if (arg == "auto"_s) {
 				requestedTeam = NoPreferredTeam;
 			} else {
-				// TRANSLATORS: Help for the /team command in the console, keep the command and the words in <> as they are
-				SendMessage(peer, UI::MessageLevel::Warning, _("Usage: /team <blue|red|green|yellow|auto>"));
+				SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::TeamUsage));
 				return true;
 			}
 
 			if (peer) {
 				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 				if (peerDesc != nullptr && peerDesc->Player != nullptr && ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
-					// TRANSLATORS: Message in the console after the player changed team, {} is the team color name in English (Blue, Red, Green or Yellow)
-					SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
+					SendMessage(peer, UI::MessageLevel::Info, ServerMessage(ServerMessageType::TeamJoined, ServerMessageTeam{peerDesc->Team}));
 				} else {
-					SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
+					SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::CannotChangeTeam));
 				}
 			} else {
 				// Host console
@@ -3395,11 +3404,10 @@ namespace Jazz2::Multiplayer
 			if (isAdmin) {
 				auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (!IsTeamGameMode(serverConfig.GameMode)) {
-					SendMessage(peer, UI::MessageLevel::Warning, _("Teams are only used in team game modes"));
+					SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::TeamsOnlyInTeamModes));
 				} else {
 					RebalanceTeams(true);
-					// TRANSLATORS: Reply in the console to the /balance command of a server admin
-					SendMessage(peer, UI::MessageLevel::Confirm, _("Teams rebalanced"));
+					SendMessage(peer, UI::MessageLevel::Confirm, ServerMessage(ServerMessageType::TeamsRebalancedReply));
 				}
 			}
 			return true;
@@ -3408,7 +3416,7 @@ namespace Jazz2::Multiplayer
 				auto [playerArg, sep, teamArg] = line.exceptPrefix("/setteam "_s).trimmedPrefix().partition(' ');
 				auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (!IsTeamGameMode(serverConfig.GameMode)) {
-					SendMessage(peer, UI::MessageLevel::Warning, _("Teams are only used in team game modes"));
+					SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::TeamsOnlyInTeamModes));
 					return true;
 				}
 
@@ -3423,8 +3431,7 @@ namespace Jazz2::Multiplayer
 				} else if (teamStr == "yellow"_s || teamStr == "3"_s) {
 					team = 3;
 				} else {
-					// TRANSLATORS: Help for the /setteam command in the console, keep the command and the team names as they are, <player#> stands for the player number
-					SendMessage(peer, UI::MessageLevel::Warning, _("Usage: /setteam <player#> <blue|red|green|yellow>"));
+					SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::SetTeamUsage));
 					return true;
 				}
 
@@ -3439,10 +3446,9 @@ namespace Jazz2::Multiplayer
 				}
 
 				if (target != nullptr && ChangePlayerTeam(target, team, true)) {
-					// TRANSLATORS: Reply in the console to the /setteam command of a server admin, first {} is player number, second {} is the team color name in English (Blue, Red, Green or Yellow)
-					SendMessage(peer, UI::MessageLevel::Confirm, _f("Player {} moved to the {} team", targetIndex, GetTeamName(team)));
+					SendMessage(peer, UI::MessageLevel::Confirm, ServerMessage(ServerMessageType::PlayerMovedToTeam, targetIndex, ServerMessageTeam{team}));
 				} else {
-					SendMessage(peer, UI::MessageLevel::Warning, _("Player not found"));
+					SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::PlayerNotFound));
 				}
 			}
 			return true;
@@ -3598,11 +3604,11 @@ namespace Jazz2::Multiplayer
 			if (_activePoll != VoteType::None) {
 				if (isAdmin && line == "/vote cancel"_s) {
 					_activePoll = VoteType::None;
-					SendMessageToAll("Active poll has been cancelled");
+					SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollCancelled));
 					return true;
 				} else {
-					std::size_t length = formatInto(infoBuffer, "Another poll is already active, please wait {} seconds", (std::int32_t)(_activePollTimeLeft * FrameTimer::SecondsPerFrame));
-					SendMessage(peer, UI::MessageLevel::Error, { infoBuffer, length });
+					SendMessage(peer, UI::MessageLevel::Error, ServerMessage(ServerMessageType::PollAlreadyActive,
+						(std::int32_t)(_activePollTimeLeft * FrameTimer::SecondsPerFrame)));
 					return true;
 				}
 			}
@@ -3612,14 +3618,14 @@ namespace Jazz2::Multiplayer
 				if (typeStr == "restart"_s) {
 					// TODO: Support also non-playlist mode
 					type = VoteType::Restart;
-					SendMessageToAll("Poll started to \f[c:#777777]restart playlist\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
+					SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollStartedRestart));
 				} else if (typeStr == "reset points"_s) {
 					type = VoteType::ResetPoints;
-					SendMessageToAll("Poll started to \f[c:#777777]reset points\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
+					SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollStartedResetPoints));
 				} else if (typeStr == "skip"_s) {
 					// TODO: Support also non-playlist mode
 					type = VoteType::Skip;
-					SendMessageToAll("Poll started to \f[c:#777777]skip current level\f[/c], type \f[c:#587050]/yes\f[/c] to vote"_s);
+					SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollStartedSkip));
 				} else if (typeStr == "kick"_s) {
 					// TODO: Allow to vote kick for a specific player
 					//type = VoteType::Kick;
@@ -3627,8 +3633,7 @@ namespace Jazz2::Multiplayer
 					//SendServerMessageToAll(infoBuffer);
 					return true;
 				} else {
-					std::size_t length = formatInto(infoBuffer, "Unsupported poll type \"{}\"", typeStr);
-					SendMessage(peer, UI::MessageLevel::Error, { infoBuffer, length });
+					SendMessage(peer, UI::MessageLevel::Error, ServerMessage(ServerMessageType::PollUnsupportedType, typeStr));
 					return true;
 				}
 
@@ -3649,14 +3654,14 @@ namespace Jazz2::Multiplayer
 				if (it != peers->end()) {
 					if (!it->second->VotedYes) {
 						it->second->VotedYes = true;
-						SendMessage(peer, UI::MessageLevel::Confirm, "Successfully voted"_s);
+						SendMessage(peer, UI::MessageLevel::Confirm, ServerMessage(ServerMessageType::PollVoted));
 					} else {
-						SendMessage(peer, UI::MessageLevel::Confirm, "Already voted"_s);
+						SendMessage(peer, UI::MessageLevel::Confirm, ServerMessage(ServerMessageType::PollAlreadyVoted));
 					}
-					
+
 				}
 			} else {
-				SendMessage(peer, UI::MessageLevel::Error, "No poll is active"_s);
+				SendMessage(peer, UI::MessageLevel::Error, ServerMessage(ServerMessageType::PollNotActive));
 			}
 			return true;
 		}
@@ -3690,13 +3695,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		MemoryStream packetOut(9 + message.size());
-		packetOut.WriteVariableUint32(0); // Local player ID
-		packetOut.WriteValue<std::uint8_t>((std::uint8_t)level);
-		packetOut.WriteVariableUint32((std::uint32_t)message.size());
-		packetOut.Write(message.data(), (std::uint32_t)message.size());
-
-		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
+		SendServerMessage(peer, ServerMessageDisplay::Console, level, ServerMessage(ServerMessageType::Text, message));
 	}
 
 	void MpLevelHandler::SendMessageToAll(StringView message, bool asChatFromServer)
@@ -3725,9 +3724,303 @@ namespace Jazz2::Multiplayer
 		});
 	}
 
-	void MpLevelHandler::SendMessageToAllPlayers(StringView text)
+	static constexpr std::uint32_t MaxServerMessageTextLength = 1024;
+
+	static void WriteServerMessage(MemoryStream& packet, ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message)
 	{
-		SendMessageToAll(text, false);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)display);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)level);
+		packet.WriteVariableUint32((std::uint32_t)message.Type);
+		std::uint8_t argCount = (std::uint8_t)std::min<std::size_t>(message.Args.size(), ServerMessage::MaxArgs);
+		packet.WriteValue<std::uint8_t>(argCount);
+		for (std::uint8_t i = 0; i < argCount; i++) {
+			const auto& arg = message.Args[i];
+			packet.WriteValue<std::uint8_t>((std::uint8_t)arg.Type);
+			switch (arg.Type) {
+				case ServerMessageArgType::Text: {
+					std::uint32_t length = (std::uint32_t)std::min<std::size_t>(arg.Text.size(), MaxServerMessageTextLength);
+					packet.WriteVariableUint32(length);
+					packet.Write(arg.Text.data(), length);
+					break;
+				}
+				case ServerMessageArgType::Number: {
+					packet.WriteVariableInt32(arg.Number);
+					break;
+				}
+				case ServerMessageArgType::Team: {
+					packet.WriteValue<std::uint8_t>((std::uint8_t)arg.Number);
+					break;
+				}
+			}
+		}
+	}
+
+	static bool ReadServerMessage(MemoryStream& packet, ServerMessageDisplay& display, UI::MessageLevel& level, ServerMessage& message)
+	{
+		display = (ServerMessageDisplay)packet.ReadValue<std::uint8_t>();
+		level = (UI::MessageLevel)packet.ReadValue<std::uint8_t>();
+		message.Type = (ServerMessageType)packet.ReadVariableUint32();
+		std::uint8_t argCount = packet.ReadValue<std::uint8_t>();
+		if (argCount > ServerMessage::MaxArgs) {
+			return false;
+		}
+		for (std::uint8_t i = 0; i < argCount; i++) {
+			ServerMessageArgType type = (ServerMessageArgType)packet.ReadValue<std::uint8_t>();
+			switch (type) {
+				case ServerMessageArgType::Text: {
+					std::uint32_t length = packet.ReadVariableUint32();
+					if (length > MaxServerMessageTextLength) {
+						return false;
+					}
+					String text{NoInit, length};
+					if (packet.Read(text.data(), length) != length) {
+						return false;
+					}
+					message.Args.emplace_back(text);
+					break;
+				}
+				case ServerMessageArgType::Number: {
+					message.Args.emplace_back(packet.ReadVariableInt32());
+					break;
+				}
+				case ServerMessageArgType::Team: {
+					message.Args.emplace_back(ServerMessageTeam{packet.ReadValue<std::uint8_t>()});
+					break;
+				}
+				default: {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	String MpLevelHandler::FormatServerMessage(const ServerMessage& message)
+	{
+		// Team names stay in English, the same as everywhere else in the game
+		auto team = [&message](std::size_t index) {
+			return GetTeamName(message.GetTeam(index));
+		};
+
+		switch (message.Type) {
+			case ServerMessageType::Text:
+				return message.GetText(0);
+			case ServerMessageType::GameWillBeginShortly:
+				// TRANSLATORS: Message shown to all players in multiplayer when the pre-game phase of a round starts, keep the leading line breaks
+				return _("\n\nThe game will begin shortly!");
+			case ServerMessageType::ChampionshipWon:
+				// TRANSLATORS: Message shown to all players in multiplayer when a player reaches the target points of the whole playlist, {} is player name, keep the leading line breaks
+				return _f("\n\n{} won the championship!", message.GetText(0));
+			case ServerMessageType::FirstToReachPointsWins:
+				// TRANSLATORS: Message shown to all players when the overtime starts, {} is the score that wins it, keep the leading line breaks
+				return _f("\n\nFirst to reach {} points wins!", message.GetNumber(0));
+			case ServerMessageType::TeamsRebalanced:
+				// TRANSLATORS: Message shown to all players in multiplayer when players were moved between teams to even them out, keep the leading line breaks
+				return _("\n\nTeams have been rebalanced");
+			case ServerMessageType::CtfFlagTaken:
+				// TRANSLATORS: Message shown to all players in Capture the Flag, first {} is player name, second {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
+				return _f("\n\n{} took the {} flag!", message.GetText(0), team(1));
+			case ServerMessageType::CtfFlagReturned:
+				// TRANSLATORS: Message shown to all players in Capture the Flag when a dropped flag is returned to its base, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
+				return _f("\n\nThe {} flag was returned", team(0));
+			case ServerMessageType::CtfFlagCaptured:
+				// TRANSLATORS: Message shown to all players in Capture the Flag, both {} are team color names in English (Blue, Red, Green or Yellow), keep the leading line breaks
+				return _f("\n\n{} team captured the {} flag!", team(0), team(1));
+			case ServerMessageType::CtfFlagDropped:
+				// TRANSLATORS: Message shown to all players in Capture the Flag when the flag carrier dies, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
+				return _f("\n\nThe {} flag was dropped", team(0));
+			case ServerMessageType::RaceFinishedFirst:
+				// TRANSLATORS: Message shown to all players in a multiplayer race when the first player finishes, first {} is player name, second {} is number of seconds left for the others, keep the line breaks
+				return _f("\n\n{} finished the race!\n{} seconds remaining", message.GetText(0), message.GetNumber(1));
+			case ServerMessageType::RaceFinished:
+				// TRANSLATORS: Message shown to all players in a multiplayer race, first {} is player name, second {} is the finishing position as a number followed by the dot (e.g. "2." for second), keep the leading line breaks
+				return _f("\n\n{} finished {}.", message.GetText(0), message.GetNumber(1));
+			case ServerMessageType::WinnerIs:
+				// TRANSLATORS: Message shown to all players in multiplayer at the end of a round, {} is player name, keep the leading line breaks
+				return _f("\n\nWinner is {}", message.GetText(0));
+			case ServerMessageType::TeamWins:
+				// TRANSLATORS: Message shown to all players in multiplayer at the end of a round in team game modes, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
+				return _f("\n\n{} team wins!", team(0));
+			case ServerMessageType::Overtime:
+				// TRANSLATORS: Message shown to all players when the time limit runs out and nobody won yet, keep the leading line breaks
+				return _("\n\nOvertime!");
+			case ServerMessageType::RoundEndedInDraw:
+				// TRANSLATORS: Message shown to all players in multiplayer when the time runs out in team game modes and no team leads, keep the leading line breaks
+				return _("\n\nThe round ended in a draw");
+
+			case ServerMessageType::ControlPointCaptured:
+				// TRANSLATORS: Message shown to all players in Domination when a team captured a control point, first {} is the team color name in English (Blue, Red, Green or Yellow), second {} is the name of the control point, keep the leading line breaks
+				return _f("\n\n{} team captured {}!", team(0), message.GetText(1));
+			case ServerMessageType::ControlPointCapturedUnnamed: {
+				// TRANSLATORS: Default name of a control point in Domination, {} is its number
+				String pointName = _f("Control Point {}", message.GetNumber(1));
+				return _f("\n\n{} team captured {}!", team(0), pointName);
+			}
+			case ServerMessageType::FlagRunTookFlag:
+				// TRANSLATORS: Message shown to all players in Flag Run when a player took the flag, {} is player name, keep the leading line breaks
+				return _f("\n\n{} took the flag!", message.GetText(0));
+			case ServerMessageType::FlagRunOutOfTime:
+				// TRANSLATORS: Message shown to all players in Flag Run when the flag carrier ran out of time, {} is player name, keep the leading line breaks
+				return _f("\n\n{} ran out of time!", message.GetText(0));
+			case ServerMessageType::FlagRunPassedFlag:
+				// TRANSLATORS: Message shown to all players in Flag Run when an injured carrier passed the flag, first {} is name of the carrier, second {} name of the teammate, keep the leading line breaks
+				return _f("\n\n{} passed the flag to {}!", message.GetText(0), message.GetText(1));
+			case ServerMessageType::FlagRunScored:
+				// TRANSLATORS: Message shown to all players in Flag Run when the flag was delivered, first {} is player name, second {} is number of points, keep the leading line breaks
+				return _f("\n\n{} scored {} points!", message.GetText(0), message.GetNumber(1));
+			case ServerMessageType::FlagRunStoleFlag:
+				// TRANSLATORS: Message shown to all players in Flag Run when a player stole the flag, {} is player name, keep the leading line breaks
+				return _f("\n\n{} stole the flag!", message.GetText(0));
+			case ServerMessageType::HeadHuntersDelivered:
+				// TRANSLATORS: Message shown to all players in Head Hunters when gems were delivered, first {} is player name, second {} is number of gems, third {} is number of points, keep the leading line breaks
+				return _f("\n\n{} delivered {} gems for {} points!", message.GetText(0), message.GetNumber(1), message.GetNumber(2));
+			case ServerMessageType::PlayerIsOut:
+				// TRANSLATORS: Message shown to all players in Last Rabbit Standing modes when a player lost all lives, {} is player name, keep the leading line breaks
+				return _f("\n\n{} is out!", message.GetText(0));
+			case ServerMessageType::PlayerPosition:
+				// TRANSLATORS: Message in the console of all players in Last Rabbit Standing modes when a player didn't roast anybody for 2 minutes, first {} is player name, the others are tile coordinates of the player
+				return _f("*** {} is currently at position {}, {}", message.GetText(0), message.GetNumber(1), message.GetNumber(2));
+			case ServerMessageType::PestilenceRandomZombie:
+				// TRANSLATORS: Chat message in Pestilence when no zombie roasted anybody for 2 minutes and a random player becomes a zombie
+				return _("*** No kills by zombies for 2 minutes means random new zombie");
+			case ServerMessageType::PestilenceLastSurvivor:
+				// TRANSLATORS: Message shown to all players in Pestilence when the last human was infected, {} is player name, keep the leading line breaks
+				return _f("\n\n{} was the last survivor!", message.GetText(0));
+			case ServerMessageType::PestilenceBecameZombie:
+				// TRANSLATORS: Message shown to all players in Pestilence when a player was infected, {} is player name, keep the leading line breaks
+				return _f("\n\n{} became a zombie!", message.GetText(0));
+			case ServerMessageType::JailbreakPrisonersReleased:
+				// TRANSLATORS: Message in the console of all players in Jailbreak when the jails open
+				return _("*** All prisoners have been released");
+			case ServerMessageType::JailbreakTeamScored:
+				// TRANSLATORS: Message in the console of all players in Jailbreak when all enemies are jailed, {} is the team color name in English (Blue, Red, Green or Yellow)
+				return _f("*** {} Team scored a point", team(0));
+			case ServerMessageType::RoastTagLostRingIdle:
+				// TRANSLATORS: Message shown to all players in Roast Tag when the player holding the ring roasted nobody for too long, {} is player name, keep the leading line breaks
+				return _f("\n\n{} lost the ring for being idle!", message.GetText(0));
+			case ServerMessageType::RoastTagHasRing:
+				// TRANSLATORS: Message shown to all players in Roast Tag when a player takes the ring, {} is player name, keep the leading line breaks
+				return _f("\n\n{} has the ring!", message.GetText(0));
+
+			case ServerMessageType::IdleSpectate:
+				// TRANSLATORS: Alert in multiplayer, shown to a player who was moved to spectate mode for inactivity
+				return _("\n\nYou were idle, so you are spectating now");
+			case ServerMessageType::IdleSpectateHelp:
+				// TRANSLATORS: Message in the console in multiplayer, shown to a player who was moved to spectate mode for inactivity
+				return _("You were idle for too long, so you are spectating now. Choose \"Join Game\" in the pause menu to play again.");
+			case ServerMessageType::RaceAlreadyFinished:
+				return _("You have already finished the race, you can play again in the next round");
+			case ServerMessageType::CannotJoinNow:
+				return _("You cannot join the game right now");
+			case ServerMessageType::CheatsNotAllowed:
+				return _("Cheats are not allowed in current context");
+			case ServerMessageType::TeamJoined:
+				// TRANSLATORS: Message in the console after the player changed team, {} is the team color name in English (Blue, Red, Green or Yellow)
+				return _f("You joined the {} team", team(0));
+			case ServerMessageType::CannotChangeTeam:
+				return _("Cannot change team right now");
+			case ServerMessageType::TeamUsage:
+				// TRANSLATORS: Help for the /team command in the console, keep the command and the words in <> as they are
+				return _("Usage: /team <blue|red|green|yellow|auto>");
+			case ServerMessageType::TeamsOnlyInTeamModes:
+				return _("Teams are only used in team game modes");
+			case ServerMessageType::TeamsRebalancedReply:
+				// TRANSLATORS: Reply in the console to the /balance command of a server admin
+				return _("Teams rebalanced");
+			case ServerMessageType::SetTeamUsage:
+				// TRANSLATORS: Help for the /setteam command in the console, keep the command and the team names as they are, <player#> stands for the player number
+				return _("Usage: /setteam <player#> <blue|red|green|yellow>");
+			case ServerMessageType::PlayerMovedToTeam:
+				// TRANSLATORS: Reply in the console to the /setteam command of a server admin, first {} is player number, second {} is the team color name in English (Blue, Red, Green or Yellow)
+				return _f("Player {} moved to the {} team", message.GetNumber(0), team(1));
+			case ServerMessageType::PlayerNotFound:
+				return _("Player not found");
+			case ServerMessageType::TeamCountOutOfRange:
+				// TRANSLATORS: Reply in the console to the /set teamcount command of a server admin, {} is the maximum number of teams
+				return _f("Value out of range (2-{})", message.GetNumber(0));
+
+			case ServerMessageType::PollStartedRestart:
+				// TRANSLATORS: Message in the console of all players in multiplayer, keep /yes and \f[...] formatting as it is
+				return _("Poll started to \f[c:#777777]restart playlist\f[/c], type \f[c:#587050]/yes\f[/c] to vote");
+			case ServerMessageType::PollStartedResetPoints:
+				// TRANSLATORS: Message in the console of all players in multiplayer, keep /yes and \f[...] formatting as it is
+				return _("Poll started to \f[c:#777777]reset points\f[/c], type \f[c:#587050]/yes\f[/c] to vote");
+			case ServerMessageType::PollStartedSkip:
+				// TRANSLATORS: Message in the console of all players in multiplayer, keep /yes and \f[...] formatting as it is
+				return _("Poll started to \f[c:#777777]skip current level\f[/c], type \f[c:#587050]/yes\f[/c] to vote");
+			case ServerMessageType::PollAlreadyActive:
+				// TRANSLATORS: Reply in the console to the /vote command in multiplayer, {} is number of seconds
+				return _f("Another poll is already active, please wait {} seconds", message.GetNumber(0));
+			case ServerMessageType::PollUnsupportedType:
+				// TRANSLATORS: Reply in the console to the /vote command in multiplayer, {} is the poll type the player typed
+				return _f("Unsupported poll type \"{}\"", message.GetText(0));
+			case ServerMessageType::PollCancelled:
+				// TRANSLATORS: Message in the console of all players in multiplayer when an admin cancelled the poll
+				return _("Active poll has been cancelled");
+			case ServerMessageType::PollVoted:
+				// TRANSLATORS: Reply in the console to the /yes command in multiplayer
+				return _("Successfully voted");
+			case ServerMessageType::PollAlreadyVoted:
+				// TRANSLATORS: Reply in the console to the /yes command in multiplayer
+				return _("Already voted");
+			case ServerMessageType::PollNotActive:
+				// TRANSLATORS: Reply in the console to the /yes command in multiplayer
+				return _("No poll is active");
+			case ServerMessageType::PollAccepted:
+				// TRANSLATORS: Message in the console of all players in multiplayer when the poll passed
+				return _("Poll accepted, the majority of players voted yes");
+			case ServerMessageType::PollNotEnoughVotes:
+				// TRANSLATORS: Message in the console of all players in multiplayer when the poll didn't pass
+				return _("Not enough votes to pass the poll");
+
+			default:
+				return {};
+		}
+	}
+
+	void MpLevelHandler::SendMessage(const Peer& peer, UI::MessageLevel level, const ServerMessage& message)
+	{
+		SendServerMessage(peer, ServerMessageDisplay::Console, level, message);
+	}
+
+	void MpLevelHandler::SendMessageToAllPlayers(const ServerMessage& message)
+	{
+		// The same as SendMessageToAll(), only each client formats it on its own
+		if (!_isLocalSession) {
+			BroadcastServerMessage(ServerMessageDisplay::Console, UI::MessageLevel::Chat, message, [this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->IsAuthenticated);
+			});
+		}
+
+		InvokeAsync([this, text = FormatServerMessage(message)]() mutable {
+			_console->WriteLine(UI::MessageLevel::Info, text);
+		});
+	}
+
+	void MpLevelHandler::SendServerMessage(const Peer& peer, ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message)
+	{
+		if (!peer.IsValid() || _isLocalSession) {
+			// The server console or a player on this machine
+			String text = FormatServerMessage(message);
+			if (display == ServerMessageDisplay::Alert) {
+				ShowLevelText(text);
+			} else {
+				SendMessage(peer, level, StringView(text));
+			}
+			return;
+		}
+
+		MemoryStream packet(16);
+		WriteServerMessage(packet, display, level, message);
+		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ServerMessage, packet);
+	}
+
+	void MpLevelHandler::BroadcastServerMessage(ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message, Function<bool(const Peer&)>&& predicate)
+	{
+		MemoryStream packet(16);
+		WriteServerMessage(packet, display, level, message);
+		_networkManager->SendTo(Death::move(predicate), NetworkChannel::Main, (std::uint8_t)ServerPacketType::ServerMessage, packet);
 	}
 
 	void MpLevelHandler::ShowCountdownToAllPlayers(std::int32_t secsLeft)
@@ -3960,15 +4253,20 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (_isServer) {
+			// Collected first, the peer map stays locked while iterating and SetPlayerSpectateMode() looks up peers
+			SmallVector<std::pair<Peer, std::shared_ptr<PeerDescriptor>>, 4> localPeers;
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				if (!peerDesc->RemotePeer && peerDesc->Player) {
-					// The same rules as for a remote player (see HandleClientPacketPlayerSpectateRequest())
-					bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
-					if (enable == isSpectating || (!enable && !CanLeaveSpectateMode(playerPeer, *peerDesc))) {
-						continue;
-					}
-					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
+					localPeers.emplace_back(playerPeer, peerDesc);
 				}
+			}
+			for (auto& [playerPeer, peerDesc] : localPeers) {
+				// The same rules as for a remote player (see HandleClientPacketPlayerSpectateRequest())
+				bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+				if (peerDesc->Player == nullptr || enable == isSpectating || (!enable && !CanLeaveSpectateMode(playerPeer, *peerDesc))) {
+					continue;
+				}
+				SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 			}
 		} else {
 			MemoryStream packet(5);
@@ -4209,14 +4507,32 @@ namespace Jazz2::Multiplayer
 
 		// Refused requests used to be dropped silently, so the "Join Game" option simply did nothing
 		if (peerDesc.RaceFinishOrder != 0) {
-			SendMessage(peer, UI::MessageLevel::Warning, _("You have already finished the race, you can play again in the next round"));
+			SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::RaceAlreadyFinished));
 			return false;
 		}
 		if (!CanSpawnPlayers()) {
-			SendMessage(peer, UI::MessageLevel::Warning, _("You cannot join the game right now"));
+			SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::CannotJoinNow));
 			return false;
 		}
 		return true;
+	}
+
+	void MpLevelHandler::MoveIdlePlayerToSpectate(const Peer& peer)
+	{
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if (peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->IsSpectating != SpectateMode::None) {
+			return;
+		}
+
+		LOGI("Player {} \"{}\" [{}] started spectating (idle for {} seconds)", peerDesc->Player->_playerIndex, peerDesc->PlayerName,
+			peer, (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame));
+
+		// Requested, not Forced, so the player can rejoin whenever they come back and stays out of the next rounds until then
+		SetPlayerSpectateMode(peerDesc->Player, SpectateMode::Requested);
+
+		SendServerMessage(peer, ServerMessageDisplay::Alert, UI::MessageLevel::Info, ServerMessage(ServerMessageType::IdleSpectate));
+		// The alert fades out before an away player is back, the message stays in the console
+		SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::IdleSpectateHelp));
 	}
 
 	void MpLevelHandler::ShowCharacterSelectLobby()
@@ -4461,7 +4777,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::FadeOut: return HandleServerPacketFadeOut(peer, data);
 				case ServerPacketType::PlaySfx: return HandleServerPacketPlaySfx(peer, data);
 				case ServerPacketType::PlayCommonSfx: return HandleServerPacketPlayCommonSfx(peer, data);
-				case ServerPacketType::ShowAlert: return HandleServerPacketShowAlert(peer, data);
+				case ServerPacketType::ServerMessage: return HandleServerPacketServerMessage(peer, data);
 				case ServerPacketType::ChatMessage: return HandleServerPacketChatMessage(peer, data);
 				case ServerPacketType::SyncTileMap: return HandleServerPacketSyncTileMap(peer, data);
 				case ServerPacketType::SetTrigger: return HandleServerPacketSetTrigger(peer, data);
@@ -4650,7 +4966,7 @@ namespace Jazz2::Multiplayer
 					}
 				});
 			} else {
-				SendMessage(peer, UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+				SendMessage(peer, UI::MessageLevel::Error, ServerMessage(ServerMessageType::CheatsNotAllowed));
 			}
 			return true;
 		}
@@ -5139,6 +5455,9 @@ namespace Jazz2::Multiplayer
 				return;
 			}
 
+			// An explicit request is activity, otherwise a player rejoining after an idle spectate would be moved back at once
+			peerDesc->IdleElapsedFrames = 0.0f;
+
 			LOGI("Player {} \"{}\" [{}] {} spectating", playerIndex, peerDesc->PlayerName, peer, enable ? "started"_s : "stopped"_s);
 			SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 
@@ -5186,6 +5505,7 @@ namespace Jazz2::Multiplayer
 
 			// Respawn the player with the chosen character (also leaves spectate mode if currently spectating)
 			peerDesc->PreferredPlayerType = playerType;
+			peerDesc->IdleElapsedFrames = 0.0f;
 			SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
 		});
 		return true;
@@ -5210,10 +5530,9 @@ namespace Jazz2::Multiplayer
 				return;
 			}
 			if (ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
-				// TRANSLATORS: Message in the console after the player changed team, {} is the team color name in English (Blue, Red, Green or Yellow)
-				SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
+				SendMessage(peer, UI::MessageLevel::Info, ServerMessage(ServerMessageType::TeamJoined, ServerMessageTeam{peerDesc->Team}));
 			} else {
-				SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
+				SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::CannotChangeTeam));
 			}
 		});
 		return true;
@@ -5816,28 +6135,6 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	bool MpLevelHandler::HandleServerPacketShowAlert(const Peer& peer, ArrayView<const std::uint8_t> data)
-	{
-		MemoryStream packet(data);
-		/*std::uint8_t flags =*/ packet.ReadValue<std::uint8_t>();
-		std::uint32_t textLength = packet.ReadVariableUint32();
-		if DEATH_UNLIKELY(textLength > 1024) {
-			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-			LOGW("[MP] ServerPacketType::ShowAlert - Malformed packet");
-			return true;
-		}
-		String text = String(NoInit, textLength);
-		packet.Read(text.data(), textLength);
-
-		LOGD("[MP] ServerPacketType::ShowAlert - text: \"{}\"", text);
-
-		InvokeAsync([this, text = Death::move(text)]() mutable {
-			if (_hud != nullptr) {
-				_hud->ShowLevelText(text);
-			}
-		});
-		return true;
-	}
 
 	bool MpLevelHandler::HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
@@ -5860,6 +6157,37 @@ namespace Jazz2::Multiplayer
 
 		InvokeAsync([this, level, message = Death::move(message)]() mutable {
 			_console->WriteLine(level, Death::move(message));
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketServerMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		ServerMessageDisplay display;
+		UI::MessageLevel level;
+		ServerMessage message;
+		if DEATH_UNLIKELY(!ReadServerMessage(packet, display, level, message)) {
+			LOGW("[MP] ServerPacketType::ServerMessage - Malformed packet");
+			return true;
+		}
+
+		LOGD("[MP] ServerPacketType::ServerMessage - type: {}, display: {}, args: {}", (std::uint32_t)message.Type,
+			(std::uint32_t)display, (std::uint32_t)message.Args.size());
+
+		InvokeAsync([this, display, level, message = Death::move(message)]() {
+			// A message of a newer server this client doesn't know is skipped
+			String text = FormatServerMessage(message);
+			if (text.empty()) {
+				return;
+			}
+			if (display == ServerMessageDisplay::Alert) {
+				if (_hud != nullptr) {
+					_hud->ShowLevelText(text);
+				}
+			} else {
+				_console->WriteLine(level, Death::move(text));
+			}
 		});
 		return true;
 	}
@@ -10001,8 +10329,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (anyChanged) {
-			// TRANSLATORS: Message shown to all players in multiplayer when players were moved between teams to even them out, keep the leading line breaks
-			ShowAlertToAllPlayers(_("\n\nTeams have been rebalanced"));
+			ShowAlertToAllPlayers(ServerMessage(ServerMessageType::TeamsRebalanced));
 		}
 	}
 
@@ -10344,8 +10671,7 @@ namespace Jazz2::Multiplayer
 					// Enemy flag taken
 					flag.State = CtfFlagState::Carried;
 					flag.CarrierPlayerIndex = mpPlayer->_playerIndex;
-					// TRANSLATORS: Message shown to all players in Capture the Flag, first {} is player name, second {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
-					ShowAlertToAllPlayers(_f("\n\n{} took the {} flag!", peerDesc->PlayerName, GetTeamName(flag.Team)));
+					ShowAlertToAllPlayers(ServerMessage(ServerMessageType::CtfFlagTaken, peerDesc->PlayerName, ServerMessageTeam{flag.Team}));
 					stateChanged = true;
 				} else if (flag.State == CtfFlagState::Dropped) {
 					// Own flag returned to base
@@ -10353,8 +10679,7 @@ namespace Jazz2::Multiplayer
 					if (flag.Actor != nullptr) {
 						flag.Actor->MoveInstantly(flag.BasePos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 					}
-					// TRANSLATORS: Message shown to all players in Capture the Flag when a dropped flag is returned to its base, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
-					ShowAlertToAllPlayers(_f("\n\nThe {} flag was returned", GetTeamName(flag.Team)));
+					ShowAlertToAllPlayers(ServerMessage(ServerMessageType::CtfFlagReturned, ServerMessageTeam{flag.Team}));
 					stateChanged = true;
 				}
 			}
@@ -10416,8 +10741,7 @@ namespace Jazz2::Multiplayer
 					flag.Actor->MoveInstantly(flag.BasePos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 				}
 
-				// TRANSLATORS: Message shown to all players in Capture the Flag, both {} are team color names in English (Blue, Red, Green or Yellow), keep the leading line breaks
-				ShowAlertToAllPlayers(_f("\n\n{} team captured the {} flag!", GetTeamName(carrierTeam), GetTeamName(flag.Team)));
+				ShowAlertToAllPlayers(ServerMessage(ServerMessageType::CtfFlagCaptured, ServerMessageTeam{carrierTeam}, ServerMessageTeam{flag.Team}));
 
 				if (auto* webhook = _networkManager->GetWebhook()) {
 					// The capture target reuses TotalKills
@@ -10661,8 +10985,7 @@ namespace Jazz2::Multiplayer
 				if (flag.Actor != nullptr) {
 					flag.Actor->MoveInstantly(player->_pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
 				}
-				// TRANSLATORS: Message shown to all players in Capture the Flag when the flag carrier dies, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
-				ShowAlertToAllPlayers(_f("\n\nThe {} flag was dropped", GetTeamName(flag.Team)));
+				ShowAlertToAllPlayers(ServerMessage(ServerMessageType::CtfFlagDropped, ServerMessageTeam{flag.Team}));
 				SyncTeamScores();
 			}
 		}
@@ -10751,30 +11074,26 @@ namespace Jazz2::Multiplayer
 		});
 	}
 
-	void MpLevelHandler::ShowAlertToAllPlayers(StringView text)
+	void MpLevelHandler::ShowAlertToAllPlayers(const ServerMessage& message)
 	{
-		if (text.empty()) {
-			return;
-		}
-
-		ShowLevelText(text);
+		ShowLevelText(FormatServerMessage(message));
 
 		if (_isLocalSession) {
 			// Every player of a local session already saw the text above
 			return;
 		}
 
-		std::uint8_t flags = 0;
-
-		MemoryStream packet(5 + text.size());
-		packet.WriteValue<std::uint8_t>(flags);
-		packet.WriteVariableUint32((std::uint32_t)text.size());
-		packet.Write(text.data(), (std::uint32_t)text.size());
-
-		_networkManager->SendTo([this](const Peer& peer) {
+		BroadcastServerMessage(ServerMessageDisplay::Alert, UI::MessageLevel::Info, message, [this](const Peer& peer) {
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 			return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
-		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowAlert, packet);
+		});
+	}
+
+	void MpLevelHandler::ShowAlertToAllPlayers(StringView text)
+	{
+		if (!text.empty()) {
+			ShowAlertToAllPlayers(ServerMessage(ServerMessageType::Text, text));
+		}
 	}
 
 	void MpLevelHandler::SetControllableToAllPlayers(bool enable)
@@ -11761,9 +12080,7 @@ namespace Jazz2::Multiplayer
 			_overtimeStarted = true;
 
 			LOGI("Overtime started - {} seconds", overtimeSecs);
-			// TODO: Localize on client
-			// TRANSLATORS: Message shown to all players in a multiplayer race when the first player finishes, first {} is player name, second {} is number of seconds left for the others, keep the line breaks
-			ShowAlertToAllPlayers(_f("\n\n{} finished the race!\n{} seconds remaining", peerDesc->PlayerName, overtimeSecs));
+			ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RaceFinishedFirst, peerDesc->PlayerName, overtimeSecs));
 
 			// Clients count the remaining time down on their own from here, so the players still racing can see it
 			if (!_isLocalSession) {
@@ -11777,8 +12094,7 @@ namespace Jazz2::Multiplayer
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 			}
 		} else {
-			// TRANSLATORS: Message shown to all players in a multiplayer race, first {} is player name, second {} is the finishing position as a number followed by the dot (e.g. "2." for second), keep the leading line breaks
-			ShowAlertToAllPlayers(_f("\n\n{} finished {}.", peerDesc->PlayerName, peerDesc->RaceFinishOrder));
+			ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RaceFinished, peerDesc->PlayerName, peerDesc->RaceFinishOrder));
 		}
 
 		// The finisher watches the rest of the race. Switching to spectate mode replaces their actor, and the finish
@@ -12051,8 +12367,7 @@ namespace Jazz2::Multiplayer
 
 		if (winner != nullptr) {
 			auto peerDesc = winner->GetPeerDescriptor();
-			// TRANSLATORS: Message shown to all players in multiplayer at the end of a round, {} is player name, keep the leading line breaks
-			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
+			ShowAlertToAllPlayers(ServerMessage(ServerMessageType::WinnerIs, peerDesc->PlayerName));
 			LOGW("Winner is player {} \"{}\" [{}]", winner->_playerIndex, peerDesc->PlayerName, peerDesc->RemotePeer);
 		}
 
@@ -12117,8 +12432,7 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		// TRANSLATORS: Message shown to all players in multiplayer at the end of a round in team game modes, {} is the team color name in English (Blue, Red, Green or Yellow), keep the leading line breaks
-		ShowAlertToAllPlayers(_f("\n\n{} team wins!", GetTeamName(team)));
+		ShowAlertToAllPlayers(ServerMessage(ServerMessageType::TeamWins, ServerMessageTeam{team}));
 		LOGW("Team {} wins", team);
 
 		if (auto* webhook = _networkManager->GetWebhook()) {
@@ -12238,8 +12552,7 @@ namespace Jazz2::Multiplayer
 		_overtimeStarted = true;
 
 		LOGI("Overtime started - {} seconds", serverConfig.GetOvertimeSecs());
-		// TRANSLATORS: Message shown to all players when the time limit runs out and nobody won yet, keep the leading line breaks
-		ShowAlertToAllPlayers(_("\n\nOvertime!"));
+		ShowAlertToAllPlayers(ServerMessage(ServerMessageType::Overtime));
 
 		// The overtime trigger - the trigger of a trigger zone at position 3 of the bottom row is set on
 		std::int32_t bottomRow = _eventMap->GetSize().Y - 1;
@@ -12284,7 +12597,7 @@ namespace Jazz2::Multiplayer
 					EndGameWithTeam(result.WinnerTeam);
 				} else {
 					if (result.Winner == nullptr) {
-						ShowAlertToAllPlayers(_("\n\nThe round ended in a draw"));
+						ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RoundEndedInDraw));
 					}
 					EndGame(static_cast<MpPlayer*>(result.Winner));
 				}
@@ -12310,8 +12623,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (tied || bestScore == 0) {
-				// TRANSLATORS: Message shown to all players in multiplayer when the time runs out in team game modes and no team leads, keep the leading line breaks
-				ShowAlertToAllPlayers(_("\n\nThe round ended in a draw"));
+				ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RoundEndedInDraw));
 				EndGame(static_cast<MpPlayer*>(nullptr));
 			} else {
 				EndGameWithTeam(bestTeam);
@@ -12498,19 +12810,23 @@ namespace Jazz2::Multiplayer
 			// Host re-picks a character mid-game: respawn the local player with the selected type directly.
 			// (The initial host spawn doesn't use the lobby, so this only applies to a deliberate change.)
 			if (changingCharacter) {
+				// Looked up first, the peer map stays locked while iterating and SetPlayerSpectateMode() looks up peers
+				Peer localPeer;
+				std::shared_ptr<PeerDescriptor> localPeerDesc;
 				for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 					if (!peerDesc->RemotePeer && peerDesc->Player) {
-						// A racer who already finished can't rejoin the race, the same as a remote player
-						if (!CanLeaveSpectateMode(playerPeer, *peerDesc)) {
-							break;
-						}
-						peerDesc->PreferredPlayerType = playerType;
-						if (team != NoPreferredTeam) {
-							ChangePlayerTeam(peerDesc->Player, team, false);
-						}
-						SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
+						localPeer = playerPeer;
+						localPeerDesc = peerDesc;
 						break;
 					}
+				}
+				// A racer who already finished can't rejoin the race, the same as a remote player
+				if (localPeerDesc != nullptr && localPeerDesc->Player != nullptr && CanLeaveSpectateMode(localPeer, *localPeerDesc)) {
+					localPeerDesc->PreferredPlayerType = playerType;
+					if (team != NoPreferredTeam) {
+						ChangePlayerTeam(localPeerDesc->Player, team, false);
+					}
+					SetPlayerSpectateMode(localPeerDesc->Player, SpectateMode::None);
 				}
 			}
 			return;
@@ -12576,7 +12892,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (votedYes >= total * 2 / 3 && total >= 3) {
-			SendMessageToAll("Poll accepted, the majority of players voted yes");
+			SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollAccepted));
 
 			switch (_activePoll) {
 				case VoteType::Restart: {
@@ -12597,7 +12913,7 @@ namespace Jazz2::Multiplayer
 				}
 			}
 		} else {
-			SendMessageToAll("Not enough votes to pass the poll");
+			SendMessageToAllPlayers(ServerMessage(ServerMessageType::PollNotEnoughVotes));
 		}
 
 		_activePoll = VoteType::None;

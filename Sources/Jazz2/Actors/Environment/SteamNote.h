@@ -8,7 +8,7 @@ namespace Jazz2::Actors::Environment
 		@brief Steam note
 		
 		Decorative musical note that periodically puffs into view with a sound effect and then
-		fades out, repeating on a cycle. It is an ambient effect and does not interact with the
+		fades out, repeating on a cycle. It lifts a player in it while it is shown, it has no other effect on the
 		player.
 	*/
 	class SteamNote : public ActorBase
@@ -27,10 +27,14 @@ namespace Jazz2::Actors::Environment
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnAnimationFinished() override;
+		bool OnHandleCollision(ActorBase* other) override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
 	private:
+		/** @brief Speed the steam lifts a player at, 1 px per tick of the original */
+		static constexpr float LiftSpeed = 70.0f / 60.0f;
+
 		float _cooldown;
 	};
 }

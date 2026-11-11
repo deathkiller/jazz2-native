@@ -32,10 +32,23 @@ namespace Jazz2::Actors::Enemies
 		void OnDeserializeState(Stream& src) override;
 
 	private:
-		static constexpr float FlySpeedX = 8.0f / 3.0f;
-		static constexpr float FlySpeedY = 4.0f / 3.0f;
-		static constexpr float DriftSpeedX = 0.35f;
-		static constexpr float DriftDistance = 48.0f;
+		/** @brief Largest horizontal offset to the target that she follows, her speed is a third of it per original tick */
+		static constexpr float FlyClampX = 8.0f;
+		/** @brief Largest vertical offset to the target that she follows, her speed is a third of it per original tick */
+		static constexpr float FlyClampY = 4.0f;
+		/** @brief Width of the sideways sway of her target around the player */
+		static constexpr float SwayAmplitude = 64.0f;
+		/** @brief Time of one sway, in original ticks */
+		static constexpr float SwayPeriodTicks = 1024.0f;
+		/** @brief Half-width and half-height of the ellipse she flies along before a player comes near */
+		static constexpr float OrbitRadiusX = 96.0f;
+		static constexpr float OrbitRadiusY = 64.0f;
+		/** @brief Time of one orbit, in original ticks */
+		static constexpr float OrbitPeriodTicks = 256.0f;
+		/** @brief Squared distance within which a player wakes her up */
+		static constexpr float WakeDistanceSqr = 2.0f * 256.0f * 256.0f;
+		/** @brief Lowest she flies below her starting point */
+		static constexpr float MaxDropBelowOrigin = 96.0f;
 		static constexpr float FlyAboveDistance = 96.0f;
 		static constexpr float AttackDistance = 300.0f;
 		static constexpr float AttackTicks = 200.0f;
@@ -68,6 +81,9 @@ namespace Jazz2::Actors::Enemies
 
 		float _attackTime;
 		bool _playerHit;
+		bool _awake;
+		float _orbitPhase;
+		Vector2f _originPos;
 
 		void OnPlayerHit();
 	};

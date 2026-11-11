@@ -6,6 +6,7 @@
 #include "MpGameMode.h"
 #include "Teams.h"
 #include "NetworkManager.h"
+#include "ServerMessage.h"
 #include "WebhookClient.h"
 #include "GameModes/GameModeFactory.h"
 #include "../Actors/Player.h"
@@ -217,8 +218,8 @@ namespace Jazz2::Multiplayer
 		StringView GetPlayerName(Actors::Player* player) override;
 		Actors::Player* FindPlayerByIndex(std::uint32_t playerIndex) override;
 		Vector2f GetTeamBasePosition(std::uint8_t team) override;
-		void ShowAlertToAllPlayers(StringView text) override;
-		void SendMessageToAllPlayers(StringView text) override;
+		void ShowAlertToAllPlayers(const ServerMessage& message) override;
+		void SendMessageToAllPlayers(const ServerMessage& message) override;
 		void ShowCountdownToAllPlayers(std::int32_t secsLeft) override;
 		void SyncPlayerModeState(Actors::Player* player) override;
 		void SyncTeamScores() override;
@@ -327,8 +328,15 @@ namespace Jazz2::Multiplayer
 #endif
 		/** @brief Sends the message to the specified peer */
 		void SendMessage(const Peer& peer, UI::MessageLevel level, StringView message);
+		/** @brief Sends the message to the specified peer, which shows it in its own language */
+		void SendMessage(const Peer& peer, UI::MessageLevel level, const ServerMessage& message);
 		/** @brief Sends the message to all authenticated peers */
 		void SendMessageToAll(StringView message, bool asChatFromServer = false);
+		/** @brief Shows the text as it is to all players, use the @ref ServerMessage overload for texts of the game */
+		void ShowAlertToAllPlayers(StringView text);
+
+		/** @brief Formats the message in the language of this client */
+		static String FormatServerMessage(const ServerMessage& message);
 
 		/** @brief Enables or disables spectate mode for the specified player (server-side) */
 		void SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode);
@@ -764,6 +772,12 @@ namespace Jazz2::Multiplayer
 		 * or a moment nobody can join in. If the player can't leave it, @p peer is told why.
 		 */
 		bool CanLeaveSpectateMode(const Peer& peer, const PeerDescriptor& peerDesc);
+		/** @brief Moves an idle remote player to spectate mode and tells them how to rejoin, see @ref ServerConfiguration::IdleSpectateTimeSecs */
+		void MoveIdlePlayerToSpectate(const Peer& peer);
+		// Shows the message on this machine if the peer is local, otherwise sends it to be formatted there
+		void SendServerMessage(const Peer& peer, ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message);
+		// Sends the message to every peer the predicate accepts, which shows it in its own language
+		void BroadcastServerMessage(ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message, Function<bool(const Peer&)>&& predicate);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
 		std::uint8_t GetTeamCount() const override;
@@ -940,7 +954,7 @@ namespace Jazz2::Multiplayer
 		void StopTrackedSfx(std::uint32_t actorId, StringView identifier);
 		// Client: moves tracked sounds with their actors and drops the finished ones and those of vanished actors
 		void UpdateTrackedSfx();
-		bool HandleServerPacketShowAlert(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketServerMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTileMap(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSetTrigger(const Peer& peer, ArrayView<const std::uint8_t> data);

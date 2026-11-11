@@ -26,7 +26,12 @@ namespace Jazz2::Actors::Solid
 		static void Preload(const ActorActivationDetails& details);
 
 		/** @brief Destroys the monitor and applies the shield to the specified player */
-		void DestroyAndApplyToPlayer(Player* player);
+		/** @brief How long a shield lasts when the monitor is broken by a jump or a move, 2100 ticks of the original */
+		static constexpr float StompShieldDuration = 2100.0f * 6.0f / 7.0f;
+		/** @brief How long a shield lasts when the monitor is shot, 2800 ticks of the original */
+		static constexpr float ShotShieldDuration = 2800.0f * 6.0f / 7.0f;
+
+		void DestroyAndApplyToPlayer(Player* player, bool byShot = false);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

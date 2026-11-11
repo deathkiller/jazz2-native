@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Enemies
 	static constexpr AnimState WithdrawEnd = (AnimState)23;
 
 	Turtle::Turtle()
-		: _isAttacking(false), _isTurning(false), _isWithdrawn(false), _isDodging(false), _dodgeCooldown(0.0f)
+		: _isAttacking(false), _isTurning(false), _isWithdrawn(false), _isDodging(false), _dodgeCooldown(0.0f), _walkTime(0.0f)
 	{
 	}
 
@@ -78,26 +78,33 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (GetState(ActorState::CanJump) && _currentTransition == nullptr) {
-			if (ShouldDodge()) {
-				if (!_isDodging) {
-					_isDodging = true;
-					_dodgeCooldown = Random().Next(80.0f, 160.0f);
-					_canHurtPlayer = false;
-					_speed.X = 0;
-					SetAnimation(WithdrawInProgress);
-					SetTransition(WithdrawStartFast, false);
-					PlaySfx("Withdraw"_s, 0.2f);
-				}
-			} else if (_isDodging) {
-				_dodgeCooldown -= timeMult;
-				if (_dodgeCooldown <= 0.0f) {
+			if (_isDodging) {
+				// It stays in its shell while a player is close
+				if (!HasPlayerWithin(WithdrawHoldDistance)) {
 					_isDodging = false;
 					SetAnimation(AnimState::Walk);
 					SetTransition(WithdrawEnd, false, [this]() {
 						_canHurtPlayer = true;
 						_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+						_walkTime = 0.0f;
 					});
 					PlaySfx("WithdrawEnd"_s, 0.2f);
+				}
+			} else if (!_isTurning && !_isWithdrawn && !_isAttacking) {
+				_walkTime += timeMult;
+				float distanceSqr;
+				Player* target = (_walkTime > ReadyTicks / TicksPerFrame ? FindFacedPlayer(distanceSqr) : nullptr);
+				if (target != nullptr) {
+					if (distanceSqr < BiteDistance * BiteDistance) {
+						Attack();
+					} else if (distanceSqr > WithdrawDistance * WithdrawDistance && target->HasFiredWithin(FireWindowTicks / TicksPerFrame)) {
+						_isDodging = true;
+						_canHurtPlayer = false;
+						_speed.X = 0;
+						SetAnimation(WithdrawInProgress);
+						SetTransition(WithdrawStartFast, false);
+						PlaySfx("Withdraw"_s, 0.2f);
+					}
 				}
 			}
 
@@ -108,6 +115,8 @@ namespace Jazz2::Actors::Enemies
 				SetTransition(WithdrawStart, false, [this]() {
 					HandleTurn(true);
 				});
+				// Measured in JJ2+: it ducks in 6 ticks and comes back out in 47 when it turns around
+				SetAnimationTicks(TurnStartTicks);
 				PlaySfx("Withdraw"_s, 0.2f);
 			}
 		}
@@ -115,18 +124,6 @@ namespace Jazz2::Actors::Enemies
 		if (_isAttacking) {
 			// Turtles attack only with animation, so check collisions every frame
 			SetState(ActorState::IsDirty, true);
-		} else if (!_isTurning && !_isWithdrawn && !_isDodging && !_currentTransition) {
-			AABBf aabb = AABBInner + Vector2f(_speed.X * 32, 0);
-			TileCollisionParams params = { TileDestructType::None, false };
-			if (_levelHandler->TileMap()->IsTileEmpty(aabb, params)) {
-				_levelHandler->GetCollidingPlayers(aabb + Vector2f(_speed.X * 32, 0), [this](ActorBase* player) -> bool {
-					if (player->GetHealth() > 0 && !player->IsInvulnerable()) {
-						Attack();
-						return false;
-					}
-					return true;
-				});
-			}
 		}
 	}
 
@@ -241,6 +238,7 @@ namespace Jazz2::Actors::Enemies
 				SetTransition(WithdrawEnd, false, [this]() {
 				   HandleTurn(false);
 				});
+				SetAnimationTicks(TurnEndTicks);
 				PlaySfx("WithdrawEnd"_s, 0.2f);
 				_isWithdrawn = true;
 			} else {
@@ -248,6 +246,7 @@ namespace Jazz2::Actors::Enemies
 				_isWithdrawn = false;
 				_isTurning = false;
 				_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+				_walkTime = 0.0f;
 			}
 		}
 	}
@@ -261,38 +260,37 @@ namespace Jazz2::Actors::Enemies
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
 			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 			_isAttacking = false;
+			_walkTime = 0.0f;
 
 			// TODO: Bad timing
 			PlaySfx("Attack2"_s);
 		});
 	}
 
-	bool Turtle::ShouldDodge() const
+	Player* Turtle::FindFacedPlayer(float& distanceSqr) const
 	{
-		constexpr float Distance = 96.0f;
+		Player* found = nullptr;
+		float nearestSqr = SightDistance * SightDistance;
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
 
-		bool shouldWithdraw = false;
-		if (_levelHandler->GetDifficulty() != GameDifficulty::Easy) {
-			AABBf withdrawAabb = AABB;
-			withdrawAabb.T = withdrawAabb.B - 30.0f;
-			withdrawAabb.L -= Distance;
-			withdrawAabb.R += Distance;
-
-			_levelHandler->FindCollisionActorsByAABB(this, withdrawAabb, [this, &shouldWithdraw](ActorBase* actor) {
-				if (auto* shot = runtime_cast<Weapons::ShotBase>(actor)) {
-					float xSpeed = shot->GetSpeed().X;
-					float x = shot->GetPos().X;
-					float xSelf = _pos.X;
-					// Check if the shot is moving towards the boss
-					if (std::abs(xSpeed) > 0.0f && std::signbit(xSelf - x) == std::signbit(xSpeed)) {
-						shouldWithdraw = true;
-						return false;
-					}
-				}
-				return true;
-			});
+			// The original checks the height only for a turtle facing right
+			Vector2f diff = player->GetPos() - _pos;
+			bool inFront = (IsFacingLeft() ? diff.X < 0.0f : (diff.X > 0.0f && std::abs(diff.Y) < SightHeight));
+			float sqr = diff.SqrLength();
+			if (inFront && sqr < nearestSqr) {
+				nearestSqr = sqr;
+				found = player;
+			}
 		}
+		distanceSqr = nearestSqr;
+		return found;
+	}
 
-		return shouldWithdraw;
+	bool Turtle::HasPlayerWithin(float distance) const
+	{
+		return (FindNearestPlayer(distance * distance) != nullptr);
 	}
 }

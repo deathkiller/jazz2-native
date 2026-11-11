@@ -1,4 +1,5 @@
 ﻿#include "BouncerShot.h"
+#include "../../ILevelHandler.h"
 #include "../Player.h"
 #include "../Explosion.h"
 
@@ -11,8 +12,15 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	BouncerShot::BouncerShot()
-		: _fired(0), _hitLimit(0.0f), _targetSpeedX(0.0f)
+		: _fired(0), _bounces(0)
 	{
+		// It bounces back off a slope like the original, it doesn't ride up it
+		_climbsSlopesInAir = false;
+	}
+
+	float BouncerShot::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		return Gravity * TickAccelScale * (_pos.Y > _levelHandler->GetWaterLevel() ? 0.25f : 1.0f);
 	}
 
 	Task<bool> BouncerShot::OnActivatedAsync(const ActorActivationDetails& details)
@@ -24,14 +32,18 @@ namespace Jazz2::Actors::Weapons
 		async_await RequestMetadataAsync("Weapon/Bouncer"_s);
 
 		AnimState state = AnimState::Idle;
+		_timeLeft = 105.0f * TicksToFrames;
 		if ((_upgrades & 0x1) != 0) {
-			_timeLeft = 130;
 			_strength = 2;
 			state |= (AnimState)1;
+			_elasticity = 9.0f / 8.0f;
+			_horizontalSpeedLimit = _verticalSpeedLimit = 6.0f * TickSpeedScale;
 			PlaySfx("FireUpgraded"_s, 1.0f, 0.5f);
 		} else {
-			_timeLeft = 90;
 			_strength = 1;
+			_elasticity = 7.0f / 8.0f;
+			_horizontalSpeedLimit = 8.0f * TickSpeedScale;
+			_verticalSpeedLimit = 4.0f * TickSpeedScale;
 			PlaySfx("Fire"_s, 1.0f, 0.5f);
 		}
 
@@ -49,17 +61,17 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 10.0f;
+		constexpr float baseSpeed = 5.0f * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
-		_speed.Y = sinAngle * baseSpeed;
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
+		_speed.Y = sinAngle * baseSpeed + std::abs(cosAngle) * TickSpeedScale;
+		SetCarriedSpeed(std::abs(sinAngle) > 0.99f ? 0.0f : speed.X, true);
+		ShortenUpShotLifetime(sinAngle);
 
-		_elasticity = 0.9f;
+		_acceleration = Acceleration * TickAccelScale;
+		_accelerationDir = Vector2f(isFacingLeft ? -cosAngle : cosAngle, sinAngle);
+		_internalForceY = ConstantFall * TickAccelScale;
 
 		_renderer.SetDrawEnabled(false);
 	}
@@ -67,6 +79,11 @@ namespace Jazz2::Actors::Weapons
 	void BouncerShot::OnUpdate(float timeMult)
 	{
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Bouncer, _strength };
+		_speed += _accelerationDir * (_acceleration * timeMult);
+		float carriedDistance = AdvanceCarriedSpeed(timeMult);
+		if (carriedDistance != 0.0f) {
+			MoveInstantly(Vector2f(carriedDistance, 0.0f), MoveType::Relative, params);
+		}
 		TryStandardMovement(timeMult, params);
 		if (params.TilesDestroyed > 0) {
 			if (auto* player = runtime_cast<Player>(_owner.get())) {
@@ -80,25 +97,11 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		if (_hitLimit > 0.0f) {
-			_hitLimit -= timeMult;
+		if (_fired < 255) {
+			_fired++;
 		}
-
-		if ((_upgrades & 0x1) != 0 && _targetSpeedX != 0.0f) {
-			if (_speed.X != _targetSpeedX) {
-				float step = timeMult * 0.2f;
-				if (std::abs(_speed.X - _targetSpeedX) < step) {
-					_speed.X = _targetSpeedX;
-				} else {
-					_speed.X += step * ((_targetSpeedX < _speed.X) ? -1 : 1);
-				}
-			}
-		}
-
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute);
-			_renderer.SetDrawEnabled(true);
+		if (_fired >= 2) {
+			RevealPastMuzzle(_gunspotPos);
 		}
 	}
 
@@ -121,37 +124,40 @@ namespace Jazz2::Actors::Weapons
 		return ShotBase::OnPerish(collider);
 	}
 
-	void BouncerShot::OnHitWall(float timeMult)
+	void BouncerShot::OnBounce()
 	{
-		if (_hitLimit > 3.0f) {
+		if (_bounces < 255) {
+			_bounces++;
+		}
+		if (_bounces > ((_upgrades & 0x1) != 0 ? MaxBouncesPoweredUp : MaxBounces)) {
 			DecreaseHealth(INT32_MAX);
 			return;
 		}
 
-		_hitLimit += 2.0f;
 		PlaySfx("Bounce"_s, 0.5f);
+	}
+
+	void BouncerShot::OnHitWall(float timeMult)
+	{
+		// The original always flips the push after a wall, a powered-up shot only one time in four
+		if ((_upgrades & 0x1) == 0 || Random().Next() % 4 == 0) {
+			_accelerationDir.X = -_accelerationDir.X;
+		}
+		OnBounce();
 	}
 
 	void BouncerShot::OnHitFloor(float timeMult)
 	{
-		if (_hitLimit > 3.0f) {
-			DecreaseHealth(INT32_MAX);
-			return;
-		}
-
-		_hitLimit += 2.0f;
-		PlaySfx("Bounce"_s, 0.5f);
+		OnBounce();
 	}
 
 	void BouncerShot::OnHitCeiling(float timeMult)
 	{
-		if (_hitLimit > 3.0f) {
-			DecreaseHealth(INT32_MAX);
-			return;
+		// A powered-up shot leaves a ceiling up to twice as fast
+		if ((_upgrades & 0x1) != 0) {
+			_speed.Y *= (9.0f + float(Random().Next() % 8)) / 9.0f;
 		}
-
-		_hitLimit += 2.0f;
-		PlaySfx("Bounce"_s, 0.5f);
+		OnBounce();
 	}
 
 	void BouncerShot::OnRicochet()

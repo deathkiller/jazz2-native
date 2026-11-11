@@ -162,8 +162,12 @@ namespace Jazz2
 		/** @brief Returns the abilities of a character */
 		virtual CharacterProfile GetCharacterProfile(PlayerType type) const = 0;
 
-		/** @brief Returns `true` if a bonus warp turns the remaining coins of a player into gems */
+		/** @brief Returns `true` if a bonus warp turns the coins lying in the level into gems */
 		virtual bool WarpsTransmuteCoins() const = 0;
+		/** @brief Returns `true` if the coins lying in the level have turned into gems */
+		virtual bool AreCoinsTransmuted() const = 0;
+		/** @brief Turns the coins lying in the level into gems, as a bonus warp that costs coins does */
+		virtual void TransmuteCoins() = 0;
 
 		/** @brief Returns how players move under water */
 		virtual WaterInteraction GetWaterInteraction() const = 0;

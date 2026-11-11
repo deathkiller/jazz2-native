@@ -381,8 +381,18 @@ Close but not identical on the two sides, and each CSV's header says which it is
 
 ```
 original   scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame
-engine     scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp
+engine     scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp,ftick
 ```
+
+`ftick` is the engine's tick counter **before** it is floored into `tick`. At any rate other than 70 FPS a frame
+is not a tick, so two rows can share a `tick` and every row sits somewhere inside the tick it is labelled with,
+up to a whole frame off (half a tick of travel at 60 FPS, 2.3 ticks at 30). Comparing positions by `tick` then
+reads that offset as a movement difference (about 1.5 px at 60 FPS, more than any change being measured), so
+interpolate the engine side on `ftick` instead.
+
+A scenario that places the player in the air does so before that frame's physics, while the original's script
+does it after the tick's physics. The probe therefore undoes the vertical speed that frame left behind before
+tick 0, if the player has not moved since. Without it, every mid-air start begins one frame of gravity ahead.
 
 `x`/`y`/`xs`/`ys` are sampled **after** the tick's movement; the key columns are the input applied *during*
 it. `sm` is the active special move. `ms` is a wall-clock offset from the start of the run, which is what
@@ -401,6 +411,13 @@ reading a fixed index would move under it. They are logged on *every* scenario, 
 doubles as camera coverage — the horizontal pan at both speeds is in `g_walk*`/`g_dash*`, the vertical
 behaviour through a jump is in `a_*`, and the sidekick's camera is in `sp_spaz_side*`. No `cm_*` family was
 needed.
+
+**This engine's camera columns follow whatever configuration the run loads.** Which camera is drawn is a user
+preference (`PreferencesCache::EnableReforgedCamera`), not tied to the gameplay switch, and a Debug build reads
+the portable `x64\Debug\Jazz2.config`, which changes whenever someone plays that build. The committed engine
+traces were captured with the Reforged camera on, so their `camx`/`camy` are **not** the original-style camera.
+For camera work, run with `/config <copy>` of a configuration that has it off (bit `0x200000000` of the
+`BoolOptions` at the start of the deflate stream), one copy per instance, and check `g_walk` settles at 28.
 
 **The two sides do not log the same convention**, and it was read off the data rather than assumed: on
 `g_stand`, where the player is at rest, the original reports exactly `−400.000, −225.000`, so its
@@ -485,7 +502,7 @@ These show up as outliers in every comparison and are not engine bugs. Check thi
 | `ob_spring_red`, `ob_spring_green`, `ob_spring_blue` | Heights are within 2-6%, the gap growing as the launch weakens. The two ticks a spring holds its launch speed in the original account for blue's deficit exactly but would make red and green worse, so they are not applied. |
 | `wb_rf_r12` | The original's muzzle ends up inside the wall at that range, so no shot is created and nothing happens — while firing from *against* the wall does blast. That contradiction is not reproduced; ours blasts at both. |
 | `wb_dash_j145` | Both games land within 2 px of the platform's left edge; they then disagree on whether the player walks off it. A knife-edge outcome, not a different arc. |
-| `fz_p_dash_rel`, `fz_p_jump`, `fz_p_jump_fall`, `fz_p_fire_hold`, and any scenario that holds *Run* from tick 0 straight after one that ended with *Run* held | About **3.4 px** behind for the whole run, and it is the reset, not the game. The original's probe only moves the player and zeroes the speed, so the dash state of the scenario before survives it and the first tick accelerates at the dash rate (`xs` 0.366 at tick 1). Ours calls `ResetLegacyMovementState()`, which clears it, so the first tick accelerates at the walk rate (0.183), exactly as the original does from a genuine standstill (`fz_p_dash`, `g_dash`: 0.183 on both sides). Read `xs` at tick 1 to tell which case a scenario is in. It became visible once the dash state started being read from the previous tick (see *The keys steer the tick they are read on* in `Docs/MovementAccuracyReference.dox`); before that, a held *Run* bypassed it. The wall-contact scenarios that used to score exactly 29.9 px/s for a related sampling reason read 0.0 since the same change. |
+| `fz_p_dash_rel`, `fz_p_jump`, `fz_p_jump_fall`, `fz_p_fire_hold`, and any scenario that holds *Run* from tick 0 straight after one that ended with *Run* held | About **3.4 px** behind for the whole run, and it is the reset, not the game. The original's probe only moves the player and zeroes the speed, so the dash state of the scenario before survives it and the first tick accelerates at the dash rate (`xs` 0.366 at tick 1). Ours calls `ResetLegacyMovementState()`, which clears it, so the first tick accelerates at the walk rate (0.183), exactly as the original does from a genuine standstill (`fz_p_dash`, `g_dash`: 0.183 on both sides). Read `xs` at tick 1 to tell which case a scenario is in. It became visible once the dash state started being read from the previous tick (see *The keys steer the tick they are read on* in `Docs/MovementAccuracyReference.dox`); before that, a held *Run* bypassed it. The six wall-contact scenarios that used to score exactly 29.9 px/s for a related sampling reason (`wb_wallfind`, `wb_dash_j130`, `wb_dash_j155`, `wb_dash_j164`, `ob_hpole`, `ob_vine2_run`) read 0.0 since the same change. The four `cl_*` moving ones that row also listed do **not**: `cl_dash_j` and `cl_dj_dash` still score ~790 and ~616 px/s with the same travel as the original, and the reason is not established. |
 | `ob_spring_vpole` | The chain itself now matches — 806.3 px against 804.5, with the same launch speeds and the same decay — but ours runs it **three times** in the 800-tick window where the original runs it once, which is what the speed distribution is reacting to. The original grabs the pole again on the way down, lands back on the spring at tick ~400, and then rests on it for the remaining 400 ticks *without it firing again*; ours re-fires on that landing. A spring re-trigger difference, not a pole one, and only reachable in a scenario where a spring sits permanently underfoot. Note this scenario scored a perfect **0.0** back when the chain was a third short — the pole blindness below. |
 | Most `pb_pad_*` / `pb_lpad_*` | **They hit the top of the level, and the two games do different things there.** Read the `RiseOrig` column: `pb_pad_x1`, `pb_pad_d24`, `pb_lpad_x1`, `pb_pad_hold` and `pb_lpad_hold` all report *exactly* 400.0, which is the drop height — the original stops the player dead at y = 0 while this engine lets them keep going, so anything that reaches the ceiling compares two different things. The launches themselves match: read the **first** launch, taken at the tick the paddle fires, which is before the player has gone anywhere. A held key then pumps each bounce higher, so reaching the ceiling is the normal outcome rather than a scenario flaw, and no amount of headroom in the chamber would avoid it — a −39 launch alone needs ~550 px. Same treatment as the spring chains: compare launch by launch, not by total height |
 | `lh_g3_walk` | **A coin flip, not a stable outlier.** Walking a 3-tile gap at exactly the walk cap either clears it or does not, and the settle decides which. Two runs of the *same* build started 0.044 px apart in `y`; one fell in at x=8149 (matching the original's 8147) and the other cleared and ran on to x=10015. Expect it to change sides between captures with nothing else different, and do not read a flip as a regression. |
@@ -499,12 +516,12 @@ These show up as outliers in every comparison and are not engine bugs. Check thi
 Twenty-eight scenarios currently sit outside the 25 px/s band, out of 280 shared. The rows above account
 for twenty-six of them — the ones that do not measure the same thing, `lh_g3_walk`'s coin flip,
 `ob_spring_vpole` (whose chain now matches and whose residual is the spring re-trigger), the three
-`fu_col_*`, the three spring colours whose heights are still 2–6% out, and `sp_dj_a_dashflip`, an 800-tick
+`fu_col_*`, the three spring colours whose heights were then 2–6% out, and `sp_dj_a_dashflip`, an 800-tick
 bounce chain that agrees on travel to 0.06% and fits one extra bounce into the window. The other two —
-`sp_jazz_upper` and `sp_jazz_dj` — are real differences too, small ones, both listed under *Known remaining
-gaps* in `Docs/MovementAccuracyReference.dox`. `sp_jazz_dj`'s is the standing jump's 3%, which is the 60 Hz
-time step sampling the capped part of the rise; the rise *rule* itself is now exact, and `ap_r01`–`ap_r30`
-are the family that established it.
+`sp_jazz_upper` and `sp_jazz_dj` — were real differences too, small ones. `sp_jazz_dj`'s was the standing
+jump's 3%, which turned out to be the order of the update rather than the time step, and the three springs
+were a two-tick hold; both are now resolved (see *Gravity before the move* in
+`Docs/MovementAccuracyReference.dox`). `ap_r01`–`ap_r30` are the family that established the rise rule.
 
 Several that used to be listed here have since come inside the band and are no longer worth chasing:
 `sp_spaz_side` (4.4 — its rise still reads 0.4 against 216, which is the held-jump re-jump, so read the

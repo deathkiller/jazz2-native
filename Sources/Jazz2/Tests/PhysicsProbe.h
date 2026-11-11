@@ -232,6 +232,11 @@ namespace Jazz2::Tests
 		std::int32_t _copterEndTick;
 		// Whether the current `fz_*` scenario's freeze has been done, latched for the same reason
 		bool _freezeDone;
+		// The original's script places the player after that tick's physics, so the frame SetupProps() ran in must
+		// not count; what it left in the speed is undone before tick 0 if the player hasn't moved since
+		bool _undoSetupFrame = false;
+		Vector2f _setupPos;
+		float _setupSpeedY = 0.0f;
 		// Where the pushable is put back to at the start of each `fz_b_*` scenario, taken the first time one runs -
 		// it is pushed further every time otherwise. X below zero while not taken yet.
 		Vector2f _boxHome;

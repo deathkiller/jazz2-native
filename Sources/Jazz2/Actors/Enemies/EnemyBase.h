@@ -26,6 +26,11 @@ namespace Jazz2::Actors::Enemies
 		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
+		/** @brief Returns the speed a player it hurts is thrown with, zero for a plain hit */
+		virtual Vector2f GetContactThrowSpeed() const {
+			return Vector2f::Zero;
+		}
+
 		/** @brief Whether the enemy can hurt player */
 		bool CanHurtPlayer() const {
 			return (_canHurtPlayer && _frozenTimeLeft <= 0.0f);
@@ -74,6 +79,8 @@ namespace Jazz2::Actors::Enemies
 		virtual float GetTurnLookAhead() const {
 			return DefaultTurnLookAhead;
 		}
+		/** @brief Returns the nearest living player within the squared distance or `nullptr`, optionally with its squared distance */
+		Player* FindNearestPlayer(float maxDistanceSqr, float* distanceSqr = nullptr) const;
 		/** @brief Randomly spawns a drop (collectible) at the enemy's position */
 		void TryGenerateRandomDrop();
 		/** @brief Starts the white-mask blinking effect */

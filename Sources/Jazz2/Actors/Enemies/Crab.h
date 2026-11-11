@@ -27,11 +27,18 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
+		float GetGravityModifier(float baseGravity, bool isRising) const override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
 
 	private:
 		static constexpr float DefaultSpeed = TicksPerFrame;
+		/** @brief Gravity of its fall in pixels per frame squared, 0.125 per tick squared of the original */
+		static constexpr float FallGravity = 0.125f * TicksPerFrame * TicksPerFrame;
+		/** @brief Fastest fall, 5 pixels per tick of the original */
+		static constexpr float FallSpeedLimit = 5.0f * TicksPerFrame;
+		/** @brief Ticks each frame of the landing animation takes */
+		static constexpr float LandingFrameTicks = 7.0f;
 
 		float _noiseCooldown;
 		float _stepCooldown;

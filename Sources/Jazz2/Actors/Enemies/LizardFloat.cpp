@@ -13,12 +13,15 @@
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#include <algorithm>
+#include <cmath>
 #include <float.h>
 
 namespace Jazz2::Actors::Enemies
 {
 	LizardFloat::LizardFloat()
-		: _attackTime(200.0f), _moveTime(100.0f), _awake(false)
+		: _attackTime(0.0f), _moveTime(0.0f), _targetIndex(0), _theme(0), _copterDuration(DefaultCopterDuration), _awake(false), _attacking(false),
+			_dropsCopter(true)
 	{
 	}
 
@@ -40,9 +43,9 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> LizardFloat::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_theme = details.Params[0];
-		_copterDuration = details.Params[1];
-		// TODO: flyAway parameter
-		//bool flyAway = (details.Params[2] != 0);
+		_copterDuration = (details.Params[1] > 0 ? details.Params[1] : DefaultCopterDuration);
+		// The original drops a copter only when the event asks for it
+		_dropsCopter = (details.Params[2] != 0);
 
 		SetState(ActorState::ApplyGravitation, false);
 		SetState(ActorState::CollideWithTileset, _levelHandler->IsReforged());
@@ -100,34 +103,82 @@ namespace Jazz2::Actors::Enemies
 
 		SetState(ActorState::CanJump, false);
 
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+		// It hangs still while it throws the bomb
+		if (_currentTransition != nullptr) {
+			if (!_attacking) {
+				_attacking = true;
+				_speedBeforeAttack = _speed;
+				_speed = Vector2f::Zero;
+			}
+			return;
+		}
+		if (_attacking) {
+			_attacking = false;
+			_speed = _speedBeforeAttack;
+		}
 
 		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
+
+		Player* nearest = nullptr;
+		std::size_t nearestIndex = 0;
+		float nearestSqr = FLT_MAX;
+		for (std::size_t i = 0; i < players.size(); i++) {
+			if (players[i]->GetHealth() <= 0) {
 				continue;
 			}
 
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
+			float distanceSqr = (players[i]->GetPos() - _pos).SqrLength();
+			if (distanceSqr < nearestSqr) {
+				nearestSqr = distanceSqr;
+				nearest = players[i];
+				nearestIndex = i;
 			}
 		}
 
-		if (found) {
-			float distance = (targetPos - _pos).Length();
+		// It floats in place until a player comes within the wake distance
+		if (!_awake) {
+			if (nearest == nullptr || nearestSqr >= WakeDistance * WakeDistance) {
+				return;
+			}
+			_awake = true;
+		}
 
-			// It floats in place until a player comes within 128 px, as measured in JJ2+
-			if (!_awake) {
-				if (distance >= 128.0f) {
-					return;
-				}
-				_awake = true;
+		if (_targetIndex >= players.size()) {
+			_targetIndex = 0;
+		}
+		if (players.empty()) {
+			return;
+		}
+
+		// It keeps a band above the target player and accelerates slowly, the speed limit rises with difficulty
+		Vector2f diff = _pos - players[_targetIndex]->GetPos();
+		float accelX = (diff.X > KeepDistanceX ? -Acceleration : (diff.X < -KeepDistanceX ? Acceleration : 0.0f));
+		float accelY = (diff.Y > 0.0f ? -Acceleration : (diff.Y < -HoverHeight ? Acceleration : 0.0f));
+		float keep = std::pow(SpeedKeptPerTick, timeMult * TicksPerFrame);
+		_speed.X = (accelX != 0.0f ? _speed.X + accelX * timeMult : _speed.X * keep);
+		_speed.Y = (accelY != 0.0f ? _speed.Y + accelY * timeMult : _speed.Y * keep);
+
+		std::int32_t difficultyLevel = 1;
+		switch (_levelHandler->GetDifficulty()) {
+			case GameDifficulty::Easy: difficultyLevel = 0; break;
+			case GameDifficulty::Hard: difficultyLevel = 2; break;
+			default: break;
+		}
+		float maxSpeed = (2.0f + 2.0f * difficultyLevel) * TicksPerFrame;
+		_speed.X = std::clamp(_speed.X, -maxSpeed, maxSpeed);
+		_speed.Y = std::clamp(_speed.Y, -maxSpeed, maxSpeed);
+
+		// It faces the nearest player only while that player is close, and attacks after being near for a while
+		if (nearest != nullptr && nearestSqr < AttackDistance * AttackDistance) {
+			if (nearest->GetPos().X != _pos.X) {
+				SetFacingLeft(nearest->GetPos().X < _pos.X);
 			}
 
-			if (distance < 280.0f && _attackTime <= 0.0f) {
+			_attackTime += timeMult;
+			if (_attackTime > AttackWaitTicks / TicksPerFrame) {
+				_attackTime = 0.0f;
+				_targetIndex = static_cast<std::uint8_t>(nearestIndex);
+
 				SetTransition(AnimState::TransitionAttack, false, [this]() {
 					std::shared_ptr<Environment::Bomb> bomb = std::make_shared<Environment::Bomb>();
 					uint8_t bombParams[2];
@@ -143,25 +194,11 @@ namespace Jazz2::Actors::Enemies
 					SetTransition(AnimState::TransitionAttackEnd, false);
 				});
 
-				_attackTime = Random().NextFloat(120, 240);
+				_attacking = true;
+				_speedBeforeAttack = _speed;
+				_speed = Vector2f::Zero;
 			}
-
-			if (distance < 360.0f && _moveTime <= 0.0f) {
-				Vector2f diff = (targetPos - _pos).Normalized();
-
-				Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff * 0.4f).Normalized();
-				_speed.X = speed.X * DefaultSpeed;
-				_speed.Y = speed.Y * DefaultSpeed;
-
-				SetFacingLeft(_speed.X < 0.0f);
-
-				_moveTime = 8.0f;
-			}
-
-			_attackTime -= timeMult;
 		}
-
-		_moveTime -= timeMult;
 	}
 
 	void LizardFloat::OnSerializeState(Stream& dest)
@@ -189,7 +226,7 @@ namespace Jazz2::Actors::Enemies
 	bool LizardFloat::OnPerish(ActorBase* collider)
 	{
 		if (_copter != nullptr) {
-			if (_copterDuration > 0) {
+			if (_dropsCopter) {
 				_copter->Unmount(_copterDuration * FrameTimer::FramesPerSecond);
 			} else {
 				_copter->DecreaseHealth(INT32_MAX);

@@ -6,12 +6,14 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <algorithm>
+#include <cmath>
 #include <float.h>
 
 namespace Jazz2::Actors::Enemies
 {
 	Witch::Witch()
-		: _attackTime(FirstAttackTicks / TicksPerFrame), _playerHit(false)
+		: _attackTime(FirstAttackTicks / TicksPerFrame), _playerHit(false), _awake(false), _orbitPhase(0.0f), _originPos(Vector2f::Zero)
 	{
 	}
 
@@ -24,6 +26,7 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> Witch::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetState(ActorState::ApplyGravitation, false);
+		_originPos = _pos;
 
 		SetHealthByDifficulty(30);
 		_scoreValue = 1000;
@@ -77,12 +80,35 @@ namespace Jazz2::Actors::Enemies
 				targetDistanceSqr = distanceSqr;
 			}
 		}
+		// She flies along an ellipse around her starting point until a player comes near
+		if (!_awake) {
+			if (target != nullptr && targetDistanceSqr < WakeDistanceSqr) {
+				_awake = true;
+				_attackTime = FirstAttackTicks / TicksPerFrame;
+			} else {
+				_orbitPhase = std::fmod(_orbitPhase + timeMult * TicksPerFrame * (fTwoPi / OrbitPeriodTicks), fTwoPi);
+				float orbitSin, orbitCos;
+				sincosApprox(_orbitPhase, orbitSin, orbitCos);
+				MoveInstantly(Vector2f(_originPos.X + OrbitRadiusX * orbitSin, _originPos.Y + OrbitRadiusY * orbitCos),
+					MoveType::Absolute | MoveType::Force);
+				SetFacingLeft(_orbitPhase >= fPi);
+				_speed = Vector2f::Zero;
+				return;
+			}
+		}
+
 		if (target == nullptr) {
 			_speed = Vector2f::Zero;
 			return;
 		}
 
-		if (_attackTime <= 0.0f && targetDistanceSqr < AttackDistance * AttackDistance) {
+		// She never flies lower than a fixed distance below her starting point, and doesn't cast while held there
+		bool heldBack = (_pos.Y > _originPos.Y + MaxDropBelowOrigin);
+		if (heldBack) {
+			MoveInstantly(Vector2f(_pos.X, _originPos.Y + MaxDropBelowOrigin), MoveType::Absolute | MoveType::Force);
+		}
+
+		if (!heldBack && _attackTime <= 0.0f && targetDistanceSqr < AttackDistance * AttackDistance) {
 			_attackTime = AttackTicks / TicksPerFrame;
 			_speed = Vector2f::Zero;
 
@@ -103,20 +129,19 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		// Measured in JJ2+: fast flight to a point above the player, then a slow drift around it
+		// The target point above the player sways sideways slowly with the level time, which is her drift
+		float swayPhase = std::fmod(_levelHandler->GetElapsedFrames() * TicksPerFrame, SwayPeriodTicks) * (fTwoPi / SwayPeriodTicks);
 		Vector2f diff = target->GetPos() - _pos;
+		diff.X += SwayAmplitude * sinApprox(swayPhase);
 		diff.Y -= FlyAboveDistance;
-		float speedX = (std::abs(diff.X) > DriftDistance ? FlySpeedX : DriftSpeedX);
-		bool goLeft = (diff.X < 0.0f);
-		if (std::abs(diff.X) < DriftDistance / 2 && _speed.X != 0.0f) {
-			// She drifts on past the player for a bit instead of turning on the spot
-			goLeft = (_speed.X < 0.0f);
-		}
-		Vector2f targetSpeed = Vector2f(goLeft ? -speedX : speedX, std::clamp(diff.Y, -FlySpeedY, FlySpeedY)) * TicksPerFrame;
+		// Each original tick her speed becomes a quarter of its sum with the clamped offset, so it settles at a third of it
+		Vector2f targetSpeed = Vector2f(std::clamp(diff.X, -FlyClampX, FlyClampX), std::clamp(diff.Y, -FlyClampY, FlyClampY)) * (TicksPerFrame / 3.0f);
 		float keep = powf(0.25f, timeMult * TicksPerFrame);
 		_speed = targetSpeed + (_speed - targetSpeed) * keep;
 
-		SetFacingLeft(_speed.X < 0.0f);
+		if (_speed.X != 0.0f) {
+			SetFacingLeft(_speed.X < 0.0f);
+		}
 	}
 
 	void Witch::OnSerializeState(Stream& dest)
@@ -133,6 +158,7 @@ namespace Jazz2::Actors::Enemies
 
 		_attackTime = src.ReadValueAsLE<float>();
 		_playerHit = (src.ReadValue<std::uint8_t>() != 0);
+		_awake = true;
 	}
 
 	void Witch::OnUpdateHitbox()

@@ -68,10 +68,17 @@ namespace Jazz2::Actors::Collectibles
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Makes the collectible untouchable for the specified number of frames, as one thrown out of a container is */
+		void SetPickupDelay(float frames) {
+			_pickupDelay = frames;
+		}
+
+		/** @brief How long a collectible thrown out of a container can't be picked up, 17 ticks of the original */
+		static constexpr float ThrownPickupDelay = 17.0f * 6.0f / 7.0f;
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
-		bool _untouched;
 		std::int32_t _scoreValue;
 		float _timeLeft;
 #endif
@@ -96,6 +103,12 @@ namespace Jazz2::Actors::Collectibles
 	private:
 		float _phase;
 		float _startingY;
-		IlluminateLights _illuminateLights;
+		float _pickupDelay = 0.0f;
+		std::unique_ptr<IlluminateLights> _illuminateLights;
+
+	protected:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		bool _untouched;
+#endif
 	};
 }

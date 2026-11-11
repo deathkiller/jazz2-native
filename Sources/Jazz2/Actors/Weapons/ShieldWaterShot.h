@@ -33,7 +33,20 @@ namespace Jazz2::Actors::Weapons
 		void OnHitWall(float timeMult) override;
 
 	private:
+		/** @brief Upward push on a bubble in px per tick squared */
+		static constexpr float Buoyancy = 2048.0f / 65536.0f;
+		/** @brief Ticks after which a bubble near the player turns back */
+		static constexpr float TurnBackTicks = 20.0f;
+		/** @brief Distance in px within which a bubble turns back */
+		static constexpr float TurnBackDistance = 32.0f;
+		/** @brief Ticks one frame of the bubble's animation lasts */
+		static constexpr float TicksPerAnimFrame = 8.0f;
+		/** @brief Updates a bubble is hidden for after it starts */
+		static constexpr std::int32_t HiddenUpdates = 7;
+
 		Vector2f _gunspotPos;
-		std::int32_t _fired;
+		float _age = 0.0f;
+		std::uint8_t _fired;
+		bool _turnedBack = false;
 	};
 }

@@ -30,6 +30,10 @@ namespace Jazz2::Actors::Solid
 		eventParam = 3;
 		AddContent(EventType::Gem, details.Params[3], &eventParam, sizeof(eventParam));
 
+		if (_content.empty()) {
+			AddRandomGems();
+		}
+
 		async_await RequestMetadataAsync("Object/BarrelContainer"_s);
 
 		SetAnimation(AnimState::Idle);
@@ -45,8 +49,9 @@ namespace Jazz2::Actors::Solid
 
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			WeaponType weaponType = shotBase->GetWeaponType();
-			if (weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
-				weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro) {
+			if (_levelHandler->IsReforged() &&
+				(weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
+				 weaponType == WeaponType::Pepper || weaponType == WeaponType::Electro)) {
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else {

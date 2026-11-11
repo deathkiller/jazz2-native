@@ -87,7 +87,7 @@ namespace Jazz2::Actors::Solid
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (owner != nullptr && shotBase->GetStrength() > 0) {
-				DestroyAndApplyToPlayer(owner);
+				DestroyAndApplyToPlayer(owner, true);
 				shotBase->DecreaseHealth(INT32_MAX);
 			} else if (weaponType == WeaponType::Freezer) {
 				_frozenTimeLeft = 10.0f * FrameTimer::FramesPerSecond;
@@ -97,7 +97,7 @@ namespace Jazz2::Actors::Solid
 		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			Player* owner = tnt->GetOwner();
 			if (owner != nullptr) {
-				DestroyAndApplyToPlayer(owner);
+				DestroyAndApplyToPlayer(owner, true);
 			}
 			return true;
 		} else if (auto* player = runtime_cast<Player>(other)) {
@@ -122,9 +122,9 @@ namespace Jazz2::Actors::Solid
 		return SolidObjectBase::OnPerish(collider);
 	}
 
-	void PowerUpWeaponMonitor::DestroyAndApplyToPlayer(Player* player)
+	void PowerUpWeaponMonitor::DestroyAndApplyToPlayer(Player* player, bool byShot)
 	{
-		player->AddAmmo(_weaponType, 25);
+		player->AddAmmo(_weaponType, byShot ? 20 : 25);
 		player->AddWeaponUpgrade(_weaponType, 0x01);
 
 		DecreaseHealth(INT32_MAX, player);

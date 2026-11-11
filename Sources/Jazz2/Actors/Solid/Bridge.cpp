@@ -80,10 +80,9 @@ namespace Jazz2::Actors::Solid
 		// Limit _heightFactor here, because with higher _heightFactor (for example in "haunted1") it starts to be inaccurate.
 		// The divisor is level data and nothing stops it being zero, which is not survivable everywhere: the PSP's
 		// Allegrex traps the IEEE divide-by-zero and the process is gone with no diagnosis (see Thread::DisableFpuTraps()).
-		const std::uint8_t heightDivisor = params.GetUint8(3);
-		_heightFactor = (heightDivisor != 0
-			? std::round(std::min((float)_bridgeWidth / heightDivisor, 38.0f))
-			: 0.0f);
+		// No toughness set means 4 in the original
+		const std::uint8_t heightDivisor = (params.GetUint8(3) != 0 ? params.GetUint8(3) : 4);
+		_heightFactor = std::round(std::min((float)_bridgeWidth / heightDivisor, 38.0f));
 
 		_pos.Y -= 6.0f;
 

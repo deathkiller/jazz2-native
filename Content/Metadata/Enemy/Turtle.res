@@ -32,7 +32,7 @@
 		},
 		"Attack": {
 			"Path": "Turtle/attack.aura",
-			"FrameRate": 7,
+			"FrameRate": 8.33,
 			"States": [ 1325400065 ]
 		}
 	},

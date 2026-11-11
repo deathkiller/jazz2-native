@@ -4,6 +4,7 @@
 
 #include "MpPlayerState.h"
 #include "../MpGameMode.h"
+#include "../ServerMessage.h"
 #include "../../EventType.h"
 #include "../../PlayerType.h"
 #include "../../UI/Alignment.h"
@@ -205,10 +206,10 @@ namespace Jazz2::Multiplayer::GameModes
 		virtual Actors::Player* FindPlayerByIndex(std::uint32_t playerIndex) = 0;
 		/** @brief Returns the home base of the specified team (CTF base event, or a spawn point of the team) */
 		virtual Vector2f GetTeamBasePosition(std::uint8_t team) = 0;
-		/** @brief Shows a message to all players */
-		virtual void ShowAlertToAllPlayers(StringView text) = 0;
-		/** @brief Writes a line to the console of all players, as a message of the server */
-		virtual void SendMessageToAllPlayers(StringView text) = 0;
+		/** @brief Shows a message to all players, each in their own language */
+		virtual void ShowAlertToAllPlayers(const ServerMessage& message) = 0;
+		/** @brief Writes a line to the console of all players, each in their own language */
+		virtual void SendMessageToAllPlayers(const ServerMessage& message) = 0;
 		/** @brief Shows a step of the big countdown in the middle of the screen of all players, `0` shows "Go!" */
 		virtual void ShowCountdownToAllPlayers(std::int32_t secsLeft) = 0;
 		/** @brief Synchronizes the mode fields of @ref MpPlayerState of the specified player to all peers and re-applies its color */

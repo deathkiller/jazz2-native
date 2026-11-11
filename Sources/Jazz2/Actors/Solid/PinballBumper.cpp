@@ -1,6 +1,8 @@
 ﻿#include "PinballBumper.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
+#include "../../Events/EventSpawner.h"
+#include "../../../nCine/Base/Random.h"
 
 namespace Jazz2::Actors::Solid
 {
@@ -17,6 +19,7 @@ namespace Jazz2::Actors::Solid
 	Task<bool> PinballBumper::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		std::uint8_t theme = details.Params[0];
+		_isCarrot = (theme == 1);
 
 		SetState(ActorState::CollideWithTileset | ActorState::IsSolidObject | ActorState::ApplyGravitation, false);
 
@@ -39,7 +42,8 @@ namespace Jazz2::Actors::Solid
 			// out. This engine fired at 48 as well - the player's own hitbox extends whatever is asked for
 			// here by about half its width - so the reach is pulled in to match. Vertically both games
 			// already agreed, catching the player about 36 px above or below the centre.
-			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, TriggerRadius, [this, timeMult](ActorBase* actor) {
+			bool carrotPending = false;
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, TriggerRadius, [this, timeMult, &carrotPending](ActorBase* actor) {
 				if (auto* player = runtime_cast<Player>(actor)) {
 					_cooldown = 16.0f;
 
@@ -49,6 +53,9 @@ namespace Jazz2::Actors::Solid
 						SetTransition(_currentAnimation->State | (AnimState)0x200, true);
 					}
 					PlaySfx("Hit"_s, 0.8f);
+
+					// A carrot bumper gives out an energy carrot now and then, added once the search is over
+					carrotPending |= (_isCarrot && Random().Next(0, 4) == 3);
 
 					// Move the player back
 					player->MoveInstantly(-player->_speed * timeMult, MoveType::Relative);
@@ -141,6 +148,15 @@ namespace Jazz2::Actors::Solid
 				}
 				return true;
 			});
+
+			if (carrotPending) {
+				std::uint8_t carrotParams[Events::EventSpawner::SpawnParamsSize] = { 0 };
+				std::shared_ptr<ActorBase> carrot = _levelHandler->EventSpawner()->SpawnEvent(EventType::Carrot, carrotParams,
+					ActorState::None, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 10));
+				if (carrot != nullptr) {
+					_levelHandler->AddActor(carrot);
+				}
+			}
 		} else {
 			_cooldown -= timeMult;
 		}

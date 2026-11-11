@@ -638,6 +638,7 @@
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
     <ClInclude Include="Jazz2\Multiplayer\Reason.h" />
     <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h" />
+    <ClInclude Include="Jazz2\Multiplayer\ServerMessage.h" />
     <ClInclude Include="Jazz2\Multiplayer\WebhookClient.h" />
     <ClInclude Include="Jazz2\PitType.h" />
     <ClInclude Include="Jazz2\PlayerAction.h" />

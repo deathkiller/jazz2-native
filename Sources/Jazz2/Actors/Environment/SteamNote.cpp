@@ -1,5 +1,6 @@
 ﻿#include "SteamNote.h"
 #include "../../ILevelHandler.h"
+#include "../Player.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -19,7 +20,8 @@ namespace Jazz2::Actors::Environment
 		_pos.X -= 10.0f;
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
-		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
+		SetState(ActorState::CollideWithOtherActors, true);
 
 		async_await RequestMetadataAsync("Object/SteamNote"_s);
 
@@ -61,6 +63,20 @@ namespace Jazz2::Actors::Environment
 	void SteamNote::OnUpdateHitbox()
 	{
 		UpdateHitbox(6, 6);
+	}
+
+	bool SteamNote::OnHandleCollision(ActorBase* other)
+	{
+		if (_cooldown <= 0.0f) {
+			if (auto* player = runtime_cast<Player>(other)) {
+				// The speed is set outright, so the player hovers up in it
+				player->_speed.Y = -LiftSpeed;
+				player->_externalForce.Y = 0.0f;
+				return true;
+			}
+		}
+
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	void SteamNote::OnAnimationFinished()

@@ -185,6 +185,9 @@ namespace Jazz2::Multiplayer
 			-   Discord authentication requires a running Discord client
 			-   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
 		-   @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
+		-   @cpp "IdleSpectateTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are moved to spectate mode, @cpp 0 @ce or less to disable (default is **900**, i.e. 15 minutes)
+			-   The player is notified and can rejoin from the pause menu at any time
+			-   Can be combined with @cpp "IdleKickTimeSecs" @ce, both are measured from the last input, so a player still idle while spectating is kicked later
 		-   @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
 		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **300**, i.e. 5 minutes); a player kicked, banned, or kicked for inactivity or cheating always starts over
 		-   @cpp "AllowCheats" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether cheats can be used on the server (default is **false**)
@@ -375,6 +378,8 @@ namespace Jazz2::Multiplayer
 		bool RequiresDiscordAuth;
 		/** @brief Allowed player types as bitmask of @ref PlayerType */
 		std::uint8_t AllowedPlayerTypes;
+		/** @brief Time after which inactive players will be moved to spectate mode, in seconds, 0 or less to disable */
+		std::int32_t IdleSpectateTimeSecs;
 		/** @brief Time after which inactive players will be kicked, in seconds, -1 to disable */
 		std::int32_t IdleKickTimeSecs;
 		/** @brief Time window in seconds during which a disconnected player can reconnect and resume their progression, 0 or less to disable */

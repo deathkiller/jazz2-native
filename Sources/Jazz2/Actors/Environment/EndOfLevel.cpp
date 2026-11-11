@@ -1,5 +1,7 @@
 ﻿#include "EndOfLevel.h"
 #include "../../ILevelHandler.h"
+#include "../Player.h"
+#include "../Weapons/ShotBase.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -30,5 +32,22 @@ namespace Jazz2::Actors::Environment
 	void EndOfLevel::OnUpdateHitbox()
 	{
 		UpdateHitbox(24, 24);
+	}
+
+	bool EndOfLevel::OnHandleCollision(ActorBase* other)
+	{
+		// The original ends the level when the sign is shot, it takes no notice of a player touching it
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
+			Player* owner = shotBase->GetOwner();
+			if (owner != nullptr && shotBase->GetStrength() > 0 && owner->GetHealth() > 0 &&
+				_levelHandler->CanActivateSugarRush() && (_levelHandler->IsLocalSession() || _levelHandler->IsServer()) &&
+				_levelHandler->CanTakeLevelExit(_exitType, {})) {
+				_levelHandler->BeginLevelChange(owner, _exitType);
+				shotBase->DecreaseHealth(1);
+				return true;
+			}
+		}
+
+		return ActorBase::OnHandleCollision(other);
 	}
 }

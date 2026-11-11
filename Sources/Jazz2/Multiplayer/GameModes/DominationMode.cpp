@@ -9,6 +9,7 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#include <float.h>
 #include <cstring>
 
 namespace Jazz2::Multiplayer::GameModes
@@ -83,12 +84,13 @@ namespace Jazz2::Multiplayer::GameModes
 			point.CapturingTeam = GameModeObject::NeutralTeam;
 			point.CaptureFrames = 0.0f;
 			point.ScoreFrames = 0.0f;
-			// "Control Point N" unless a Text event names it
-			point.Name = (!info.Name.empty() ? info.Name : _f("Control Point {}", (std::int32_t)_points.size()));
+			// Empty unless a Text event names it, clients then show "Control Point N" in their own language
+			point.Name = info.Name;
 
 			GameModeObject& obj = AddObject(ctx, GameModeObjectType::ControlPoint, GameModeObject::NeutralTeam, info.Pos);
 			obj.Direction = (std::int8_t)info.Direction;
-			obj.Name = point.Name;
+			// Scripts compare the names, so it must not depend on the language of the server
+			obj.Name = (!point.Name.empty() ? point.Name : Death::format("Control Point {}", (std::int32_t)_points.size()));
 			point.ObjectId = obj.Id;
 		}
 
@@ -130,8 +132,11 @@ namespace Jazz2::Multiplayer::GameModes
 						point.CapturingTeam = GameModeObject::NeutralTeam;
 						point.CaptureFrames = 0.0f;
 						point.ScoreFrames = 0.0f;
-						// TRANSLATORS: Message shown to all players in Domination when a team captured a control point, first {} is the team color name in English (Blue, Red, Green or Yellow), second {} is the name of the control point, keep the leading line breaks
-						ctx.ShowAlertToAllPlayers(_f("\n\n{} team captured {}!", GetTeamName(point.Team), point.Name));
+						if (!point.Name.empty()) {
+							ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::ControlPointCaptured, ServerMessageTeam{point.Team}, point.Name));
+						} else {
+							ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::ControlPointCapturedUnnamed, ServerMessageTeam{point.Team}, (std::int32_t)(i + 1)));
+						}
 						objectsChanged = true;
 					}
 				}

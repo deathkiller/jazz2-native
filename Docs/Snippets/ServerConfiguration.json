@@ -25,7 +25,8 @@
 	"IsPrivate": false,
 	"RequiresDiscordAuth": false,
 	"AllowedPlayerTypes": 7, /* Jazz + Spaz + Lori */
-	"IdleKickTimeSecs": 600,
+	"IdleSpectateTimeSecs": 900, /* Idle players spectate first, then they are kicked */
+	"IdleKickTimeSecs": 1800,
 	"ReconnectWindowSecs": 600, /* 0 or less disables reconnect resume */
 
 	/* Only whitelisted players can join if the whitelist is specified */

@@ -89,7 +89,8 @@ namespace Jazz2::Actors::Environment
 					return true;
 				}
 			} else if (auto* player = runtime_cast<Player>(other)) {
-				if (player->CanBreakSolidObjects() && TryApplyToPlayer(player)) {
+				// The original opens the cage only by a shot or an explosion
+				if (_levelHandler->IsReforged() && player->CanBreakSolidObjects() && TryApplyToPlayer(player)) {
 					return true;
 				}
 			}

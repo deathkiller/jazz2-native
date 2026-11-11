@@ -19,13 +19,13 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	TNT::TNT()
-		: _timeLeft(0.0f), _lightIntensity(0.0f), _isExploded(false)
+		: _proximityLeft(0.0f), _timeLeft(0.0f), _lightIntensity(0.0f), _isExploded(false)
 	{
 	}
 
 	Task<bool> TNT::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_timeLeft = 200.0f;
+		_timeLeft = FuseTicks * TicksToFrames;
 		_preexplosionTime = (std::int32_t)_timeLeft / 16;
 
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
@@ -50,8 +50,8 @@ namespace Jazz2::Actors::Weapons
 	bool TNT::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* tnt = runtime_cast<TNT>(other)) {
-			if (tnt->_isExploded && _timeLeft > 35.0f) {
-				_timeLeft = 35.0f;
+			if (tnt->_isExploded && _timeLeft > PreBlastTicks * TicksToFrames) {
+				_timeLeft = PreBlastTicks * TicksToFrames;
 			}
 		}
 
@@ -75,15 +75,20 @@ namespace Jazz2::Actors::Weapons
 		if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;
 
-			if (_timeLeft > 35.0f) {
-				_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 64.0f, [this](ActorBase* actor) {
-					if (actor->CanCauseDamage(this)) {
-						_timeLeft = 35.0f;
-						return false;
-					}
-					return true;
-				});
-			} else if (_timeLeft < 30.0f) {
+			if (_timeLeft > PreBlastTicks * TicksToFrames) {
+				// Something near looks every few ticks and sets the TNT off
+				_proximityLeft -= timeMult;
+				if (_proximityLeft <= 0.0f) {
+					_proximityLeft += ProximityTicks * TicksToFrames;
+					_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 64.0f, [this](ActorBase* actor) {
+						if (actor->CanCauseDamage(this)) {
+							_timeLeft = PreBlastTicks * TicksToFrames;
+							return false;
+						}
+						return true;
+					});
+				}
+			} else {
 				std::int32_t fraction = (std::int32_t)_timeLeft / 16;
 				if (_preexplosionTime != fraction) {
 					_preexplosionTime = fraction;
@@ -108,8 +113,19 @@ namespace Jazz2::Actors::Weapons
 			_renderer.SetScale(1.0f);
 			PlaySfx("Explosion"_s);
 
-			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 96.0f, [this](ActorBase* actor) {
-				actor->OnHandleCollision(this);
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, BlastRadius, [this](ActorBase* actor) {
+				auto* enemy = runtime_cast<Enemies::EnemyBase>(actor);
+				if (enemy == nullptr) {
+					actor->OnHandleCollision(this);
+				} else if (!enemy->GetState(ActorState::IsInvulnerable)) {
+					// The nearer the blast, the harder it hits
+					Vector2f delta = _pos - enemy->GetPos();
+					float distanceSqr = delta.X * delta.X + delta.Y * delta.Y;
+					if (distanceSqr < BlastRadius * BlastRadius) {
+						std::int32_t damage = 1 + std::int32_t((BlastRadius * BlastRadius - distanceSqr) * float(MaxBlastDamage - 1) / (BlastRadius * BlastRadius));
+						enemy->DecreaseHealth(damage, this);
+					}
+				}
 				return true;
 			});
 

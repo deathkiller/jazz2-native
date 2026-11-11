@@ -28,18 +28,16 @@ namespace Jazz2::Actors::Weapons
 		async_await RequestMetadataAsync("Weapon/Pepper"_s);
 
 		AnimState state = AnimState::Idle;
+		_timeLeft = 55.0f * TicksToFrames;
 		if ((_upgrades & 0x01) != 0) {
-			_timeLeft = Random().NextFloat(32.0f, 40.0f);
 			state |= (AnimState)1;
-		} else {
-			_timeLeft = Random().NextFloat(26.0f, 36.0f);
 		}
 
 		SetAnimation(state);
 		PlaySfx("Fire"_s);
 
-		// Measured in JJ2+: the plain spray is drawn opaque, the powered-up one wasn't measured
-		if (_levelHandler->IsReforged() || (_upgrades & 0x01) != 0) {
+		// The plain spray is drawn opaque, the powered-up one is additive
+		if ((_upgrades & 0x01) != 0) {
 			_renderer.SetBlendingPreset(DrawableNode::BlendingPreset::Additive);
 		}
 
@@ -55,14 +53,11 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		float baseSpeed = ((_upgrades & 0x1) != 0 ? Random().NextFloat(5.0f, 7.2f) : Random().NextFloat(3.0f, 7.0f));
+		// Both variants spray alike, each drop at its own speed
+		float baseSpeed = (193.0f + float(Random().Next() % 128)) / 64.0f * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed + speed.X;
 		_speed.Y = sinAngle * baseSpeed;
 
 		_renderer.SetRotation(angle);
@@ -88,11 +83,10 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.SetDrawEnabled(true);
+		if (_fired < 255) {
+			_fired++;
 		}
+		RevealPastMuzzle(_gunspotPos);
 	}
 	
 	void PepperShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)

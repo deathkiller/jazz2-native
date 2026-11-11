@@ -55,9 +55,12 @@ namespace Jazz2::Actors::Enemies
 
 	void EnemyBase::SetHealthByDifficulty(std::int32_t health)
 	{
-		switch (_levelHandler->GetDifficulty()) {
-			case GameDifficulty::Easy: health = (std::int32_t)std::round(health * 0.6f); break;
-			case GameDifficulty::Hard: health = (std::int32_t)std::round(health * 1.4f); break;
+		// The original does not scale enemy health by difficulty
+		if (_levelHandler->IsReforged()) {
+			switch (_levelHandler->GetDifficulty()) {
+				case GameDifficulty::Easy: health = (std::int32_t)std::round(health * 0.6f); break;
+				case GameDifficulty::Hard: health = (std::int32_t)std::round(health * 1.4f); break;
+			}
 		}
 
 		_health = std::max<std::int32_t>(health, 1);
@@ -131,6 +134,29 @@ namespace Jazz2::Actors::Enemies
 		SetState(prevState);
 
 		return success;
+	}
+
+	Player* EnemyBase::FindNearestPlayer(float maxDistanceSqr, float* distanceSqr) const
+	{
+		Player* result = nullptr;
+		float bestSqr = maxDistanceSqr;
+
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
+			float distSqr = (player->GetPos() - _pos).SqrLength();
+			if (distSqr < bestSqr) {
+				bestSqr = distSqr;
+				result = player;
+			}
+		}
+
+		if (distanceSqr != nullptr) {
+			*distanceSqr = bestSqr;
+		}
+		return result;
 	}
 
 	void EnemyBase::TryGenerateRandomDrop()

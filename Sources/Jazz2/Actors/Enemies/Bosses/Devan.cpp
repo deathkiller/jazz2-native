@@ -4,6 +4,8 @@
 #include "../../Explosion.h"
 #include "../../Weapons/ShotBase.h"
 
+#include <cmath>
+
 #include "../../../../nCine/Base/Random.h"
 
 #include <float.h>
@@ -37,8 +39,8 @@ namespace Jazz2::Actors::Bosses
 	static constexpr AnimState DemonFireball = (AnimState)36;
 
 	Devan::Devan()
-		: _state(State::Waiting), _stateTime(0.0f), _crouchCooldown(60.0f), _endText(0), _shots(0), _isDemon(false),
-			_isDead(false)
+		: _state(State::Waiting), _stateTime(0.0f), _endText(0), _shots(0), _isDemon(false),
+			_isDead(false), _evalAcc(0.0f), _jumpTicks(0.0f)
 	{
 	}
 
@@ -52,6 +54,7 @@ namespace Jazz2::Actors::Bosses
 		_endText = details.Params[1];
 
 		_scoreValue = 10000;
+		_originPos = _pos;
 
 		SetState(ActorState::CollideWithOtherActors, false);
 
@@ -65,12 +68,12 @@ namespace Jazz2::Actors::Bosses
 
 	bool Devan::OnActivatedBoss()
 	{
-		SetHealthByDifficulty(140 * 2);
+		// Both forms together, the first form ends when half of it is gone
+		SetHealthByDifficulty(TotalHealth);
 
 		_state = State::WarpingIn;
-		_stateTime = 120.0f;
-		_attackTime = 90.0f;
-		_anglePhase = 0.0f;
+		_stateTime = StartDelay;
+		_attackTime = DemonFlightTime;
 		_shots = 0;
 		_isDemon = false;
 		_isDead = false;
@@ -89,6 +92,22 @@ namespace Jazz2::Actors::Bosses
 			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 		} else {
 			BossBase::OnUpdate(timeMult);
+		}
+
+		// It stays inside the level like a player, a jump that ignores tiles could carry it out
+		Recti levelBounds = _levelHandler->GetLevelBounds();
+		float boundedX = std::clamp(_pos.X, float(levelBounds.X), float(levelBounds.X + levelBounds.W));
+		float boundedY = std::max(_pos.Y, float(levelBounds.Y));
+		if (boundedX != _pos.X || boundedY != _pos.Y) {
+			if (boundedY != _pos.Y) {
+				_speed.Y = std::max(_speed.Y, 0.0f);
+			}
+			// The edge of the level turns it around like a wall
+			if (boundedX != _pos.X && _state == State::Running1) {
+				SetFacingLeft(boundedX < _pos.X);
+				_speed.X = (IsFacingLeft() ? -RunSpeed : RunSpeed);
+			}
+			MoveInstantly(Vector2f(boundedX, boundedY), MoveType::Absolute | MoveType::Force);
 		}
 
 		if (_frozenTimeLeft > 0.0f) {
@@ -123,7 +142,7 @@ namespace Jazz2::Actors::Bosses
 					_state = State::Transition;
 					SetTransition(AnimState::TransitionWarpIn, false, [this]() {
 						_state = State::Idling;
-						_stateTime = 80.0f;
+						_stateTime = IdleTime;
 
 						SetState(ActorState::IsInvulnerable, false);
 						_canHurtPlayer = true;
@@ -135,21 +154,21 @@ namespace Jazz2::Actors::Bosses
 
 			case State::Idling: {
 				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 120.0f));
+					StartRunning();
 				}
 
 				break;
 			}
 
 			case State::Running1: {
-				if (_crouchCooldown <= 0.0 && ShouldCrouch()) {
-					Crouch();
-				} else if (_health < _maxHealth / 2) {
+				float ticks = timeMult * TicksPerFrame;
+
+				if (_health <= _maxHealth / 2) {
 					_isDemon = true;
 					_speed.X = 0.0f;
 					_speed.Y = 0.0f;
 
-					SetState(ActorState::IsInvulnerable, true);
+					SetState(ActorState::IsInvulnerable, false);
 					SetState(ActorState::CanBeFrozen, false);
 
 					std::shared_ptr<DisarmedGun> gun = std::make_shared<DisarmedGun>();
@@ -165,39 +184,66 @@ namespace Jazz2::Actors::Bosses
 					SetTransition(DisarmedStart, false, [this]() {
 						SetAnimation(DemonFly);
 						SetTransition(DemonTransformStart, false, [this]() {
-							SetState(ActorState::ApplyGravitation | ActorState::IsInvulnerable, false);
+							SetState(ActorState::ApplyGravitation, false);
 							_state = State::DemonFlying;
+							_attackTime = DemonFlightTime;
+							_demonTicks = 0.0f;
+							_hoverSet = false;
 
 							_lastPos = _pos;
-							_targetPos = _lastPos + Vector2f(0.0f, -200.0f);
 						});
 					});
-				} else if (_stateTime <= 0.0f) {
-					if (Random().NextFloat() < 0.5f) {
-						FollowNearestPlayer(State::Running1, Random().NextFloat(60, 120));
-					} else {
-						FollowNearestPlayer(State::Running2, Random().NextFloat(10, 30));
-					}
-				} else {
-					if (!CanMoveToPosition(_speed.X, 0)) {
-						SetFacingLeft(!IsFacingLeft());
-						_speed.X = (IsFacingLeft() ? -4.0f : 4.0f);
-					}
+					break;
+				}
+
+				// Falling off a ledge, it keeps its heading and decides nothing until it lands
+				if (!GetState(ActorState::CanJump)) {
+					_fellOffLedge = true;
+					break;
+				}
+				if (_fellOffLedge) {
+					_fellOffLedge = false;
+					Land();
+					break;
+				}
+
+				// Only a wall turns it around, the original runs off a ledge and falls
+				AABBf ahead = AABBInner;
+				float reach = (_speed.X < 0.0f ? -WallProbeDistance : WallProbeDistance);
+				ahead.L += reach;
+				ahead.R += reach;
+				ahead.B -= WallProbeLift;
+				Tiles::TileCollisionParams probe = { Tiles::TileDestructType::None, true };
+				if (!_levelHandler->IsPositionEmpty(this, ahead, probe)) {
+					SetFacingLeft(!IsFacingLeft());
+					_speed.X = (IsFacingLeft() ? -RunSpeed : RunSpeed);
+				}
+
+				_evalAcc += ticks;
+				if (_evalAcc >= EvaluationTicks) {
+					_evalAcc = std::fmod(_evalAcc, EvaluationTicks);
+					Evaluate();
 				}
 				break;
 			}
 
-			case State::Running2: {
-				if (_stateTime <= 0.0f) {
+			case State::Jumping: {
+				_jumpTicks += timeMult * TicksPerFrame;
+				if (_jumpTicks < JumpRunTicks) {
+					// It stands still for a moment first, as measured in the original
 					_speed.X = 0.0f;
-
-					_state = State::Transition;
-					SetTransition(AnimState::TransitionRunToIdle, false, [this]() {
-						SetTransition(ShootStart, false, [this]() {
-							_shots = Random().Next(1, 8);
-							Shoot();
-						});
-					});
+					_speed.Y = 0.0f;
+				} else if (!_jumpLaunched) {
+					// The original rises through whatever is above and only lands on the way down
+					_jumpLaunched = true;
+					_speed.X = (IsFacingLeft() ? -JumpSpeedX : JumpSpeedX);
+					_speed.Y = JumpSpeedY;
+					SetState(ActorState::CanJump, false);
+					SetState(ActorState::CollideWithTileset, false);
+				} else if (_speed.Y >= 0.0f && !GetState(ActorState::CollideWithTileset)) {
+					SetState(ActorState::CollideWithTileset, true);
+				} else if (GetState(ActorState::CanJump) && _speed.Y >= 0.0f) {
+					Land();
 				}
 				break;
 			}
@@ -206,21 +252,13 @@ namespace Jazz2::Actors::Bosses
 				if (_stateTime <= 0.0f) {
 					_state = State::Transition;
 
-					switch (_levelHandler->GetDifficulty()) {
-						case GameDifficulty::Easy: _crouchCooldown = Random().NextFloat(360.0f, 600.0f); break;
-						default:
-						case GameDifficulty::Normal: _crouchCooldown = Random().NextFloat(180.0f, 360.0f); break;
-						case GameDifficulty::Hard: _crouchCooldown = Random().NextFloat(100.0f, 240.0f); break;
-					}
-
 					SetState(ActorState::SkipPerPixelCollisions, false);
 					SetTransition(CrouchEnd, false, [this]() {
-						FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 150.0f));
+						StartRunning();
 					});
 				}
 				break;
 			}
-
 			case State::DemonFlying: {
 				if (_attackTime <= 0.0f) {
 					_state = State::DemonSpewingFireball;
@@ -237,7 +275,7 @@ namespace Jazz2::Actors::Bosses
 					PlaySfx("SpitFireball"_s);
 
 					std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
-					std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
+					std::uint8_t fireballParams[2] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0), (std::uint8_t)GetDifficultyIndex() };
 					fireball->OnActivated(ActorActivationDetails(
 						_levelHandler,
 						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 14, _renderer.GetLayer() + 2),
@@ -248,7 +286,9 @@ namespace Jazz2::Actors::Bosses
 					SetTransition(DemonSpewFireballEnd, false, [this]() {
 						_state = State::DemonFlying;
 
-						_attackTime = Random().NextFloat(100.0f, 240.0f);
+						_attackTime = DemonFlightTime;
+						_demonTicks = 0.0f;
+						_hoverSet = false;
 					});
 				});
 				break;
@@ -258,13 +298,19 @@ namespace Jazz2::Actors::Bosses
 				if (GetState(ActorState::CanJump)) {
 					_state = State::Transition;
 					SetTransition(DisorientedStart, false, [this]() {
-						SetTransition(Disoriented, false, [this]() {
-							SetTransition(Disoriented, false, [this]() {
-								SetTransition(DisorientedWarpOut, false, [this]() {
-									BossBase::OnPerish(nullptr);
-								});
-							});
-						});
+						_state = State::Disoriented;
+						_stateTime = DisorientedTicks / TicksPerFrame;
+						SetAnimation(Disoriented);
+					});
+				}
+				break;
+			}
+
+			case State::Disoriented: {
+				if (_stateTime <= 0.0f) {
+					_state = State::Transition;
+					SetTransition(DisorientedWarpOut, false, [this]() {
+						BossBase::OnPerish(nullptr);
 					});
 				}
 				break;
@@ -272,7 +318,6 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		_stateTime -= timeMult;
-		_crouchCooldown -= timeMult;
 	}
 
 	void Devan::OnUpdateHitbox()
@@ -344,54 +389,56 @@ namespace Jazz2::Actors::Bosses
 
 	void Devan::FollowNearestPlayerDemon(float timeMult)
 	{
-		bool found = false;
-		Vector2f foundPos = Vector2f(FLT_MAX, FLT_MAX);
+		float ticks = timeMult * TicksPerFrame;
 
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
+		// The side and the height to hover at are picked when a flight starts
+		if (!_hoverSet) {
+			_hoverSet = true;
+			_demonTicks = 0.0f;
+			Player* player = FindNearestPlayer(DemonNoticeDistanceSqr);
+			if (player == nullptr) {
+				auto players = _levelHandler->GetPlayers();
+				if (!players.empty()) {
+					player = players[0];
+				}
 			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - foundPos).Length()) {
-				foundPos = newPos;
-				found = true;
+			if (player != nullptr) {
+				_demonTarget = player->shared_from_this();
+				_hoverX = (_pos.X < player->GetPos().X ? -HoverOffsetX : HoverOffsetX);
+				SetFacingLeft(_pos.X >= player->GetPos().X);
+			} else {
+				_demonTarget.reset();
 			}
+			_hoverY = -(float)Random().Next(0, 16) * 4.0f;
 		}
 
-		if (found) {
-			bool willFaceLeft = (foundPos.X < _pos.X);
+		_demonTicks += ticks;
 
-			float xOffset, yOffset, speedMult;
-			if (_levelHandler->GetDifficulty() == GameDifficulty::Easy) {
-				xOffset = 100.0f;
-				yOffset = 70.0f;
-				speedMult = 0.01f;
-			} else {
-				xOffset = 70.0f;
-				yOffset = 30.0f;
-				speedMult = 0.005f;
+		if (auto target = _demonTarget.lock()) {
+			float remaining = std::max<float>(129.0f - _demonTicks, 1.0f);
+			Vector2f wanted;
+			wanted.X = std::clamp<float>((target->GetPos().X + _hoverX - _lastPos.X) / remaining, -3.0f, 3.0f);
+			wanted.Y = std::clamp<float>((target->GetPos().Y + _hoverY - _lastPos.Y) / remaining, -2.0f, 2.0f);
+
+			// The speed per original tick is a low-pass of the wanted speed
+			float blend = 1.0f - std::pow(0.25f, ticks);
+			_demonVel += (wanted - _demonVel) * blend;
+			_lastPos += _demonVel * TicksPerFrame * timeMult;
+
+			float dx = _pos.X - target->GetPos().X;
+			bool willFaceLeft = IsFacingLeft();
+			if (dx < -TurnDistance) {
+				willFaceLeft = false;
+			} else if (dx > TurnDistance) {
+				willFaceLeft = true;
 			}
-
-			_targetPos = foundPos;
-			_targetPos.X += (willFaceLeft ? xOffset : -xOffset);
-			_targetPos.Y -= yOffset;
-
-			Vector2f speed = ((_targetPos - _lastPos) * speedMult + _lastSpeed * 1.4f) / 2.4f;
-			_lastPos.X += speed.X;
-			_lastPos.Y += speed.Y;
-			_lastSpeed = speed;
-
-			if (IsFacingLeft() != willFaceLeft) {
+			if (willFaceLeft != IsFacingLeft()) {
 				SetFacingLeft(willFaceLeft);
 				SetTransition(DemonTurn, false);
 			}
 		}
 
-		_anglePhase += timeMult * 0.02f;
-
-		MoveInstantly(_lastPos + Vector2f(0.0f, sinApprox(_anglePhase) * 22.0f), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(_lastPos, MoveType::Absolute | MoveType::Force);
 	}
 
 	void Devan::Shoot()
@@ -400,44 +447,51 @@ namespace Jazz2::Actors::Bosses
 
 		SetTransition(ShootInProgress, false, [this]() {
 			std::shared_ptr<Bullet> bullet = std::make_shared<Bullet>();
-			std::uint8_t fireballParams[1] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
+			std::uint8_t bulletParams[2] = { (std::uint8_t)(IsFacingLeft() ? 1 : 0), (std::uint8_t)GetDifficultyIndex() };
 			bullet->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -24 : 24), (std::int32_t)_pos.Y + 2, _renderer.GetLayer() + 2),
-				fireballParams
+				bulletParams
 			));
 			_levelHandler->AddActor(bullet);
 
-			_shots--;
+			_shots++;
 
 			SetTransition(ShootEnd, false, [this]() {
-				if (_shots > 0) {
+				// It keeps firing while the player stays in front of it and level with it, a shot every 8 ticks
+				bool again = false;
+				if (_shots < MaxShots) {
+					Player* player = FindNearestPlayer(ShootDistanceSqr * 1.5f);
+					if (player != nullptr) {
+						bool isFacing = ((player->GetPos().X < _pos.X) == IsFacingLeft());
+						again = (isFacing && std::abs(player->GetPos().Y - _pos.Y) < LevelBand);
+					}
+				}
+
+				if (again) {
 					Shoot();
 				} else {
 					Run();
 				}
 			});
+			SetAnimationTicks(ShotRecoverTicks);
 		});
+		SetAnimationTicks(ShotAimTicks);
 	}
 
 	void Devan::Run()
 	{
 		SetTransition(ShootEnd2, false, [this]() {
-			FollowNearestPlayer(State::Running1, Random().NextFloat(60.0f, 150.0f));
+			StartRunning();
 		});
+		SetAnimationTicks(ShootEndTicks);
 	}
 
 	void Devan::Crouch()
 	{
 		_speed.X = 0.0f;
 		_state = State::Crouch;
-
-		switch (_levelHandler->GetDifficulty()) {
-			case GameDifficulty::Easy: _stateTime = Random().NextFloat(100.0f, 240.0f); break;
-			default:
-			case GameDifficulty::Normal: _stateTime = Random().NextFloat(60.0f, 120.0f); break;
-			case GameDifficulty::Hard: _stateTime = Random().NextFloat(30.0f, 80.0f); break;
-		}
+		_stateTime = CrouchTicks / TicksPerFrame;
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 
@@ -445,32 +499,80 @@ namespace Jazz2::Actors::Bosses
 		SetTransition(CrouchStart, false);
 	}
 
-	bool Devan::ShouldCrouch() const
+	void Devan::StartRunning()
 	{
-		constexpr float Distance = 64.0f;
+		_state = State::Running1;
+		_evalAcc = 0.0f;
 
-		bool shouldCrouch = false;
-		AABBf crouchAabb = AABB;
-		crouchAabb.L -= Distance;
-		crouchAabb.R += Distance;
+		Player* player = FindNearestPlayer(NoticeDistanceSqr);
+		if (player != nullptr) {
+			SetFacingLeft(player->GetPos().X < _pos.X);
+		}
 
-		_levelHandler->FindCollisionActorsByAABB(this, crouchAabb, [this, &shouldCrouch](ActorBase* actor) {
-			if (auto* shot = runtime_cast<Weapons::ShotBase>(actor)) {
-				float xSpeed = shot->GetSpeed().X;
-				float x = shot->GetPos().X;
-				float xSelf = _pos.X;
-				// Check if the shot is moving towards the boss
-				if (std::abs(xSpeed) > 0.0f && std::signbit(xSelf - x) == std::signbit(xSpeed)) {
-					shouldCrouch = true;
-					return false;
-				}
-			}
-			return true;
-		});
-
-		return shouldCrouch;
+		_speed.X = (IsFacingLeft() ? -RunSpeed : RunSpeed);
+		SetAnimation(AnimState::Run);
 	}
 
+	void Devan::Evaluate()
+	{
+		Player* player = FindNearestPlayer(NoticeDistanceSqr);
+		if (player == nullptr) {
+			return;
+		}
+
+		Vector2f diff = player->GetPos() - _pos;
+		float distanceSqr = diff.SqrLength();
+		bool isFacing = ((diff.X < 0.0f) == IsFacingLeft());
+
+		if (!isFacing) {
+			return;
+		}
+
+		if (std::abs(diff.Y) < LevelBand) {
+			if (distanceSqr < ShootDistanceSqr && Random().Next(0, 8) < 4) {
+				_speed.X = 0.0f;
+				_shots = 0;
+				_state = State::Transition;
+				// The lengths of the shooting animations are measured in JJ2+
+				SetTransition(AnimState::TransitionRunToIdle, false, [this]() {
+					SetTransition(ShootStart, false, [this]() {
+						Shoot();
+					});
+					SetAnimationTicks(ShootStartTicks);
+				});
+				SetAnimationTicks(RunStopTicks);
+			} else if (distanceSqr > CrouchDistanceSqr && player->HasFiredWithin(RecentFireFrames)) {
+				Crouch();
+			}
+		} else if (_pos.Y > _originPos.Y - 32.0f) {
+			Jump();
+		}
+	}
+
+	float Devan::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		// It rises and falls at the rate measured in the original, in a jump and off a ledge alike
+		return (!_isDemon ? ReplaceLevelGravity(JumpGravity, baseGravity) : baseGravity);
+	}
+
+	void Devan::Land()
+	{
+		// It stands for a moment after a landing before it runs again, as measured in the original
+		_speed.X = 0.0f;
+		_state = State::Idling;
+		_stateTime = LandingTicks / TicksPerFrame;
+		SetAnimation(AnimState::Idle);
+	}
+
+	void Devan::Jump()
+	{
+		_state = State::Jumping;
+		_jumpTicks = 0.0f;
+		_jumpLaunched = false;
+		_speed.X = 0.0f;
+		_speed.Y = 0.0f;
+		SetAnimation(AnimState::Jump);
+	}
 	Devan::DisarmedGun::DisarmedGun()
 	{
 	}
@@ -514,7 +616,8 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Devan::Bullet::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetFacingLeft(details.Params[0] != 0);
-		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
+		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * (float)(details.Params[1] + 4) * TicksPerFrame;
+		_timeLeft = 70.0f / TicksPerFrame;
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
@@ -526,6 +629,17 @@ namespace Jazz2::Actors::Bosses
 		SetAnimation(DevanBullet);
 
 		async_return true;
+	}
+
+	void Devan::Bullet::OnUpdate(float timeMult)
+	{
+		EnemyBase::OnUpdate(timeMult);
+
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		} else {
+			_timeLeft -= timeMult;
+		}
 	}
 
 	void Devan::Bullet::OnUpdateHitbox()
@@ -575,9 +689,9 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Devan::Fireball::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetFacingLeft(details.Params[0] != 0);
-		_speed.X = (IsFacingLeft() ? -5.0f : 5.0f);
-		_speed.Y = 3.5f;
-		_timeLeft = 50.0f;
+		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * (float)(details.Params[1] + 2) * TicksPerFrame;
+		_speed.Y = (float)(details.Params[1] + 2) * TicksPerFrame;
+		_timeLeft = 35.0f / TicksPerFrame;
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
@@ -588,6 +702,17 @@ namespace Jazz2::Actors::Bosses
 		SetAnimation(DemonFireball);
 
 		async_return true;
+	}
+
+	void Devan::Fireball::OnUpdate(float timeMult)
+	{
+		EnemyBase::OnUpdate(timeMult);
+
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		} else {
+			_timeLeft -= timeMult;
+		}
 	}
 
 	void Devan::Fireball::OnUpdateHitbox()

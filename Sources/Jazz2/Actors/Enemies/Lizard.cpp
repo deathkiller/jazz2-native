@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Enemies
 		_isFalling = (details.Params[1] != 0);
 		bool isFacingLeft = (_isFalling ? details.Params[2] != 0 : Random().NextBool());
 
-		SetHealthByDifficulty(_isFalling ? 6 : 1);
+		SetHealthByDifficulty(_isFalling ? FallingHealth : 1);
 		_scoreValue = 100;
 
 		SetState(ActorState::CollideWithTilesetReduced, true);
@@ -54,7 +54,8 @@ namespace Jazz2::Actors::Enemies
 		SetFacingLeft(isFacingLeft);
 		SetAnimation(AnimState::Walk);
 
-		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+		// The original drops straight down and starts walking only after landing
+		_speed.X = (_isFalling ? 0.0f : (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed);
 
 		if (_isFalling) {
 			// Lizard lost its copter, check if spawn position is
@@ -143,6 +144,7 @@ namespace Jazz2::Actors::Enemies
 
 		if (_isFalling) {
 			_isFalling = false;
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 			SetHealthByDifficulty(1);
 		}
 	}

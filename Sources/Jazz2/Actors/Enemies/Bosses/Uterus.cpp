@@ -6,18 +6,19 @@
 
 #include "../../../../nCine/Base/Random.h"
 
-#include <float.h>
+#include <cmath>
 
 namespace Jazz2::Actors::Bosses
 {
 	Uterus::Uterus()
-		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _anglePhase(0.0f), _hasShield(false)
+		: _state(StateWaiting), _endText(0), _shieldCount(0), _phase(0.0f), _angle(0.0f), _crabTicks(0.0f), _hasShield(false),
+			_touchable(false)
 	{
 	}
 
 	Uterus::~Uterus()
 	{
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_shields)); i++) {
+		for (std::int32_t i = 0; i < MaxShieldPartCount; i++) {
 			if (_shields[i] != nullptr) {
 				_shields[i]->SetState(ActorState::IsDestroyed, true);
 			}
@@ -51,21 +52,23 @@ namespace Jazz2::Actors::Bosses
 
 	bool Uterus::OnActivatedBoss()
 	{
-		SetHealthByDifficulty(50);
+		SetHealthByDifficulty(100);
 		_renderer.SetDrawEnabled(true);
 
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 
-		_state = StateOpen;
-		_stateTime = 240.0f;
-
-		_spawnCrabTime = 500.0f;
-
+		_state = StateActive;
+		_phase = 0.0f;
+		_angle = 0.0f;
+		_crabTicks = 0.0f;
 		_hasShield = true;
+		_touchable = false;
+		SetAnimation((AnimState)1073741825);
 
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_shields)); i++) {
+		_shieldCount = GetDifficultyIndex() * 2 + 4;
+		for (std::int32_t i = 0; i < _shieldCount; i++) {
 			_shields[i] = std::make_shared<ShieldPart>();
-			_shields[i]->Phase = (fTwoPi * i / std::int32_t(arraySize(_shields)));
+			_shields[i]->Phase = (fTwoPi * i / _shieldCount);
 			_shields[i]->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i(std::int32_t(_pos.X), std::int32_t(_pos.Y), _renderer.GetLayer() + 2)
@@ -75,100 +78,101 @@ namespace Jazz2::Actors::Bosses
 		return true;
 	}
 
+	bool Uterus::OnHandleCollision(ActorBase* other)
+	{
+		// A shot at the shielded Uterus does no harm, but makes it drop a Crab
+		if (_hasShield && _state == StateActive && _crabTicks <= 0.0f && runtime_cast<Weapons::ShotBase>(other) != nullptr) {
+			_crabTicks = CrabTicks;
+		}
+
+		return BossBase::OnHandleCollision(other);
+	}
+
 	void Uterus::OnUpdate(float timeMult)
 	{
 		OnUpdateHitbox();
 		HandleBlinking(timeMult);
 
-		switch (_state) {
-			case StateOpen: {
-				if (_stateTime <= 0.0f) {
-					PlaySfx("Closing"_s);
+		if (_state == StateWaiting) {
+			return;
+		}
 
-					_state = StateTransition;
-					SetAnimation((AnimState)1073741825);
-					SetTransition((AnimState)1073741824, false, [this]() {
-						_state = StateClosed;
-						_stateTime = 280.0f;
+		float ticks = timeMult * TicksPerFrame;
 
-						SetState(ActorState::IsInvulnerable, true);
-					});
+		// The cycle of opening and closing
+		float oldPhase = _phase;
+		_phase = std::fmod(_phase + ticks, CycleTicks);
+		if (oldPhase < OpenStartTick && _phase >= OpenStartTick) {
+			PlaySfx("Opening"_s);
+			SetAnimation(AnimState::Idle);
+			SetTransition((AnimState)1073741826, false);
+		} else if (oldPhase < CloseStartTick && _phase >= CloseStartTick) {
+			PlaySfx("Closing"_s);
+			SetAnimation((AnimState)1073741825);
+			SetTransition((AnimState)1073741824, false);
+		}
+
+		// The Crab drops 70 ticks after the shot
+		if (_crabTicks > 0.0f) {
+			float oldTicks = _crabTicks;
+			_crabTicks -= ticks;
+			if (oldTicks > CrabTicks - CrabDropTick && _crabTicks <= CrabTicks - CrabDropTick) {
+				SpawnCrab();
+			}
+		}
+
+		FollowNearestPlayer(timeMult);
+
+		float orbitSpeed = (_hasShield ? ShieldedOrbitSpeed : ExposedOrbitSpeed);
+		_angle += orbitSpeed * (fTwoPi / 1024.0f) * ticks;
+
+		float sinAngle, cosAngle;
+		sincosApprox(_angle, sinAngle, cosAngle);
+		_renderer.SetRotation(fPiOver2 + sinAngle * 0.2f);
+
+		Vector2f pos = _lastPos + Vector2f(sinAngle * WobbleX, cosAngle * WobbleY);
+		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+
+		if (_hasShield) {
+			std::int32_t shieldCount = 0;
+			for (std::int32_t i = 0; i < _shieldCount; i++) {
+				if (_shields[i] == nullptr) {
+					continue;
+				}
+				if (_shields[i]->GetHealth() <= 0) {
+					_shields[i] = nullptr;
+					continue;
 				}
 
-				if (_spawnCrabTime <= 0.0f) {
-					float force = Random().NextFloat(-15.0f, 15.0f);
+				shieldCount++;
 
-					// TODO: Implement Crab spawn animation
-					std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
-					crab->OnActivated(ActorActivationDetails(
-						_levelHandler,
-						Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 4)
-					));
-					crab->AddExternalForce(force, 0.0f);
-					_levelHandler->AddActor(crab);
+				float sinShield, cosShield;
+				sincosApprox(_angle + _shields[i]->Phase, sinShield, cosShield);
+				Vector2f slot = pos + Vector2f(sinShield * ShieldRadius, cosShield * ShieldRadius);
 
-					_spawnCrabTime = (_hasShield ? Random().NextFloat(160.0f, 220.0f) : Random().NextFloat(120.0f, 200.0f));
+				if (_shields[i]->FallTime > 0.0f) {
+					continue;
+				}
+
+				if (_shields[i]->ReturnTime > 0.0f) {
+					// Flies back to where its place in the ring is by then
+					float remaining = _shields[i]->ReturnTime;
+					_shields[i]->ReturnTime -= timeMult;
+					float factor = std::min<float>(1.0f, timeMult / std::max<float>(remaining, 0.001f));
+					Vector2f from = _shields[i]->GetPos();
+					_shields[i]->MoveInstantly(from + (slot - from) * factor, MoveType::Absolute | MoveType::Force);
 				} else {
-					_spawnCrabTime -= timeMult;
+					_shields[i]->MoveInstantly(slot, MoveType::Absolute | MoveType::Force);
 				}
-				break;
+				_shields[i]->Recover(_angle + _shields[i]->Phase);
 			}
 
-			case StateClosed: {
-				if (_stateTime <= 0.0f) {
-					PlaySfx("Opening"_s);
-
-					_state = StateTransition;
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741826, false, [this]() {
-						_state = StateOpen;
-						_stateTime = 280.0f;
-
-						SetState(ActorState::IsInvulnerable, _hasShield);
-					});
-				}
-				break;
+			if (shieldCount == 0) {
+				_hasShield = false;
 			}
 		}
 
-		_stateTime -= timeMult;
-
-		if (_state != StateWaiting) {
-			FollowNearestPlayer(timeMult);
-
-			_anglePhase += timeMult * 0.02f;
-			float sinPhase, cosPhase;
-			sincosApprox(_anglePhase, sinPhase, cosPhase);
-			_renderer.SetRotation(fPiOver2 + sinPhase * 0.2f);
-
-			Vector2f pos = _lastPos + Vector2f(cosPhase * 60.0f, sinPhase * 60.0f);
-			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-
-			if (_hasShield) {
-				std::int32_t shieldCount = 0;
-				for (std::int32_t i = 0; i < std::int32_t(arraySize(_shields)); i++) {
-					if (_shields[i] != nullptr) {
-						if (_shields[i]->GetHealth() > 0) {
-							if (_shields[i]->FallTime <= 0.0f) {
-								float sinShield, cosShield;
-								sincosApprox(_anglePhase + _shields[i]->Phase, sinShield, cosShield);
-								_shields[i]->MoveInstantly(pos + Vector2f(cosShield * 50.0f, sinShield * 50.0f), MoveType::Absolute | MoveType::Force);
-								_shields[i]->Recover(_anglePhase + _shields[i]->Phase);
-							}
-							shieldCount++;
-						} else {
-							_shields[i] = nullptr;
-						}
-					}
-				}
-
-				if (shieldCount == 0) {
-					_hasShield = false;
-					SetState(ActorState::IsInvulnerable, _state != StateOpen);
-				}
-			}
-		}
-
+		UpdateVulnerability();
 		OnUpdateHitbox();
 	}
 
@@ -191,39 +195,41 @@ namespace Jazz2::Actors::Bosses
 		return BossBase::OnPerish(collider);
 	}
 
+	void Uterus::UpdateVulnerability()
+	{
+		_touchable = (!_hasShield && _phase >= VulnerableStartTick && _phase < VulnerableEndTick);
+		SetState(ActorState::IsInvulnerable, !_touchable);
+		_canHurtPlayer = _touchable;
+	}
+
+	void Uterus::SpawnCrab()
+	{
+		std::shared_ptr<Enemies::Crab> crab = std::make_shared<Enemies::Crab>();
+		crab->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y + 32, _renderer.GetLayer() - 4)
+		));
+		_levelHandler->AddActor(crab);
+	}
+
 	void Uterus::FollowNearestPlayer(float timeMult)
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
-				targetPos = newPos;
-				found = true;
-			}
+		Player* player = FindNearestPlayer(FollowDistanceSqr);
+		if (player == nullptr) {
+			return;
 		}
 
-		if (found) {
-			targetPos.Y -= 100.0f;
+		// Each axis is limited on its own, it is much slower while shielded
+		float orbitSpeed = (_hasShield ? ShieldedOrbitSpeed : ExposedOrbitSpeed);
+		float limit = orbitSpeed * 0.125f * TicksPerFrame * timeMult;
 
-			Vector2f diff = (targetPos - _lastPos);
-			if (diff.Length() > 40) {
-				Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff.Normalized() * 0.4f).Normalized();
-				float mult = (_hasShield ? 0.8f : 2.0f) * timeMult;
-				switch (_levelHandler->GetDifficulty()) {
-					case GameDifficulty::Easy: mult *= 0.8f; break;
-					case GameDifficulty::Hard: mult *= 1.1f; break;
-				}
-				_lastPos.X += speed.X * mult;
-				_lastPos.Y += speed.Y * mult;
-			}
+		Vector2f target = player->GetPos();
+		if (_hasShield) {
+			target.Y -= HoverHeight;
 		}
+
+		_lastPos.X += std::clamp<float>(target.X - _lastPos.X, -limit, limit);
+		_lastPos.Y += std::clamp<float>(target.Y - _lastPos.Y, -limit, limit);
 	}
 
 	Task<bool> Uterus::ShieldPart::OnActivatedAsync(const ActorActivationDetails& details)
@@ -231,9 +237,13 @@ namespace Jazz2::Actors::Bosses
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
 		CanCollideWithShots = false;
 
-		_elasticity = 0.3f;
+		// Measured in JJ2+: half the speed is kept on a bounce and the fall is capped at 6 px a tick
+		_elasticity = 0.5f;
+		_verticalSpeedLimit = 6.0f * TicksPerFrame;
 
 		_health = 3;
+		FallTime = 0.0f;
+		ReturnTime = 0.0f;
 
 		async_await RequestMetadataAsync("Boss/Uterus"_s);
 		SetAnimation((AnimState)1073741827);
@@ -248,6 +258,11 @@ namespace Jazz2::Actors::Bosses
 		if (FallTime > 0.0f) {
 			EnemyBase::OnUpdate(timeMult);
 			FallTime -= timeMult;
+			if (FallTime <= 0.0f) {
+				ReturnTime = ShieldReturnTicks / TicksPerFrame;
+				_speed.X = 0.0f;
+				_speed.Y = 0.0f;
+			}
 		} else {
 			HandleBlinking(timeMult);
 		}
@@ -261,9 +276,13 @@ namespace Jazz2::Actors::Bosses
 	bool Uterus::ShieldPart::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
-			DecreaseHealth(shotBase->GetStrength(), shotBase);
+			// The first hit only knocks it off, it takes damage once it has fallen
+			if (FallTime > 0.0f) {
+				DecreaseHealth(shotBase->GetStrength(), shotBase);
+			}
 
-			FallTime = 400.0f;
+			FallTime = ShieldFallTicks / TicksPerFrame;
+			ReturnTime = 0.0f;
 
 			SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, true);
 
@@ -284,6 +303,11 @@ namespace Jazz2::Actors::Bosses
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::Tiny);
 
 		return EnemyBase::OnPerish(collider);
+	}
+
+	float Uterus::ShieldPart::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		return ReplaceLevelGravity(FallGravity, baseGravity);
 	}
 
 	void Uterus::ShieldPart::Recover(float phase)

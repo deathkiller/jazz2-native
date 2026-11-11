@@ -26,10 +26,13 @@ namespace Jazz2::Actors::Weapons
 
 		async_await RequestMetadataAsync("Weapon/ShieldWater"_s);
 
-		_timeLeft = 35;
-		_strength = 2;
+		_strength = 1;
 
 		SetAnimation(AnimState::Idle);
+
+		// The bubble lasts as long as its animation
+		std::int32_t frameCount = (_currentAnimation != nullptr ? _currentAnimation->FrameCount : 0);
+		_timeLeft = (frameCount > 0 ? float(frameCount) * TicksPerAnimFrame : 35.0f) * TicksToFrames;
 
 		_renderer.SetBlendingPreset(DrawableNode::BlendingPreset::Additive);
 
@@ -43,17 +46,20 @@ namespace Jazz2::Actors::Weapons
 
 		_gunspotPos = gunspotPos;
 
-		float angleRel = (angle + Random().NextFloat(-0.2f, 0.2f)) * (isFacingLeft ? -1 : 1);
+		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 7.0f;
+		constexpr float baseSpeed = 2.0f * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
 		_speed.Y = sinAngle * baseSpeed;
+		SetAcceleration(Vector2f(_speed.X < 0.0f ? -1.0f : 1.0f, 0.0f), 0.125f * TickAccelScale, 0.0f);
+		SetCarriedSpeed(speed.X, true);
+
+		// A bubble starts bobbing in a random direction
+		float bobSin, bobCos;
+		sincosApprox(Random().NextFloat(0.0f, fRadAngle360), bobSin, bobCos);
+		_speed.Y += bobSin * TickSpeedScale;
 
 		_renderer.SetAlphaF(0.7f);
 		_renderer.SetDrawEnabled(false);
@@ -63,6 +69,19 @@ namespace Jazz2::Actors::Weapons
 
 	void ShieldWaterShot::OnUpdate(float timeMult)
 	{
+		_age += timeMult;
+		// The bubble rises, and after a while a bubble near the player turns back
+		_speed.Y -= Buoyancy * TickAccelScale * timeMult;
+		if (_age > TurnBackTicks * TicksToFrames && !_turnedBack) {
+			auto* owner = _owner.get();
+			if (owner != nullptr && (owner->GetPos() - _pos).Length() < TurnBackDistance) {
+				_turnedBack = true;
+				_speed.X = -_speed.X * 0.5f;
+				_speed.Y = -_speed.Y;
+				_accelerationDir.X = -_accelerationDir.X;
+			}
+		}
+
 		std::int32_t n = GetMovementSubstepCount(timeMult);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
 		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
@@ -80,10 +99,11 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.SetDrawEnabled(true);
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_fired >= HiddenUpdates) {
+			RevealPastMuzzle(_gunspotPos);
 		}
 	}
 

@@ -5,7 +5,7 @@
 namespace Jazz2::Actors::Environment
 {
 	Copter::Copter()
-		: _phase(0.0f), _state(State::Free)
+		: _phase(0.0f), _state(State::Free), _ridden(false)
 	{
 	}
 
@@ -22,7 +22,6 @@ namespace Jazz2::Actors::Environment
 	Task<bool> Copter::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_state = (details.Params[0] != 0 ? State::Mounted : State::Free);
-
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 
 		async_await RequestMetadataAsync("Enemy/LizardFloat"_s);
@@ -41,6 +40,16 @@ namespace Jazz2::Actors::Environment
 				_phase += timeMult * 0.05f;
 				MoveInstantly(_originPos + Vector2f(0.0f, sinApprox(_phase) * 4.0f), MoveType::Absolute);
 				OnUpdateHitbox();
+				break;
+			}
+			case State::Mounted: {
+				// The rider ends it, the timer only covers a rider that is gone
+				if (_ridden) {
+					_phase -= timeMult;
+					if (_phase <= 0.0f) {
+						DecreaseHealth(INT32_MAX);
+					}
+				}
 				break;
 			}
 			case State::Unmounted: {
@@ -74,7 +83,7 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnSerializeState(dest);
 
-		dest.WriteValue<std::uint8_t>((std::uint8_t)_state);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)((std::uint8_t)_state | (_ridden ? 0x80 : 0x00)));
 		dest.WriteValueAsLE<float>(_phase);
 	}
 
@@ -84,12 +93,27 @@ namespace Jazz2::Actors::Environment
 
 		// A copter taken by a player is destroyed right away, so there is no rider to restore. The noise
 		// of an unmounted copter is only fading out, so it's not started again.
-		_state = (State)src.ReadValue<std::uint8_t>();
+		std::uint8_t state = src.ReadValue<std::uint8_t>();
+		_state = (State)(state & 0x7f);
 		_phase = src.ReadValueAsLE<float>();
+		// The rider is not restored with it, so a ridden one stays hidden until its timer ends it
+		_ridden = ((state & 0x80) != 0);
+		if (_ridden) {
+			_renderer.SetDrawEnabled(false);
+			SetState(ActorState::CollideWithOtherActors, false);
+		}
 	}
 
 	void Copter::OnDetach(ActorBase* parent)
 	{
+		if (!_ridden) {
+			// Measured in the original: it exists for the whole ride, so its generator waits for the ride to end
+			_ridden = true;
+			_phase = RiddenTimeout;
+			SetState(ActorState::CollideWithOtherActors, false);
+			return;
+		}
+
 		DecreaseHealth(INT32_MAX);
 	}
 

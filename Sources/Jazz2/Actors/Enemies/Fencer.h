@@ -28,10 +28,30 @@ namespace Jazz2::Actors::Enemies
 		bool OnPerish(ActorBase* collider) override;
 		void OnSerializeState(Stream& dest) override;
 		void OnDeserializeState(Stream& src) override;
+		void OnHitFloor(float timeMult) override;
+		float GetGravityModifier(float baseGravity, bool isRising) const override;
 
 	private:
-		float _stateTime;
+		/** @brief Distance within which it turns toward the nearest player */
+		static constexpr float SightDistance = 362.0f;
+		/** @brief Largest vertical distance to a player it reacts to */
+		static constexpr float SightHeight = 64.0f;
+		/** @brief Distance within which it hops toward a player who has just fired */
+		static constexpr float ShotReactDistance = 256.0f;
+		/** @brief Distance within which it hops back from a player who isn't firing */
+		static constexpr float HopBackDistance = 160.0f;
+		/** @brief How recently a player must have fired, in original ticks */
+		static constexpr float ShotWindowTicks = 20.0f;
+		/** @brief Time on the ground before it hops back, in original ticks */
+		static constexpr float HopBackWaitTicks = 141.0f;
+		/** @brief Gravity of a hop in px per original tick squared */
+		static constexpr float HopGravity = 0.25f * TicksPerFrame * TicksPerFrame;
+		/** @brief Length of the hop animation in original ticks, measured in JJ2+ */
+		static constexpr float HopAnimTicks = 20.0f;
 
-		bool FindNearestPlayer(Vector2f& targetPos);
+		float _stateTime;
+		bool _airborne;
+
+		void Hop(float speedX, float speedY, float offsetY);
 	};
 }

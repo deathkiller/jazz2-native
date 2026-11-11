@@ -2,6 +2,7 @@
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../Player.h"
+#include "../Weapons/ShotBase.h"
 
 namespace Jazz2::Actors::Environment
 {
@@ -90,7 +91,15 @@ namespace Jazz2::Actors::Environment
 			return true;
 		}
 
-		if (auto* player = runtime_cast<Player>(other)) {
+		// A shot of a player wakes it up as well
+		Player* player = runtime_cast<Player>(other);
+		if (player == nullptr) {
+			auto* shotBase = runtime_cast<Weapons::ShotBase>(other);
+			if (shotBase != nullptr && shotBase->GetStrength() > 0 && (_levelHandler->IsLocalSession() || _levelHandler->IsServer())) {
+				player = shotBase->GetOwner();
+			}
+		}
+		if (player != nullptr) {
 			_activated = true;
 
 			SetAnimation((AnimState)1);

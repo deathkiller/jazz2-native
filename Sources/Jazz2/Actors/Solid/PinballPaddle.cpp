@@ -174,6 +174,8 @@ namespace Jazz2::Actors::Solid
 							// which is one thirty-second of a pixel per pixel either side of `(d - 8) / 32`.
 							float drift = std::max(LegacyMinDrift, (distance - LegacyDriftOffset) * LegacyDriftScale);
 							player->_speed.X = (IsFacingLeft() ? -drift : drift) * Player::LegacyFrameRateScale;
+							// The drift is left alone for a few ticks before the air brake takes it
+							player->_brakeHoldLeft = LegacyDriftHoldTicks / Player::LegacyFrameRateScale;
 
 							if (player->_activeModifier == Player::Modifier::None) {
 								// End a copter properly rather than just shortening it, which is what a spring

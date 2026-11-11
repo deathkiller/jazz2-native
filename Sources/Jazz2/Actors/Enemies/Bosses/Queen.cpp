@@ -6,14 +6,14 @@
 
 #include "../../../../nCine/Base/Random.h"
 
-#include <float.h>
+#include <cmath>
 
 using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors::Bosses
 {
 	Queen::Queen()
-		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _queuedBackstep(false)
+		: _state(StateWaiting), _ticks(0.0f), _idleTicks(FirstIdleTicks), _hits(0), _backstepLoops(0), _endText(0)
 	{
 	}
 
@@ -44,14 +44,6 @@ namespace Jazz2::Actors::Bosses
 		_maxHealth = INT32_MAX;
 		_scoreValue = 0;
 
-		_lastHealth = _health;
-
-		_stepSize = 0.3f;
-		switch (_levelHandler->GetDifficulty()) {
-			case GameDifficulty::Easy: _stepSize *= 1.3f; break;
-			case GameDifficulty::Hard: _stepSize *= 0.7f; break;
-		}
-
 		async_await RequestMetadataAsync("Boss/Queen"_s);
 		SetAnimation(AnimState::Idle);
 
@@ -69,13 +61,16 @@ namespace Jazz2::Actors::Bosses
 	bool Queen::OnActivatedBoss()
 	{
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-		_state = StateWaiting;
+		_hits = 0;
+		EnterIdle(FirstIdleTicks);
 		return true;
 	}
 
 	void Queen::OnUpdate(float timeMult)
 	{
 		TileCollisionParams params = { TileDestructType::Weapon | TileDestructType::Speed, _speed.Y >= 0.0f, WeaponType::Blaster, 1 };
+		// Speed tiles break for whoever declares a speed, so she has to
+		params.Speed = 64.0f;
 		TryStandardMovement(timeMult, params);
 		OnUpdateHitbox();
 		if (params.TilesDestroyed > 0) {
@@ -88,161 +83,136 @@ namespace Jazz2::Actors::Bosses
 			_block->MoveInstantly(Vector2f(_pos.X, _pos.Y - 32.0f), MoveType::Absolute | MoveType::Force);
 		}
 
-		switch (_state) {
-			case StateWaiting: {
-				// Waiting for player to enter the arena
-				_levelHandler->FindCollisionActorsByAABB(this, AABBf(_pos.X - 300, _pos.Y - 120, _pos.X + 60, _pos.Y + 120), [this](ActorBase* actor) {
-					if (auto* player = runtime_cast<Player>(actor)) {
-						_state = StateIdleToScream;
-						_stateTime = 260.0f;
-						return false;
-					}
-					return true;
-				});
-				break;
-			}
+		if (_state != StateWaiting) {
+			float ticks = timeMult * TicksPerFrame;
 
-			case StateIdleToScream: {
-				// Scream towards the player
-				if (_stateTime <= 0.0f) {
-					_lastHealth = _health;
-					SetShielded(false);
-
-					_state = StateScreaming;
-					PlaySfx("Scream"_s);
-					SetTransition((AnimState)1073741824, false, [this]() {
-						_state = (Random().NextFloat() < 0.8f ? StateIdleToStomp : StateIdleToBackstep);
-						_stateTime = Random().NextFloat(65.0f, 85.0f);
-
-						SetShielded(true);
-
-						if (_lastHealth - _health >= 2) {
-							_queuedBackstep = true;
+			switch (_state) {
+				case StateIdle: {
+					if (IsPlayerInRegion()) {
+						_idleTicks -= ticks;
+						if (_idleTicks < 0.0f || _hits >= HitsForBackstep) {
+							ChooseAction();
 						}
-					});
+					}
+					break;
 				}
-				break;
-			}
+				case StateScream: {
+					_ticks += ticks;
 
-			case StateIdleToStomp: {
-				if (_stateTime <= 0.0f) {
-					_state = StateTransition;
-					SetTransition((AnimState)1073741825, false, [this]() {
-						PlaySfx("Stomp"_s);
+					// Every player is pushed away, harder on Hard
+					float push = (GetDifficultyIndex() == 2 ? 2.0f : 1.0f) * TicksPerFrame * timeMult;
+					auto players = _levelHandler->GetPlayers();
+					for (auto* player : players) {
+						if (player->GetHealth() <= 0) {
+							continue;
+						}
 
-						SetTransition((AnimState)1073741830, false, [this]() {
-							_state = StateIdleToBackstep;
-							_stateTime = Random().NextFloat(70.0f, 80.0f);
+						player->MoveInstantly(Vector2f(-push, 0.0f), MoveType::Relative);
+						// Resync the push to the owning client, otherwise remote players aren't affected in multiplayer
+						_levelHandler->HandlePlayerPushed(player);
+					}
 
-							auto players = _levelHandler->GetPlayers();
-							if (players.empty()) {
-								return;
-							}
-
-							Player* player;
-							for (std::int32_t i = 0; i < 5; i++) {
-								player = players[Random().Next(0, (std::uint32_t)players.size())];
-								if (player->GetHealth() > 0) {
-									break;
-								}
-							}
-
+					if (_ticks >= ScreamTicks) {
+						EnterIdle(ShortIdleTicks);
+					}
+					break;
+				}
+				case StateStomp: {
+					_ticks += ticks;
+					if (_ticks >= StompTicks) {
+						Player* player = FindNearestPlayer(StompRangeSqr);
+						if (player != nullptr) {
 							std::shared_ptr<Brick> brick = std::make_shared<Brick>();
 							brick->OnActivated(ActorActivationDetails(
 								_levelHandler,
-								Vector3i((std::int32_t)(player->GetPos().X + Random().NextFloat(-50.0f, 50.0f)), (std::int32_t)(_pos.Y - 200.0f), _renderer.GetLayer() - 20)
+								Vector3i((std::int32_t)player->GetPos().X, (std::int32_t)(_originPos.Y - BrickHeight), _renderer.GetLayer() - 20)
 							));
 							_levelHandler->AddActor(Death::move(brick));
+						}
 
-							_levelHandler->ShakeCameraViewNear(_pos, 20.0f);
-						});
-					});
-				}
-				break;
-			}
-
-			case StateIdleToBackstep: {
-				if (_stateTime <= 0.0f) {
-					if (_queuedBackstep) {
-						_queuedBackstep = false;
-
-						// 2 hits by player while screaming, step backwards
-						_speed.X = _stepSize;
-
-						_state = StateTransition;
-						SetTransition((AnimState)1073741826, false, [this]() {
-							_speed.X = 0.0f;
-
-							// Check it it's on the ledge
-							AABBf aabb1 = AABBf(_pos.X - 10, _pos.Y + 24, _pos.X - 6, _pos.Y + 28);
-							AABBf aabb2 = AABBf(_pos.X + 6, _pos.Y + 24, _pos.X + 10, _pos.Y + 28);
-							TileCollisionParams params = { TileDestructType::None, true };
-							if (!_levelHandler->IsPositionEmpty(this, aabb1, params) && _levelHandler->IsPositionEmpty(this, aabb2, params)) {
-								_lastHealth = _health;
-								SetShielded(false);
-
-								// It's on the ledge
-								_state = StateTransition;
-								SetTransition((AnimState)1073741827, false, [this]() {
-									SetShielded(true);
-
-									// 1 hits by player
-									if (_lastHealth - _health >= 1) {
-										// Fall off the ledge
-										_speed.X = 2.2f;
-
-										SetAnimation(AnimState::Fall);
-									} else {
-										// Recover, step forward
-										SetTransition((AnimState)1073741828, false, [this]() {
-											_speed.X = _stepSize * -1.3f;
-
-											SetTransition((AnimState)1073741826, false, [this]() {
-												_speed.X = 0.0f;
-
-												_state = StateIdleToScream;
-												_stateTime = Random().NextFloat(150.0f, 180.0f);
-											});
-										});
-									}
-								});
-							} else {
-								_state = StateIdleToScream;
-								_stateTime = Random().NextFloat(160.0f, 200.0f);
-							}
-						});
-					} else {
-						_state = StateIdleToScream;
-						_stateTime = Random().NextFloat(150.0f, 180.0f);
+						_levelHandler->ShakeCameraViewNear(_pos, 20.0f);
+						EnterIdle(LongIdleTicks);
 					}
+					break;
 				}
-				break;
+				case StateBackstep: {
+					_ticks += ticks;
+					if (_backstepLoops == 2) {
+						// The step is spread over the first loop, so she doesn't jump back at its end
+						MoveInstantly(Vector2f(BackstepDistance * ticks / BackstepLoopTicks, 0.0f), MoveType::Relative | MoveType::Force);
+					}
+					if (_ticks >= BackstepLoopTicks) {
+						_ticks -= BackstepLoopTicks;
+						_backstepLoops--;
+						if (_backstepLoops < 1) {
+							EnterIdle(ShortIdleTicks);
+						} else {
+							// After the step it checks for ground under her
+							float oldX = _pos.X - BackstepDistance;
+							if (!IsSolidAt(oldX + 18.0f, _pos.Y)) {
+								_state = StateLedge;
+								_ticks = 0.0f;
+								SetShielded(false);
+								SetTransition((AnimState)1073741827, false);
+							} else {
+								SetTransition((AnimState)1073741826, false);
+							}
+						}
+					}
+					break;
+				}
+				case StateLedge: {
+					_ticks += ticks;
+					// The fall starts once the ledge animation has played
+					if (_ticks >= LedgeTicks || _currentTransition == nullptr) {
+						_state = StateFalling;
+						SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, false);
+						MoveInstantly(Vector2f(2.0f, 0.0f), MoveType::Relative | MoveType::Force);
+						_speed.X = FallSpeedX;
+						_speed.Y = 0.0f;
+						SetAnimation(AnimState::Fall);
+					}
+					break;
+				}
+				case StateFalling: {
+					_speed.X *= std::pow(15.0f / 16.0f, ticks);
+					_speed.Y += Gravity * timeMult;
+
+					if (FindSpring()) {
+						_state = StateFlung;
+						_ticks = 0.0f;
+						_speed.X = 0.0f;
+						_speed.Y = -LaunchSpeed;
+						SetState(ActorState::CollideWithTileset, true);
+						SetAnimation(AnimState::Fall);
+						PlaySfx("Spring"_s);
+					}
+					break;
+				}
+				case StateFlung: {
+					_ticks += ticks;
+					_speed.Y = -LaunchSpeed;
+
+					if (_ticks >= FlightTicks) {
+						StringView text = _levelHandler->GetLevelText(_endText);
+						_levelHandler->ShowLevelText(text);
+						DecreaseHealth(INT32_MAX);
+					}
+					break;
+				}
 			}
 
-			case StateDead: {
-				// Thrown away by spring
-				if (_stateTime <= 0.0f) {
-					DecreaseHealth(INT32_MAX);
-				}
-				break;
-			}
-
-			case StateScreaming: {
+			// The players cannot get past a wall in front of her
+			if (_state != StateWaiting) {
 				auto players = _levelHandler->GetPlayers();
 				for (auto* player : players) {
-					if (player->GetHealth() <= 0) {
-						continue;
+					float limit = _pos.X - WallDistance;
+					if (player->GetHealth() > 0 && player->GetPos().X > limit) {
+						player->MoveInstantly(Vector2f(limit - player->GetPos().X, 0.0f), MoveType::Relative);
 					}
-
-					player->MoveInstantly(Vector2f(-1.5f * timeMult, 0.0f), MoveType::Relative);
-					// Resync the push to the owning client, otherwise remote players aren't affected in multiplayer
-					_levelHandler->HandlePlayerPushed(player);
 				}
-				break;
 			}
 		}
-
-		_stateTime -= timeMult;
 	}
 
 	bool Queen::OnHandleCollision(ActorBase* other)
@@ -255,32 +225,10 @@ namespace Jazz2::Actors::Bosses
 				}
 				return true;
 			}
-		} else if (auto* spring = runtime_cast<Environment::Spring>(other)) {
-			// Collide only with hitbox
-			if (AABBInner.Overlaps(spring->AABBInner)) {
-				Vector2f force = spring->Activate();
-				int sign = ((force.X + force.Y) > 0.0f ? 1 : -1);
-				if (std::abs(force.X) > 0.0f) {
-					_speed.X = (4 + std::abs(force.X)) * sign;
-					_externalForce.X = force.X;
-				} else if (std::abs(force.Y) > 0.0f) {
-					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
-					_externalForce.Y = force.Y;
-				} else {
-					return BossBase::OnHandleCollision(other);
-				}
-				SetState(ActorState::CanJump, false);
 
-				SetAnimation(AnimState::Fall);
-				PlaySfx("Spring"_s);
-
-				if (_state != StateDead) {
-					StringView text = _levelHandler->GetLevelText(_endText);
-					_levelHandler->ShowLevelText(text);
-
-					_state = StateDead;
-					_stateTime = 50.0f;
-				}
+			// Hits only count while she is not shielded
+			if (_state != StateWaiting) {
+				_hits++;
 			}
 		}
 
@@ -294,11 +242,108 @@ namespace Jazz2::Actors::Bosses
 		CanCollideWithShots = !value;
 	}
 
+	bool Queen::IsPlayerInRegion()
+	{
+		auto players = _levelHandler->GetPlayers();
+		for (auto* player : players) {
+			if (player->GetHealth() > 0 && player->GetPos().X > _originPos.X - RegionLeft && player->GetPos().Y > _originPos.Y - RegionTop) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void Queen::ChooseAction()
+	{
+		// The hits are spent on whichever action follows, otherwise she acts again the moment she is idle
+		std::int32_t hits = _hits;
+		_hits = 0;
+		if (hits < HitsForBackstep) {
+			if (Random().Next(0, 2) == 0) {
+				StartScream();
+			} else {
+				StartStomp();
+			}
+		} else {
+			std::int32_t r = Random().Next(0, 8);
+			if (r < 5) {
+				StartBackstep();
+			} else if (r < 7) {
+				StartScream();
+			} else {
+				StartStomp();
+			}
+		}
+	}
+
+	void Queen::StartScream()
+	{
+		_state = StateScream;
+		_ticks = 0.0f;
+		SetShielded(false);
+		PlaySfx("Scream"_s);
+		SetTransition((AnimState)1073741824, false);
+	}
+
+	void Queen::StartStomp()
+	{
+		_state = StateStomp;
+		_ticks = 0.0f;
+		SetShielded(false);
+		PlaySfx("Stomp"_s);
+		SetTransition((AnimState)1073741825, false);
+	}
+
+	void Queen::StartBackstep()
+	{
+		_state = StateBackstep;
+		_ticks = 0.0f;
+		_hits = 0;
+		_backstepLoops = 2;
+		SetShielded(false);
+		SetTransition((AnimState)1073741826, false);
+	}
+
+	void Queen::EnterIdle(float idleTicks)
+	{
+		_state = StateIdle;
+		_ticks = 0.0f;
+		_idleTicks = idleTicks;
+		_speed.X = 0.0f;
+		SetShielded(true);
+		SetAnimation(AnimState::Idle);
+	}
+
+	bool Queen::IsSolidAt(float x, float y)
+	{
+		TileCollisionParams params = { TileDestructType::None, true };
+		// A column from her middle to below her feet, so the height of her hitbox doesn't matter
+		AABBf aabb = AABBf(x - 1.0f, y, x + 1.0f, y + LedgeProbeDepth);
+		return !_levelHandler->IsPositionEmpty(this, aabb, params);
+	}
+
+	bool Queen::FindSpring()
+	{
+		bool found = false;
+		_levelHandler->FindCollisionActorsByAABB(this, AABBf(_pos.X - SpringRange, _pos.Y - SpringRange, _pos.X + SpringRange, _pos.Y + SpringRange), [this, &found](ActorBase* actor) {
+			if (auto* spring = runtime_cast<Environment::Spring>(actor)) {
+				if (spring->GetPos().Y < _pos.Y) {
+					found = true;
+					return false;
+				}
+			}
+			return true;
+		});
+		return found;
+	}
+
 	Task<bool> Queen::Brick::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_timeLeft = 50.0f;
+		// Long enough to fall out of the view
+		_timeLeft = 180.0f;
 
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
+		// It falls through the level, otherwise it gets stuck in the ceiling it starts in
 		SetState(ActorState::CollideWithTileset, false);
 
 		async_await RequestMetadataAsync("Boss/Queen"_s);

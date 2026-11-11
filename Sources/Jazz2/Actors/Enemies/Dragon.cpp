@@ -9,7 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Dragon::Dragon()
-		: _attacking(false), _stateTime(0.0f), _attackTime(0.0f)
+		: _stateTime(IdleTicks / TicksPerFrame), _attackTime(0.0f), _burstLeft(0), _attacking(false)
 	{
 	}
 
@@ -58,64 +58,67 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		if (found) {
-			if (_currentTransition == nullptr) {
-				if (!_attacking) {
-					if (_stateTime <= 0.0f) {
-						bool willFaceLeft = (_pos.X > targetPos.X);
-						if (IsFacingLeft() != willFaceLeft) {
-							SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
-								SetFacingLeft(willFaceLeft);
+		if (_currentTransition != nullptr) {
+			return;
+		}
 
-								SetAnimation((AnimState)1073741825);
-								SetTransition((AnimState)1073741824, false, [this]() {
-									_attacking = true;
-									_stateTime = 30.f;
-								});
-							});
-						} else {
-							SetAnimation((AnimState)1073741825);
-							SetTransition((AnimState)1073741824, false, [this]() {
-								_attacking = true;
-								_stateTime = 30.0f;
-							});
-						}
-					}
-				} else {
-					if (_stateTime <= 0.0f) {
-						SetAnimation(AnimState::Idle);
-						SetTransition((AnimState)1073741826, false, [this]() {
-							_attacking = false;
-							_stateTime = 60.0f;
-						});
-					} else {
-						if (_attackTime <= 0.0f) {
-							std::shared_ptr<Fire> fire = std::make_shared<Fire>();
-							uint8_t fireParams[1];
-							fireParams[0] = (IsFacingLeft() ? 1 : 0);
-							fire->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14 : 14), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
-								fireParams
-							));
-							_levelHandler->AddActor(fire);
-
-							_attackTime = 10.0f;
-						} else {
-							_attackTime -= timeMult;
-						}
-					}
-				}
+		if (_attacking) {
+			if (!found || _stateTime <= 0.0f) {
+				// Measured in JJ2+: the whole attack is 32 ticks, it stands idle right after the flames
+				SetAnimation(AnimState::Idle);
+				_attacking = false;
+				_stateTime = AttackPauseTicks / TicksPerFrame;
+				return;
 			}
 
 			_stateTime -= timeMult;
-		} else if (_attacking) {
-			SetAnimation(AnimState::Idle);
-			SetTransition((AnimState)1073741826, false, [this]() {
-				_attacking = false;
-				_stateTime = 80.0f;
-			});
+
+			// The original spits a quick burst of flames
+			_attackTime -= timeMult;
+			while (_burstLeft > 0 && _attackTime <= 0.0f) {
+				std::shared_ptr<Fire> fire = std::make_shared<Fire>();
+				uint8_t fireParams[1];
+				fireParams[0] = (IsFacingLeft() ? 1 : 0);
+				fire->OnActivated(ActorActivationDetails(
+					_levelHandler,
+					Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -14 : 14), (std::int32_t)_pos.Y - 6, _renderer.GetLayer() + 2),
+					fireParams
+				));
+				_levelHandler->AddActor(fire);
+
+				_burstLeft--;
+				_attackTime += BurstSpacingTicks / TicksPerFrame;
+			}
+			return;
 		}
+
+		// Idle time runs even without a player, it attacks only in the second half of it and turns around when it runs out
+		_stateTime -= timeMult;
+		if (found && _stateTime <AttackReadyTicks / TicksPerFrame) {
+			bool willFaceLeft = (_pos.X > targetPos.X);
+			if (IsFacingLeft() != willFaceLeft) {
+				Turn(willFaceLeft);
+			} else {
+				SetAnimation((AnimState)1073741825);
+				SetTransition((AnimState)1073741824, false, [this]() {
+					_attacking = true;
+					_stateTime = AttackTicks / TicksPerFrame;
+					_attackTime = 0.0f;
+					_burstLeft = BurstFlames;
+				});
+				SetAnimationTicks(AttackWindUpTicks);
+			}
+		} else if (_stateTime <= 0.0f) {
+			Turn(!IsFacingLeft());
+		}
+	}
+
+	void Dragon::Turn(bool willFaceLeft)
+	{
+		SetTransition(AnimState::TransitionTurn, false, [this, willFaceLeft]() {
+			SetFacingLeft(willFaceLeft);
+			_stateTime = IdleTicks / TicksPerFrame;
+		});
 	}
 
 	void Dragon::OnSerializeState(Stream& dest)
@@ -123,7 +126,7 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
-		dest.WriteValueAsLE<float>(_stateTime);
+		dest.WriteValueAsLE<float>(_attacking ? _stateTime : 0.0f);
 		dest.WriteValueAsLE<float>(_attackTime);
 	}
 
@@ -132,7 +135,10 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_attacking = (src.ReadValue<std::uint8_t>() != 0);
-		_stateTime = src.ReadValueAsLE<float>();
+		float stateTime = src.ReadValueAsLE<float>();
+		if (_attacking) {
+			_stateTime = stateTime;
+		}
 		_attackTime = src.ReadValueAsLE<float>();
 	}
 
@@ -152,8 +158,7 @@ namespace Jazz2::Actors::Enemies
 	{
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
-		// Collide with player ammo if Reforged
-		CanCollideWithShots = _levelHandler->IsReforged();
+		CanCollideWithShots = false;
 
 		SetFacingLeft(details.Params[0] != 0);
 

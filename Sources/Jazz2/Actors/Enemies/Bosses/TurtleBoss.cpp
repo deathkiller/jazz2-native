@@ -6,12 +6,13 @@
 
 #include "../../../../nCine/Base/Random.h"
 
-#include <float.h>
+#include <cmath>
 
 namespace Jazz2::Actors::Bosses
 {
 	TurtleBoss::TurtleBoss()
-		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _maceTime(0.0f)
+		: _state(StateWaiting), _endText(0), _walkTicks(0.0f), _turnAcc(0.0f), _attackAcc(0.0f), _attackTicks(0.0f),
+			_attackEndStart(0.0f), _maceThrown(false), _aimCaptured(false)
 	{
 	}
 
@@ -32,7 +33,6 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> TurtleBoss::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_endText = details.Params[1];
-		_originPos = _pos;
 		_scoreValue = 5000;
 
 		async_await RequestMetadataAsync("Boss/TurtleBoss"_s);
@@ -46,8 +46,7 @@ namespace Jazz2::Actors::Bosses
 	bool TurtleBoss::OnActivatedBoss()
 	{
 		SetHealthByDifficulty(100);
-		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-		FollowNearestPlayer(StateWalking1, Random().NextFloat(120.0f, 160.0f));
+		StartWalking();
 		return true;
 	}
 
@@ -60,82 +59,9 @@ namespace Jazz2::Actors::Bosses
 		}
 
 		switch (_state) {
-			case StateWalking1: {
-				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(StateWalking2, 16);
-				} else if (!CanMoveToPosition(_speed.X, 0)) {
-					SetFacingLeft(!IsFacingLeft());
-					_speed.X = -_speed.X;
-				}
-				break;
-			}
-
-			case StateWalking2: {
-				if (_stateTime <= 0.0f) {
-					_speed.X = 0.0f;
-
-					PlaySfx("AttackStart"_s);
-
-					_state = StateTransition;
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741824, false, [this]() {
-						_mace = std::make_shared<Mace>();
-						_mace->OnActivated(ActorActivationDetails(
-							_levelHandler,
-							Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2)
-						));
-						_levelHandler->AddActor(_mace);
-
-						SetTransition((AnimState)1073741825, false, [this]() {
-							_state = StateAttacking;
-							_stateTime = 10.0f;
-							_maceTime = 480.0f;
-						});
-					});
-				} else if (!CanMoveToPosition(_speed.X, 0)) {
-					_speed.X = 0;
-
-					SetAnimation(AnimState::Idle);
-				}
-				break;
-			}
-
-			case StateAttacking: {
-				_maceTime -= timeMult;
-				if (_maceTime <= 0.0f && _mace != nullptr) {
-					_mace->DecreaseHealth(INT32_MAX);
-					_mace = nullptr;
-
-					SetTransition((AnimState)1073741826, false, [this]() {
-						FollowNearestPlayer(StateWalking1, Random().NextFloat(80.0f, 160.0f));
-					});
-				}
-				break;
-			}
+			case StateWalking: UpdateWalking(timeMult); break;
+			case StateAttacking: UpdateAttacking(timeMult); break;
 		}
-
-		_stateTime -= timeMult;
-	}
-
-	bool TurtleBoss::OnHandleCollision(ActorBase* other)
-	{
-		if (_state == StateAttacking && _stateTime <= 0.0f) {
-			if (auto* mace = runtime_cast<Mace>(other)) {
-				if (mace == _mace.get()) {
-					_mace->DecreaseHealth(INT32_MAX);
-					_mace = nullptr;
-
-					PlaySfx("AttackEnd"_s);
-
-					SetTransition((AnimState)1073741826, false, [this]() {
-						FollowNearestPlayer(StateWalking1, Random().NextFloat(80.0f, 160.0f));
-					});
-					return true;
-				}
-			}
-		}
-
-		return EnemyBase::OnHandleCollision(other);
 	}
 
 	bool TurtleBoss::OnPerish(ActorBase* collider)
@@ -173,33 +99,121 @@ namespace Jazz2::Actors::Bosses
 		return BossBase::OnPerish(collider);
 	}
 
-	void TurtleBoss::FollowNearestPlayer(std::int32_t newState, float time)
+	void TurtleBoss::StartWalking()
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+		_state = StateWalking;
+		_walkTicks = 0.0f;
+		_turnAcc = 0.0f;
+		_attackAcc = 0.0f;
+		_speed.X = (IsFacingLeft() ? -WalkSpeed : WalkSpeed);
+		SetAnimation(AnimState::Walk);
+	}
 
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
+	void TurtleBoss::UpdateWalking(float timeMult)
+	{
+		float ticks = timeMult * TicksPerFrame;
 
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
+		if (!CanMoveToPosition(_speed.X, 0)) {
+			SetFacingLeft(!IsFacingLeft());
+			_speed.X = -_speed.X;
+		}
+
+		_walkTicks += ticks;
+		_turnAcc += ticks;
+		_attackAcc += ticks;
+
+		if (_turnAcc >= TurnPeriodTicks) {
+			_turnAcc = std::fmod(_turnAcc, TurnPeriodTicks);
+
+			Player* player = FindNearestPlayer(NoticeDistanceSqr);
+			if (player != nullptr) {
+				bool faceLeft = (player->GetPos().X < _pos.X);
+				if (faceLeft != IsFacingLeft()) {
+					SetFacingLeft(faceLeft);
+					_speed.X = (faceLeft ? -WalkSpeed : WalkSpeed);
+					PlaySfx("AttackStart"_s, 0.4f);
+				}
 			}
 		}
 
-		if (found) {
-			_state = newState;
-			_stateTime = time;
+		if (_attackAcc >= AttackPeriodTicks) {
+			_attackAcc = std::fmod(_attackAcc, AttackPeriodTicks);
 
-			SetFacingLeft(targetPos.X < _pos.X);
+			if (_walkTicks > AttackMinTicks) {
+				Player* player = FindNearestPlayer(NoticeDistanceSqr);
+				if (player != nullptr) {
+					StartAttack(player);
+				}
+			}
+		}
+	}
 
-			_speed.X = (IsFacingLeft() ? -1.6f : 1.6f);
+	void TurtleBoss::StartAttack(Player* target)
+	{
+		_state = StateAttacking;
+		_speed.X = 0.0f;
+		_attackTicks = 0.0f;
+		_maceThrown = false;
+		_aimCaptured = false;
+		_target = target->shared_from_this();
 
-			SetAnimation(AnimState::Walk);
+		std::int32_t difficulty = GetDifficultyIndex();
+		// The mace stays out for as long as the boss stands, both scale with the difficulty
+		_attackEndStart = ThrowTicks + (AttackAnimTicks - ThrowTicks) + std::ceil((128.0f - (AttackAnimTicks - ThrowTicks)) / (float)(difficulty + 1));
+
+		PlaySfx("AttackStart"_s);
+		SetTransition((AnimState)1073741824, false, [this]() {
+			if (_state == StateAttacking) {
+				SetTransition((AnimState)1073741825, false);
+			}
+		});
+	}
+
+	void TurtleBoss::UpdateAttacking(float timeMult)
+	{
+		float ticks = timeMult * TicksPerFrame;
+		_attackTicks += ticks;
+
+		std::int32_t difficulty = GetDifficultyIndex();
+
+		// The aim point is taken from where the player stands a few animation frames before the throw
+		if (!_aimCaptured && _attackTicks >= (float)(4 + 4 * difficulty) * AttackFrameTicks) {
+			_aimCaptured = true;
+			if (auto target = _target.lock()) {
+				_aimPos = target->GetPos();
+				SetFacingLeft(_aimPos.X < _pos.X);
+			} else {
+				_aimPos = _pos + Vector2f(IsFacingLeft() ? -100.0f : 100.0f, 0.0f);
+			}
+		}
+
+		if (!_maceThrown && _attackTicks >= ThrowTicks) {
+			_maceThrown = true;
+			if (!_aimCaptured) {
+				_aimPos = _pos;
+			}
+
+			Vector2f spawnPos = _pos;
+			_mace = std::make_shared<Mace>();
+			_mace->Setup(shared_from_this(), _aimPos - spawnPos, difficulty);
+			_mace->OnActivated(ActorActivationDetails(
+				_levelHandler,
+				Vector3i((std::int32_t)spawnPos.X, (std::int32_t)spawnPos.Y, _renderer.GetLayer() + 2)
+			));
+			_levelHandler->AddActor(_mace);
+		}
+
+		if (_attackTicks >= _attackEndStart + AttackEndTicks) {
+			_mace = nullptr;
+			StartWalking();
+		} else if (_attackTicks >= _attackEndStart && _attackTicks - ticks < _attackEndStart) {
+			PlaySfx("AttackEnd"_s);
+			SetTransition((AnimState)1073741826, false, [this]() {
+				if (_state == StateAttacking) {
+					SetAnimation(AnimState::Idle);
+				}
+			});
+			SetAnimationTicks(AttackEndTicks);
 		}
 	}
 
@@ -211,6 +225,14 @@ namespace Jazz2::Actors::Bosses
 			_sound = nullptr;
 		}
 #endif
+	}
+
+	void TurtleBoss::Mace::Setup(const std::shared_ptr<ActorBase>& owner, Vector2f aim, std::int32_t difficulty)
+	{
+		_owner = owner;
+		_aim = aim;
+		_clock = 0.0f;
+		_clockStep = (float)(difficulty + 1);
 	}
 
 	Task<bool> TurtleBoss::Mace::OnActivatedAsync(const ActorActivationDetails& details)
@@ -226,8 +248,6 @@ namespace Jazz2::Actors::Bosses
 
 		_originPos = _pos;
 
-		FollowNearestPlayer();
-
 #if defined(WITH_AUDIO)
 		_sound = PlaySfx("Mace"_s, 0.7f);
 		if (_sound != nullptr) {
@@ -240,68 +260,34 @@ namespace Jazz2::Actors::Bosses
 
 	void TurtleBoss::Mace::OnUpdate(float timeMult)
 	{
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
+		float ticks = timeMult * TicksPerFrame;
+		_clock += _clockStep * ticks;
+
+		if (_clock < OutAndBackClock) {
+			// Out to the aim point and back along a sine, the clock covers a half turn
+			float factor = std::sin(_clock * fPi / OutAndBackClock);
+			MoveInstantly(_originPos + _aim * factor, MoveType::Absolute | MoveType::Force);
+		} else {
+			auto owner = _owner.lock();
+			if (owner == nullptr || _clock > EndClock) {
+				DecreaseHealth(INT32_MAX);
+				return;
+			}
+
+			Vector2f target = owner->GetPos() + Vector2f(owner->IsFacingLeft() ? -MaceReturnOffset : MaceReturnOffset, 0.0f);
+			float keep = std::pow(0.5f, ticks);
+			MoveInstantly(target + (_pos - target) * keep, MoveType::Absolute | MoveType::Force);
+		}
 
 #if defined(WITH_AUDIO)
 		if (_sound != nullptr) {
 			_sound->SetPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
 		}
 #endif
-
-		if (_returning) {
-			Vector2f diff = (_targetSpeed - _speed);
-			if (diff.SqrLength() > 1.0f) {
-				_speed.X += diff.X * 0.04f;
-				_speed.Y += diff.Y * 0.04f;
-			}
-
-		} else {
-			if (_returnTime > 0.0f) {
-				_returnTime -= timeMult;
-			} else {
-				_returning = true;
-
-				_targetSpeed = (_originPos - _pos) / (TotalTime / 2);
-			}
-		}
 	}
 
 	void TurtleBoss::Mace::OnUpdateHitbox()
 	{
 		UpdateHitbox(18, 18);
-	}
-
-	void TurtleBoss::Mace::FollowNearestPlayer()
-	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
-			}
-		}
-
-		if (found) {
-			SetFacingLeft(targetPos.X < _originPos.X);
-
-			_returnTime = (TotalTime / 2);
-
-			Vector2f diff = (targetPos - _originPos);
-			float length = diff.Length();
-			if (length > 500.0f) {
-				diff = diff * 500.0f / length;
-			}
-
-			_speed.X = (diff.X / _returnTime);
-			_speed.Y = (diff.Y / _returnTime);
-		}
 	}
 }

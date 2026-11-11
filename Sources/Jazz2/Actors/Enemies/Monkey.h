@@ -53,12 +53,25 @@ namespace Jazz2::Actors::Enemies
 #endif
 
 	private:
-		static constexpr float DefaultSpeed = 1.5f;
+		/** @brief Time a walking monkey goes without seeing a player before it stands still, in original ticks */
+		static constexpr float WalkTicks = 280.0f;
+		/** @brief Time a walking monkey stands still, in original ticks */
+		static constexpr float StandTicks = 70.0f;
+		/** @brief Time per difficulty step a standing monkey waits between throws, in original ticks */
+		static constexpr float ThrowWaitTicks = 70.0f;
+		/** @brief Distance within which it sees a player */
+		static constexpr float SightDistance = 256.0f;
 
+		// Walk time, stand time left or throw wait, they're never in use together
+		float _time;
 		bool _isWalking;
 		bool _stuck;
-		std::uint8_t _idleLoops;
+		bool _standing;
+		bool _hasStood;
 
+		float GetWalkSpeed() const;
+		float GetThrowInterval() const;
+		bool HasPlayerInSight() const;
 		bool TryThrow();
 		void ThrowBanana(std::uint32_t distance, std::int32_t offsetX);
 	};

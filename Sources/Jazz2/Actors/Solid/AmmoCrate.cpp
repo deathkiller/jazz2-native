@@ -115,7 +115,7 @@ namespace Jazz2::Actors::Solid
 				weaponTypes.push_back(WeaponType::Bouncer);
 			}
 
-			std::int32_t n = Random().Next(4, 7);
+			std::int32_t n = Random().Next(4, 8);
 			for (std::int32_t i = 0; i < n; i++) {
 				std::uint8_t weaponType = (std::uint8_t)weaponTypes[Random().Next(0, (std::uint32_t)weaponTypes.size())];
 				AddContent(EventType::Ammo, 1, &weaponType, sizeof(weaponType));

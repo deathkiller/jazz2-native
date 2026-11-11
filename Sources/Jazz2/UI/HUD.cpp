@@ -1912,7 +1912,6 @@ namespace Jazz2::UI
 		auto& state = _weaponWheel[player->_playerIndex];
 
 		if (PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled || player == nullptr ||
-			!((player->_controllable && player->_controllableExternal) || !_levelHandler->IsReforged()) ||
 			player->_playerType == PlayerType::Frog || player->_playerType == PlayerType::Bird) {
 			if (state.Anim > 0.0f) {
 				state.Shown = false;

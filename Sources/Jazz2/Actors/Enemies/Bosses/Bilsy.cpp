@@ -5,12 +5,12 @@
 
 #include "../../../../nCine/Base/Random.h"
 
-#include <float.h>
+#include <cmath>
 
 namespace Jazz2::Actors::Bosses
 {
 	Bilsy::Bilsy()
-		: _state(StateTransition), _stateTime(0.0f), _endText(0)
+		: _state(StateDormant), _stateTime(0.0f), _fireballThrown(false), _theme(0), _endText(0)
 	{
 	}
 
@@ -49,15 +49,30 @@ namespace Jazz2::Actors::Bosses
 
 		SetAnimation(AnimState::Idle);
 
-		_renderer.SetDrawEnabled(false);
-
 		async_return true;
 	}
 
 	bool Bilsy::OnActivatedBoss()
 	{
 		SetHealthByDifficulty(120);
-		Teleport();
+
+		// Measured in JJ2+: it stands on the floor below where the level puts it
+		OnUpdateHitbox();
+		Tiles::TileCollisionParams probe = { Tiles::TileDestructType::None, true };
+		for (std::int32_t i = 0; i < GroundSearchDistance; i++) {
+			AABBf feet = AABBInner;
+			feet.T = feet.B;
+			feet.B += 1.0f;
+			if (!_levelHandler->IsPositionEmpty(this, feet, probe)) {
+				break;
+			}
+			MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative | MoveType::Force);
+			OnUpdateHitbox();
+		}
+		_originPos = _pos;
+		_state = StateStartWait;
+		_stateTime = StartDelay;
+		SetFacingLeft(true);
 		return true;
 	}
 
@@ -65,76 +80,94 @@ namespace Jazz2::Actors::Bosses
 	{
 		BossBase::OnUpdate(timeMult);
 
-		if (_frozenTimeLeft > 0.0f) {
+		if (_frozenTimeLeft > 0.0f || _state == StateDormant) {
 			return;
 		}
 
 		switch (_state) {
-			case StateWaiting: {
+			case StateStartWait: {
 				if (_stateTime <= 0.0f) {
-					bool isFacingPlayer;
-					if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
-						bool found = false;
-						Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+					_state = StateAppear;
+					_stateTime = AppearTime;
+					SetAnimation((AnimState)1073741824);
+		SetAnimationTicks(AppearTicks);
+					PlaySfx("Appear"_s, 0.8f);
+				}
+				break;
+			}
+			case StateAppear: {
+				if (_stateTime <= 0.0f) {
+					_state = StateIdle;
+					_stateTime = IdleTime;
+					SetAnimation(AnimState::Idle);
 
-						auto players = _levelHandler->GetPlayers();
-						for (auto* player : players) {
-							if (player->GetHealth() <= 0) {
-								continue;
-							}
-
-							Vector2f newPos = player->GetPos();
-							if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-								targetPos = newPos;
-								found = true;
+					// The original turns to the player again here only on Hard
+					if (_levelHandler->GetDifficulty() >= GameDifficulty::Hard) {
+						if (auto target = _target.lock()) {
+							float dx = target->GetPos().X - _pos.X;
+							if (dx < -1.0f) {
+								SetFacingLeft(true);
+							} else if (dx > 1.0f) {
+								SetFacingLeft(false);
 							}
 						}
-
-						isFacingPlayer = (found && (targetPos.X < _pos.X) == IsFacingLeft());
-					} else {
-						isFacingPlayer = true;
-					}
-
-					if (isFacingPlayer) {
-						_state = StateTransition;
-						SetTransition((AnimState)1073741826, false, [this]() {
-							PlaySfx("ThrowFireball"_s);
-
-							std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
-							uint8_t fireballParams[2] = { _theme, (uint8_t)(IsFacingLeft() ? 1 : 0) };
-							fireball->OnActivated(ActorActivationDetails(
-								_levelHandler,
-								Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 20, _renderer.GetLayer() + 2),
-								fireballParams
-							));
-							_levelHandler->AddActor(fireball);
-
-							SetTransition((AnimState)1073741827, false, [this]() {
-								_state = StateWaiting2;
-								_stateTime = 30.0f;
-							});
-						});
-					} else {
-						_state = StateWaiting2;
-						_stateTime = 30.0f;
 					}
 				}
 				break;
 			}
-			case StateWaiting2: {
+			case StateIdle: {
 				if (_stateTime <= 0.0f) {
-					SetState(ActorState::CanBeFrozen, false);
+					Player* player = FindTarget();
+					if (player != nullptr) {
+						_target = player->shared_from_this();
 
-					PlaySfx("Disappear"_s, 0.8f);
-
-					if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
-						_canHurtPlayer = false;
+						float dx = player->GetPos().X - _pos.X;
+						bool isFacing = (dx != 0.0f && (dx < 0.0f) == IsFacingLeft());
+						if (isFacing) {
+							_state = StateThrow;
+							_stateTime = ThrowTime;
+							_fireballThrown = false;
+							SetAnimation((AnimState)1073741826);
+							SetAnimationTicks(ThrowTime * TicksPerFrame);
+						} else {
+							_state = StateVanish;
+							_stateTime = VanishTime;
+							SetAnimation((AnimState)1073741825);
+		SetAnimationTicks(VanishTicks);
+							PlaySfx("Disappear"_s, 0.8f);
+						}
 					}
+				}
+				break;
+			}
+			case StateThrow: {
+				if (!_fireballThrown && ThrowTime - _stateTime >= ThrowFireballTime) {
+					_fireballThrown = true;
+					PlaySfx("ThrowFireball"_s);
 
-					_state = StateTransition;
-					SetTransition((AnimState)1073741825, false, [this]() {
-						Teleport();
-					});
+					std::shared_ptr<Fireball> fireball = std::make_shared<Fireball>();
+					uint8_t fireballParams[2] = { _theme, (uint8_t)(IsFacingLeft() ? 1 : 0) };
+					fireball->OnActivated(ActorActivationDetails(
+						_levelHandler,
+						Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -26 : 26), (std::int32_t)_pos.Y - 20, _renderer.GetLayer() + 2),
+						fireballParams
+					));
+					fireball->SetTarget(_target.lock());
+					_levelHandler->AddActor(fireball);
+				}
+
+				if (_stateTime <= 0.0f) {
+					_state = StateVanish;
+					_stateTime = VanishTime;
+					SetAnimation((AnimState)1073741825);
+		SetAnimationTicks(VanishTicks);
+					PlaySfx("Disappear"_s, 0.8f);
+				}
+				break;
+			}
+			case StateVanish: {
+				if (_stateTime <= 0.0f) {
+					Teleport();
 				}
 				break;
 			}
@@ -159,27 +192,10 @@ namespace Jazz2::Actors::Bosses
 		return BossBase::OnPerish(collider);
 	}
 
-	void Bilsy::Teleport()
+	Player* Bilsy::FindTarget() const
 	{
-		for (std::int32_t i = 0; i < 20; i++) {
-			Vector2f pos = Vector2f(_originPos.X + Random().NextFloat(-320.0f, 320.0f), _originPos.Y + Random().NextFloat(-240.0f, 240.0f));
-			if (MoveInstantly(pos, MoveType::Absolute)) {
-				break;
-			}
-		}
-
-		OnUpdateHitbox();
-
-		std::int32_t j = 60;
-		while (j-- > 0 && MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative)) {
-			// Nothing to do...
-		}
-		while (j-- > 0 && MoveInstantly(Vector2f(0.0f, 1.0f), MoveType::Relative)) {
-			// Nothing to do...
-		}
-
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+		Player* result = nullptr;
+		float bestSqr = NoticeDistanceSqr;
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
@@ -187,31 +203,29 @@ namespace Jazz2::Actors::Bosses
 				continue;
 			}
 
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
+			float distSqr = (player->GetPos() - _pos).SqrLength();
+			if (distSqr < bestSqr) {
+				bestSqr = distSqr;
+				result = player;
 			}
 		}
 
-		if (found) {
-			SetFacingLeft(targetPos.X < _pos.X);
+		return result;
+	}
+
+	void Bilsy::Teleport()
+	{
+		float steps = (float)((std::int32_t)Random().Next(0, 32) - 15);
+		MoveInstantly(Vector2f(_originPos.X + steps * TeleportStep, _originPos.Y), MoveType::Absolute | MoveType::Force);
+
+		if (auto target = _target.lock()) {
+			SetFacingLeft(target->GetPos().X < _pos.X);
 		}
 
-		_renderer.SetDrawEnabled(true);
-
-		_state = StateTransition;
-		SetTransition((AnimState)1073741824, false, [this]() {
-			SetState(ActorState::CanBeFrozen, true);
-
-			if (_levelHandler->GetDifficulty() < GameDifficulty::Hard) {
-				_canHurtPlayer = true;
-			}
-
-			_state = StateWaiting;
-			_stateTime = 30.0f;
-		});
-
+		_state = StateAppear;
+		_stateTime = AppearTime;
+		SetAnimation((AnimState)1073741824);
+		SetAnimationTicks(AppearTicks);
 		PlaySfx("Appear"_s, 0.8f);
 	}
 
@@ -219,15 +233,17 @@ namespace Jazz2::Actors::Bosses
 	{
 		uint8_t theme = details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
-		_timeLeft = 90.0f;
+		_timeLeft = Lifetime;
+		_heading = (IsFacingLeft() ? fPi : 0.0f);
+		_speedValue = InitialSpeedValue;
 
 		SetState(ActorState::IsInvulnerable, true);
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
-		_speed.X = (IsFacingLeft() ? -4.0f : 4.0f);
-		_speed.Y = 2.0f;
+		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * (_speedValue / 8.0f) * TicksPerFrame;
+		_speed.Y = 0.0f;
 
 		switch (theme) {
 			case 0:
@@ -249,16 +265,23 @@ namespace Jazz2::Actors::Bosses
 
 	void Bilsy::Fireball::OnUpdate(float timeMult)
 	{
+		FollowTarget(timeMult);
+
 		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
 
 		if (_timeLeft <= 0.0f) {
 			DecreaseHealth(INT32_MAX);
 		} else {
 			_timeLeft -= timeMult;
-			FollowNearestPlayer();
 		}
 
-		// TODO: Spawn fire particles
+		if (_speed.X < 0.0f) {
+			SetFacingLeft(true);
+			_renderer.SetRotation(atan2Approx(-_speed.Y, -_speed.X));
+		} else {
+			SetFacingLeft(false);
+			_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
+		}
 	}
 
 	void Bilsy::Fireball::OnUpdateHitbox()
@@ -292,37 +315,35 @@ namespace Jazz2::Actors::Bosses
 		return EnemyBase::OnPerish(collider);
 	}
 
-	void Bilsy::Fireball::FollowNearestPlayer()
+	void Bilsy::Fireball::FollowTarget(float timeMult)
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).Length() < (_pos - targetPos).Length()) {
-				targetPos = newPos;
-				found = true;
-			}
+		auto target = _target.lock();
+		if (target == nullptr) {
+			return;
 		}
 
-		if (found) {
-			Vector2f diff = (targetPos - _pos).Normalized();
-			Vector2f speed = (Vector2f(_speed.X, _speed.Y) + diff * 0.4f).Normalized();
-			_speed.X = speed.X * 4.0f;
-			_speed.Y = speed.Y * 4.0f;
-
-			if (_speed.X < 0.0f) {
-				SetFacingLeft(true);
-				_renderer.SetRotation(atan2Approx(-_speed.Y, -_speed.X));
-			} else {
-				SetFacingLeft(false);
-				_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
-			}
+		Vector2f diff = target->GetPos() - _pos;
+		float dist = diff.Length();
+		if (dist < 0.001f) {
+			return;
 		}
+
+		// The heading always points at the target, only the speed depends on how much the bearing changed
+		float angle = atan2Approx(diff.Y, diff.X);
+		float delta = std::abs(angle - _heading);
+		if (delta > fPi) {
+			delta = fTwoPi - delta;
+		}
+		_heading = angle;
+
+		float ticks = std::max<float>(timeMult * TicksPerFrame, 0.01f);
+		float unitsPerTick = std::min<float>(delta / fTwoPi * 1024.0f / ticks, 512.0f);
+		float wanted = (1024.0f - unitsPerTick) / 32.0f;
+		_speedValue += (wanted - _speedValue) * (1.0f - std::pow(0.5f, ticks));
+		_speedValue = std::max<float>(_speedValue, MinSpeedValue);
+
+		float speed = _speedValue / 8.0f * TicksPerFrame;
+		_speed.X = diff.X / dist * speed;
+		_speed.Y = diff.Y / dist * speed;
 	}
 }

@@ -1055,7 +1055,15 @@ namespace Jazz2::Compatibility
 			return { EventType::AirboardGenerator, { (std::uint8_t)(eventParams[0] == 0 ? 30 : eventParams[0]) } };
 		});
 
-		Add(JJ2Event::COPTER, NoParamList(EventType::Copter));
+		Add(JJ2Event::COPTER, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {
+			std::uint8_t eventParams[16];
+			ConvertParamInt(jj2Params, {
+				{ JJ2ParamUInt, 8 }		// Flight time (seconds)
+			}, eventParams);
+
+			// The first parameter is taken, it tells a copter that already carries a player
+			return { EventType::Copter, { 0, eventParams[0] } };
+		});
 
 		Add(JJ2Event::CTF_BASE, ParamIntToParamList(EventType::CtfBase, {{
 			{ JJ2ParamUInt, 1 },		// Team

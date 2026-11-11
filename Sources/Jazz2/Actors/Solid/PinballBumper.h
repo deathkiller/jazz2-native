@@ -71,6 +71,7 @@ namespace Jazz2::Actors::Solid
 		static constexpr float LegacyImpulseBias = 1.0f;
 
 		float _cooldown;
+		bool _isCarrot = false;
 		float _lightIntensity;
 		float _lightBrightness;
 	};

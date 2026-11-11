@@ -280,6 +280,13 @@ namespace Jazz2::Actors
 		// Can be overridden
 	}
 
+	float ActorBase::ReplaceLevelGravity(float gravity, float baseGravity) const
+	{
+		// Whatever else scales the base gravity (water) is kept
+		float levelGravity = _levelHandler->GetGravity();
+		return (levelGravity > 0.0f ? gravity * baseGravity / levelGravity : baseGravity);
+	}
+
 	void ActorBase::OnDetach(ActorBase* parent)
 	{
 		// Can be overridden
@@ -401,17 +408,34 @@ namespace Jazz2::Actors
 			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
 			effectiveSpeedY = _speed.Y + 0.5f * accelY;
 		}
+		// The original moves by each tick's new speed; over a frame of several ticks (or part of one) that is the
+		// average of those speeds, not the last one, otherwise distances depend on the frame rate
+		if (_frameSpeedChangeX != 0.0f) {
+			float ticks = timeMult * Player::LegacyFrameRateScale;
+			if (ticks > 0.0f) {
+				effectiveSpeedX -= _frameSpeedChangeX * (ticks - 1.0f) / (2.0f * ticks);
+			}
+			_frameSpeedChangeX = 0.0f;
+		}
+
 		// Half a step of gravity (velocity Verlet) keeps jump height frame-rate independent, only in flight
 		// and before the rise cap, otherwise a capped rise is slowed twice
 		if (currentGravity > 0.0f && (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation &&
 			(_speed.Y < 0.0f || (_state & ActorState::CanJump) != ActorState::CanJump)) {
-			// No Euler bias here, it breaks the fitted rises (see Docs/MovementAccuracyReference.dox)
-			effectiveSpeedY += 0.5f * GetGravityModifier(currentGravity, /*isRising:*/_speed.Y < 0.0f) * timeMult;
+			float gravityStep = GetGravityModifier(currentGravity, /*isRising:*/_speed.Y < 0.0f);
+			effectiveSpeedY += 0.5f * gravityStep * timeMult;
+			// The original moves by the speed after each tick's gravity, half a tick more than the average
+			if (_gravityBeforeMove) {
+				effectiveSpeedY += 0.5f * gravityStep / Player::LegacyFrameRateScale;
+			}
 		}
 
 		// Only the applied rise is capped, `_speed.Y` keeps its momentum, as the original's springs and jumps
 		if (_maxRiseSpeed > 0.0f && effectiveSpeedY < -_maxRiseSpeed) {
 			effectiveSpeedY = -_maxRiseSpeed;
+		}
+		if (_maxFallSpeed > 0.0f && effectiveSpeedY > _maxFallSpeed) {
+			effectiveSpeedY = _maxFallSpeed;
 		}
 		// Same on the horizontal axis, as the original's dash
 		if (_maxAppliedSpeedX > 0.0f) {
@@ -421,6 +445,16 @@ namespace Jazz2::Actors
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
+		// A stalled tick moves nowhere, see `_landingStall`
+		if (_moveStallLeft > 0.0f && timeMult > 0.0f) {
+			float held = std::min(_moveStallLeft, timeMult);
+			_moveStallLeft -= held;
+			float moving = 1.0f - held / timeMult;
+			effectiveSpeedX *= moving;
+			effectiveSpeedY *= moving;
+		}
+
+		bool groundedBeforeMove = ((_state & ActorState::CanJump) == ActorState::CanJump && _speed.Y >= 0.0f);
 		Vector2f posBefore = _pos;
 		bool movementAttempted = (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f);
 		if (movementAttempted) {
@@ -461,6 +495,38 @@ namespace Jazz2::Actors
 				}
 				if (!stepMoved || (stepX == 0.0f && stepY == 0.0f)) {
 					break;
+				}
+			}
+
+			// Measured in the original: falling while moving sideways lands on a floor that close below the move
+			if (_airFloorSnapReach > 0.0f && !result.HitFloor && stepY > 0.0f && _speed.Y > 0.0f &&
+				(_state & ActorState::CanJump) != ActorState::CanJump && timeMult > 0.0f &&
+				std::abs(effectiveSpeedX) / (timeMult * Player::LegacyFrameRateScale) >= AirFloorSnapMinStepX) {
+				// Every other check step first, then the step skipped just above the one found
+				float snapDiff = -1.0f;
+				for (float yDiff = 0.0f; yDiff < _airFloorSnapReach; yDiff += 2.0f * CollisionCheckStep) {
+					if (IsSupportedAfterMove(0.0f, yDiff)) {
+						snapDiff = (yDiff > 0.0f && IsSupportedAfterMove(0.0f, yDiff - CollisionCheckStep) ? yDiff - CollisionCheckStep : yDiff);
+						break;
+					}
+				}
+				if (snapDiff < 0.0f) {
+					// The last check step of the reach is one of the skipped ones
+					std::int32_t lastStep = (std::int32_t)std::ceil(_airFloorSnapReach / CollisionCheckStep) - 1;
+					if (lastStep > 0 && (lastStep & 1) != 0 && IsSupportedAfterMove(0.0f, lastStep * CollisionCheckStep)) {
+						snapDiff = lastStep * CollisionCheckStep;
+					}
+				}
+				if (snapDiff >= 0.0f) {
+					if (snapDiff > 0.0f) {
+						MoveInstantly(Vector2f(0.0f, snapDiff), MoveType::Relative, params);
+					}
+					// Measured in the original: this landing keeps its fall speed, so a fall faster than the
+					// step height loses the next tick's whole move
+					if (_landingStall && _speed.Y / Player::LegacyFrameRateScale >
+						LandingStepHeight + std::floor(std::abs(_speed.X) / Player::LegacyFrameRateScale)) {
+						_moveStallLeft = 1.0f / Player::LegacyFrameRateScale;
+					}
 				}
 			}
 
@@ -512,7 +578,16 @@ namespace Jazz2::Actors
 					// Only the bottom of a reduced hitbox finds the floor, for a player just its feet (measured in JJ2+)
 					aabb.T = std::max(aabb.T, aabb.B - ((_state & ActorState::CollideWithTilesetLegacy) == ActorState::CollideWithTilesetLegacy ? 2.0f : std::max(14.0f, (aabb.B - aabb.T) - 10.0f)));
 				}
-				if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
+				// Measured in the original: footing is judged where the player stood a tick ago, so walking off a ledge
+				// keeps it for one more tick (whatever the frame rate)
+				bool footingTickAgo = false;
+				if (_footingGrace && groundedBeforeMove && timeMult > 0.0f && _pos != posBefore) {
+					Vector2f tickTravel = (_pos - posBefore) / (timeMult * Player::LegacyFrameRateScale);
+					AABBf feet = aabb + Vector2f(-tickTravel.X, -tickTravel.Y);
+					TileCollisionParams probeParams = { TileDestructType::None, true };
+					footingTickAgo = (!_levelHandler->IsPositionEmpty(this, feet, probeParams) || HasExtendedFooting(feet));
+				}
+				if (!footingTickAgo && _levelHandler->IsPositionEmpty(this, aabb, params) && !HasExtendedFooting(aabb)) {
 					// There is still some space below - only apply gravity
 					SetState(ActorState::CanJump, false);
 					_speed.Y += GetGravityModifier(currentGravity, /*isRising:*/false) * timeMult;
@@ -545,7 +620,33 @@ namespace Jazz2::Actors
 		aabb.T = aabb.B;
 		aabb.B += CollisionCheckStep;
 		TileCollisionParams probeParams = { TileDestructType::None, true };
-		return !_levelHandler->IsPositionEmpty(this, aabb, probeParams);
+		return (!_levelHandler->IsPositionEmpty(this, aabb, probeParams) || HasExtendedFooting(aabb));
+	}
+
+	bool ActorBase::HasExtendedFooting(const AABBf& feet)
+	{
+		if (_footingExtraLeft <= 0.0f && _footingExtraRight <= 0.0f) {
+			return false;
+		}
+
+		// Only a floor with open space above it, so a wall beside the actor doesn't hold it up
+		constexpr float ClearanceGap = 2.0f;
+		constexpr float ClearanceHeight = 4.0f;
+		TileCollisionParams probeParams = { TileDestructType::None, true };
+		for (std::int32_t side = 0; side < 2; side++) {
+			float extra = (side == 0 ? _footingExtraLeft : _footingExtraRight);
+			if (extra <= 0.0f) {
+				continue;
+			}
+			AABBf edge = (side == 0
+				? AABBf(feet.L - extra, feet.T, feet.L, feet.B)
+				: AABBf(feet.R, feet.T, feet.R + extra, feet.B));
+			AABBf above(edge.L, edge.T - ClearanceGap - ClearanceHeight, edge.R, edge.T - ClearanceGap);
+			if (!_levelHandler->IsPositionEmpty(this, edge, probeParams) && _levelHandler->IsPositionEmpty(this, above, probeParams)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool ActorBase::TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, TileCollisionParams& params, MovementResult& result)
@@ -554,7 +655,8 @@ namespace Jazz2::Actors
 			// Ground-bound movement tries angles from a bit over 45 degrees down to 45 degrees up to stick to slopes.
 			// A downward candidate needs ground under it, otherwise gaps are fallen into instead of jumped over.
 			bool success = false;
-			float maxYDiff = std::max(3.0f, std::abs(stepX) + 2.5f);
+			// Whole check steps, otherwise the height found on a flat floor wobbles with the frame time
+			float maxYDiff = std::ceil(std::max(3.0f, std::abs(stepX) + 2.5f) / CollisionCheckStep) * CollisionCheckStep;
 			for (float yDiff = maxYDiff + stepY; yDiff >= -maxYDiff + stepY; yDiff -= CollisionCheckStep) {
 				if (yDiff > stepY && !IsSupportedAfterMove(stepX, yDiff)) {
 					continue;
@@ -602,7 +704,7 @@ namespace Jazz2::Actors
 		// Mostly-horizontal airborne movement climbs gentle upslopes instead of stopping at their foot
 		bool movedHorizontally = MoveInstantly(Vector2f(stepX, 0.0f), MoveType::Relative, params);
 		// `>=` so a jump into a 45 degree slope keeps its momentum, as in the original
-		if (!movedHorizontally && std::abs(stepX) >= std::abs(stepY)) {
+		if (!movedHorizontally && _climbsSlopesInAir && std::abs(stepX) >= std::abs(stepY)) {
 			float maxClimb = std::abs(stepX) + 2.5f;
 			// Landing on a ledge edge reaches `_landingTolerance`, only when really descending
 			// so walls don't get easier to mount

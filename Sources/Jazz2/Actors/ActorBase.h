@@ -623,6 +623,10 @@ namespace Jazz2::Actors
 		static constexpr std::uint8_t AlphaThreshold = MaskAlphaThreshold;
 		/** @brief Step for collision checking */
 		static constexpr float CollisionCheckStep = 0.5f;
+		// Horizontal travel per original tick from which `_airFloorSnapReach` applies, tested after the tick's brake
+		static constexpr float AirFloorSnapMinStepX = 1.0f;
+		// How far a tick's fall may end in the floor and still be stepped onto it, plus the sideways speed in px/tick
+		static constexpr float LandingStepHeight = 4.0f;
 		/** @brief Longest single collision sub-step of @ref TryStandardMovement() */
 		static constexpr float MaxMovementStep = 8.0f;
 		/** @brief Most collision sub-steps of @ref TryStandardMovement() per frame */
@@ -682,6 +686,34 @@ namespace Jazz2::Actors
 		 * Only the player sets it, see @ref Player::LegacyLandingTolerance.
 		 */
 		float _landingTolerance = 0.0f;
+		/**
+		 * @brief How far the floor still holds the actor up past either side of its hitbox (0 = the hitbox only)
+		 *
+		 * Only the player sets it, see @ref Player::LegacyFootingExtraLeft.
+		 */
+		float _footingExtraLeft = 0.0f;
+		/** @brief See @ref _footingExtraLeft */
+		float _footingExtraRight = 0.0f;
+		/** @brief Whether footing found at the start of a tick holds for that tick, as the original's player */
+		bool _footingGrace = false;
+		/** @brief Whether each tick's gravity is applied before that tick's move, as the original's player */
+		bool _gravityBeforeMove = false;
+		/** @brief Whether mostly-horizontal movement in the air climbs a gentle upslope instead of hitting it */
+		bool _climbsSlopesInAir = true;
+		/** @brief Whether a landing made by the air floor snap can lose the next tick's move, as the original's player */
+		bool _landingStall = false;
+		/** @brief Frames left during which the actor doesn't move, see @ref _landingStall */
+		float _moveStallLeft = 0.0f;
+		/** @brief Fastest applied descent (0 = no cap), only the player sets it */
+		float _maxFallSpeed = 0.0f;
+		/** @brief How much the horizontal speed changed this frame before the move, consumed by the move */
+		float _frameSpeedChangeX = 0.0f;
+		/**
+		 * @brief How far below its move a falling actor moving sideways still lands on a floor (0 = off)
+		 *
+		 * Only the player sets it, see @ref Player::LegacyAirFloorSnap.
+		 */
+		float _airFloorSnapReach = 0.0f;
 		float _unstuckCooldown;
 		float _frozenTimeLeft;
 		std::int32_t _maxHealth;
@@ -781,6 +813,12 @@ namespace Jazz2::Actors
 		virtual float GetGravityModifier(float baseGravity, bool isRising) const {
 			return baseGravity;
 		}
+		/** @brief Sets how long the animation or transition just started lasts, in ticks of the original game (70 a second) */
+		void SetAnimationTicks(float ticks) {
+			_renderer.AnimDuration = ticks / 70.0f;
+		}
+		/** @brief Returns @p baseGravity with the gravity of the level replaced by the given one, for an override of @ref GetGravityModifier() */
+		float ReplaceLevelGravity(float gravity, float baseGravity) const;
 
 		/** @brief Called when an event is triggered */
 		virtual void OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams);
@@ -913,6 +951,8 @@ namespace Jazz2::Actors
 
 		// Returns `true` if the actor would still have ground under it after a given relative move
 		bool IsSupportedAfterMove(float stepX, float stepY);
+		// Returns `true` if the floor past the sides of the feet holds the actor up, see `_footingExtraLeft`
+		bool HasExtendedFooting(const AABBf& feet);
 		// Resolves one bounded sub-step of the standard movement, returns `false` if the actor couldn't move at all
 		bool TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, Tiles::TileCollisionParams& params, MovementResult& result);
 

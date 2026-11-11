@@ -46,8 +46,7 @@ namespace Jazz2::Multiplayer::GameModes
 		if (_holderIdleFrames >= HolderIdleLimitSecs * FrameTimer::FramesPerSecond) {
 			// The holder loses a point and dies
 			AddPoints(ctx, holder, -1);
-			// TRANSLATORS: Message shown to all players in Roast Tag when the player holding the ring roasted nobody for too long, {} is player name, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} lost the ring for being idle!", ctx.GetPlayerName(holder)));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RoastTagLostRingIdle, ctx.GetPlayerName(holder)));
 			DropRing(ctx);
 			UpdateBottomFeeder(ctx);
 			ctx.SyncPlayerModeState(holder);
@@ -148,8 +147,7 @@ namespace Jazz2::Multiplayer::GameModes
 		SetFlag(ctx, player, PlayerModeFlags::It, true);
 		ctx.SyncPlayerModeState(player);
 
-		// TRANSLATORS: Message shown to all players in Roast Tag when a player takes the ring, {} is player name, keep the leading line breaks
-		ctx.ShowAlertToAllPlayers(_f("\n\n{} has the ring!", ctx.GetPlayerName(player)));
+		ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::RoastTagHasRing, ctx.GetPlayerName(player)));
 	}
 
 	void RoastTagMode::DropRing(IGameModeContext& ctx)

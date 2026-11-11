@@ -69,6 +69,8 @@ namespace Jazz2::Actors::Solid
 		static constexpr float LegacyDriftScale = 1.0f / 32.0f;
 		/** @brief Least sideways drift, close to the mounted end (original 0.5 px/tick) */
 		static constexpr float LegacyMinDrift = 0.5f;
+		/** @brief How long the non-Reforged launch keeps its sideways drift unbraked, in the original's ticks */
+		static constexpr float LegacyDriftHoldTicks = 4.0f;
 		/**
 		 * @brief How steeply the surface drops away from the mounted end (px per px)
 		 *

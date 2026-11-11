@@ -51,12 +51,36 @@ namespace Jazz2::Actors::Bosses
 		bool OnPerish(ActorBase* collider) override;
 
 	private:
-		static constexpr std::int32_t StateTransition = -1;
 		static constexpr std::int32_t StateWaiting = 0;
-		static constexpr std::int32_t StateFlying = 1;
-		static constexpr std::int32_t StateNewDirection = 2;
-		static constexpr std::int32_t StatePrepairingToAttack = 3;
-		static constexpr std::int32_t StateAttacking = 4;
+		static constexpr std::int32_t StateChasing = 1;
+		static constexpr std::int32_t StateAttacking = 2;
+
+		/** @brief Ticks of chasing before an attack */
+		static constexpr float ChaseTicks = 211.0f;
+		/** @brief Ticks of an attack at which the aim point stops following the player */
+		static constexpr float AimLockTicks = 140.0f;
+		/** @brief Tick of an attack of the first rocket */
+		static constexpr float FirstShotTick = 224.0f;
+		/** @brief Ticks between rockets */
+		static constexpr float ShotPeriodTicks = 16.0f;
+		/** @brief Tick of an attack of the last rocket, which also ends the attack */
+		static constexpr float LastShotTick = 288.0f;
+		/** @brief Ticks between choosing the player to follow */
+		static constexpr float TargetPeriodTicks = 32.0f;
+		/** @brief Squared distance in pixels within which a player is followed (512 px) */
+		static constexpr float TargetDistanceSqr = 262144.0f;
+		/** @brief Flying speed in pixels per frame (1 pixel per original tick) */
+		static constexpr float ChaseSpeed = 1.0f * TicksPerFrame;
+		/** @brief Distance in pixels above the player which it flies to */
+		static constexpr float HoverHeight = 64.0f;
+		/** @brief Highest distance in pixels above its home position */
+		static constexpr float MaxRise = 100.0f;
+		/** @brief Number of entries of the chain on Easy */
+		static constexpr std::int32_t EasyChainLength = 4 * 3;
+		/** @brief Rocket speed when launched, in pixels per frame */
+		static constexpr float RocketSpeed = 1.0f * TicksPerFrame;
+		/** @brief Rocket acceleration in pixels per frame squared (0.125 per original tick squared) */
+		static constexpr float RocketAcceleration = 0.125f * TicksPerFrame * TicksPerFrame;
 
 		static constexpr std::int32_t HardChainLength = 6 * 3;
 		// Distance from the start of the chain, and from an entry of the chain to the next one, in pixels
@@ -84,7 +108,7 @@ namespace Jazz2::Actors::Bosses
 		 * Reported rather than measured, and it cannot be measured here --- a boss is out of reach of the
 		 * trajectory probe, which drives one player through one test level.
 		 */
-		static constexpr std::int32_t ChainBallHealth = 1;
+		static constexpr std::int32_t ChainBallHealth = 3;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -120,23 +144,30 @@ namespace Jazz2::Actors::Bosses
 
 		private:
 			float _timeLeft;
+				bool _launched = false;
 		};
 #endif
 
 		std::int32_t _state;
-		float _stateTime;
 		uint8_t _endText;
 		std::shared_ptr<BollyPart> _bottom;
 		//std::shared_ptr<BollyPart> _turret;
 		std::shared_ptr<BollyPart> _chain[MaxChainLength];
 		Vector2f _originPos;
 		float _noiseCooldown;
-		std::int32_t _rocketsLeft;
 		float _chainPhase;
+
+		float _ticks;
+		float _targetAcc;
+		float _nextShotTick;
+		Vector2f _aimPos;
+		std::weak_ptr<ActorBase> _target;
 
 		static Vector2f GetChainDirection(float chainPhase, std::int32_t index);
 		//void UpdateTurret(float timeMult);
-		void FollowNearestPlayer(std::int32_t newState, float time);
+		void PickTarget();
+		void UpdateChase(float timeMult);
+		void UpdateAttack(float timeMult);
 		void FireRocket();
 	};
 }

@@ -36,8 +36,8 @@ namespace Jazz2::Actors::Weapons
 
 		async_await RequestMetadataAsync("Weapon/ShieldLightning"_s);
 
-		_timeLeft = 30;
-		_strength = 2;
+		_timeLeft = 46.0f * TicksToFrames;
+		_strength = 3;
 
 		SetAnimation(AnimState::Idle);
 
@@ -55,15 +55,13 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 7.0f;
+		constexpr float baseSpeed = 2.0f * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
 		_speed.Y = sinAngle * baseSpeed;
+		SetAcceleration(_speed.Normalized(), 0.125f * TickAccelScale, 10.0f * TickSpeedScale);
+		SetCarriedSpeed(speed.X, true);
 
 		_renderer.SetRotation(angle);
 		_renderer.SetDrawEnabled(false);
@@ -92,10 +90,11 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.SetDrawEnabled(true);
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_fired >= 2) {
+			RevealPastMuzzle(_gunspotPos);
 		}
 
 #if defined(WITH_AUDIO)

@@ -70,8 +70,8 @@ namespace Jazz2::Actors::Collectibles
 
 	void FastFireCollectible::OnCollect(Player* player)
 	{
-		if (player->AddFastFire(1)) {
-			CollectibleBase::OnCollect(player);
-		}
+		// Taken at the maximum too, as the original does
+		player->AddFastFire(1);
+		CollectibleBase::OnCollect(player);
 	}
 }

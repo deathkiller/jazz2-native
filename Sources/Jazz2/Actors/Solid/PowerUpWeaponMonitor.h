@@ -25,7 +25,7 @@ namespace Jazz2::Actors::Solid
 		static void Preload(const ActorActivationDetails& details);
 
 		/** @brief Destroys the monitor and applies the weapon upgrade to the specified player */
-		void DestroyAndApplyToPlayer(Player* player);
+		void DestroyAndApplyToPlayer(Player* player, bool byShot = false);
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

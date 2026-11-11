@@ -6,13 +6,38 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <algorithm>
 #include <float.h>
 
 namespace Jazz2::Actors::Enemies
 {
 	Monkey::Monkey()
-		: _isWalking(false), _stuck(false), _idleLoops(0)
+		: _time(0.0f), _isWalking(false), _stuck(false), _standing(false), _hasStood(false)
 	{
+	}
+
+	float Monkey::GetWalkSpeed() const
+	{
+		// The original speed follows the walk animation, slowest at its middle frame
+		std::int32_t frame = std::max<std::int32_t>(_renderer.CurrentFrame - _renderer.FirstFrame, 0);
+		std::int32_t step = (std::abs(frame - 7) * 32) & 511;
+		return (1.0f + sinApprox((float)step * (fTwoPi / 1024.0f))) * 0.5f * TicksPerFrame;
+	}
+
+	float Monkey::GetThrowInterval() const
+	{
+		std::int32_t difficultyLevel = 1;
+		switch (_levelHandler->GetDifficulty()) {
+			case GameDifficulty::Easy: difficultyLevel = 0; break;
+			case GameDifficulty::Hard: difficultyLevel = 2; break;
+			default: break;
+		}
+		return (3 - difficultyLevel) * ThrowWaitTicks / TicksPerFrame;
+	}
+
+	bool Monkey::HasPlayerInSight() const
+	{
+		return (FindNearestPlayer(SightDistance * SightDistance) != nullptr);
 	}
 
 	void Monkey::Preload(const ActorActivationDetails& details)
@@ -25,7 +50,7 @@ namespace Jazz2::Actors::Enemies
 		_isWalking = (details.Params[0] != 0);
 
 		SetHealthByDifficulty(3);
-		_scoreValue = 200;
+		_scoreValue = (_isWalking ? 200 : 300);
 
 		async_await RequestMetadataAsync("Enemy/Monkey"_s);
 
@@ -33,7 +58,7 @@ namespace Jazz2::Actors::Enemies
 			SetFacingLeft(Random().NextBool());
 			SetAnimation(AnimState::Walk);
 
-			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+			_speed.X = (IsFacingLeft() ? -1 : 1) * GetWalkSpeed();
 
 			PlaceOnGround();
 		} else {
@@ -47,8 +72,69 @@ namespace Jazz2::Actors::Enemies
 	{
 		EnemyBase::OnUpdate(timeMult);
 
-		if (!_isWalking || _frozenTimeLeft > 0.0f) {
+		if (_frozenTimeLeft > 0.0f) {
 			return;
+		}
+
+		if (!_isWalking) {
+			// The standing one throws once the wait for its difficulty has passed
+			if (_currentTransition == nullptr) {
+				_time += timeMult;
+				if (_time >= GetThrowInterval() && TryThrow()) {
+					_time = 0.0f;
+				}
+			}
+			return;
+		}
+
+		if (_standing) {
+			_time -= timeMult;
+			if (_time <= 0.0f) {
+				_standing = false;
+				_time = 0.0f;
+				SetAnimation(AnimState::Walk);
+				if (!TryThrow()) {
+					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * GetWalkSpeed();
+				}
+			}
+			return;
+		}
+
+		if (_currentTransition == nullptr) {
+			if (std::abs(_speed.X) > 0.0f) {
+				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * GetWalkSpeed();
+			}
+
+			// It stops for a moment after walking for a while without a player in sight
+			if (HasPlayerInSight()) {
+				_time = 0.0f;
+				// The original stops to throw as soon as it sees a player
+				if (TryThrow()) {
+					return;
+				}
+			} else {
+				_time += timeMult;
+				if (_time > WalkTicks / TicksPerFrame) {
+					_time = 0.0f;
+					_speed.X = 0.0f;
+					if (_hasStood) {
+						// Measured in JJ2+: only its first stop is a long one, later it just pauses
+						SetTransition((AnimState)1073741824, false, [this]() {
+							if (!TryThrow()) {
+								_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * GetWalkSpeed();
+							}
+						});
+					} else {
+						_hasStood = true;
+						SetTransition((AnimState)1073741825, false, [this]() {
+							_standing = true;
+							_time = StandTicks / TicksPerFrame;
+							SetAnimation(AnimState::Jump);
+						});
+					}
+					return;
+				}
+			}
 		}
 
 		if (GetState(ActorState::CanJump) && std::abs(_speed.X) > 0) {
@@ -57,7 +143,7 @@ namespace Jazz2::Actors::Enemies
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 				} else {
 					SetFacingLeft(!IsFacingLeft());
-					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * GetWalkSpeed();
 					_stuck = true;
 				}
 			} else {
@@ -84,7 +170,7 @@ namespace Jazz2::Actors::Enemies
 		_stuck = ((flags & 0x01) != 0);
 		if (_isWalking && (flags & 0x02) != 0) {
 			// Throwing was interrupted, continue walking as the last transition callback would
-			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+			_speed.X = (IsFacingLeft() ? -1 : 1) * GetWalkSpeed();
 		}
 	}
 
@@ -102,15 +188,10 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		// Measured in JJ2+: the standing one throws after every second loop of its idle animation
-		if (!_isWalking && _idleLoops < 2) {
-			_idleLoops++;
-			if (_idleLoops < 2) {
-				return;
-			}
+		// Only a walking monkey throws when its animation ends, a standing one waits for its difficulty's time
+		if (_isWalking && !_standing) {
+			TryThrow();
 		}
-
-		TryThrow();
 	}
 
 	bool Monkey::TryThrow()
@@ -137,9 +218,11 @@ namespace Jazz2::Actors::Enemies
 			if (found) {
 				Vector2f diff = (targetPos - _pos);
 				std::uint32_t distance = (std::uint32_t)std::abs(diff.X);
-				if (distance > 16.0f && targetDistanceSqr < 256.0f * 256.0f) {
+				if (distance > 16.0f && targetDistanceSqr < SightDistance * SightDistance) {
+					_time = 0.0f;
 					if (_isWalking) {
 						_speed.X = 0.0f;
+						_hasStood = true;
 
 						SetTransition((AnimState)1073741825, false, [this, targetPos, distance]() {
 							SetFacingLeft(targetPos.X < _pos.X);
@@ -153,14 +236,13 @@ namespace Jazz2::Actors::Enemies
 										// Measured in JJ2+: it keeps throwing while a player is in range
 										if (!TryThrow()) {
 											SetFacingLeft(Random().NextBool());
-											_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+											_speed.X = (IsFacingLeft() ? -1 : 1) * GetWalkSpeed();
 										}
 									});
 								});
 							});
 						});
 					} else {
-						_idleLoops = 0;
 						SetFacingLeft(targetPos.X < _pos.X);
 
 						SetTransition((AnimState)1073741826, false, [this, distance]() {

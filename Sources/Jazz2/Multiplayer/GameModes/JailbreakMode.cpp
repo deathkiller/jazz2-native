@@ -312,8 +312,7 @@ namespace Jazz2::Multiplayer::GameModes
 			}
 		}
 
-		// TRANSLATORS: Message in the console of all players in Jailbreak when the jails open
-		ctx.SendMessageToAllPlayers(_("*** All prisoners have been released"));
+		ctx.SendMessageToAllPlayers(ServerMessage(ServerMessageType::JailbreakPrisonersReleased));
 	}
 
 	void JailbreakMode::CheckTeamsJailed(IGameModeContext& ctx)
@@ -346,8 +345,7 @@ namespace Jazz2::Multiplayer::GameModes
 		const auto& config = ctx.GetServerConfiguration();
 		if (freeTeams == 1) {
 			_teamPoints[lastFreeTeam]++;
-			// TRANSLATORS: Message in the console of all players in Jailbreak when all enemies are jailed, {} is the team color name in English (Blue, Red, Green or Yellow)
-			ctx.SendMessageToAllPlayers(_f("*** {} Team scored a point", GetTeamName(lastFreeTeam)));
+			ctx.SendMessageToAllPlayers(ServerMessage(ServerMessageType::JailbreakTeamScored, ServerMessageTeam{lastFreeTeam}));
 		}
 
 		// The round is over, everybody dies (only the losing team without ResetAllTeams) and the jails open later

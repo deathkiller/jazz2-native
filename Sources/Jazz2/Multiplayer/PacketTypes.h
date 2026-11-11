@@ -75,14 +75,15 @@ namespace Jazz2::Multiplayer
 		FadeOut,						/**< Requests the client to fade out the screen */
 		PlaySfx,						/**< Plays a sound effect attached to an actor */
 		PlayCommonSfx,					/**< Plays a common sound effect at a position */
-		ShowAlert,					// TODO
-		ChatMessage,					/**< Chat message broadcasted to the client */
+		Reserved2,						/**< Unused, kept so the following values don't change */
+		ChatMessage,					/**< Chat message of a player or of the server console, see @ref ServerMessage for the rest */
 		SyncTileMap,					/**< Synchronizes the state of the tile map */
 		SetTrigger,						/**< Sets the state of a trigger */
 		AdvanceTileAnimation,			/**< Advances a destructible tile animation */
 		RevertTileAnimation,		// TODO
 		CreateDebris,					/**< Creates particle or sprite debris */
 		StopSfx,						/**< Stops a sound effect attached to an actor, started with @ref SfxFlags::Exclusive */
+		ServerMessage,					/**< Alert or console line of the server, formatted by the client in its own language, see @ref ServerMessageType */
 
 		CreateControllablePlayer = 110,	/**< Creates a player controllable by the client */
 		CreateRemoteActor,				/**< Creates a remote actor on the client */

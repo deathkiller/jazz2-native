@@ -12,13 +12,13 @@
 		"AttackStart": {
 			"Path": "MadderHatter/attack.aura",
 			"FrameCount": 12,
-			"FrameRate": 5,
+			"FrameRate": 7.3,
 			"States": [ 1073741824 ]
 		},
 		"AttackEnd": {
 			"Path": "MadderHatter/attack.aura",
 			"FrameOffset": 12,
-			"FrameRate": 5,
+			"FrameRate": 9.5,
 			"States": [ 1073741825 ]
 		},
 

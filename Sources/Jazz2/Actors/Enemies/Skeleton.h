@@ -33,6 +33,10 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr float DefaultSpeed = TicksPerFrame;
+		/** @brief Fewest bones it bursts into, besides the skull */
+		static constexpr std::int32_t MinBoneCount = 31;
+		/** @brief Most bones it bursts into, besides the skull */
+		static constexpr std::int32_t MaxBoneCount = 46;
 
 		bool _stuck;
 	};

@@ -2070,7 +2070,7 @@ namespace Jazz2::Tests
 		// The active modifier, because an airboard, a copter and a lizard copter all fly and none of them can
 		// be told apart from the position - and the pose each one is supposed to show is picked from exactly
 		// this. A copter trace reading `anim` = Jump|Fall says the pose is wrong; only this says why.
-		LOGI("[probe] {},{},{:.3f},{:.3f},{:.4f},{:.4f},{},{},{},{},{},{},{},{},{},{:.1f},{:.1f},{:.1f},{},{},{},{},{},{:.3f},{:.3f},{},{},{},{}",
+		LOGI("[probe] {},{},{:.3f},{:.3f},{:.4f},{:.4f},{},{},{},{},{},{},{},{},{},{:.1f},{:.1f},{:.1f},{},{},{},{},{},{:.3f},{:.3f},{},{},{},{},{:.3f}",
 			name, t, player->_pos.X, player->_pos.Y, player->_speed.X, player->_speed.Y,
 			right ? 1 : 0, left ? 1 : 0, run ? 1 : 0, jump ? 1 : 0, down ? 1 : 0, up ? 1 : 0, fire ? 1 : 0,
 			(std::int32_t)player->GetSpecialMove(), (std::int32_t)player->GetModifier(), ms, objX, objY,
@@ -2078,7 +2078,7 @@ namespace Jazz2::Tests
 			(player->_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch ? 1 : 0,
 			player->_jumpReleased ? 1 : 0, player->_isSpring ? 1 : 0,
 			cameraPos.X - player->_pos.X, cameraPos.Y - player->_pos.Y,
-			animState, animFrame, transitionState, suspendType);
+			animState, animFrame, transitionState, suspendType, _tick);
 
 		// The freeze set's own line, the counterpart of the original's `#fz` one: the player's freeze counter in
 		// ticks and the subject object's position, speed (per 60 Hz frame, as `xs`/`ys`), freeze counter, two
@@ -3093,7 +3093,7 @@ namespace Jazz2::Tests
 						LOGI("[probe-info] PARTIAL RUN - first={} last={} filter=\"{}\" - NOT a full sweep",
 							FirstScenario, LastScenario, ScenarioFilter);
 					}
-					LOGI("[probe] scenario,tick,x,y,xs,ys,right,left,run,jump,down,up,fire,sm,mod,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp");
+					LOGI("[probe] scenario,tick,x,y,xs,ys,right,left,run,jump,down,up,fire,sm,mod,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp,ftick");
 					_startFrames = _levelHandler->_elapsedFrames;
 					// Recording mode goes straight to RUN and stays there: no reset, no settle, no scenario
 					// advance, so the player is never moved and the level is left exactly as it is
@@ -3144,7 +3144,11 @@ namespace Jazz2::Tests
 				// decays under - so a stale one does not move the player anywhere by itself and only shows up
 				// twenty ticks into the next scenario's arc, as a height that is quietly wrong. Reusing the
 				// game's own reset keeps this list from drifting out of step with the fields it has to clear.
+				// ...except the dash grace, which the original's reset doesn't touch either: a scenario holding Run from
+				// tick 0 after one that ended with Run held starts at the dash rate there, see Tests/README.md
+				float dashGraceLeft = std::min(player->_dashGraceLeft, Actors::Player::LegacyDashGraceTicks);
 				player->ResetLegacyMovementState();
+				player->_dashGraceLeft = dashGraceLeft;
 				// The rev-up too: a scenario that ends mid-wind-up would otherwise hand the charge, the pose and
 				// its scaled animation speed to whatever runs next, which reads as that scenario starting in the
 				// wind-up animation for no reason - the same class of leak as the pole attachment above.
@@ -3176,6 +3180,9 @@ namespace Jazz2::Tests
 				if (atRest || _waited >= MaxWaitTicks) {
 					SetupProps(player, _scenario);
 					SetupFreezeProps(player, _scenario);
+					_undoSetupFrame = true;
+					_setupPos = player->_pos;
+					_setupSpeedY = player->_speed.Y;
 					_state = StateRun;
 				}
 				return;
@@ -3198,8 +3205,15 @@ namespace Jazz2::Tests
 		// Each cycle is independent: hop until a fresh copter is caught, test from that tick, and go back
 		// to hopping the moment it is lost. `u` is therefore measured within a cycle, never from the
 		// scenario's start, and a trace is read as several episodes rather than as one.
+		if (_undoSetupFrame) {
+			_undoSetupFrame = false;
+			if (player->_pos == _setupPos && !player->CanJump()) {
+				player->_speed.Y = _setupSpeedY;
+			}
+		}
+
 		Actors::Player::Modifier modifier = player->GetModifier();
-		_onCopter = (modifier == Actors::Player::Modifier::Copter || modifier == Actors::Player::Modifier::LizardCopter);
+		_onCopter =(modifier == Actors::Player::Modifier::Copter || modifier == Actors::Player::Modifier::LizardCopter);
 		if (!_onCopter) {
 			if (_copterAttachTick >= 0) {
 				_copterEndTick = (std::int32_t)_tick;
@@ -3222,7 +3236,10 @@ namespace Jazz2::Tests
 			player->_internalForceY = 0.0f;
 		}
 
-		if (!ApplyInput(player, _scenario, (std::int32_t)_tick)) {
+		// Rounded, not floored: a frame starts up to a whole frame past the tick a key edge is scheduled for, and
+		// flooring made every edge land half a frame late on average (0.58 ticks at 60 FPS, a 4 px offset after a
+		// walking turn). `ftick` in the row keeps the true time.
+		if (!ApplyInput(player, _scenario, (std::int32_t)(_tick + 0.5f))) {
 			// Also a finish, and it has to say so. This is not the rare path it looks like: the last scenario
 			// is guarded on the level, so *every* sweep of the test level ends here rather than by running out
 			// of `ScenarioCount`. Without the marker a capture has no end, and both the documented way to wait

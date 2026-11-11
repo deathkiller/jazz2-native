@@ -29,8 +29,11 @@ namespace Jazz2::Actors::Enemies
 
 		_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 		_canJumpPrev = GetState(ActorState::CanJump);
+		_verticalSpeedLimit = FallSpeedLimit;
 
 		PlaceOnGround();
+		// Only one that really falls plays the landing
+		_canJumpPrev = true;
 
 		async_return true;
 	}
@@ -46,11 +49,18 @@ namespace Jazz2::Actors::Enemies
 		if (GetState(ActorState::CanJump)) {
 			if (!_canJumpPrev) {
 				_canJumpPrev = true;
+				_speed.X = 0.0f;
 				SetAnimation(AnimState::Walk);
-				SetTransition(AnimState::TransitionFallToIdle, false);
+				// It walks on only after the landing, which takes 7 ticks a frame in the original
+				SetTransition(AnimState::TransitionFallToIdle, false, [this]() {
+					_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+				});
+				if (_currentTransition != nullptr && _currentTransition->FrameCount > 0) {
+					SetAnimationTicks(_currentTransition->FrameCount * LandingFrameTicks);
+				}
 			}
 
-			if (!CanMoveToPosition(_speed.X * 4, 0)) {
+			if (std::abs(_speed.X) > 0.0f && !CanMoveToPosition(_speed.X * 4, 0)) {
 				if (_stuck) {
 					MoveInstantly(Vector2f(0.0f, -2.0f), MoveType::Relative | MoveType::Force);
 				} else {
@@ -80,7 +90,14 @@ namespace Jazz2::Actors::Enemies
 				_canJumpPrev = false;
 				SetAnimation(AnimState::Fall);
 			}
+			// The original loses a 32nd of the sideways speed each tick of a fall
+			_speed.X *= std::pow(31.0f / 32.0f, timeMult * TicksPerFrame);
 		}
+	}
+
+	float Crab::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		return ReplaceLevelGravity(FallGravity, baseGravity);
 	}
 
 	void Crab::OnSerializeState(Stream& dest)
@@ -100,6 +117,10 @@ namespace Jazz2::Actors::Enemies
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 		_canJumpPrev = ((flags & 0x01) != 0);
 		_stuck = ((flags & 0x02) != 0);
+		// A landing in progress is not restored, so it walks on right away
+		if (_canJumpPrev && _speed.X == 0.0f) {
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+		}
 	}
 
 	void Crab::OnUpdateHitbox()

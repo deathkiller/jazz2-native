@@ -29,10 +29,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void Stopwatch::OnCollect(Player* player)
 	{
-		bool timeIncreased = player->IncreaseShieldTime(10.0f * FrameTimer::FramesPerSecond);
-		// Always collect if Reforged is disabled
-		if (timeIncreased || !_levelHandler->IsReforged()) {
-			CollectibleBase::OnCollect(player);
-		}
+		player->IncreaseShieldTime(10.0f * FrameTimer::FramesPerSecond);
+		CollectibleBase::OnCollect(player);
 	}
 }

@@ -15,6 +15,7 @@
 #include "Input/ControlScheme.h"
 #include "Rendering/UpscaleRenderPass.h"
 
+
 #include "../nCine/Graphics/Shader.h"
 #include "../nCine/Audio/AudioBufferPlayer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
@@ -140,6 +141,8 @@ namespace Jazz2
 #endif
 		/** @brief Color of the water unless a script gives it its own, see @ref Rendering::CombineRenderer */
 		static constexpr Vector3f DefaultWaterColor = Vector3f(0.4f, 0.6f, 0.8f);
+		/** @brief Speed the water level moves to a new level at, in px per frame (1 px per tick of the original) */
+		static constexpr float WaterLevelSpeed = 70.0f / 60.0f;
 
 		/** @} */
 
@@ -183,6 +186,8 @@ namespace Jazz2
 		bool IsPlayerColorForced(const Actors::Player* player) const override;
 		CharacterProfile GetCharacterProfile(PlayerType type) const override;
 		bool WarpsTransmuteCoins() const override;
+		bool AreCoinsTransmuted() const override;
+		void TransmuteCoins() override;
 		WaterInteraction GetWaterInteraction() const override;
 
 		/** @brief Returns the internal name (path) of the current level */
@@ -382,22 +387,22 @@ namespace Jazz2
 		// Software renderer and the console fixed-function tiers: the bloom/lighting chain is gated out, but the
 		// viewport compositor still needs the Combine programs so the device recognizes the draw (object label
 		// "Combine" -> SwEffect::Combine, or the generated fixed-function entry's LightingCombine stage) and runs
-		// the CPU dynamic-lighting combine in its place. Default-initialized here so no constructor arm is needed.
-		Shader* _combineShader = nullptr;
+		// the CPU dynamic-lighting combine in its place.
+		Shader* _combineShader;
 #endif
 		// Acquired on EVERY tier: the water variant's own program is what carries the water description. On the
 		// shader path that is its fragment stage, on the console tiers the fixed_function block that draws the
 		// tint band over whatever the lighting stage produced (see CombineWithWater.shader)
-		Shader* _combineWithWaterShader = nullptr;
+		Shader* _combineWithWaterShader;
 		// The water drawn mid-scene (see Water.shader)
-		Shader* _waterShader = nullptr;
+		Shader* _waterShader;
 
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 		// When the scene is supersampled (splitscreen zoom-out), the HUD and the in-game menu are rendered through this
 		// separate pass at the native resolution and composited on top, so they stay crisp instead of being
 		// supersampled with the scene
 		Rendering::UpscaleRenderPassWithClipping _hudUpscalePass;
-		bool _hudOverlayActive = false;
+		bool _hudOverlayActive;
 #if defined(DEATH_DEBUG)
 		// Console commands given on the command line by `/console <command>`, run on the first frame
 		SmallVector<String, 0> _debugStartupCommands;
@@ -453,6 +458,10 @@ namespace Jazz2
 #endif
 		// Settings the level starts with, a script may change some of them later (see Formats::LevelSettingsChunk)
 		Formats::LevelSettingsChunk::Settings _levelSettings;
+		// Set once a bonus warp turned the coins of the level into gems
+		bool _coinsTransmuted;
+		// Level the water is moving to, `FLT_MAX` if it is not
+		float _waterLevelTarget;
 
 		Events::EventSpawner _eventSpawner;
 		std::unique_ptr<Events::EventMap> _eventMap;
@@ -474,19 +483,19 @@ namespace Jazz2
 		float _checkpointFrames;
 		float _waterLevel;
 		// The water as the level script left it after onPlayer() in its last tick, see GetPlayerWaterLevel()
-		float _playerWaterLevel = 0.0f;
+		float _playerWaterLevel;
 		// Colors of the water at its surface and at the bottom of the view, see Rendering::CombineRenderer
-		Vector3f _waterColorTop = DefaultWaterColor;
-		Vector3f _waterColorBottom = DefaultWaterColor;
-		bool _playerWaterLevelSet = false;
+		Vector3f _waterColorTop;
+		Vector3f _waterColorBottom;
+		bool _playerWaterLevelSet;
 		// The water is still there for the actors, but not drawn
-		bool _waterHidden = false;
+		bool _waterHidden;
 		// Index of the layer the water is drawn in front of, or Formats::LevelSettingsChunk::WaterInFront, see GetWaterDepth()
-		std::int32_t _waterLayer = Formats::LevelSettingsChunk::WaterInFront;
+		std::int32_t _waterLayer;
 		// How players move under water, see GetWaterInteraction()
-		WaterInteraction _waterInteraction = WaterInteraction::Swim;
+		WaterInteraction _waterInteraction;
 		// How the ambient lighting goes with the water, see Rendering::PlayerViewport
-		Formats::LevelSettingsChunk::WaterLighting _waterLighting = Formats::LevelSettingsChunk::WaterLighting::None;
+		Formats::LevelSettingsChunk::WaterLighting _waterLighting;
 		Vector4f _defaultAmbientLight;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
@@ -494,7 +503,7 @@ namespace Jazz2
 		// Frames between two attempts to restart music that was stopped from outside the game
 		static constexpr std::int32_t MusicRestartDelay = 60;
 
-		std::int32_t _musicStartDelay = 0;
+		std::int32_t _musicStartDelay;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 #endif
@@ -507,7 +516,7 @@ namespace Jazz2
 		// Actors (and the water and weather that go with them) at the last checkpoint, restored when a player dies,
 		// taken at the end of the frame the checkpoint was activated in, when all actors are updated
 		LevelStateSnapshot _checkpointSnapshot;
-		bool _checkpointSnapshotPending = false;
+		bool _checkpointSnapshotPending;
 		// State of the previous level to return to once this (special) level is completed
 		std::shared_ptr<const LevelStateSnapshot> _returnLevelState;
 		// State of this level taken right before it was left to a special level

@@ -43,6 +43,7 @@ namespace Jazz2::Actors
 	{
 		class Bird;
 		class SwingingVine;
+		class SteamNote;
 	}
 
 	namespace Solid
@@ -79,6 +80,7 @@ namespace Jazz2::Actors
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 #endif
 		friend class Environment::SwingingVine;
+		friend class Environment::SteamNote;
 		friend class Solid::PinballBumper;
 		friend class Solid::PinballPaddle;
 		friend class Weapons::Thunderbolt;
@@ -210,6 +212,11 @@ namespace Jazz2::Actors
 			return _currentSpecialMove;
 		}
 
+		/** @brief Returns whether the player has fired within the specified number of frames */
+		bool HasFiredWithin(float frames) const {
+			return (_fireFramesLeft > 20.0f - frames);
+		}
+
 		/** @brief Return weapon ammo */
 		ArrayView<const std::uint16_t> GetWeaponAmmo() const {
 			return _inventory.WeaponAmmo;
@@ -247,17 +254,26 @@ namespace Jazz2::Actors
 		/** @brief Returns `true` if ledge climbing is allowed */
 		bool IsLedgeClimbAllowed() const;
 		/**
-		 * @brief Returns how far the non-Reforged camera should lead the player horizontally, in pixels
+		 * @brief Returns the direction the non-Reforged camera leads in, `-1`, `0` or `1`
 		 *
-		 * Zero unless a direction is held, the original follows the input rather than the speed.
+		 * The direction held, zero during a special move. How far it leads comes from the speed, see
+		 * @ref Rendering::PlayerViewport.
 		 */
-		float GetCameraLookAhead() const;
+		std::int32_t GetCameraLeadDirection() const;
 		/**
 		 * @brief Returns how far the non-Reforged camera should drop below the player, in pixels
 		 *
 		 * Zero except during a buttstomp. Matches the original.
 		 */
 		float GetCameraVerticalOffset() const;
+		/**
+		 * @brief Returns how far the non-Reforged camera is panned by looking up (negative) or down (positive), in pixels
+		 *
+		 * Holding Up or crouching for a moment pans the view, it eases back once released. Zero in Reforged.
+		 */
+		float GetCameraLookOffset() const;
+		/** @brief Returns `true` once after a buttstomp landed, so the camera can shake */
+		bool ConsumeStompLanding();
 
 		/** @brief Called when the level is about to change */
 		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
@@ -618,16 +634,14 @@ namespace Jazz2::Actors
 		 * The full @ref LegacyDashSpeed is kept until then, and clamped back to @ref LegacyWalkSpeed in a single frame.
 		 */
 		static constexpr float LegacyDashGraceTicks = 16.0f / LegacyFrameRateScale;
-		/** @brief How far the non-Reforged camera leads the player while walking */
-		static constexpr float LegacyCameraWalkLead = 28.0f;
-		/** @brief How far the non-Reforged camera leads the player while dashing, keyed on @ref IsDashActive() */
-		static constexpr float LegacyCameraDashLead = 120.0f;
 		/**
 		 * @brief How far the non-Reforged camera drops during a buttstomp
 		 *
 		 * The only vertical camera lead in the original. Measured in the original.
 		 */
 		static constexpr float LegacyCameraButtstompDrop = 60.0f;
+		/** @brief Ticks the camera shakes after a buttstomp landed, original 17 ticks */
+		static constexpr float LegacyStompQuakeTicks = 17.0f;
 		/**
 		 * @brief Ticks the non-Reforged landing pose spends on each of its frames
 		 *
@@ -673,6 +687,14 @@ namespace Jazz2::Actors
 		 * Applied in HandleWaterAndModifierMovement(), because OnHandleWater() disables gravity for a swimming player.
 		 */
 		static constexpr float LegacyWaterGravity = (1024.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		/** @brief How far below the surface the non-Reforged player starts swimming (px) */
+		static constexpr float LegacyWaterEnterDepth = 12.0f;
+		/** @brief How far below the surface the non-Reforged player stops swimming (px) */
+		static constexpr float LegacyWaterExitDepth = 4.0f;
+		/** @brief How far below the surface a non-Reforged swimmer can still jump out of the water (px) */
+		static constexpr float LegacyWaterJumpDepth = 32.0f;
+		/** @brief How much stronger than a jump off the ground the non-Reforged jump out of the water launches */
+		static constexpr float LegacyWaterJumpBoost = 4.0f * LegacyFrameRateScale;
 		/**
 		 * @brief Non-Reforged cap on applied movement, on both axes
 		 *
@@ -718,6 +740,16 @@ namespace Jazz2::Actors
 		 * A plain timer. The rest of the ride shares the flying carrot's model.
 		 */
 		static constexpr float LegacyLizardCopterDuration = 279.0f / LegacyFrameRateScale;
+		/** @brief How long the sugar rush lasts, 1400 ticks of the original */
+		static constexpr float SugarRushDuration = 1400.0f / LegacyFrameRateScale;
+		/** @brief How long the invincibility carrot protects, 1050 ticks of the original */
+		static constexpr float InvincibleCarrotDuration = 1050.0f / LegacyFrameRateScale;
+		/** @brief How long the energy carrot protects, 70 ticks of the original */
+		static constexpr float EnergyCarrotInvulnerability = 70.0f / LegacyFrameRateScale;
+		/** @brief Speed above which the player breaks a speed tile, 8 px per tick of the original */
+		static constexpr float SpeedTileThreshold = 8.0f * LegacyFrameRateScale;
+		/** @brief Number of gems of the total that give a life */
+		static constexpr std::int32_t GemsPerLife = 100;
 		/**
 		 * @brief How long the flight lasts, practically until it is cancelled
 		 *
@@ -733,11 +765,44 @@ namespace Jazz2::Actors
 		static constexpr float LegacyEnemyStompBounce = 13.0f * LegacyFrameRateScale;
 		/** @brief How far below a ledge's surface the non-Reforged player may arrive and still land on it */
 		static constexpr float LegacyLandingTolerance = 20.0f;
+		/**
+		 * @brief How far past the left side of the non-Reforged hitbox the floor still holds the player up
+		 *
+		 * Measured in the original by standing the player still at set offsets from a ledge: it holds 12 px past a
+		 * right-hand edge and 11 px before a left-hand one, a 24 px footing on a 20 px wide box.
+		 */
+		static constexpr float LegacyFootingExtraLeft = 2.0f;
+		/** @brief The same past the right side, see @ref LegacyFootingExtraLeft */
+		static constexpr float LegacyFootingExtraRight = 1.0f;
+		/**
+		 * @brief How far below the non-Reforged player's move a floor still catches it while falling sideways
+		 *
+		 * Measured in the original with a fixed fall and horizontal speed: from 2 px/tick across, the player lands
+		 * whenever the floor is less than 8 px under where the tick's move leaves it, at every fall speed tried.
+		 * While dashing it reaches further, see @ref LegacyAirFloorSnapDashExtra.
+		 */
+		static constexpr float LegacyAirFloorSnap = 8.0f;
+		/** @brief While dashing the reach is the horizontal speed in px/tick plus this, if that is more (20 at 16) */
+		static constexpr float LegacyAirFloorSnapDashExtra = 4.0f;
 		/** @brief Non-Reforged terminal fall speed */
 		static constexpr float LegacyFallSpeedCap = 12.0f * LegacyFrameRateScale;
 
 		/** @brief Non-Reforged buttstomp descent speed, the same for all characters */
 		static constexpr float LegacyButtstompSpeed = 10.0f * LegacyFrameRateScale;
+		/** @brief How fast the non-Reforged buttstomp sinks while it hovers before the descent, measured in the original */
+		static constexpr float LegacyButtstompHoverSpeed = (1.0f / 16.0f) * LegacyFrameRateScale;
+		/**
+		 * @brief How long the non-Reforged buttstomp hovers before the descent, in seconds
+		 *
+		 * 39 ticks from the press to the first descending tick in the original, after a jump or a fall alike.
+		 */
+		static constexpr float LegacyButtstompHoldTime = 38.5f / LegacyTickRate;
+		/** @brief Non-Reforged hop off the floor after a buttstomp whose last step ends deep in it */
+		static constexpr float LegacyButtstompHopSpeed = 4.0f * LegacyFrameRateScale;
+		/** @brief Non-Reforged buttstomp descent per original tick (px), see @ref LegacyButtstompHopDepth */
+		static constexpr float LegacyButtstompStep = 10.0f;
+		/** @brief How far past the floor the last descent step has to end for the hop (px) */
+		static constexpr float LegacyButtstompHopDepth = 6.0f;
 		/**
 		 * @brief Non-Reforged sideways drift speed during a buttstomp, doubled with Run
 		 *
@@ -840,6 +905,26 @@ namespace Jazz2::Actors
 		 * Distance from the shot, not from the wall. No lower bound.
 		 */
 		static constexpr float LegacyRFBlastReach = 32.0f;
+		/** @brief Ticks of held fire between two shots without fast fire pickups, less one */
+		static constexpr float FireBaseHoldTicks = 35.0f;
+		/** @brief Ticks one fast fire pickup takes off the held fire interval */
+		static constexpr float FireFastFireStepTicks = 3.0f;
+		/** @brief Shortest held fire interval in ticks, less one */
+		static constexpr float FireMinHoldTicks = 6.0f;
+		/** @brief Longest wait in frames before the next shot after the fire key was released */
+		static constexpr float FireReleaseWaitFrames = 5.0f / LegacyFrameRateScale;
+		/** @brief Ticks between two Toaster shots while the player isn't moving vertically */
+		static constexpr float ToasterBaseIntervalTicks = 6.0f;
+		/** @brief Vertical speed in px per tick that takes one tick off the Toaster interval */
+		static constexpr float ToasterIntervalSpeedStep = 4.0f;
+		/** @brief Ticks of Toaster fire one unit of ammo lasts */
+		static constexpr std::uint16_t ToasterTicksPerAmmo = 32;
+		/** @brief Frames between two shots of a shield */
+		static constexpr float ShieldFireInterval = 9.0f / LegacyFrameRateScale;
+		/** @brief Distance in px from the player's centre to a wall an RF rocket's start is measured at */
+		static constexpr float RFStartHalfWidth = 9.0f;
+		/** @brief Pixels above the player's origin an upward shot starts */
+		static constexpr float UpShotSpawnOffsetY = 8.0f;
 		/** @brief Non-Reforged sidekick launch speed for Spaz */
 		static constexpr float LegacySpazSidekickSpeed = 16.0f * LegacyFrameRateScale;
 		/**
@@ -861,6 +946,8 @@ namespace Jazz2::Actors
 		 * Changes only the speed, not the travel, but a jump out of the launch takes its boost from it.
 		 */
 		static constexpr float LegacySpringHoldTicks = 4.0f;
+		/** @brief Ticks an upward spring's launch speed is held before gravity acts on it, measured in the original */
+		static constexpr float LegacySpringRiseHoldTicks = 2.0f;
 		/** @brief Ticks a horizontal pole's carry lasts after a vertical spring that keeps the horizontal speed */
 		static constexpr float LegacyVerticalSpringCarryTicks = 6.0f;
 		/**
@@ -1084,6 +1171,16 @@ namespace Jazz2::Actors
 
 		// `_speed.Y` before this frame's gravity; the non-Reforged double-jump window tests this, as the original does
 		float _frameStartSpeedY = 0.0f;
+		// Frames left of the hold after an upward spring, see LegacySpringRiseHoldTicks
+		float _springRiseHoldLeft = 0.0f;
+		// Frames left during which the keys and the brake leave the horizontal speed alone
+		float _brakeHoldLeft = 0.0f;
+		// Where the buttstomp's descent started, see LegacyButtstompHopDepth
+		float _stompDiveStartY = 0.0f;
+		// Share of this frame's gravity that applies, below 1 only while the spring hold runs out
+		float _gravityFrameScale = 1.0f;
+		// CanJump() right before the previous move, what the non-Reforged jump rules read
+		bool _canJumpBeforeMove = false;
 		// Started when Jump is let go, the non-Reforged double jump is only accepted while it runs
 		float _doubleJumpWindowLeft = 0.0f;
 		// Re-armed by a pinball paddle every frame, keeps the tube ball pose; a timer since the paddle may update either side of the player
@@ -1126,6 +1223,7 @@ namespace Jazz2::Actors
 		float _sugarRushLeft = 0.0f, _sugarRushStarsTime = 0.0f;
 		float _shieldSpawnTime = ShieldDisabled;
 		float _gemsTimer = 0.0f;
+		std::int32_t _gemLifeMilestone = -1;
 		float _bonusWarpTimer = 0.0f;
 		float _suspendTime = 0.0f;
 		float _invulnerableTime = 0.0f;
@@ -1147,9 +1245,19 @@ namespace Jazz2::Actors
 		float _lastPoleTime = 0.0f;
 		float _inTubeTime = 0.0f;
 		float _dizzyTime = 0.0f;
+		/** @brief Non-Reforged camera look: ticks Up or Down was held, ticks left before that is forgotten, offset in pixels */
+		float _lookTicks = 0.0f, _lookGraceTicks = 0.0f, _lookOffset = 0.0f;
+		/** @brief Non-Reforged airboard turn timer in frames, a full timer means not turning */
+		float _airboardTurnLeft = LegacyAirboardTurnTime;
+		/** @brief Non-Reforged frog tongue: how long it cannot walk and how long until the next tongue */
+		float _frogTongueLockLeft = 0.0f, _frogTongueCooldown = 0.0f;
+		/** @brief Ticks the player has been pressing into a wall or object, the push pose needs a moment of it */
+		float _pushPressTicks = 0.0f;
+		bool _stompLandedPending = false;
 		float _activeShieldTime = 0.0f;
 		float _weaponFlareTime = 0.0f;
 		float _weaponCooldown = 0.0f;
+		std::int32_t _pepperAim = 0;
 		// Bird steering acceleration, wound up by a held direction and zeroed on release
 		float _birdAccelX = 0.0f;
 		// Time a bird has sat still on the floor (perches it), and time left of the current perched pose
@@ -1292,6 +1400,8 @@ namespace Jazz2::Actors
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 		float GetGravityModifier(float baseGravity, bool isRising) const override;
+		float GetLegacyGravity(bool isRising) const;
+		float GetLegacyFallCap() const;
 
 		/**
 		 * @brief Pushes this player and @p other apart so they can't overlap
@@ -1520,19 +1630,56 @@ namespace Jazz2::Actors
 		 * A one-off distance, so not scaled to the frame rate. Needed to reach vines stacked four tiles apart.
 		 */
 		static constexpr float LegacyVineJumpLift = 12.0f;
-		/**
-		 * @brief Fastest descent the copter can still be started from
-		 *
-		 * Fitted to this engine rather than the original (2.3125), because the standing jump is about 3.5 px
-		 * short. If that is fixed, put it back to 2.3125.
-		 */
-		static constexpr float LegacyCopterEngageMaxSpeed = 2.40625f * LegacyFrameRateScale;
+		/** @brief Fastest descent the copter can still be started from, the original accepts 2.375 and refuses 2.5 */
+		static constexpr float LegacyCopterEngageMaxSpeed = 2.4375f * LegacyFrameRateScale;
+		/** @brief Slowest descent the copter can be started from, the original refuses 0 at the apex and its next step is 0.125 */
+		static constexpr float LegacyCopterEngageMinSpeed = 0.0625f * LegacyFrameRateScale;
 		/**
 		 * @brief How often Lori's kick repeats while Down and Jump are held (original 35 ticks)
 		 *
 		 * Start to start, the length of her kick animation, so keep the two in step.
 		 */
 		static constexpr float LegacyLoriKickPeriod = 35.0f / LegacyFrameRateScale;
+		/** @brief Speed a hurt player is thrown back at, away from where it faces (original 4 px/tick) */
+		static constexpr float LegacyHurtKnockSpeed = 4.0f * LegacyFrameRateScale;
+		/** @brief Speed up to which the hurt throw is the flat one, above it the throw is 2 px/tick plus half the speed (original 2 px/tick) */
+		static constexpr float LegacyHurtKnockBase = 2.0f * LegacyFrameRateScale;
+		/** @brief Upward speed a hurt player gets unless it is already rising (original 4 px/tick) */
+		static constexpr float LegacyHurtHopSpeed = 4.0f * LegacyFrameRateScale;
+		/** @brief Longest the hurt pose keeps the player unhittable and out of control (original 69 ticks) */
+		static constexpr float LegacyHurtPoseTime = 69.0f / LegacyFrameRateScale;
+		/** @brief Blinking protection after a death respawn (original 350 ticks) */
+		static constexpr float LegacyRespawnProtectTime = 350.0f / LegacyFrameRateScale;
+		/** @brief Speed cap of a dizzy player (original 2 px/tick) */
+		static constexpr float LegacyDizzySpeed = 2.0f * LegacyFrameRateScale;
+		/** @brief How long a frog cannot walk after its tongue (original 69 ticks) */
+		static constexpr float LegacyFrogTongueLockTime = 69.0f / LegacyFrameRateScale;
+		/** @brief Shortest time between two tongues (original 35 ticks) */
+		static constexpr float LegacyFrogTongueInterval = 35.0f / LegacyFrameRateScale;
+		/** @brief Braking of a frog that cannot walk (original 16000/65536 px/tick^2) */
+		static constexpr float LegacyFrogDecel = (16000.0f / 65536.0f) * LegacyFrameRateScaleSqr;
+		/** @brief Horizontal acceleration of the airboard, in the direction held (original 0.125 px/tick^2) */
+		static constexpr float LegacyAirboardAccel = 0.125f * LegacyFrameRateScaleSqr;
+		/** @brief How long the airboard takes to turn round, the player keeps its heading meanwhile (original 14 ticks) */
+		static constexpr float LegacyAirboardTurnTime = 14.0f / LegacyFrameRateScale;
+		/** @brief Net downward pull of the airboard with no key, the board's lift minus gravity, while falling (original 1/64 px/tick^2) */
+		static constexpr float LegacyAirboardSink = (1.0f / 64.0f) * LegacyFrameRateScaleSqr;
+		/** @brief Net downward pull of the airboard with no key while rising (original 17/64 px/tick^2) */
+		static constexpr float LegacyAirboardSinkRising = (17.0f / 64.0f) * LegacyFrameRateScaleSqr;
+		/** @brief Net acceleration of the airboard with Up held, gravity included (original 0.375 px/tick^2, 0.625 with Run) */
+		static constexpr float LegacyAirboardClimb = 0.375f * LegacyFrameRateScaleSqr;
+		/** @brief Net acceleration of the airboard with Down held, gravity included (original 0.625 px/tick^2, 0.875 with Run) */
+		static constexpr float LegacyAirboardDive = 0.625f * LegacyFrameRateScaleSqr;
+		/** @brief Extra acceleration Run adds to the airboard's vertical keys (original 0.25 px/tick^2) */
+		static constexpr float LegacyAirboardRunBonus = 0.25f * LegacyFrameRateScaleSqr;
+		/** @brief Ticks of pressing on a wall or object before the non-Reforged push pose shows (original 16 ticks) */
+		static constexpr float LegacyPushPoseTicks = 16.0f;
+		/** @brief Ticks Up or Down must be held before the non-Reforged camera starts to pan */
+		static constexpr float LegacyLookDelayTicks = 30.0f;
+		/** @brief Farthest the non-Reforged camera pans when looking up or down, in pixels */
+		static constexpr float LegacyLookMax = 60.0f;
+		/** @brief Ticks a look may be interrupted before its delay starts over */
+		static constexpr float LegacyLookGraceTicks = 2.0f;
 		/**
 		 * @brief How long the wind-up loop runs between the two animations in a light launch
 		 *
@@ -1587,6 +1734,9 @@ namespace Jazz2::Actors
 		void OnUpdateTimers(float timeMult);
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev, bool steeredBeforeMove);
 		void UpdateRunAction();
+		bool IsControllableForMovement() const;
+		// Crouch, jump, rev-up, or swimming and modifiers - everything the keys do apart from steering and firing
+		void HandleVerticalInput(float timeMult, bool canJumpPrev);
 		void HandleHorizontalMovement(float timeMult);
 		void UpdateHorizontalSpeed(float timeMult);
 		// Bird flight on both axes, its own pull instead of gravity, no jump or special move
@@ -1695,6 +1845,8 @@ namespace Jazz2::Actors
 		void HandleWeaponFire(bool areaWeaponAllowed);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
+		// The original hurts by any overlap of the body with the solid part of a hurt tile, not only when landing or bumping
+		void CheckLegacyHurtTiles();
 		// What a point of the path travelled this frame may act on
 		enum class AreaEventPass {
 			None = 0x00,
@@ -1717,8 +1869,15 @@ namespace Jazz2::Actors
 		void OnPerishInner();
 
 		void SwitchToNextWeapon();
+		// Picks the nearest lower weapon with ammo after one ran out
+		void SwitchToLowerWeapon();
+		// Held fire interval in frames with the given number of fast fire pickups
+		static float GetFireIntervalFrames(std::int32_t fastFire);
+		// Moves the start of a shot to where the original starts it
+		void ApplyShotSpawnPoint(Vector3i& initialPos, Vector2f gunspotPos) const;
 		template<typename T, WeaponType weaponType>
 		void FireWeapon(float cooldownBase, float cooldownUpgrade, bool emitFlare = false);
+		void FireWeaponFreezer();
 		void FireWeaponPepper();
 		void FireWeaponRF();
 		void FireWeaponTNT();

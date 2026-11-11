@@ -1632,6 +1632,9 @@
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\ServerMessage.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\RaceRouteGenerator.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>

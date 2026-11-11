@@ -5,12 +5,15 @@
 
 #include "../../../../nCine/Base/Random.h"
 
-#include <float.h>
+#include <cmath>
+
+using namespace Jazz2::Tiles;
 
 namespace Jazz2::Actors::Bosses
 {
 	Robot::Robot()
-		: _state(StateWaiting), _stateTime(0.0f), _shots(0)
+		: _state(StateWaiting), _ticks(0.0f), _gaitPhase(0.0f), _gaitBase(FastGaitSpeed), _tickAcc(0.0f), _counter(0), _shots(0),
+			_attackPhase(0), _ballThrown(false), _ballSpeed(0.0f), _deathAcc(0.0f)
 	{
 	}
 
@@ -22,7 +25,8 @@ namespace Jazz2::Actors::Bosses
 	Task<bool> Robot::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_scoreValue = 2000;
-		_originPos = Vector2f(_pos.X, _pos.Y - 300.0f);
+		// It comes down from where the level puts it, as measured in JJ2+
+		_originPos = _pos;
 
 		async_await RequestMetadataAsync("Boss/Robot"_s);
 		SetAnimation(AnimState::Idle);
@@ -30,26 +34,44 @@ namespace Jazz2::Actors::Bosses
 		SetFacingLeft(true);
 
 		_renderer.SetDrawEnabled(false);
+		// It waits in place until the fight starts
+		SetState(ActorState::ApplyGravitation, false);
 
 		async_return true;
 	}
 
 	void Robot::Activate()
 	{
-		SetHealthByDifficulty(100);
+		if (_levelHandler->IsReforged()) {
+			SetHealthByDifficulty(100);
+		} else {
+			_health = 100;
+			_maxHealth = 100;
+		}
 
 		_renderer.SetDrawEnabled(true);
 		_state = StateCopter;
+		_counter = 0;
+		_tickAcc = 0.0f;
 
+		// It descends at a constant speed without gravity
+		SetState(ActorState::ApplyGravitation, false);
 		MoveInstantly(_originPos, MoveType::Absolute);
 
 		SetAnimation((AnimState)1073741828);
+		SetAnimationTicks(CopterLoopTicks);
 	}
 
 	void Robot::Deactivate()
 	{
 		_renderer.SetDrawEnabled(false);
 		_state = StateWaiting;
+		SetState(ActorState::ApplyGravitation, true);
+	}
+
+	bool Robot::IsDeathFinished() const
+	{
+		return (_state == StateDead);
 	}
 
 	void Robot::OnUpdate(float timeMult)
@@ -60,60 +82,73 @@ namespace Jazz2::Actors::Bosses
 			return;
 		}
 
+		float ticks = timeMult * TicksPerFrame;
+
 		switch (_state) {
 			case StateCopter: {
-				if (GetState(ActorState::CanJump)) {
-					_speed.Y = 0.0f;
-
-					_state = StateTransition;
-					SetTransition((AnimState)1073741829, false, [this]() {
-						FollowNearestPlayer(StateRunning1, Random().NextFloat(20, 40));
-					});
-				} else {
-					_speed.Y -= (_levelHandler->IsReforged() ? 0.27f : 0.21f) * timeMult;
-				}
-				break;
-			}
-			case StateRunning1: {
-				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(
-						Random().NextFloat() < 0.65f ? StateRunning1 : StateRunning2,
-						Random().NextFloat(10, 30));
-				}
-				break;
-			}
-
-			case StateRunning2: {
-				if (_stateTime <= 0.0f) {
+				if (HasGroundBelow()) {
 					_speed.X = 0.0f;
-
-					_state = StateTransition;
-					PlaySfx("AttackStart"_s);
-					SetAnimation(AnimState::Idle);
-					SetTransition((AnimState)1073741824, false, [this]() {
-						_shots = Random().Next(1, 4);
-						Shoot();
+					_speed.Y = 0.0f;
+					_state = StateLanding;
+					_ticks = 0.0f;
+					// The landing ends with its animation, the timer is only a fallback
+					SetTransition((AnimState)1073741829, false, [this]() {
+						if (_state == StateLanding) {
+							SetState(ActorState::ApplyGravitation, true);
+							_gaitBase = FastGaitSpeed;
+							StartRunning();
+						}
 					});
+					SetAnimationTicks(LandingTicks);
+				} else {
+					_speed.Y = DropSpeed;
 				}
 				break;
 			}
-
-			case StatePreparingToRun: {
-				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(StateRunning1, Random().NextFloat(10, 30));
+			case StateLanding: {
+				_ticks += ticks;
+				if (_ticks >= LandingTicks * 2.0f) {
+					SetState(ActorState::ApplyGravitation, true);
+					_gaitBase = FastGaitSpeed;
+					StartRunning();
 				}
 				break;
 			}
+			case StateRunning: {
+				_gaitPhase = std::fmod(_gaitPhase + ticks, 16.0f);
+				if (!CanMoveToPosition(_speed.X, 0)) {
+					SetFacingLeft(!IsFacingLeft());
+				}
+				float speed = (std::sin(fPi * std::floor(_gaitPhase) / 16.0f) + _gaitBase) * TicksPerFrame;
+				_speed.X = (IsFacingLeft() ? -speed : speed);
+			}
+			// fallthrough
+			case StateIdle: {
+				// The decisions are made once per original tick with a coin flip, so they run on whole ticks
+				_tickAcc += ticks;
+				while (_tickAcc >= 1.0f && (_state == StateRunning || _state == StateIdle)) {
+					_tickAcc -= 1.0f;
+					LogicTick();
+				}
+				break;
+			}
+			case StateAttacking: UpdateAttack(timeMult); break;
+			case StateDying: UpdateDying(timeMult); break;
 		}
-
-		_stateTime -= timeMult;
 	}
 
 	void Robot::OnHealthChanged(ActorBase* collider)
 	{
 		EnemyBase::OnHealthChanged(collider);
 
-		std::int32_t n = Random().Next(1, 4);
+		std::int32_t n;
+		if (_health < 10) {
+			n = 4 + Random().Next(0, 7);
+		} else if (_health < 20) {
+			n = 4 + Random().Next(0, 3);
+		} else {
+			n = 2 + Random().Next(0, 3);
+		}
 		for (std::int32_t i = 0; i < n; i++) {
 			CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
 		}
@@ -123,89 +158,191 @@ namespace Jazz2::Actors::Bosses
 
 	bool Robot::OnPerish(ActorBase* collider)
 	{
+		if (_state == StateDying || _state == StateDead) {
+			return false;
+		}
+
+		AddScoreToCollider(collider);
+
+		_state = StateDying;
+		_ticks = 0.0f;
+		_deathAcc = 0.0f;
+		_speed.X = 0.0f;
+		_speed.Y = 0.0f;
+		_canHurtPlayer = false;
+		CanCollideWithShots = false;
+		SetState(ActorState::IsInvulnerable, true);
+		SetAnimation(AnimState::Idle);
+
 		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
-
-		for (std::int32_t i = 0; i < 8; i++) {
-			CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
-		}
-
-		_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
-
-		return EnemyBase::OnPerish(collider);
+		return false;
 	}
 
-	void Robot::FollowNearestPlayer(std::int32_t newState, float time)
+	bool Robot::HasGroundBelow() const
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
-			}
-		}
-
-		if (found) {
-			_state = newState;
-			_stateTime = time;
-
-			SetFacingLeft(targetPos.X < _pos.X);
-
-			float mult = Random().NextFloat(0.6f, 0.9f);
-			_speed.X = (IsFacingLeft() ? -3.0f : 3.0f) * mult;
-			_renderer.AnimDuration = _currentAnimation->AnimDuration / mult;
-
-			PlaySfx("Run"_s);
-			SetAnimation(AnimState::Run);
-		}
+		TileCollisionParams params = { TileDestructType::None, true };
+		// A short column below the feet, the hitbox is not exactly where the sprite ends
+		AABBf feet = AABBf(AABBInner.L + 2.0f, AABBInner.B - 2.0f, AABBInner.R - 2.0f, AABBInner.B + 1.0f);
+		return !_levelHandler->IsPositionEmpty(const_cast<Robot*>(this), feet, params);
 	}
 
-	void Robot::Shoot()
+	void Robot::StartRunning()
 	{
-		if (_state == StateWaiting) {
+		_state = StateRunning;
+		_counter = 0;
+		PlaySfx("Run"_s);
+		SetAnimation(AnimState::Run);
+		SetAnimationTicks(RunLoopTicks);
+	}
+
+	void Robot::StartIdle()
+	{
+		_state = StateIdle;
+		_counter = 0;
+		_speed.X = 0.0f;
+		SetAnimation(AnimState::Idle);
+	}
+
+	void Robot::LogicTick()
+	{
+		_counter++;
+		if (_counter <= DecisionDelayTicks) {
 			return;
 		}
 
+		if (Random().Next(0, 2) != 0) {
+			_counter = 0;
+			return;
+		}
+
+		float distanceSqr;
+		Player* player = FindNearestPlayer(NoticeDistanceSqr, &distanceSqr);
+		if (player == nullptr) {
+			return;
+		}
+
+		SetFacingLeft(player->GetPos().X < _pos.X);
+
+		if (distanceSqr < AttackDistanceSqr) {
+			StartAttack(distanceSqr);
+		} else if (_state == StateIdle) {
+			_gaitBase = (Random().Next(0, 2) == 0 ? SlowGaitSpeed : FastGaitSpeed);
+			StartRunning();
+		}
+	}
+
+	void Robot::StartAttack(float distanceSqr)
+	{
+		_state = StateAttacking;
+		_attackPhase = 0;
+		_ticks = 0.0f;
+		_shots = Random().Next(0, 4) + 1;
+		// The speed of the ball is the squared distance in pixels divided by 2048 per tick
+		_ballSpeed = distanceSqr / 2048.0f;
+		_speed.X = 0.0f;
+
+		PlaySfx("AttackStart"_s);
+		SetAnimation(AnimState::Idle);
+		SetTransition((AnimState)1073741824, false);
+	}
+
+	void Robot::StartShot()
+	{
+		_attackPhase = 1;
+		_ballThrown = false;
+		_ticks = 0.0f;
+		PlaySfx("Attack"_s);
+		SetTransition((AnimState)1073741825, false);
+	}
+
+	void Robot::ThrowSpikeBall()
+	{
 		std::shared_ptr<SpikeBall> spikeBall = std::make_shared<SpikeBall>();
 		uint8_t spikeBallParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
+		spikeBall->SetLaunchSpeed(_ballSpeed);
 		spikeBall->OnActivated(ActorActivationDetails(
 			_levelHandler,
-			Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y - 32, _renderer.GetLayer() + 2),
+			Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? -16 : 16), (std::int32_t)_pos.Y - 27, _renderer.GetLayer() + 2),
 			spikeBallParams
 		));
 		_levelHandler->AddActor(spikeBall);
-
-		_shots--;
-
-		PlaySfx("Attack"_s);
-		SetTransition((AnimState)1073741825, false, [this]() {
-			if (_shots > 0) {
-				PlaySfx("AttackShutter"_s);
-				Shoot();
-			} else {
-				Run();
-			}
-		});
 	}
 
-	void Robot::Run()
+	void Robot::UpdateAttack(float timeMult)
 	{
-		if (_state == StateWaiting) {
-			return;
+		_ticks += timeMult * TicksPerFrame;
+
+		switch (_attackPhase) {
+			case 0: {
+				if (_ticks >= AttackStartTicks) {
+					StartShot();
+				}
+				break;
+			}
+			case 1: {
+				if (!_ballThrown && _ticks >= ShotThrowTick) {
+					_ballThrown = true;
+					_shots--;
+					ThrowSpikeBall();
+				}
+				if (_ticks >= ShotTicks) {
+					// The shots stop when they are used up or the player got behind it
+					std::int32_t remaining = _shots;
+
+					bool playerBehind = false;
+					Player* player = FindNearestPlayer(NoticeDistanceSqr, nullptr);
+					if (player != nullptr) {
+						playerBehind = ((player->GetPos().X < _pos.X) != IsFacingLeft());
+					}
+
+					if (remaining < 1 || playerBehind) {
+						_attackPhase = 2;
+						_ticks = 0.0f;
+						PlaySfx("AttackEnd"_s);
+						SetTransition((AnimState)1073741826, false);
+					} else {
+						StartShot();
+					}
+				}
+				break;
+			}
+			case 2: {
+				if (_ticks >= AttackEndTicks) {
+					StartIdle();
+				}
+				break;
+			}
+		}
+	}
+
+	void Robot::UpdateDying(float timeMult)
+	{
+		float ticks = timeMult * TicksPerFrame;
+		_ticks += ticks;
+		_deathAcc += ticks;
+
+		while (_deathAcc >= 1.0f) {
+			_deathAcc -= 1.0f;
+			std::int32_t r = Random().Next(0, 16);
+			if (r == 0 || r == 2 || r == 5 || r == 7) {
+				Vector3i pos = Vector3i((std::int32_t)(_pos.X + Random().NextFloat(-32.0f, 32.0f)), (std::int32_t)(_pos.Y + Random().NextFloat(-32.0f, 32.0f)), _renderer.GetLayer() + 2);
+				Explosion::Create(_levelHandler, pos, Explosion::Type::Small);
+				if (r == 0) {
+					CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
+				}
+			}
 		}
 
-		PlaySfx("AttackEnd"_s);
-		SetTransition((AnimState)1073741826, false, [this]() {
-			_state = StatePreparingToRun;
-			_stateTime = 10.0f;
-		});
+		if (_ticks >= DyingTicks) {
+			_state = StateDead;
+
+			for (std::int32_t i = 0; i < 8; i++) {
+				CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
+			}
+			_levelHandler->PlayCommonSfx("Splat"_s, Vector3f(_pos.X, _pos.Y, 0.0f));
+
+			EnemyBase::OnPerish(nullptr);
+		}
 	}
 
 	Task<bool> Robot::SpikeBall::OnActivatedAsync(const ActorActivationDetails& details)
@@ -213,16 +350,30 @@ namespace Jazz2::Actors::Bosses
 		SetFacingLeft(details.Params[0] != 0);
 
 		SetState(ActorState::IsInvulnerable | ActorState::SkipPerPixelCollisions, true);
-		SetState(ActorState::CanBeFrozen, false);
+		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		CanCollideWithShots = false;
 
 		_health = INT32_MAX;
-		_speed.X = (IsFacingLeft() ? -8.0f : 8.0f);
+		_speed.X = (IsFacingLeft() ? -_launchSpeed : _launchSpeed) * TicksPerFrame;
+		_speed.Y = 0.0f;
 
 		async_await RequestMetadataAsync("Boss/Robot"_s);
 		SetAnimation((AnimState)1073741827);
 
 		async_return true;
+	}
+
+	void Robot::SpikeBall::OnUpdate(float timeMult)
+	{
+		EnemyBase::OnUpdate(timeMult);
+
+		_speed.Y += Gravity * timeMult;
+
+		if (_timeLeft <= 0.0f) {
+			DecreaseHealth(INT32_MAX);
+		} else {
+			_timeLeft -= timeMult;
+		}
 	}
 
 	void Robot::SpikeBall::OnUpdateHitbox()

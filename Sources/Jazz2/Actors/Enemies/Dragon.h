@@ -49,8 +49,25 @@ namespace Jazz2::Actors::Enemies
 	private:
 		static constexpr float DefaultSpeed = 0.7f;
 
-		bool _attacking;
+		/** @brief Time it stands still before it turns around, in original ticks */
+		static constexpr float IdleTicks = 280.0f;
+		/** @brief Idle time left under which it can attack, in original ticks */
+		static constexpr float AttackReadyTicks = 140.0f;
+		/** @brief Idle time it gets after an attack, in original ticks */
+		static constexpr float AttackPauseTicks = 210.0f;
+		/** @brief Number of flames in a burst and the time between them, in original ticks */
+		static constexpr std::int32_t BurstFlames = 2;
+		static constexpr float BurstSpacingTicks = 3.0f;
+		/** @brief Ticks before the first flame of an attack and ticks the flames take, 32 together as measured in JJ2+ */
+		static constexpr float AttackWindUpTicks = 27.0f;
+		static constexpr float AttackTicks = 5.0f;
+
+		// Attack time left while attacking, idle time left otherwise
 		float _stateTime;
 		float _attackTime;
+		std::uint8_t _burstLeft;
+		bool _attacking;
+
+		void Turn(bool willFaceLeft);
 	};
 }

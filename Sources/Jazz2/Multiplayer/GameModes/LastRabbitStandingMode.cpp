@@ -9,6 +9,7 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/FrameTimer.h"
 
+#include <float.h>
 #include <Base/Format.h>
 #include <Containers/SmallVector.h>
 
@@ -134,8 +135,7 @@ namespace Jazz2::Multiplayer::GameModes
 				state.DeathElapsedFrames = ctx.GetElapsedFrames();
 			}
 			ctx.SyncPlayerModeState(player);
-			// TRANSLATORS: Message shown to all players in Last Rabbit Standing modes when a player lost all lives, {} is player name, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} is out!", ctx.GetPlayerName(player)));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::PlayerIsOut, ctx.GetPlayerName(player)));
 		}
 	}
 
@@ -155,8 +155,7 @@ namespace Jazz2::Multiplayer::GameModes
 	void LastRabbitStandingMode::AnnouncePosition(IGameModeContext& ctx, Actors::Player* player)
 	{
 		Vector2f pos = player->GetPos();
-		// TRANSLATORS: Message in the console of all players in Last Rabbit Standing modes when a player didn't roast anybody for 2 minutes, first {} is player name, the others are tile coordinates of the player
-		ctx.SendMessageToAllPlayers(_f("*** {} is currently at position {}, {}", ctx.GetPlayerName(player),
+		ctx.SendMessageToAllPlayers(ServerMessage(ServerMessageType::PlayerPosition, ctx.GetPlayerName(player),
 			(std::int32_t)(pos.X / 32.0f), (std::int32_t)(pos.Y / 32.0f)));
 	}
 

@@ -18,6 +18,25 @@ namespace Jazz2::Rendering
 		// How deep under the water the light of the level is reached with Formats::LevelSettingsChunk::WaterLighting::Depth,
 		// approximated, not measured in JJ2+
 		constexpr float WaterLightingDepth = 480.0f;
+
+		// One axis of the original's camera lead, written for any number of ticks; with one tick it is exactly
+		// `step = (step + dir * limit) / 2`, capped at half the remaining gap
+		void StepLegacyLead(float& lead, float& step, float target, float limit, float ticks, float keep)
+		{
+			if (ticks <= 0.0f) {
+				return;
+			}
+			float gap = target - lead;
+			float dir = (gap < 0.0f ? -1.0f : 1.0f);
+			step = dir * limit + (step - dir * limit) * keep;
+			float delta = step * ticks;
+			float maxDelta = std::abs(gap) * (1.0f - keep);
+			if (delta * dir > maxDelta) {
+				delta = gap * (1.0f - keep);
+				step = delta / ticks;
+			}
+			lead += delta;
+		}
 	}
 
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
@@ -29,9 +48,11 @@ namespace Jazz2::Rendering
 			_behindCopyPass(this), _behindDownsamplePass(this), _behindBlurPass1(this), _behindBlurPass2(this),
 #endif
 #if defined(RHI_CAP_POSTPROCESSING)
-			_waterCopyPass(this),
+			_waterCopyPass(this), _waterCopyPasses(0),
 #endif
-			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _centerOnTargetProgress(0.0f),
+			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _legacyCameraSpeed(0.0f),
+			_legacyCameraDrop(0.0f), _legacyCameraDirection(0), _legacyLookOffset(0.0f), _legacyQuakeTicks(0.0f),
+			_legacyQuakeOffset(Vector2f::Zero), _legacyQuakeShown(Vector2f::Zero), _legacyQuakeAccum(1.0f), _centerOnTargetProgress(0.0f),
 			_shakeDuration(0.0f), _cameraEaseProgress(1.0f), _cameraScale(1.0f), _freeCamera(false), _cameraFixedX(false), _cameraFixedY(false)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
@@ -670,42 +691,77 @@ namespace Jazz2::Rendering
 			// Eased in and out (smoothstep), so the view neither lurches off nor stops dead
 			centerOnTarget = _centerOnTargetProgress * _centerOnTargetProgress * (3.0f - 2.0f * _centerOnTargetProgress);
 		} else {
-			// The original's camera, measured tick by tick. Three things differ from the above and each one is a
-			// separate complaint about how this engine pans:
-			//
-			// - The target is aimed by the direction being *held*, not by the speed being carried. That is what
-			//   holds the view still through a sidekick - 16 px/tick with nothing pressed pans the original not at
-			//   all, where reading the speed runs the lead out to 117 px here.
-			// - It is a flat distance per movement state (28 px walking, 120 dashing) rather than something
-			//   proportional to the speed. Reforged leads 80 px at a walk, nearly three times the original.
-			// - It closes half the gap per tick but never by more than a pixel, so almost the whole approach is a
-			//   straight 1 px/tick ramp that stops dead on arrival - not an exponential ease that is still
-			//   creeping after 140 frames.
-			float targetLookAheadX = 0.0f;
-			float targetLookAheadY = 0.0f;
-			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
-				targetLookAheadX = player->GetCameraLookAhead();
-				targetLookAheadY = player->GetCameraVerticalOffset();
-			}
-			// The constants are per one of the original's 70 Hz ticks, so the elapsed frame is converted into
-			// ticks once and both the fraction and the clamp are applied in that unit
+			// The original's camera, measured tick by tick: where the player was a tick ago, plus a lead on each
+			// axis whose step eases halfway towards a limit every tick and never takes more than half of what is
+			// left. The lead is aimed by the direction held, at a distance set by the speed; the keys and the speed
+			// are the previous frame's, as the original reads them a tick late. No vertical lead except the
+			// buttstomp, and no deadzone.
 			float ticks = timeMult * Actors::Player::LegacyFrameRateScale;
-			float wanted = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LegacyCameraApproach, ticks);
-			float maxStep = LegacyCameraMaxStep * ticks;
-			_cameraDistanceFactor.X += std::clamp(wanted - _cameraDistanceFactor.X, -maxStep, maxStep);
+			float halfKeep = std::pow(0.5f, ticks);
+			float targetX = 0.0f;
+			float limitX;
+			if (_legacyCameraDirection == 0) {
+				limitX = (std::abs(_legacyCameraSpeed) > 0.001f ? LegacyCameraStepReleased : LegacyCameraStepHeld);
+			} else if (_legacyCameraDirection * _legacyCameraSpeed < 0.0f) {
+				limitX = LegacyCameraStepReversed;
+			} else {
+				targetX = std::clamp(LegacyCameraLeadPerSpeed * _legacyCameraSpeed, -float(halfView.X), float(halfView.X));
+				limitX = (_legacyCameraDirection * _cameraDistanceFactor.X < 0.0f ? LegacyCameraStepReleased : LegacyCameraStepHeld);
+			}
+			StepLegacyLead(_cameraDistanceFactor.X, _legacyLeadStep.X, targetX, limitX, ticks, halfKeep);
 
-			// No vertical deadzone, and no vertical lead except during a buttstomp. Measured, the original's
-			// camera otherwise holds the player's own Y to within one tick of its vertical movement - +7.75 px
-			// at the launch of a 132 px jump, back to zero by the apex - so there is nothing to reproduce but
-			// the player's position. The deadzone above is what leaves this engine holding a stale 21 px offset
-			// into the next scenario, which is the opposite of fixed.
-			//
-			// The stomp is the exception, and it uses the same approach at twice the step - see
-			// @ref Actors::Player::LegacyCameraButtstompDrop.
-			float wantedY = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LegacyCameraApproach, ticks);
-			float maxStepY = LegacyCameraMaxStep * 2.0f * ticks;
-			_cameraDistanceFactor.Y += std::clamp(wantedY - _cameraDistanceFactor.Y, -maxStepY, maxStepY);
+			float limitY = (_legacyCameraDrop == 0.0f || std::abs(_cameraDistanceFactor.Y) < LegacyCameraDropFastRange
+				? LegacyCameraStepReversed : LegacyCameraStepReleased);
+			StepLegacyLead(_cameraDistanceFactor.Y, _legacyLeadStep.Y, _legacyCameraDrop, limitY, ticks, halfKeep);
 			_cameraViewCenterY = focusPos.Y;
+
+			// The original moves the view halfway to its target every tick, so it trails a tick behind a steady
+			// move and eases in after a stop instead of snapping; a move too long for one tick is a teleport
+			Vector2f movementPerTick = (ticks > 0.0f ? actualMovement / ticks : Vector2f::Zero);
+			if (std::abs(movementPerTick.X) > LegacyCameraMaxTrail || std::abs(movementPerTick.Y) > LegacyCameraMaxTrail) {
+				_legacyCameraTrail = Vector2f::Zero;
+			} else {
+				_legacyCameraTrail = (_legacyCameraTrail + actualMovement) * halfKeep;
+			}
+
+			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
+				_legacyCameraDirection = player->GetCameraLeadDirection();
+				_legacyCameraDrop = player->GetCameraVerticalOffset();
+				_legacyLookOffset = player->GetCameraLookOffset();
+			} else {
+				_legacyCameraDirection = 0;
+				_legacyCameraDrop = 0.0f;
+				_legacyLookOffset = 0.0f;
+			}
+			_legacyCameraSpeed = _targetActor->GetSpeed().X / Actors::Player::LegacyFrameRateScale;
+		}
+
+		// The shake after a buttstomp landed, with either camera: always up, and a little to the right
+		{
+			float ticks = timeMult * Actors::Player::LegacyFrameRateScale;
+			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
+				if (player->ConsumeStompLanding()) {
+					_legacyQuakeTicks = Actors::Player::LegacyStompQuakeTicks;
+				}
+			}
+			// The original's camera waits until its own pan after the stomp is over
+			bool panned = (!PreferencesCache::EnableReforgedCamera && (_legacyLookOffset != 0.0f || std::abs(_cameraDistanceFactor.Y) >= 1.0f));
+			if (_legacyQuakeTicks > 0.0f && !panned) {
+				_legacyQuakeTicks = std::max(_legacyQuakeTicks - ticks, 0.0f);
+				// A new offset once per original tick
+				_legacyQuakeAccum += ticks;
+				if (_legacyQuakeAccum >= 1.0f) {
+					_legacyQuakeAccum -= std::floor(_legacyQuakeAccum);
+					_legacyQuakeOffset.X = nCine::Random().NextFloat(0.0f, 2.0f);
+					_legacyQuakeOffset.Y = -nCine::Random().NextFloat(0.0f, 2.0f) * _legacyQuakeTicks;
+				}
+			} else {
+				_legacyQuakeOffset = Vector2f::Zero;
+				_legacyQuakeAccum = 1.0f;
+			}
+			// Measured in the original: the view only moves halfway to the shaken spot each tick, which softens it
+			float halfKeep = std::pow(0.5f, ticks);
+			_legacyQuakeShown = _legacyQuakeShown * halfKeep + _legacyQuakeOffset * (1.0f - halfKeep);
 		}
 
 		if (_shakeDuration > 0.0f) {
@@ -726,13 +782,17 @@ namespace Jazz2::Rendering
 		// The offset to where the view settles once it's on the player is taken the same way, without the shake (the HUD
 		// doesn't shake) and aligned like the view, so the weapon wheel moves in the same whole-pixel steps as the level
 		Vector2f lookAhead = _cameraDistanceFactor * (1.0f - centerOnTarget);
+		if (!PreferencesCache::EnableReforgedCamera) {
+			lookAhead -= _legacyCameraTrail;
+			lookAhead.Y += _legacyLookOffset;
+		}
 		float viewCenterY = lerp(_cameraViewCenterY, focusPos.Y, centerOnTarget);
 		const auto alignView = [](float pos) { return (PreferencesCache::UnalignedViewport ? pos : floorFast(pos)); };
 		_centerOnTargetOffset = Vector2f::Zero;
 		if (_viewBounds.W > halfView.X * 2) {
 			const float minX = _viewBounds.X + halfView.X, maxX = _viewBounds.X + _viewBounds.W - halfView.X;
 			const float cameraX = std::clamp(focusPos.X + roundFast(lookAhead.X), minX, maxX);
-			_cameraPos.X = alignView(cameraX + _shakeOffset.X);
+			_cameraPos.X = alignView(cameraX + _shakeOffset.X + _legacyQuakeShown.X);
 			_centerOnTargetOffset.X = alignView(std::clamp(focusPos.X, minX, maxX)) - alignView(cameraX);
 		} else {
 			_cameraPos.X = floorFast(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
@@ -742,7 +802,7 @@ namespace Jazz2::Rendering
 			// The vertical anchor is off the player by whole pixels too - floored on its own while it eases back onto the
 			// player, it stepped in other frames than the player did, which shook by a pixel on a moving platform
 			const float cameraY = std::clamp(focusPos.Y + roundFast(viewCenterY - focusPos.Y + lookAhead.Y), minY, maxY);
-			_cameraPos.Y = alignView(cameraY + _shakeOffset.Y);
+			_cameraPos.Y = alignView(cameraY + _shakeOffset.Y + _legacyQuakeShown.Y);
 			_centerOnTargetOffset.Y = alignView(std::clamp(focusPos.Y, minY, maxY)) - alignView(cameraY);
 		} else {
 			_cameraPos.Y = floorFast(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
@@ -833,6 +893,11 @@ namespace Jazz2::Rendering
 		// faces - set straight away, so a level start or a respawn does not open with the view drifting by itself
 		_lookAheadDirectionX = (_targetActor->IsFacingLeft() ? -1.0f : 1.0f);
 		_lookAheadTurnTime = 0.0f;
+		_legacyLeadStep = Vector2f::Zero;
+		_legacyCameraTrail = Vector2f::Zero;
+		_legacyCameraSpeed = 0.0f;
+		_legacyCameraDrop = 0.0f;
+		_legacyCameraDirection = 0;
 		const bool leads = (PreferencesCache::EnableReforgedCamera && IsSmallView());
 		_cameraDistanceFactor = Vector2f(leads ? _lookAheadDirectionX * (GetViewportSize().X / 2) * SmallViewIdleLeadFraction : 0.0f, 0.0f);
 	}

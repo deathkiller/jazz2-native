@@ -37,6 +37,10 @@ namespace Jazz2::Actors::Enemies
 		static constexpr float DefaultSpeed = 0.76f * TicksPerFrame;
 		// Measured in JJ2+: it walks for 70 ticks between attacks
 		static constexpr float WalkTicks = 70.0f;
+		/** @brief Distance within which it spits at a player */
+		static constexpr float SpitDistance = 128.0f;
+		/** @brief Most extra attack loops that can follow the first one */
+		static constexpr std::int32_t MaxExtraLoops = 3;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -63,9 +67,10 @@ namespace Jazz2::Actors::Enemies
 
 		float _attackTime;
 		bool _stuck;
+		std::uint8_t _extraLoops;
 
 		void Idle(float timeMult);
 		void Walking(float timeMult);
-		void Attack();
+		void Attack(std::int32_t loop);
 	};
 }

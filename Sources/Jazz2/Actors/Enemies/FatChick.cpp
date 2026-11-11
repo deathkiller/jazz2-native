@@ -9,7 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	FatChick::FatChick()
-		: _isAttacking(false), _stuck(false)
+		: _isAttacking(false), _stuck(false), _attackCooldown(AttackWaitTicks / TicksPerFrame)
 	{
 	}
 
@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Enemies
 	Task<bool> FatChick::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		SetHealthByDifficulty(3);
-		_scoreValue = 300;
+		_scoreValue = 200;
 
 		async_await RequestMetadataAsync("Enemy/FatChick"_s);
 		SetFacingLeft(Random().NextBool());
@@ -42,19 +42,12 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
-		for (auto& player : _levelHandler->GetPlayers()) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f targetPos = player->GetPos();
-			float length = (_pos - targetPos).Length();
-			// Turns only once the player is well behind it, or it would turn back and forth under a player above it
-			if (length > 20.0f && length < 60.0f && std::abs(_pos.X - targetPos.X) > 16.0f && IsFacingLeft() != (_pos.X > targetPos.X)) {
-				SetFacingLeft(_pos.X > targetPos.X);
-				_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
-				break;
-			}
+		Vector2f targetPos;
+		// The original turns toward a close player only above Easy
+		if (!_isAttacking && _levelHandler->GetDifficulty() != GameDifficulty::Easy && FindNearestPlayer(TurnDistance, targetPos) &&
+			std::abs(_pos.X - targetPos.X) > TurnDeadZone && IsFacingLeft() != (_pos.X > targetPos.X)) {
+			SetFacingLeft(_pos.X > targetPos.X);
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 		}
 
 		if (GetState(ActorState::CanJump)) {
@@ -72,15 +65,21 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (!_isAttacking) {
-			bool foundPlayer = false;
-			_levelHandler->GetCollidingPlayers(AABBInner + Vector2f(_speed.X * 28.0f, 0.0f), [&foundPlayer](Actors::ActorBase* actor) {
-				foundPlayer = true;
-				return false;
-			});
-			if (foundPlayer) {
+			if (_attackCooldown > 0.0f) {
+				_attackCooldown -= timeMult;
+			} else if (FindNearestPlayer(AttackDistance, targetPos) && IsFacingLeft() == (targetPos.X < _pos.X)) {
 				Attack();
 			}
 		}
+	}
+
+	bool FatChick::FindNearestPlayer(float maxDistance, Vector2f& targetPos) const
+	{
+		Player* player = EnemyBase::FindNearestPlayer(maxDistance * maxDistance);
+		if (player != nullptr) {
+			targetPos = player->GetPos();
+		}
+		return (player != nullptr);
 	}
 
 	void FatChick::OnSerializeState(Stream& dest)
@@ -132,6 +131,7 @@ namespace Jazz2::Actors::Enemies
 		SetTransition(AnimState::TransitionAttack, false, [this]() {
 			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
 			_isAttacking = false;
+			_attackCooldown = AttackWaitTicks / TicksPerFrame;
 		});
 		_speed.X = 0.0f;
 		_isAttacking = true;

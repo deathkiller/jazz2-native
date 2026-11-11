@@ -74,8 +74,7 @@ namespace Jazz2::Multiplayer::GameModes
 		_noInfectionFrames += timeMult;
 		if (_noInfectionFrames >= NoInfectionLimitSecs * FrameTimer::FramesPerSecond && humanCount > 0) {
 			_noInfectionFrames = 0.0f;
-			// TRANSLATORS: Chat message in Pestilence when no zombie roasted anybody for 2 minutes and a random player becomes a zombie
-			ctx.SendMessageToAllPlayers(_("*** No kills by zombies for 2 minutes means random new zombie"));
+			ctx.SendMessageToAllPlayers(ServerMessage(ServerMessageType::PestilenceRandomZombie));
 			std::int32_t pick = Random().Next(0, humanCount);
 			for (auto* player : ctx.GetPlayers()) {
 				if (!ctx.IsSpectating(player) && !HasFlag(ctx, player, PlayerModeFlags::Zombie) && pick-- == 0) {
@@ -191,13 +190,11 @@ namespace Jazz2::Multiplayer::GameModes
 				AddPoints(ctx, lastKiller, 2);
 				ctx.SyncPlayerModeState(lastKiller);
 			}
-			// TRANSLATORS: Message shown to all players in Pestilence when the last human was infected, {} is player name, keep the leading line breaks
-			ctx.ShowAlertToAllPlayers(_f("\n\n{} was the last survivor!", ctx.GetPlayerName(player)));
+			ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::PestilenceLastSurvivor, ctx.GetPlayerName(player)));
 			return;
 		}
 
-		// TRANSLATORS: Message shown to all players in Pestilence when a player was infected, {} is player name, keep the leading line breaks
-		ctx.ShowAlertToAllPlayers(_f("\n\n{} became a zombie!", ctx.GetPlayerName(player)));
+		ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::PestilenceBecameZombie, ctx.GetPlayerName(player)));
 	}
 
 	std::int32_t PestilenceMode::CountZombies(IGameModeContext& ctx, std::int32_t& humanCount)

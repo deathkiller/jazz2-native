@@ -45,9 +45,9 @@ namespace Jazz2::Actors::Enemies
 		float adjustedWaterLevel = _levelHandler->GetWaterLevel() + WaterDifference;
 		if (_onWater) {
 			// Floating on the water
-			_speed.X = sinApprox(_phase);
+			_speed.X = sinApprox(_phase) * TicksPerFrame;
 
-			_phase += timeMult * 0.02f;
+			_phase += timeMult * SwayPhaseStep;
 
 			if (adjustedWaterLevel < _pos.Y) {
 				// Water is above the enemy, return the enemy on the surface

@@ -312,6 +312,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.ColorizePlayersByTeam = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
+		serverConfig.IdleSpectateTimeSecs = 15 * 60;
 		serverConfig.IdleKickTimeSecs = -1;
 		serverConfig.ReconnectWindowSecs = 300;
 		serverConfig.AntiCheatKick = true;
@@ -585,9 +586,14 @@ namespace Jazz2::Multiplayer
 					serverConfig.AllowedPlayerTypes = std::uint8_t(allowedPlayerTypes);
 				}
 
+				std::int64_t idleSpectateTimeSecs;
+				if (doc["IdleSpectateTimeSecs"].get(idleSpectateTimeSecs) == Json::SUCCESS && idleSpectateTimeSecs >= INT32_MIN && idleSpectateTimeSecs <= INT32_MAX) {
+					serverConfig.IdleSpectateTimeSecs = std::int32_t(idleSpectateTimeSecs);
+				}
+
 				std::int64_t idleKickTimeSecs;
 				if (doc["IdleKickTimeSecs"].get(idleKickTimeSecs) == Json::SUCCESS && idleKickTimeSecs >= INT32_MIN && idleKickTimeSecs <= INT32_MAX) {
-					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
+					serverConfig.IdleKickTimeSecs = std::int32_t(idleKickTimeSecs);
 				}
 
 				std::int64_t reconnectWindowSecs;

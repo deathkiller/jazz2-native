@@ -35,11 +35,23 @@ namespace Jazz2::Actors::Weapons
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnRicochet() override;
+		float GetGravityModifier(float baseGravity, bool isRising) const override;
 
 	private:
+		/** @brief Speeds a bounce up along the horizontal direction in px per tick squared */
+		static constexpr float Acceleration = 0.25f;
+		/** @brief Constant downward acceleration on top of gravity in px per tick squared */
+		static constexpr float ConstantFall = 6000.0f / 65536.0f;
+		/** @brief Gravity of the shot in px per tick squared */
+		static constexpr float Gravity = 0.125f;
+		/** @brief Bounces after which the shot is spent, normal and powered-up */
+		static constexpr std::int32_t MaxBounces = 16;
+		static constexpr std::int32_t MaxBouncesPoweredUp = 32;
+
+		void OnBounce();
+
 		Vector2f _gunspotPos;
-		std::int32_t _fired;
-		float _targetSpeedX;
-		float _hitLimit;
+		std::uint8_t _fired;
+		std::uint8_t _bounces;
 	};
 }

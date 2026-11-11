@@ -36,7 +36,7 @@ namespace Jazz2::Actors::Weapons
 
 	private:
 		Vector2f _gunspotPos;
-		std::int32_t _fired;
+		std::uint8_t _fired;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _noise;
 #endif

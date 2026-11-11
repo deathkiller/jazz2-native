@@ -4,10 +4,13 @@
 
 #include "../../../nCine/Base/Random.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace Jazz2::Actors::Enemies
 {
 	Sucker::Sucker()
-		: _cycle(0), _cycleTimer(0.0f), _stuck(false)
+		: _cycle(0), _cycleTimer(0.0f), _stuck(false), _fallStage(FallStage::None)
 	{
 	}
 
@@ -31,15 +34,21 @@ namespace Jazz2::Actors::Enemies
 
 			_health = 1;
 
+			// Shots pass through it until it lands
+			CanCollideWithShots = false;
+			_fallStage = FallStage::Deflating;
+
 			SetState(ActorState::ApplyGravitation, false);
 			SetAnimation(AnimState::Walk);
 			SetTransition((AnimState)1073741824, false, [this]() {
-				_speed.X = 0;
-				SetAnimation(AnimState::Walk);
+				_fallStage = FallStage::Falling;
+				SetAnimation(AnimState::Fall);
 				SetState(ActorState::ApplyGravitation, true);
 			});
+			// Measured in JJ2+: it deflates for 21 ticks, pushed away at 3 px a tick to begin with
+			SetAnimationTicks(DeflateTicks);
 			if (parentLastHitDir == Direction::Left || parentLastHitDir == Direction::Right) {
-				_speed.X = (parentLastHitDir == Direction::Left ? -3.0f : 3.0f);
+				_speed.X = (parentLastHitDir == Direction::Left ? -DeflateStartSpeed : DeflateStartSpeed);
 			}
 			PlaySfx("Deflate"_s);
 		} else {
@@ -57,6 +66,17 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnUpdate(timeMult);
 
 		if (_frozenTimeLeft > 0.0f) {
+			return;
+		}
+
+		if (_fallStage == FallStage::Deflating) {
+			// It speeds up sideways in the direction of the shot while sinking slowly
+			float dir = (_speed.X < 0.0f ? -1.0f : 1.0f);
+			_speed.X = std::clamp(_speed.X + dir * DeflateAcceleration * timeMult, -DeflateMaxSpeed, DeflateMaxSpeed);
+			_speed.Y = DeflateSinkSpeed;
+			return;
+		} else if (_fallStage == FallStage::Falling) {
+			_speed.X *= std::pow(FallSpeedKeptPerTick, timeMult * TicksPerFrame);
 			return;
 		}
 
@@ -124,12 +144,44 @@ namespace Jazz2::Actors::Enemies
 
 		std::uint8_t flags = src.ReadValue<std::uint8_t>();
 		_stuck = ((flags & 0x01) != 0);
+		_fallStage = FallStage::None;
+		CanCollideWithShots = true;
 		if ((flags & 0x02) != 0) {
 			// Deflating was interrupted, finish it as its transition callback would
 			_speed.X = 0;
 			SetAnimation(AnimState::Walk);
 			SetState(ActorState::ApplyGravitation, true);
 		}
+	}
+
+	void Sucker::OnHitFloor(float timeMult)
+	{
+		EnemyBase::OnHitFloor(timeMult);
+
+		if (_fallStage == FallStage::Falling) {
+			_fallStage = FallStage::None;
+			_speed.X = 0.0f;
+			CanCollideWithShots = true;
+			SetAnimation(AnimState::Walk);
+		}
+	}
+
+	void Sucker::OnHitWall(float timeMult)
+	{
+		EnemyBase::OnHitWall(timeMult);
+
+		// At a wall it stops flying sideways and drops
+		if (_fallStage == FallStage::Deflating) {
+			_fallStage = FallStage::Falling;
+			_speed.X = 0.0f;
+			SetFacingLeft(!IsFacingLeft());
+			SetState(ActorState::ApplyGravitation, true);
+		}
+	}
+
+	float Sucker::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		return (_fallStage == FallStage::Falling ? ReplaceLevelGravity(FallGravity, baseGravity) : baseGravity);
 	}
 
 	bool Sucker::OnPerish(ActorBase* collider)

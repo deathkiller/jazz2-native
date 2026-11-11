@@ -37,9 +37,21 @@ namespace Jazz2::Actors::Weapons
 	private:
 		Vector2f _gunspotPos;
 		std::int32_t _fired;
-		float _defaultRecomputeTime;
-		float _followRecomputeTime;
+		float _searchTicks;
+		bool _hasTarget;
+		Vector2f _targetPos;
+		/** @brief Farthest enemy a rocket goes for in px */
+		static constexpr float TargetRange = 256.0f;
+		/** @brief Length of the pull towards a target within about 180 px in px per tick, a seventh of it is the speed the rocket settles at */
+		static constexpr float PullLength = 24.0f;
+		/** @brief Distance in px from which the pull grows with the distance instead of staying the same */
+		static constexpr float PullLinearDistance = 181.0f;
+		/** @brief Share of the pull per px of distance beyond @ref PullLinearDistance */
+		static constexpr float PullLinearFactor = 6.0f / 64.0f;
+		/** @brief How many times the old speed counts less after a tick, per tick */
+		static constexpr float SpeedKeep = 1.0f / 8.0f;
 
 		void FollowNeareastEnemy(float timeMult);
+		bool HasClearLine(Vector2f target) const;
 	};
 }

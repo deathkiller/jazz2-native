@@ -32,10 +32,20 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr float DefaultSpeed = 0.9f;
+		/** @brief Distance within which it turns toward a player (not on Easy) */
+		static constexpr float TurnDistance = 80.0f;
+		/** @brief Horizontal offset a player must exceed before it turns toward them */
+		static constexpr float TurnDeadZone = 16.0f;
+		/** @brief Distance within which it attacks a player in front of it */
+		static constexpr float AttackDistance = 40.0f;
+		/** @brief Time it walks before it can attack, in original ticks */
+		static constexpr float AttackWaitTicks = 140.0f;
 
 		bool _isAttacking;
 		bool _stuck;
+		float _attackCooldown;
 
+		bool FindNearestPlayer(float maxDistance, Vector2f& targetPos) const;
 		void Attack();
 	};
 }

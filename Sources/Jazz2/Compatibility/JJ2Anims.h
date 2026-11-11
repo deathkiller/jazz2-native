@@ -31,7 +31,7 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static constexpr std::uint16_t CacheVersion = 53;
+		static constexpr std::uint16_t CacheVersion = 54;
 #endif
 
 		/**

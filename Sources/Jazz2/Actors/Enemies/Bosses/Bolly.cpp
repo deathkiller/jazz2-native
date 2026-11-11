@@ -8,11 +8,12 @@
 #include "../../../../nCine/Base/Random.h"
 
 #include <float.h>
+#include <cmath>
 
 namespace Jazz2::Actors::Bosses
 {
 	Bolly::Bolly()
-		: _state(StateWaiting), _stateTime(0.0f), _endText(0), _noiseCooldown(0.0f), _rocketsLeft(0), _chainPhase(0.0f)
+		: _state(StateWaiting), _endText(0), _noiseCooldown(0.0f), _chainPhase(0.0f), _ticks(0.0f), _targetAcc(0.0f), _nextShotTick(FirstShotTick)
 	{
 	}
 
@@ -84,7 +85,8 @@ namespace Jazz2::Actors::Bosses
 		});
 		_levelHandler->AddActor(_turret);*/
 
-		std::int32_t chainLength = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? NormalChainLength : HardChainLength);
+		std::int32_t difficulty = GetDifficultyIndex();
+		std::int32_t chainLength = (difficulty == 0 ? EasyChainLength : (difficulty == 1 ? NormalChainLength : HardChainLength));
 		for (std::int32_t i = 0; i < chainLength; i++) {
 			_chain[i] = std::make_shared<BollyPart>();
 			std::uint8_t chainParams[1] = { std::uint8_t(IsChainBall(i) ? ChainBallAnimation : ChainPieceAnimation) };
@@ -101,9 +103,12 @@ namespace Jazz2::Actors::Bosses
 
 	bool Bolly::OnActivatedBoss()
 	{
-		SetHealthByDifficulty(42);
+		SetHealthByDifficulty(80);
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-		FollowNearestPlayer(StateFlying, 100.0f);
+		_state = StateChasing;
+		_ticks = 0.0f;
+		_targetAcc = 0.0f;
+		PickTarget();
 		return true;
 	}
 
@@ -111,64 +116,13 @@ namespace Jazz2::Actors::Bosses
 	{
 		HandleBlinking(timeMult);
 
-		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
-
 		switch (_state) {
-			case StateFlying: {
-				if (_stateTime <= 0.0f) {
-					if (Random().NextFloat() < 0.1f) {
-						_state = StatePrepairingToAttack;
-						_stateTime = 120.0f;
-						_speed.X = 0;
-						_speed.Y = 0;
-					} else {
-						_state = StateNewDirection;
-						_stateTime = 50.0f;
-					}
-				}
-				break;
-			}
-
-			case StateNewDirection: {
-				if (_stateTime <= 0.0f) {
-					FollowNearestPlayer(StateFlying, 1.0f);
-				}
-				break;
-			}
-
-			case StatePrepairingToAttack: {
-				if (_stateTime <= 0.0f) {
-					_state = StateAttacking;
-					_stateTime = 20.0f;
-					_rocketsLeft = 5;
-
-					PlaySfx("PreAttack"_s);
-				}
-				break;
-			}
-
-			case StateAttacking: {
-				if (_stateTime <= 0.0f) {
-					if (_rocketsLeft > 0) {
-						_stateTime = 20.0f;
-
-						FireRocket();
-						_rocketsLeft--;
-
-						PlaySfx("Attack"_s);
-					} else {
-						_state = StateNewDirection;
-						_stateTime = 100.0f;
-
-						PlaySfx("PostAttack"_s);
-					}
-				}
-				break;
-			}
+			case StateChasing: UpdateChase(timeMult); break;
+			case StateAttacking: UpdateAttack(timeMult); break;
 		}
 
 		if (_bottom != nullptr) {
-			_bottom->MoveInstantly(Vector2f(_pos.X + _speed.X * timeMult, _pos.Y + _speed.Y * timeMult), MoveType::Absolute | MoveType::Force);
+			_bottom->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
 			_bottom->SetFacingLeft(IsFacingLeft());
 		}
 		/*if (_turret != nullptr) {
@@ -224,7 +178,6 @@ namespace Jazz2::Actors::Bosses
 			PlaySfx("Noise"_s, 0.2f);
 		}
 
-		_stateTime -= timeMult;
 		_chainPhase += timeMult * 0.06f;
 	}
 
@@ -265,70 +218,111 @@ namespace Jazz2::Actors::Bosses
 		_turret->MoveInstantly(Vector2f(_pos.X + (IsFacingLeft() ? 10.0f : -10.0f) + _speed.X * timeMult, _pos.Y + 10.0f + _speed.Y * timeMult), MoveType::Absolute | MoveType::Force);
 	}*/
 
-	void Bolly::FollowNearestPlayer(std::int32_t newState, float time)
+	void Bolly::PickTarget()
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
-
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
+		Player* player = FindNearestPlayer(TargetDistanceSqr);
+		if (player == nullptr) {
+			auto players = _levelHandler->GetPlayers();
+			if (!players.empty()) {
+				player = players[0];
 			}
 		}
 
-		if (found) {
-			_state = newState;
-			_stateTime = time;
+		if (player != nullptr) {
+			_target = player->shared_from_this();
+		} else {
+			_target.reset();
+		}
+	}
 
-			targetPos.Y += Random().FastFloat(-100.0f, 20.0f);
+	void Bolly::UpdateChase(float timeMult)
+	{
+		float ticks = timeMult * TicksPerFrame;
+		_ticks += ticks;
+		_targetAcc += ticks;
+		if (_targetAcc >= TargetPeriodTicks) {
+			_targetAcc = std::fmod(_targetAcc, TargetPeriodTicks);
+			PickTarget();
+		}
 
-			SetFacingLeft(targetPos.X < _pos.X);
+		if (auto target = _target.lock()) {
+			Vector2f diff = Vector2f(target->GetPos().X, target->GetPos().Y - HoverHeight) - _pos;
+			float distance = diff.Length();
+			if (distance > 1.0f) {
+				// Hard is a quarter faster
+				float speed = ChaseSpeed * (GetDifficultyIndex() == 2 ? 1.0f / 0.75f : 1.0f);
+				_speed = diff / distance * speed;
+			}
 
-			float speedMultiplier = (_levelHandler->GetDifficulty() < GameDifficulty::Hard ? 0.6f : 0.8f);
-			Vector2f speed = (targetPos - _pos).Normalized();
-			_speed.X = speed.X * speedMultiplier;
-			_speed.Y = speed.Y * speedMultiplier;
+			if (diff.X < -4.0f) {
+				SetFacingLeft(true);
+			} else if (diff.X > 4.0f) {
+				SetFacingLeft(false);
+			}
+		}
+
+		MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force);
+		if (_pos.Y < _originPos.Y - MaxRise) {
+			MoveInstantly(Vector2f(_pos.X, _originPos.Y - MaxRise), MoveType::Absolute | MoveType::Force);
+		}
+
+		if (_ticks > ChaseTicks) {
+			_state = StateAttacking;
+			_ticks = 0.0f;
+			_nextShotTick = FirstShotTick;
+			_speed = Vector2f::Zero;
+			if (auto target = _target.lock()) {
+				_aimPos = target->GetPos();
+			}
+			PlaySfx("PreAttack"_s);
+		}
+	}
+
+	void Bolly::UpdateAttack(float timeMult)
+	{
+		_ticks += timeMult * TicksPerFrame;
+
+		// The aim follows the player for a while and then stays where it is
+		if (_ticks < AimLockTicks) {
+			if (auto target = _target.lock()) {
+				_aimPos = target->GetPos();
+			}
+		}
+
+		float dx = _aimPos.X - _pos.X;
+		if (dx < -4.0f) {
+			SetFacingLeft(true);
+		} else if (dx > 4.0f) {
+			SetFacingLeft(false);
+		}
+
+		if (_ticks >= _nextShotTick) {
+			FireRocket();
+			PlaySfx("Attack"_s);
+
+			if (_nextShotTick >= LastShotTick) {
+				_state = StateChasing;
+				_ticks = 0.0f;
+				PlaySfx("PostAttack"_s);
+			} else {
+				_nextShotTick += ShotPeriodTicks;
+			}
 		}
 	}
 
 	void Bolly::FireRocket()
 	{
-		bool found = false;
-		Vector2f targetPos = Vector2f(FLT_MAX, FLT_MAX);
+		Vector2f gunPos = Vector2f(_pos.X + (IsFacingLeft() ? 10.0f : -10.0f), _pos.Y + 10.0f);
+		Vector2f diff = (_aimPos - gunPos).Normalized();
 
-		auto players = _levelHandler->GetPlayers();
-		for (auto* player : players) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			Vector2f newPos = player->GetPos();
-			if ((_pos - newPos).SqrLength() < (_pos - targetPos).SqrLength()) {
-				targetPos = newPos;
-				found = true;
-			}
-		}
-
-		if (found) {
-			Vector2f diff = (targetPos - _pos).Normalized();
-
-			std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
-			rocket->OnActivated(ActorActivationDetails(
-				_levelHandler,
-				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 10 : -10), (std::int32_t)_pos.Y + 10, _renderer.GetLayer() - 4)
-			));
-			rocket->_renderer.SetRotation(atan2Approx(diff.Y, diff.X));
-			_levelHandler->AddActor(rocket);
-		}
+		std::shared_ptr<Rocket> rocket = std::make_shared<Rocket>();
+		rocket->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)gunPos.X, (std::int32_t)gunPos.Y, _renderer.GetLayer() - 4)
+		));
+		rocket->_renderer.SetRotation(atan2Approx(diff.Y, diff.X));
+		_levelHandler->AddActor(rocket);
 	}
-
 	Task<bool> Bolly::BollyPart::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		uint8_t partType = details.Params[0];
@@ -399,7 +393,7 @@ namespace Jazz2::Actors::Bosses
 		SetState(ActorState::CanBeFrozen | ActorState::ApplyGravitation, false);
 		CanCollideWithShots = false;
 
-		_timeLeft = 300.0f;
+		_timeLeft = 1200.0f;
 		_health = INT32_MAX;
 
 		async_await RequestMetadataAsync("Boss/Bolly"_s);
@@ -413,10 +407,17 @@ namespace Jazz2::Actors::Bosses
 		float angle = _renderer.GetRotation();
 		float sinAngle, cosAngle;
 		sincosApprox(angle, sinAngle, cosAngle);
-		_speed.X += cosAngle * 0.14f * timeMult;
-		_speed.Y += sinAngle * 0.14f * timeMult;
 
+		if (!_launched) {
+			_launched = true;
+			_speed.X = cosAngle * RocketSpeed;
+			_speed.Y = sinAngle * RocketSpeed;
+		}
+
+		// It moves first and then speeds up
 		EnemyBase::OnUpdate(timeMult);
+		_speed.X += cosAngle * RocketAcceleration * timeMult;
+		_speed.Y += sinAngle * RocketAcceleration * timeMult;
 
 		if (_timeLeft <= 0.0f) {
 			DecreaseHealth(INT32_MAX);

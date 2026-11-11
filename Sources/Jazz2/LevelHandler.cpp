@@ -216,12 +216,20 @@ namespace Jazz2
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root),
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
-			_lightingMeshShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
+			_lightingMeshShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr),
 #endif
-			_eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
-			_cheatsUsed(false), _checkpointCreated(false), _nextLevelType(ExitType::None),
-			_nextLevelTime(0.0f), _elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
-			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
+			_combineShader(nullptr), _combineWithWaterShader(nullptr), _waterShader(nullptr), _hudOverlayActive(false),
+			_difficulty(GameDifficulty::Default), _weatherType(WeatherType::None), _nextLevelType(ExitType::None),
+			_nextLevelTime(0.0f), _isReforged(false), _cheatsUsed(false), _checkpointCreated(false),
+			_coinsTransmuted(false), _waterLevelTarget(FLT_MAX), _eventSpawner(this),
+			_elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
+			_waterLevel(FLT_MAX), _playerWaterLevel(0.0f), _waterColorTop(DefaultWaterColor), _waterColorBottom(DefaultWaterColor),
+			_playerWaterLevelSet(false), _waterHidden(false), _waterLayer(Formats::LevelSettingsChunk::WaterInFront),
+			_waterInteraction(WaterInteraction::Swim), _waterLighting(Formats::LevelSettingsChunk::WaterLighting::None),
+#if defined(WITH_AUDIO)
+			_musicStartDelay(0),
+#endif
+			_checkpointSnapshotPending(false), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
 			_overrideActions(0), _overrideMovement(0.0f, 0.0f)
 	{
 	}
@@ -379,6 +387,7 @@ namespace Jazz2
 
 		// All components are ready, deserialize the rest of state
 		_waterLevel = src.ReadValueAsLE<float>();
+		_waterLevelTarget = FLT_MAX;
 		_weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
 		_weatherIntensity = src.ReadValue<std::uint8_t>();
 
@@ -549,6 +558,19 @@ namespace Jazz2
 		}
 #endif
 		return _levelSettings.WarpsTransmuteCoins;
+	}
+
+	bool LevelHandler::AreCoinsTransmuted() const
+	{
+		return _coinsTransmuted;
+	}
+
+	void LevelHandler::TransmuteCoins()
+	{
+		// The original does it in a single player game only
+		if (IsLocalSession() && CanActivateSugarRush() && _players.size() == 1) {
+			_coinsTransmuted = true;
+		}
 	}
 
 	void LevelHandler::ApplyLevelSettings(const Formats::LevelSettingsChunk::Settings& settings)
@@ -1151,6 +1173,18 @@ namespace Jazz2
 
 			ProcessEvents(timeMult);
 			ProcessWeather(timeMult);
+
+			// The water moves to its new level at 1 px per original tick, and not at all in a level without water
+			if (_waterLevelTarget < FLT_MAX && _waterLevel < FLT_MAX) {
+				float step = WaterLevelSpeed * timeMult;
+				float diff = _waterLevelTarget - _waterLevel;
+				if (std::abs(diff) <= step) {
+					_waterLevel = _waterLevelTarget;
+					_waterLevelTarget = FLT_MAX;
+				} else {
+					_waterLevel += (diff < 0.0f ? -step : step);
+				}
+			}
 
 #if defined(WITH_PHYSICS_PROBE)
 			// Before the actors update, so the input it puts in takes effect this tick and the state it logs
@@ -1830,8 +1864,18 @@ namespace Jazz2
 				break;
 			}
 			case EventType::ModifierSetWater: {
-				// TODO: Implement Instant (non-instant transition), Lighting
-				_waterLevel = Actors::EventParamsReader(eventParams).GetUint16(0);
+				// TODO: Implement Lighting
+				float target = (float)Actors::EventParamsReader(eventParams).GetUint16(0);
+				if (target <= 0.0f && initiator != nullptr) {
+					// No height puts the water 15 px into the tile the player stands in
+					target = std::floor(initiator->GetPos().Y / 32.0f) * 32.0f + 15.0f;
+				}
+				if (eventParams[2] != 0) {
+					_waterLevel = target;
+					_waterLevelTarget = FLT_MAX;
+				} else {
+					_waterLevelTarget = target;
+				}
 				break;
 			}
 		}
@@ -2499,6 +2543,7 @@ namespace Jazz2
 	{
 		MemoryStream src(_checkpointSnapshot.data(), (std::int64_t)_checkpointSnapshot.size());
 		_waterLevel = src.ReadValueAsLE<float>();
+		_waterLevelTarget = FLT_MAX;
 		_weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
 		_weatherIntensity = src.ReadValue<std::uint8_t>();
 		InitializeActorsFromStream(src);
@@ -2734,6 +2779,7 @@ namespace Jazz2
 		AttachComponents(Death::move(descriptor));
 		_musicDefaultPath = Death::move(musicDefaultPath);
 		_waterLevel = waterLevel;
+		_waterLevelTarget = FLT_MAX;
 		_weatherType = weatherType;
 		_weatherIntensity = weatherIntensity;
 

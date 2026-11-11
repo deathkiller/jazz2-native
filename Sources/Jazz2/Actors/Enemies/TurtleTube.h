@@ -31,6 +31,10 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr float WaterDifference = -16.0f;
+		/** @brief Full swing of its sideways sway takes this many original ticks */
+		static constexpr float SwayPeriodTicks = 256.0f;
+		/** @brief Phase advance per frame of its sideways sway */
+		static constexpr float SwayPhaseStep = (fTwoPi / SwayPeriodTicks) * TicksPerFrame;
 
 		bool _onWater;
 		float _phase;

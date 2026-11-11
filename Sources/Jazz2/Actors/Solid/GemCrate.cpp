@@ -30,6 +30,10 @@ namespace Jazz2::Actors::Solid
 		eventParam = 3;
 		AddContent(EventType::Gem, details.Params[3], &eventParam, sizeof(eventParam));
 
+		if (_content.empty()) {
+			AddRandomGems();
+		}
+
 		async_await RequestMetadataAsync("Object/Crate/Generic"_s);
 
 		SetAnimation(AnimState::Idle);

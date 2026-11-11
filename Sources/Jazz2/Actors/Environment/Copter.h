@@ -36,6 +36,9 @@ namespace Jazz2::Actors::Environment
 		void OnDeserializeState(Stream& src) override;
 
 	private:
+		// Longer than any ride, in frames
+		static constexpr float RiddenTimeout = 600.0f;
+
 		enum class State {
 			Free,
 			Unmounted,
@@ -45,6 +48,7 @@ namespace Jazz2::Actors::Environment
 		Vector2f _originPos;
 		float _phase;
 		State _state;
+		bool _ridden;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _noise;
 #endif

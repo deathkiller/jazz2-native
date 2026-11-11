@@ -1,4 +1,5 @@
 #include "GemGiant.h"
+#include "CollectibleBase.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventSpawner.h"
 #include "../Player.h"
@@ -59,7 +60,7 @@ namespace Jazz2::Actors::Collectibles
 
 		PlaySfx("Break"_s);
 
-		std::int32_t count = Random().Next(5, 12);
+		std::int32_t count = Random().Next(5, 13);
 		for (int i = 0; i < count; i++) {
 			float fx = Random().NextFloat(-16.0f, 16.0f);
 			float fy = Random().NextFloat(-2.0f, 2.0f);
@@ -67,6 +68,9 @@ namespace Jazz2::Actors::Collectibles
 			std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(EventType::Gem, eventParams, ActorState::None, Vector3i((std::int32_t)(_pos.X + fx * 2.0f), (std::int32_t)(_pos.Y + fy * 4.0f), _renderer.GetLayer() - 10));
 			if (actor != nullptr) {
 				actor->AddExternalForce(fx, fy);
+			if (auto* collectible = runtime_cast<CollectibleBase>(actor.get())) {
+				collectible->SetPickupDelay(CollectibleBase::ThrownPickupDelay);
+			}
 				_levelHandler->AddActor(actor);
 			}
 		}

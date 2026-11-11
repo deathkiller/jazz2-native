@@ -6,7 +6,7 @@
 	"Animations": {
 		"Walk": {
 			"Path": "Monkey/walk.aura",
-			"FrameRate": 5,
+			"FrameRate": 3.125,
 			"States": [ 1 ]
 		},
 		"Jump": {

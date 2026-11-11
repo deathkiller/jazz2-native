@@ -29,12 +29,13 @@ namespace Jazz2::Actors::Weapons
 		async_await RequestMetadataAsync("Weapon/Blaster"_s);
 
 		AnimState state = AnimState::Idle;
+		_ricochetLimit = MaxTileRicochets;
 		if ((_upgrades & 0x01) != 0) {
-			_timeLeft = 25;
+			_timeLeft = 30.0f * TicksToFrames;
 			state |= (AnimState)1;
 			_strength = 2;
 		} else {
-			_timeLeft = 22;
+			_timeLeft = 35.0f * TicksToFrames;
 			_strength = 1;
 		}
 
@@ -54,15 +55,15 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		constexpr float baseSpeed = 12.0f;
+		bool powered = ((_upgrades & 0x01) != 0);
+		float baseSpeed = (powered ? 7.0f : 6.0f) * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
 		_speed.Y = sinAngle * baseSpeed;
+		SetAcceleration(_speed.Normalized(), (powered ? 0.1875f : 0.125f) * TickAccelScale, 10.0f * TickSpeedScale);
+		SetCarriedSpeed(std::abs(sinAngle) > 0.99f ? 0.0f : speed.X, true);
+		ShortenUpShotLifetime(sinAngle);
 
 		_renderer.SetRotation(angle);
 		_renderer.SetDrawEnabled(false);
@@ -91,10 +92,11 @@ namespace Jazz2::Actors::Weapons
 			PlaySfx("WallPoof"_s);
 		}
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			_renderer.SetDrawEnabled(true);
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_fired >= 2) {
+			RevealPastMuzzle(_gunspotPos);
 		}
 	}
 
@@ -141,7 +143,7 @@ namespace Jazz2::Actors::Weapons
 
 	void BlasterShot::OnRicochet()
 	{
-		ShotBase::OnRicochet();
+		OnRicochetExact();
 
 		_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 

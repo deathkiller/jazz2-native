@@ -10,7 +10,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ToasterShot::ToasterShot()
-		: _fired(0)
+		: _crossAccel(0.0f), _followOffsetY(0.0f), _followLeft(0.0f), _hiddenLeft(0.0f), _fired(0), _vertical(false), _burning(false)
 	{
 	}
 
@@ -27,13 +27,14 @@ namespace Jazz2::Actors::Weapons
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x01) != 0) {
-			_timeLeft = 80.0f;
 			state |= (AnimState)1;
-		} else {
-			_timeLeft = 60.0f;
 		}
 
 		SetAnimation(state);
+
+		// A flame lasts as long as its animation
+		std::int32_t frameCount = (_currentAnimation != nullptr ? _currentAnimation->FrameCount : 0);
+		_timeLeft = (frameCount > 0 ? float(frameCount) * TicksPerAnimFrame : 35.0f) * TicksToFrames;
 
 		async_return true;
 	}
@@ -48,20 +49,27 @@ namespace Jazz2::Actors::Weapons
 		float ax, ay;
 		sincosApprox(angle, ay, ax);
 
-		constexpr float baseSpeed = 1.2f;
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - ax * (baseSpeed + Random().NextFloat(0.0f, 0.2f));
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + ax * (baseSpeed + Random().NextFloat(0.0f, 0.2f));
+		// Every fast fire pickup makes the flame a little faster
+		std::int32_t fastFire = 0;
+		if (auto* player = runtime_cast<Player>(owner.get())) {
+			fastFire = (player->GetWeaponUpgrades()[(std::int32_t)WeaponType::Blaster] >> 1);
 		}
-		_speed.X += ay * Random().NextFloat(-0.5f, 0.5f);
+		float fireInterval = std::max(Player::FireMinHoldTicks, Player::FireBaseHoldTicks - float(fastFire) * Player::FireFastFireStepTicks);
+		float baseSpeed = (99.0f - fireInterval) / 32.0f * TickSpeedScale;
 
-		if (isFacingLeft) {
-			_speed.Y = -ay * (baseSpeed + Random().NextFloat(0.0f, 0.2f));
-		} else {
-			_speed.Y = ay * (baseSpeed + Random().NextFloat(0.0f, 0.2f));
+		Vector2f dir(isFacingLeft ? -ax : ax, isFacingLeft ? -ay : ay);
+		_speed = dir * baseSpeed;
+		_vertical = (std::abs(ay) > 0.99f);
+		if (!_vertical) {
+			SetCarriedSpeed(speed.X, false);
 		}
-		_speed.Y += ax * Random().NextFloat(-0.5f, 0.5f);
+
+		// The flame drifts sideways of its path by a small random acceleration
+		_crossAccel = float(std::int32_t(Random().Next() % 4) - 1) * Damping * TickAccelScale;
+
+		_followOffsetY = std::clamp(owner->GetPos().Y - _pos.Y, -MaxFollowOffset, MaxFollowOffset);
+		_followLeft = FollowTicks * TicksToFrames;
+		_hiddenLeft = FollowTicks * TicksToFrames;
 
 		_renderer.SetDrawEnabled(false);
 	}
@@ -75,16 +83,46 @@ namespace Jazz2::Actors::Weapons
 			return;
 		}
 
+		Vector2f step = Vector2f::Zero;
+		if (!_burning) {
+			float damping = Damping * TickAccelScale * timeMult;
+			float maxSpeed = MaxSpeed * TickSpeedScale;
+			auto fade = [damping, maxSpeed](float value) {
+				if (value > maxSpeed) { return maxSpeed; }
+				if (value < -maxSpeed) { return -maxSpeed; }
+				if (value > damping) { return value - damping; }
+				if (value < -damping) { return value + damping; }
+				return 0.0f;
+			};
+			if (_vertical) {
+				_speed.Y = fade(_speed.Y);
+				_speed.X += _crossAccel * timeMult;
+			} else {
+				_speed.X = fade(_speed.X);
+				_speed.Y += _crossAccel * timeMult;
+			}
+			step = Vector2f((_speed.X + (_vertical ? 0.0f : _carriedSpeedX)) * timeMult, _speed.Y * timeMult);
+		}
+
 		auto tiles = _levelHandler->TileMap();
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Toaster, _strength };
 		if (tiles == nullptr || tiles->IsTileEmpty(AABBInner, params)) {
-			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
+			MoveInstantly(step, MoveType::Relative | MoveType::Force, params);
 		} else {
-			MoveInstantly(Vector2f(_speed.X * timeMult, _speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
-			MoveInstantly(Vector2f(-_speed.X * timeMult, -_speed.Y * timeMult), MoveType::Relative | MoveType::Force, params);
+			MoveInstantly(step, MoveType::Relative | MoveType::Force, params);
+			MoveInstantly(Vector2f(-step.X, -step.Y), MoveType::Relative | MoveType::Force, params);
 
 			if ((_upgrades & 0x1) == 0) {
 				DecreaseHealth(INT32_MAX);
+			} else if (!_burning) {
+				// A powered-up flame stays where it hit and burns for two loops of its animation
+				_burning = true;
+				_speed = Vector2f::Zero;
+				_carriedSpeedX = 0.0f;
+				std::int32_t frameCount = (_currentAnimation != nullptr ? _currentAnimation->FrameCount : 0);
+				if (frameCount > 0) {
+					_timeLeft = std::min(_timeLeft, 2.0f * float(frameCount) * TicksPerAnimFrame * TicksToFrames);
+				}
 			}
 		}
 		if (params.TilesDestroyed > 0) {
@@ -93,10 +131,19 @@ namespace Jazz2::Actors::Weapons
 			}
 		}
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, (_upgrades & 0x1) != 0 ? MoveType::Absolute : (MoveType::Absolute | MoveType::Force));
-			_renderer.SetDrawEnabled(true);
+		if (_followLeft > 0.0f && _owner != nullptr) {
+			_followLeft -= timeMult;
+			MoveInstantly(Vector2f(_pos.X, _owner->GetPos().Y - _followOffsetY), MoveType::Absolute | MoveType::Force);
+		}
+
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_hiddenLeft > 0.0f) {
+			_hiddenLeft -= timeMult;
+			if (_hiddenLeft <= 0.0f) {
+				_renderer.SetDrawEnabled(true);
+			}
 		}
 
 		ShotBase::OnUpdate(timeMult);

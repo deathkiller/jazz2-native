@@ -10,7 +10,7 @@
 namespace Jazz2::Actors::Bosses
 {
 	DevanRemote::DevanRemote()
-		: _introText(0), _endText(0)
+		: _introText(0), _endText(0), _ending(false), _endDelay(0.0f)
 	{
 	}
 
@@ -65,35 +65,42 @@ namespace Jazz2::Actors::Bosses
 
 	bool DevanRemote::OnPlayerDied()
 	{
-		if (_robot != nullptr) {
-			_robot->Deactivate();
-			_robot = nullptr;
-		}
-
-		return BossBase::OnPlayerDied();
+		// The original keeps the fight going when a player dies
+		return false;
 	}
 
 	void DevanRemote::OnUpdate(float timeMult)
 	{
 		BossBase::OnUpdate(timeMult);
 
-		if (_robot != nullptr) {
-			int robotHealth = _robot->GetHealth();
-			if (robotHealth <= 0) {
-				_robot = nullptr;
+		if (_robot == nullptr) {
+			return;
+		}
 
+		if (!_ending) {
+			if (_robot->GetHealth() > 0) {
+				_health = _robot->GetHealth();
+			} else {
+				// The health bar stays empty while the robot explodes
 				_health = 1;
+				if (_robot->IsDeathFinished()) {
+					_ending = true;
+					_endDelay = WarpOutDelay;
 
-				StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
-				_levelHandler->ShowLevelText(text);
+					StringView text = _levelHandler->GetLevelText(_endText, -1, '|');
+					_levelHandler->ShowLevelText(text);
+				}
+			}
+		} else if (_endDelay > 0.0f) {
+			_endDelay -= timeMult;
+			if (_endDelay <= 0.0f) {
+				_robot = nullptr;
 
 				PlaySfx("WarpOut"_s);
 				SetTransition(AnimState::TransitionWarpOut, false, [this]() {
 					_renderer.SetDrawEnabled(false);
 					DecreaseHealth(INT32_MAX);
 				});
-			} else {
-				_health = robotHealth;
 			}
 		}
 	}

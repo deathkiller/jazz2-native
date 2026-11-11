@@ -25,6 +25,12 @@ namespace Jazz2::Actors::Weapons
 			return WeaponType::Freezer;
 		}
 
+		/** @brief Makes the shot of the powered-up weapon wave around its path, @p phase is in 1/1024 of a turn */
+		void SetWavePhase(float phase) {
+			_wavePhase = phase;
+			_waves = true;
+		}
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
@@ -35,8 +41,16 @@ namespace Jazz2::Actors::Weapons
 		void OnRicochet() override;
 
 	private:
+		/** @brief Turns the wave of a powered-up shot advances per tick in 1/1024 of a turn */
+		static constexpr float WaveStep = 64.0f;
+		/** @brief Updates a shot is hidden for after it starts, normal and powered-up */
+		static constexpr std::int32_t HiddenUpdates = 2;
+		static constexpr std::int32_t HiddenUpdatesPoweredUp = 3;
+
 		Vector2f _gunspotPos;
-		std::int32_t _fired;
 		float _particlesTime;
+		float _wavePhase;
+		std::uint8_t _fired;
+		bool _waves;
 	};
 }

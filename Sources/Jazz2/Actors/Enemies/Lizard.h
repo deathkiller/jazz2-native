@@ -41,6 +41,8 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr float DefaultSpeed = TicksPerFrame;
+		/** @brief Health of a lizard that has just lost its copter, the shot that knocked it down has already taken one */
+		static constexpr std::int32_t FallingHealth = 3;
 
 		bool _stuck;
 		bool _isFalling;

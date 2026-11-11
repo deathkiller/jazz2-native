@@ -9,7 +9,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	RFShot::RFShot()
-		: _fired(0), _smokeTimer(3.0f), _blastDelayLeft(BlastDelayUnarmed)
+		: _smokeTimer(3.0f), _blastDelayLeft(BlastDelayUnarmed), _hiddenLeft(0.0f), _spread(0.0f), _fired(0)
 	{
 	}
 
@@ -19,6 +19,7 @@ namespace Jazz2::Actors::Weapons
 
 		_upgrades = details.Params[0];
 		_strength = 2;
+		_ricochetLimit = MaxTileRicochets;
 
 		SetState(ActorState::ApplyGravitation, false);
 
@@ -26,10 +27,10 @@ namespace Jazz2::Actors::Weapons
 
 		AnimState state = AnimState::Idle;
 		if ((_upgrades & 0x1) != 0) {
-			_timeLeft = 24;
+			_timeLeft = 35.0f * TicksToFrames;
 			state |= (AnimState)1;
 		} else {
-			_timeLeft = 30;
+			_timeLeft = 40.0f * TicksToFrames;
 		}
 
 		SetAnimation(state);
@@ -45,40 +46,31 @@ namespace Jazz2::Actors::Weapons
 
 		_gunspotPos = gunspotPos;
 
-		// Player::FireWeaponRF() spawns this at the player's leading edge, which is where the original's
-		// flight times say its shot starts - but a shot detonates when its own *box* meets the wall, not
-		// when its centre does, so spawning the centre there puts the leading edge half a shot too far
-		// forward. Measured, that was a flat three ticks at every range: the slope was already right at
-		// 3 px/tick and each reading came in early by the same amount. Backing the centre off by half the
-		// shot's own width is what the geometry asks for - travel is then `wall - pos - halfShot`, and that
-		// equals the player-edge-to-wall gap the rule is written in.
-		if (!_levelHandler->IsReforged()) {
-			float halfShot = (AABBInner.R - AABBInner.L) * 0.5f;
-			MoveInstantly(Vector2f(_pos.X + (isFacingLeft ? halfShot : -halfShot), _pos.Y),
-				MoveType::Absolute | MoveType::Force);
-		}
-
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
-
-		// The original's RF is half as fast as this engine's, which is most of why firing one into a wall is
-		// a way to launch yourself there and hardly one here: ours detonated before the player had left the
-		// ground. The upgraded variant keeps its ratio to the plain one, since only the plain one was
-		// measured and the ratio is the part that is not being contradicted.
-		float baseSpeed = ((_upgrades & 0x1) != 0 ? 6.4f : 6.0f);
-		if (!_levelHandler->IsReforged()) {
-			baseSpeed *= LegacyFlightSpeed / 6.0f;
-		}
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
+		bool up = (std::abs(sinAngle) > 0.99f);
+
+		// A shot detonates when its box meets the wall, the original's when its centre does, so the centre starts half a shot back
+		if (!up) {
+			float halfShot = (AABBInner.R - AABBInner.L) * 0.5f;
+			MoveInstantly(Vector2f(_pos.X + (isFacingLeft ? halfShot : -halfShot), _pos.Y), MoveType::Absolute | MoveType::Force);
 		}
-		_speed.Y = sinAngle * baseSpeed;
+
+		float baseSpeed = ((_upgrades & 0x1) != 0 ? 1.5f : 1.0f) * TickSpeedScale;
+		Vector2f dir(isFacingLeft ? -cosAngle : cosAngle, sinAngle);
+		float spreadSpeed = _spread * TickSpeedScale;
+		_speed = dir * baseSpeed + Vector2f(-sinAngle * spreadSpeed, cosAngle * spreadSpeed);
+		// The player's whole speed adds to the rocket's, it isn't capped or fading
+		if (!up) {
+			_speed.X += speed.X;
+		}
+		SetAcceleration(dir, 0.1875f * TickAccelScale, 0.0f);
+		ShortenUpShotLifetime(sinAngle);
 
 		_renderer.SetRotation(angle);
 		_renderer.SetDrawEnabled(false);
+		_hiddenLeft = HiddenTicks * TicksToFrames;
 	}
 
 	void RFShot::OnUpdate(float timeMult)
@@ -114,28 +106,26 @@ namespace Jazz2::Actors::Weapons
 
 		if (_smokeTimer > 0.0f) {
 			_smokeTimer -= timeMult;
-		} else {
+		} else if (_renderer.IsDrawEnabled()) {
+			// No trail while the rocket itself is still hidden
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() + 2), Explosion::Type::TinyBlue);
 			_smokeTimer = 6.0f;
 		}
 
-		_fired++;
-		if (_fired == 2) {
-			// The snap to the gunspot is a *rendering* trick - the shot is hidden for two frames and then
-			// placed at the muzzle - and it costs the flight its first two frames plus however far the
-			// gunspot is ahead of where the shot started. Non-Reforged is spawned at the player's leading
-			// edge instead (see Player::FireWeaponRF), which is where the original's flight times say its
-			// shot begins, so moving it afterwards would undo exactly that. Only the reveal is kept.
-			if (_levelHandler->IsReforged()) {
-				MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-			}
-			_renderer.SetDrawEnabled(true);
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_hiddenLeft > 0.0f) {
+			_hiddenLeft -= timeMult;
+		}
+		if (_hiddenLeft <= 0.0f) {
+			RevealPastMuzzle(_gunspotPos);
 		}
 	}
 
 	void RFShot::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		if (_fired >= 2) {
+		if (_fired >= 2 && _renderer.IsDrawEnabled()) {
 			auto& light1 = lights.emplace_back();
 			light1.Pos = _pos;
 			light1.Intensity = 0.4f;
@@ -183,21 +173,20 @@ namespace Jazz2::Actors::Weapons
 
 	void RFShot::OnHitWall(float timeMult)
 	{
-		// The original's blast does not land on the tick the shot arrives - see LegacyBlastDelay. Lighting
-		// the fuse rather than detonating is what puts the knockback where it is measured: point blank the
-		// flight is now 9 ticks against 9. `BlastDelayUnarmed` keeps a second wall report from restarting it.
-		//
-		// What this does NOT fix is the flight at range, and the remaining error is a starting position
-		// rather than a speed: the shot spends two frames hidden and is then teleported to the gunspot,
-		// which for any gap under ~24 px is already at or past the wall. So the distance it flies is neither
-		// the gap nor proportional to it, and the flight comes out flat at 12 ticks where the original grows
-		// 13, 16, 17. The original behaves as though its shot starts at the player's front edge and covers
-		// exactly the gap. Pinning ours to the same place needs the shot's own position in the trace, which
-		// neither probe logs. It is also why `wb_rf_r48` still throws a player the original leaves alone -
-		// the shot dies short of the wall, so ApplyBlastKnockback() is handed a distance inside its reach.
-		if (!_levelHandler->IsReforged() && _blastDelayLeft == BlastDelayUnarmed) {
-			_blastDelayLeft = LegacyBlastDelay;
+		auto events = _levelHandler->EventMap();
+		if (events != nullptr) {
+			std::uint8_t* eventParams;
+			if (events->GetEventByPosition(_pos.X + _speed.X, _pos.Y + _speed.Y, &eventParams) == EventType::ModifierRicochet) {
+				TriggerRicochet(nullptr);
+				return;
+			}
+		}
+
+		// The blast lands a tick after the rocket meets the wall and what it throws moves a tick after that
+		if (_blastDelayLeft == BlastDelayUnarmed) {
+			_blastDelayLeft = BlastDelayTicks * TicksToFrames;
 			_speed = Vector2f::Zero;
+			_acceleration = 0.0f;
 			_externalForce = Vector2f::Zero;
 			return;
 		}
@@ -207,5 +196,8 @@ namespace Jazz2::Actors::Weapons
 
 	void RFShot::OnRicochet()
 	{
+		OnRicochetExact();
+
+		_renderer.SetRotation(atan2Approx(_speed.Y, _speed.X));
 	}
 }

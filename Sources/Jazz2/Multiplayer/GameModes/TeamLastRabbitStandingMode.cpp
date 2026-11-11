@@ -8,6 +8,7 @@
 #include "../../../nCine/Base/Algorithms.h"
 #include "../../../nCine/Base/Random.h"
 
+#include <float.h>
 #include <algorithm>
 
 namespace Jazz2::Multiplayer::GameModes
@@ -112,7 +113,7 @@ namespace Jazz2::Multiplayer::GameModes
 				DistributeReserve(ctx, state.Team);
 			}
 			if (IsEliminated(ctx, victim)) {
-				ctx.ShowAlertToAllPlayers(_f("\n\n{} is out!", ctx.GetPlayerName(victim)));
+				ctx.ShowAlertToAllPlayers(ServerMessage(ServerMessageType::PlayerIsOut, ctx.GetPlayerName(victim)));
 			}
 		}
 

@@ -18,9 +18,9 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	CustomShot::CustomShot()
-		: _slot(WeaponType::Blaster), _basedOn(WeaponType::Blaster), _fired(0), _pierceLeft(0), _bouncesLeft(0),
-			_baseStrength(0), _detonated(false), _bubbleInWater(false), _flipX(false), _lookStep(0.0f), _particleSpawnTime(0.0f),
-			_farPoint(Vector2f::Zero), _direction(1.0f, 0.0f)
+		: _slot(WeaponType::Blaster), _basedOn(WeaponType::Blaster), _pierceLeft(0), _bouncesLeft(0),
+			_baseStrength(0), _lookStep(0.0f), _particleSpawnTime(0.0f),
+			_farPoint(Vector2f::Zero), _direction(1.0f, 0.0f), _fired(0), _detonated(false), _bubbleInWater(false), _flipX(false)
 	{
 	}
 
@@ -48,7 +48,8 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		_timeLeft = _options.Lifetime;
-		_strength = _baseStrength = _options.Strength;
+		_baseStrength = _options.Strength;
+		SetStrength(_baseStrength);
 		_pierceLeft = _options.Pierce;
 		_bouncesLeft = _options.Bounces;
 		SetFrozenDuration(_options.FreezeDuration);
@@ -208,7 +209,7 @@ namespace Jazz2::Actors::Weapons
 		}
 
 		// An enemy it already hit isn't hit again while the shot passes through it
-		_strength = (IsOverlappingHitActor() ? 0 : _baseStrength);
+		SetStrength(IsOverlappingHitActor() ? 0 : _baseStrength);
 
 		if (_options.Look == ShotLook::Beam) {
 			UpdateBeam(timeMult);
@@ -272,7 +273,9 @@ namespace Jazz2::Actors::Weapons
 			return;
 		}
 
-		_fired++;
+		if (_fired < 255) {
+			_fired++;
+		}
 		if (_fired == 2) {
 			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
 			// Only the sparks of the electro are seen, not the shot

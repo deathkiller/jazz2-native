@@ -13,7 +13,7 @@ using namespace Jazz2::Tiles;
 namespace Jazz2::Actors::Weapons
 {
 	ElectroShot::ElectroShot()
-		: _fired(0), _currentStep(0.0f), _particleSpawnTime(0.0f)
+		: _currentStep(0.0f), _particleSpawnTime(0.0f), _fired(0)
 	{
 	}
 
@@ -22,8 +22,8 @@ namespace Jazz2::Actors::Weapons
 		async_await ShotBase::OnActivatedAsync(details);
 
 		_upgrades = details.Params[0];
-		_strength = 4;
-		_timeLeft = 55;
+		_strength = 1;
+		_timeLeft = 55.0f * TicksToFrames;
 
 		SetState(ActorState::SkipPerPixelCollisions, true);
 		SetState(ActorState::ApplyGravitation, false);
@@ -50,15 +50,13 @@ namespace Jazz2::Actors::Weapons
 
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
-		float baseSpeed = ((_upgrades & 0x1) != 0 ? 5.0f : 4.0f);
+		// Both variants fly alike
+		constexpr float baseSpeed = 4.0f * TickSpeedScale;
 		float sinAngle, cosAngle;
 		sincosApprox(angleRel, sinAngle, cosAngle);
-		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
-		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
-		}
+		_speed.X = (isFacingLeft ? -cosAngle : cosAngle) * baseSpeed;
 		_speed.Y = sinAngle * baseSpeed;
+		SetCarriedSpeed(std::abs(sinAngle) > 0.99f ? 0.0f : speed.X, false);
 	}
 
 	void ElectroShot::OnUpdate(float timeMult)
@@ -80,10 +78,10 @@ namespace Jazz2::Actors::Weapons
 
 		ShotBase::OnUpdate(timeMult);
 
-		_fired++;
-		if (_fired == 2) {
-			MoveInstantly(_gunspotPos, MoveType::Absolute | MoveType::Force);
-		} else if (_fired > 2) {
+		if (_fired < 255) {
+			_fired++;
+		}
+		if (_fired > 2) {
 			_particleSpawnTime -= timeMult;
 			if (_particleSpawnTime <= 0.0f) {
 				_particleSpawnTime += 1.0f;

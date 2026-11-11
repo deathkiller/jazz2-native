@@ -6,7 +6,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Fencer::Fencer()
-		: _stateTime(0.0f)
+		: _stateTime(HopBackWaitTicks / TicksPerFrame), _airborne(false)
 	{
 	}
 
@@ -31,32 +31,78 @@ namespace Jazz2::Actors::Enemies
 
 	void Fencer::OnUpdate(float timeMult)
 	{
-		if (_frozenTimeLeft <= 0.0f) {
-			Vector2f targetPos;
-			if (FindNearestPlayer(targetPos)) {
-				SetFacingLeft(_pos.X > targetPos.X);
-
-				if (_stateTime <= 0.0f) {
-					// Measured in JJ2+: a small hop back from the player at 1 px/tick, every 150 ticks
-					_speed.X = (IsFacingLeft() ? 1.0f : -1.0f) * TicksPerFrame;
-
-					MoveInstantly(Vector2f(0.0f, -4.0f), MoveType::Relative);
-					_speed.Y = -1.75f * TicksPerFrame;
-
-					PlaySfx("Attack"_s);
-
-					SetTransition(AnimState::TransitionAttack, false, [this]() {
-						_speed.X = 0.0f;
-					});
-
-					_stateTime = 150.0f / TicksPerFrame;
-				} else {
-					_stateTime -= timeMult;
+		if (_frozenTimeLeft <= 0.0f && !_airborne) {
+			Player* target = nullptr;
+			float targetDistanceSqr = SightDistance * SightDistance;
+			for (auto* player : _levelHandler->GetPlayers()) {
+				if (player->GetHealth() <= 0) {
+					continue;
 				}
+
+				float distanceSqr = (player->GetPos() - _pos).SqrLength();
+				if (distanceSqr < targetDistanceSqr) {
+					targetDistanceSqr = distanceSqr;
+					target = player;
+				}
+			}
+
+			if (target != nullptr) {
+				Vector2f targetPos = target->GetPos();
+				if (targetPos.X != _pos.X) {
+					SetFacingLeft(_pos.X > targetPos.X);
+				}
+
+				if (std::abs(targetPos.Y - _pos.Y) < SightHeight) {
+					float dir = (IsFacingLeft() ? -1.0f : 1.0f);
+					if (targetDistanceSqr < ShotReactDistance * ShotReactDistance && target->HasFiredWithin(ShotWindowTicks / TicksPerFrame)) {
+						// The original hops toward a player who has just fired
+						Hop(2.0f * dir, -5.0f, -6.0f);
+					} else if (targetDistanceSqr < HopBackDistance * HopBackDistance && _stateTime <= 0.0f &&
+						_levelHandler->GetDifficulty() != GameDifficulty::Easy) {
+						// Measured in JJ2+: a small hop back from the player at 1 px/tick
+						Hop(-1.0f * dir, -2.0f, -4.0f);
+					}
+				}
+			}
+
+			if (_stateTime > 0.0f) {
+				_stateTime -= timeMult;
 			}
 		}
 
 		EnemyBase::OnUpdate(timeMult);
+	}
+
+	void Fencer::Hop(float speedX, float speedY, float offsetY)
+	{
+		_airborne = true;
+		_speed.X = speedX * TicksPerFrame;
+
+		MoveInstantly(Vector2f(0.0f, offsetY), MoveType::Relative);
+		_speed.Y = speedY * TicksPerFrame;
+
+		PlaySfx("Attack"_s);
+
+		SetTransition(AnimState::TransitionAttack, false);
+		// Measured in JJ2+: the hop animation lasts as long as the hop
+		SetAnimationTicks(HopAnimTicks);
+	}
+
+	void Fencer::OnHitFloor(float timeMult)
+	{
+		EnemyBase::OnHitFloor(timeMult);
+
+		if (_airborne) {
+			_airborne = false;
+			_speed.X = 0.0f;
+			_stateTime = HopBackWaitTicks / TicksPerFrame;
+		}
+	}
+
+	float Fencer::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		// Measured in JJ2+: the hop rises and falls at the same rate
+		return (_airborne ? ReplaceLevelGravity(HopGravity, baseGravity) : baseGravity);
 	}
 
 	void Fencer::OnSerializeState(Stream& dest)
@@ -87,24 +133,5 @@ namespace Jazz2::Actors::Enemies
 		TryGenerateRandomDrop();
 
 		return EnemyBase::OnPerish(collider);
-	}
-
-	bool Fencer::FindNearestPlayer(Vector2f& targetPos)
-	{
-		constexpr float VisionDistance = 100.0f;
-
-		for (auto& player : _levelHandler->GetPlayers()) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-
-			targetPos = player->GetPos();
-			if ((_pos - targetPos).Length() < VisionDistance) {
-				return true;
-			}
-		}
-
-		targetPos = Vector2f::Zero;
-		return false;
 	}
 }

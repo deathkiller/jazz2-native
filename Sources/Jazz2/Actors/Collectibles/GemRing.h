@@ -45,6 +45,7 @@ namespace Jazz2::Actors::Collectibles
 		float _speed;
 		float _phase;
 		bool _collected;
+		std::int32_t _gemCount = 8;
 		float _collectedPhase;
 
 		SmallVector<ChainPiece, 0> _pieces;

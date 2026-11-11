@@ -2,6 +2,11 @@
 
 #include "../EnemyBase.h"
 
+namespace Jazz2::Actors
+{
+	class Player;
+}
+
 namespace Jazz2::Actors::Bosses
 {
 	/**
@@ -24,6 +29,9 @@ namespace Jazz2::Actors::Bosses
 		virtual bool OnPlayerDied();
 
 	protected:
+		/** @brief Returns the difficulty as a number, 0 for Easy, 1 for Normal and 2 for Hard */
+		std::int32_t GetDifficultyIndex() const;
+
 		// A restored boss has to come back fresh and dormant, its sub-actors and multi-phase fight can't be resumed,
 		// so it's spawned again by the event map instead
 		bool IsSerializable() const override { return false; }

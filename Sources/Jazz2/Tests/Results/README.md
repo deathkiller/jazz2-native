@@ -11,7 +11,7 @@ written as `.csv` when only the `.gz` is present, so nothing needs to know which
 | Path | Captured from | Settings |
 |---|---|---|
 | `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 601 scenarios, 357 350 rows across 24 category files (counted 2026-10-27). |
-| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64 (see below for when it was 144). 610 scenarios, 312 516 rows across 25 category files (counted 2026-10-27). |
+| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64, original-style camera pinned with `/config` (see below). 610 scenarios, 312 596 rows across 25 category files, one whole sweep (2026-11-11, the last of that day). |
 | `diam3-original.csv.gz`, `diam3-engine.csv.gz` | The same two probes in a **different level** — the original game's own Diamondus 3 — for the single `dm_chain` scenario | Kept apart from the pair above on purpose: a trace holds one level's geometry, and merging two would make the level-version caveat below meaningless. See *Running it in another level* in `../README.md`. |
 
 **Split by category, one file per category on each side.** A full sweep is about eighty minutes a side, so
@@ -30,6 +30,76 @@ whether the categories are redrawn later.
 
 Both sides were re-swept whole on 2026-09-18, after the movement rework described in
 `Docs/MovementAccuracyReference.dox`. The engine run is the reference for that document's "Now" column.
+
+**The engine side was re-swept whole on 2026-11-10**, in five parallel sections of one build, after the keys moved
+ahead of the move, the footing, the frame-rate-exact horizontal move, the original-style camera model, the crouch
+carried into a buttstomp and the buttstomp's 39-tick hover. Three
+things differ from every capture before it. It carries an `ftick` column (the tick counter before it is floored),
+so the files cannot be merged with older ones; the extractor refuses to. The probe rounds its tick for input
+instead of flooring it. And the camera columns are the **original-style** camera for the first time: all earlier
+engine captures took whatever `x64\Debug\Jazz2.config` said and had the Reforged camera, so their `camx`/`camy`
+compare nothing. Scores against the original: median 0.1 px/s; 346 / 454 / 514 / 537 of 599 within 1 / 5 / 10 / 25
+px/s. Interpolated on `ftick`, 130 scenarios hold a median position error of at most 0.5 px, 160 of at most 1 px and
+213 of at most 2 px.
+
+**Re-swept again later on 2026-11-10** (60 FPS, 599 scenarios, 311,984 rows) after the air floor snap, gravity
+before the move, the spring rise hold, the applied fall cap and the copter's press-time read. The probe now also
+undoes the setup frame's gravity for a mid-air start. Scores: 348 / 485 / 524 / 541 of 599 within 1 / 5 / 10 / 25
+px/s; 133 / 166 / 218 scenarios within 0.5 / 1 / 2 px median position error (median 4.16 px). The same build at
+70 FPS, where a frame is a tick, reads 445 / 498 / 531 / 540 and a 2.97 px median, so most of the gap at 60 FPS is
+input landing on frame starts rather than physics. At 144 FPS: 372 / 497 / 519 / 539, 2.94 px.
+
+**Re-swept whole on 2026-11-11** (60 FPS, five parallel sections of one build) after the paddle's four-tick drift
+hold, the water entry and exit depths without the push out, the buttstomp hop and the air floor snap from
+1 px/tick. Scores: 347 / 491 / 529 / 545 of 599 within 1 / 5 / 10 / 25 px/s; 135 / 167 / 220 scenarios within
+0.5 / 1 / 2 px median position error (median 4.09 px). Against the previous sweep 471 scenarios hold within 1 px
+of median position error, 66 improve by more and 62 worsen by more. The improvements are the paddle and water
+families (`pb_pad_hold` 105 → 13 px, `pb_pad_xm16` 138 → 57, `wt_swim_up_run` 16 → 5). The largest regressions
+are not the change: `sp_chain` (0.75 → 760 px) starts 0.09 px apart in `x` after its settle and both sweeps carry
+identical speeds until the chain amplifies it, and the `sp_dj_*` family sits 0.2 ticks apart in input phase. The
+one real regression is `sp_butt_high`, `sp_butt_hold_r` and `sp_butt_tap_r`, which now hop where the original
+lands 0.19 px inside the no-hop band (see the buttstomp row in the reference's gaps section).
+
+**Re-swept whole a second time on 2026-11-11**, after the landing stall (a landing made by the air floor snap loses
+the next tick's move when the fall is faster than the step height) and the jump out of the water. Scores:
+346 / 487 / 531 / 546 of 599 within 1 / 5 / 10 / 25 px/s; 132 / 167 / 223 scenarios within 0.5 / 1 / 2 px median
+position error (median 4.16 px). Against the first sweep of the day 516 scenarios hold within 1 px, 34 improve by
+more and 49 worsen by more. The change shows in the walking gaps: `lh_g5_walk` 3.9 → 0.3 px, `lh_g6_walk`
+3.9 → 0.2, `lh_g4_walk` 8.8 → 4.8. The three largest regressions are input phase, not the change:
+`wb_dash_j164` (2 → 1008 px) presses Jump 0.04 ticks earlier against its wall contact and launches before the
+speed is zeroed, `fu_jump_right_rel` (0.2 → 480) meets its float-up tiles a frame apart, and `wb_rf_g5` flips
+between 0.4 and 260 px from sweep to sweep (it read 260 two sweeps ago).
+
+**Re-swept whole once more on 2026-11-11**, with the game windows minimized, after the weapon, enemy, boss, pickup
+and player-mechanics rounds and three changes to shared movement code: the floor-following search now steps in
+whole check steps (a flat floor no longer wobbles by up to 0.5 px with the frame time), the original-style camera
+moves halfway to its target every tick instead of trailing by a fixed tick, and airborne slope climbing became a
+per-actor switch. Scores: 347 / 488 / 530 / 543 of 599 within 1 / 5 / 10 / 25 px/s; 134 / 166 / 225 scenarios
+within 0.5 / 1 / 2 px median position error (median 4.12 px). Against the previous sweep 526 scenarios hold
+within 1 px, 38 improve by more and 35 worsen by more, which is the run-to-run spread: `sp_chain` is back at
+0.5 px (760 two sweeps ago), `fu_jump_right_rel` back at 480 (0.2 last time), and the `sp_dj_*` family moves by
+3 to 9 px in both directions. **Run the probe minimized**: a window that opens focused takes real keyboard and
+gamepad input, which is mixed with the scripted input - one run made while the machine was in use had every
+scenario off by hundreds of pixels, with the player walking through the settle.
+
+**The last sweep of 2026-11-11** followed the boss and enemy rounds and two changes that reach the probe: airborne
+slope climbing became a per-actor switch, and a copter placed in a level flies its fixed time again whatever
+time the level gives it (the original ignores that value: every ride is 280 ticks; honouring it had made the
+rides 630 ticks). Scores: 347 / 489 / 530 / 546 of 599 within 1 / 5 / 10 / 25 px/s, median position error
+4.16 px. 523 scenarios hold within 1 px of the sweep before it; the `cp_mod_*` family is back where it was before
+the copter change, and the rest is the usual spread (`sp_chain` at 759 px again, the `sp_dj_*` family by a few
+pixels either way).
+
+**Re-swept on 2026-11-12** after a round that unified rules between the two modes, moved shared code into helpers
+and narrowed fields, none of which is meant to move the player. Scores: 348 / 489 / 529 / 548 of 599 within
+1 / 5 / 10 / 25 px/s, median 0.1 px/s. The `cp_mod_*` family changed on purpose: a copter now exists for the whole
+ride as in the original, so its generator starts waiting when the ride ends, and each scenario has to hop for a
+fresh copter (in `cp_mod_get` it is caught at tick 232 against 234, the ride ends at 511 against 513).
+
+**Blank the level's own script before a sweep.** `_pt` carries the probe script of the original game, and left in
+`Cache/Episodes/unknown/_pt.j2as` it runs in this engine too and presses keys of its own: every scenario starts
+displaced at tick 0 and about 125 scenarios instead of 347 land within 1 px/s. It is deterministic, so it reads as
+a regression. A contaminated log has `_pt_trace.csv` lines in it; a clean one has none.
 
 **The `bird` category (`bd_*`, `b2_*`, 43 scenarios) was added on 2026-10-18** from one filtered capture a side,
 with the category's own filter, so both files hold the whole category. It was taken at **60 FPS**, the rate every
