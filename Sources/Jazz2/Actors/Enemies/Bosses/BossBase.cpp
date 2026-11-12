@@ -11,15 +11,6 @@ namespace Jazz2::Actors::Bosses
 		return false;
 	}
 
-	std::int32_t BossBase::GetDifficultyIndex() const
-	{
-		switch (_levelHandler->GetDifficulty()) {
-			case GameDifficulty::Easy: return 0;
-			case GameDifficulty::Hard: return 2;
-			default: return 1;
-		}
-	}
-
 	bool BossBase::OnTileDeactivated()
 	{
 		// Boss cannot be deactivated

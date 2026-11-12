@@ -66,14 +66,7 @@ namespace Jazz2::Actors::Bosses
 
 	bool TurtleBoss::OnPerish(ActorBase* collider)
 	{
-		float shellSpeedY;
-		if (_pos.Y > _levelHandler->GetWaterLevel()) {
-			shellSpeedY = -0.65f;
-		} else if (_levelHandler->IsReforged()) {
-			shellSpeedY = -1.1f;
-		} else {
-			shellSpeedY = -0.98f;
-		}
+		float shellSpeedY = (_pos.Y > _levelHandler->GetWaterLevel() ? -0.65f : -0.98f);
 
 		std::shared_ptr<Enemies::TurtleShell> shell = std::make_shared<Enemies::TurtleShell>();
 		uint8_t shellParams[9];
@@ -162,6 +155,8 @@ namespace Jazz2::Actors::Bosses
 		_attackEndStart = ThrowTicks + (AttackAnimTicks - ThrowTicks) + std::ceil((128.0f - (AttackAnimTicks - ThrowTicks)) / (float)(difficulty + 1));
 
 		PlaySfx("AttackStart"_s);
+		// It stands while the mace is out, once the throw animations are over
+		SetAnimation(AnimState::Idle);
 		SetTransition((AnimState)1073741824, false, [this]() {
 			if (_state == StateAttacking) {
 				SetTransition((AnimState)1073741825, false);

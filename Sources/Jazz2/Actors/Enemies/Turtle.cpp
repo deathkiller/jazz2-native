@@ -88,6 +88,9 @@ namespace Jazz2::Actors::Enemies
 						_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
 						_walkTime = 0.0f;
 					});
+					if (_currentTransition != nullptr) {
+						SetAnimationTicks(_currentTransition->FrameCount * WithdrawFrameTicks);
+					}
 					PlaySfx("WithdrawEnd"_s, 0.2f);
 				}
 			} else if (!_isTurning && !_isWithdrawn && !_isAttacking) {
@@ -103,6 +106,9 @@ namespace Jazz2::Actors::Enemies
 						_speed.X = 0;
 						SetAnimation(WithdrawInProgress);
 						SetTransition(WithdrawStartFast, false);
+						if (_currentTransition != nullptr) {
+							SetAnimationTicks(_currentTransition->FrameCount * WithdrawFrameTicks);
+						}
 						PlaySfx("Withdraw"_s, 0.2f);
 					}
 				}
@@ -112,11 +118,16 @@ namespace Jazz2::Actors::Enemies
 				_isTurning = true;
 				_canHurtPlayer = false;
 				_speed.X = 0;
+				// Measured in JJ2+: the duck goes on from the frame the walk was at, so a late frame ducks quicker
+				std::int32_t walkFrame = _renderer.CurrentFrame - _renderer.FirstFrame;
 				SetTransition(WithdrawStart, false, [this]() {
 					HandleTurn(true);
 				});
-				// Measured in JJ2+: it ducks in 6 ticks and comes back out in 47 when it turns around
-				SetAnimationTicks(TurnStartTicks);
+				if (_renderer.FrameCount > 0) {
+					std::int32_t startFrame = std::clamp<std::int32_t>(walkFrame, 0, _renderer.FrameCount - 1);
+					SetAnimationTicks(_renderer.FrameCount * TurnFrameTicks);
+					SetAnimationTimeTicks(startFrame * TurnFrameTicks + TurnFrameElapsedTicks);
+				}
 				PlaySfx("Withdraw"_s, 0.2f);
 			}
 		}
@@ -124,6 +135,11 @@ namespace Jazz2::Actors::Enemies
 		if (_isAttacking) {
 			// Turtles attack only with animation, so check collisions every frame
 			SetState(ActorState::IsDirty, true);
+		}
+
+		// Measured in JJ2+: it walks at 8 ticks a frame, the frame it reaches a wall at decides how much of the duck shows
+		if (_currentTransition == nullptr && !_isDodging && _renderer.FrameCount > 0) {
+			ChangeAnimationTicks(_renderer.FrameCount * WalkFrameTicks);
 		}
 	}
 
@@ -199,14 +215,7 @@ namespace Jazz2::Actors::Enemies
 
 			TryGenerateRandomDrop();
 		} else {
-			float shellSpeedY;
-			if (_pos.Y > _levelHandler->GetWaterLevel()) {
-				shellSpeedY = -0.65f;
-			} else if (_levelHandler->IsReforged()) {
-				shellSpeedY = -1.1f;
-			} else {
-				shellSpeedY = -0.98f;
-			}
+			float shellSpeedY = (_pos.Y > _levelHandler->GetWaterLevel() ? -0.65f : -0.98f);
 
 			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
 			std::uint8_t shellParams[Events::EventSpawner::SpawnParamsSize] = {};
@@ -276,9 +285,9 @@ namespace Jazz2::Actors::Enemies
 				continue;
 			}
 
-			// The original checks the height only for a turtle facing right
+			// The original checks the height only for a turtle facing right, JJ2+ checks it either way
 			Vector2f diff = player->GetPos() - _pos;
-			bool inFront = (IsFacingLeft() ? diff.X < 0.0f : (diff.X > 0.0f && std::abs(diff.Y) < SightHeight));
+			bool inFront = ((IsFacingLeft() ? diff.X < 0.0f : diff.X > 0.0f) && std::abs(diff.Y) < SightHeight);
 			float sqr = diff.SqrLength();
 			if (inFront && sqr < nearestSqr) {
 				nearestSqr = sqr;
@@ -287,6 +296,20 @@ namespace Jazz2::Actors::Enemies
 		}
 		distanceSqr = nearestSqr;
 		return found;
+	}
+
+	bool Turtle::OnHandleCollision(ActorBase* other)
+	{
+		// Shots bounce off the shell while it turns, and once it has fully withdrawn from a shot (measured in JJ2+)
+		bool inShell = (_isTurning || (_isDodging && _currentTransition == nullptr));
+		if (inShell) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
+				shotBase->TriggerRicochet(this);
+				return true;
+			}
+		}
+
+		return EnemyBase::OnHandleCollision(other);
 	}
 
 	bool Turtle::HasPlayerWithin(float distance) const

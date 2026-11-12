@@ -11,7 +11,8 @@ namespace Jazz2::Actors::Enemies
 		constexpr float SwimRadius = 64.0f;
 		constexpr std::int32_t SwimPeriod = 1024;
 		constexpr std::int32_t SwimTicksBeforeDash = 280;
-		constexpr float DashDistance = 320.0f;
+		// Measured in JJ2+, the same as the original's 160 px
+		constexpr float DashDistance = 160.0f;
 		constexpr float DashDivisor = 64.0f;
 		constexpr std::int32_t DashTicks = 100;
 		constexpr std::int32_t ReturnTicks = 64;

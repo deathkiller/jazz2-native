@@ -7,8 +7,8 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Raven
 
-		Black bird that rises above its perch when a player comes within range and flies back and forth
-		over them. From time to time it glides down at the player and then swoops back to its perch,
+		Black bird that drifts up and down near its perch until a player comes within range, then sweeps
+		over the player from one side to the other, glides down at them and swoops back to its perch,
 		staying clear of the water. Takes a couple of hits to defeat.
 	*/
 	class Raven : public EnemyBase
@@ -40,6 +40,8 @@ namespace Jazz2::Actors::Enemies
 		Vector2f _originPos, _speedPerTick;
 		std::int32_t _counter;
 		float _tickTime;
+		std::int32_t _angle;
+		std::int32_t _angleStep;
 		RavenState _ravenState;
 
 		void AdvanceTick();

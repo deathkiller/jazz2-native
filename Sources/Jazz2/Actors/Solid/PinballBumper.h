@@ -69,10 +69,17 @@ namespace Jazz2::Actors::Solid
 		 * about eight, as in the original.
 		 */
 		static constexpr float LegacyImpulseBias = 1.0f;
+		/** @brief Radius of the broad search outside Reforged, the sprites decide then */
+		static constexpr float LegacyBroadRadius = 48.0f;
+		/** @brief Sprite pixels the player and the bumper must share outside Reforged, as in the original */
+		static constexpr std::int32_t LegacyMinOverlapPixels = 8;
 
 		float _cooldown;
+		float _tickTime;
 		bool _isCarrot = false;
 		float _lightIntensity;
 		float _lightBrightness;
+
+		void LegacyTick();
 	};
 }

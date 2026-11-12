@@ -26,7 +26,11 @@ namespace Jazz2::Actors::Environment
 			return Vector2f::Zero;
 		}
 
-		_cooldown = (_delay > 0 ? _delay : 6.0f);
+		// Measured in JJ2+: a horizontal spring fires again soon, a player held against a wall by it is still on it
+		bool horizontal = (_orientation == Orientation::Left || _orientation == Orientation::Right);
+		_cooldown = (_delay > 0 ? _delay : (!_levelHandler->IsReforged() && horizontal
+			? Player::LegacySpringRetriggerTicks / Player::LegacyFrameRateScale
+			: 6.0f));
 		_launchTime = 0.0f;
 
 		SetTransition(_currentAnimation->State | (AnimState)0x200, false);
@@ -56,7 +60,8 @@ namespace Jazz2::Actors::Environment
 		_state = ((details.Params[2] & 0x02) != 0 ? State::Frozen : State::Default);
 		_delay = details.Params[3];
 
-		SetState(ActorState::SkipPerPixelCollisions, true);
+		// The original fires a spring when its sprite and the player's overlap, so the player's pose matters (measured in JJ2+)
+		SetState(ActorState::SkipPerPixelCollisions, _levelHandler->IsReforged());
 
 		async_await RequestMetadataAsync("Object/Spring"_s);
 

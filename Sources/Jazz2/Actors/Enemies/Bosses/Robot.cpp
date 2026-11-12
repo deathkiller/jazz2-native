@@ -172,9 +172,8 @@ namespace Jazz2::Actors::Bosses
 		_canHurtPlayer = false;
 		CanCollideWithShots = false;
 		SetState(ActorState::IsInvulnerable, true);
+		ForceCancelTransition();
 		SetAnimation(AnimState::Idle);
-
-		CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
 		return false;
 	}
 
@@ -243,7 +242,13 @@ namespace Jazz2::Actors::Bosses
 
 		PlaySfx("AttackStart"_s);
 		SetAnimation(AnimState::Idle);
-		SetTransition((AnimState)1073741824, false);
+		// Each clip runs its exact length in ticks and starts the next one when it ends, so no idle frame shows between them
+		SetTransition((AnimState)1073741824, false, [this]() {
+			if (_state == StateAttacking && _attackPhase == 0) {
+				StartShot();
+			}
+		});
+		SetAnimationTicks(AttackStartTicks);
 	}
 
 	void Robot::StartShot()
@@ -252,11 +257,49 @@ namespace Jazz2::Actors::Bosses
 		_ballThrown = false;
 		_ticks = 0.0f;
 		PlaySfx("Attack"_s);
-		SetTransition((AnimState)1073741825, false);
+		SetTransition((AnimState)1073741825, false, [this]() {
+			if (_state == StateAttacking && _attackPhase == 1) {
+				EndShot();
+			}
+		});
+		SetAnimationTicks(ShotTicks);
+	}
+
+	void Robot::EndShot()
+	{
+		ThrowSpikeBall();
+
+		// The shots stop when they are used up or the player got behind it
+		bool playerBehind = false;
+		Player* player = FindNearestPlayer(NoticeDistanceSqr, nullptr);
+		if (player != nullptr) {
+			playerBehind = ((player->GetPos().X < _pos.X) != IsFacingLeft());
+		}
+
+		if (_shots < 1 || playerBehind) {
+			_attackPhase = 2;
+			_ticks = 0.0f;
+			PlaySfx("AttackEnd"_s);
+			SetTransition((AnimState)1073741826, false, [this]() {
+				if (_state == StateAttacking && _attackPhase == 2) {
+					StartIdle();
+				}
+			});
+			SetAnimationTicks(AttackEndTicks);
+		} else {
+			StartShot();
+		}
 	}
 
 	void Robot::ThrowSpikeBall()
 	{
+		// Once per shot
+		if (_ballThrown) {
+			return;
+		}
+		_ballThrown = true;
+		_shots--;
+
 		std::shared_ptr<SpikeBall> spikeBall = std::make_shared<SpikeBall>();
 		uint8_t spikeBallParams[1] = { (uint8_t)(IsFacingLeft() ? 1 : 0) };
 		spikeBall->SetLaunchSpeed(_ballSpeed);
@@ -272,42 +315,28 @@ namespace Jazz2::Actors::Bosses
 	{
 		_ticks += timeMult * TicksPerFrame;
 
+		// The clips end each step, the timers only catch a clip that didn't run (e.g. missing animation)
 		switch (_attackPhase) {
 			case 0: {
-				if (_ticks >= AttackStartTicks) {
+				if (_ticks >= AttackStartTicks * 2.0f) {
+					ForceCancelTransition();
 					StartShot();
 				}
 				break;
 			}
 			case 1: {
-				if (!_ballThrown && _ticks >= ShotThrowTick) {
-					_ballThrown = true;
-					_shots--;
+				if (_ticks >= ShotThrowTick) {
 					ThrowSpikeBall();
 				}
-				if (_ticks >= ShotTicks) {
-					// The shots stop when they are used up or the player got behind it
-					std::int32_t remaining = _shots;
-
-					bool playerBehind = false;
-					Player* player = FindNearestPlayer(NoticeDistanceSqr, nullptr);
-					if (player != nullptr) {
-						playerBehind = ((player->GetPos().X < _pos.X) != IsFacingLeft());
-					}
-
-					if (remaining < 1 || playerBehind) {
-						_attackPhase = 2;
-						_ticks = 0.0f;
-						PlaySfx("AttackEnd"_s);
-						SetTransition((AnimState)1073741826, false);
-					} else {
-						StartShot();
-					}
+				if (_ticks >= ShotTicks * 2.0f) {
+					ForceCancelTransition();
+					EndShot();
 				}
 				break;
 			}
 			case 2: {
-				if (_ticks >= AttackEndTicks) {
+				if (_ticks >= AttackEndTicks * 2.0f) {
+					ForceCancelTransition();
 					StartIdle();
 				}
 				break;
@@ -336,6 +365,10 @@ namespace Jazz2::Actors::Bosses
 		if (_ticks >= DyingTicks) {
 			_state = StateDead;
 
+			// The original just removes it here, it bursts into pieces instead of vanishing
+			CreateParticleDebrisOnPerish(ParticleDebrisEffect::Standard, Vector2f::Zero);
+			// The remote control keeps this actor alive for a while, so it has to hide itself
+			_renderer.SetDrawEnabled(false);
 			for (std::int32_t i = 0; i < 8; i++) {
 				CreateSpriteDebris((AnimState)Random().Fast(100, 109), 1);
 			}

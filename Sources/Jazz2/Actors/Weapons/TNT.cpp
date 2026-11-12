@@ -123,6 +123,10 @@ namespace Jazz2::Actors::Weapons
 					float distanceSqr = delta.X * delta.X + delta.Y * delta.Y;
 					if (distanceSqr < BlastRadius * BlastRadius) {
 						std::int32_t damage = 1 + std::int32_t((BlastRadius * BlastRadius - distanceSqr) * float(MaxBlastDamage - 1) / (BlastRadius * BlastRadius));
+						// Some bosses lose one point to a blast however close it is, as in the original
+						if (enemy->TakesSingleBlastDamage()) {
+							damage = 1;
+						}
 						enemy->DecreaseHealth(damage, this);
 					}
 				}

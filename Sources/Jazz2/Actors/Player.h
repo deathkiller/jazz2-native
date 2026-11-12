@@ -42,6 +42,7 @@ namespace Jazz2::Actors
 	namespace Environment
 	{
 		class Bird;
+		class RollingRock;
 		class SwingingVine;
 		class SteamNote;
 	}
@@ -79,6 +80,7 @@ namespace Jazz2::Actors
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 #endif
+		friend class Environment::RollingRock;
 		friend class Environment::SwingingVine;
 		friend class Environment::SteamNote;
 		friend class Solid::PinballBumper;
@@ -642,6 +644,8 @@ namespace Jazz2::Actors
 		static constexpr float LegacyCameraButtstompDrop = 60.0f;
 		/** @brief Ticks the camera shakes after a buttstomp landed, original 17 ticks */
 		static constexpr float LegacyStompQuakeTicks = 17.0f;
+		/** @brief Fall speed a floor has to stop for the landing sound, 3 px per tick of the original */
+		static constexpr float LandSoundMinFallSpeed = 3.0f * LegacyFrameRateScale;
 		/**
 		 * @brief Ticks the non-Reforged landing pose spends on each of its frames
 		 *
@@ -766,14 +770,14 @@ namespace Jazz2::Actors
 		/** @brief How far below a ledge's surface the non-Reforged player may arrive and still land on it */
 		static constexpr float LegacyLandingTolerance = 20.0f;
 		/**
-		 * @brief How far past the left side of the non-Reforged hitbox the floor still holds the player up
+		 * @brief How far the hitbox reaches left of the player's centre
 		 *
-		 * Measured in the original by standing the player still at set offsets from a ledge: it holds 12 px past a
-		 * right-hand edge and 11 px before a left-hand one, a 24 px footing on a 20 px wide box.
+		 * Measured in the original: a floor holds the player up 12 px past a right-hand edge and 11 px before a
+		 * left-hand one, and a wall stops it 12 px away on the left and 11 px away on the right.
 		 */
-		static constexpr float LegacyFootingExtraLeft = 2.0f;
-		/** @brief The same past the right side, see @ref LegacyFootingExtraLeft */
-		static constexpr float LegacyFootingExtraRight = 1.0f;
+		static constexpr float HitboxLeft = 12.0f;
+		/** @brief The same right of the centre, see @ref HitboxLeft */
+		static constexpr float HitboxRight = 11.0f;
 		/**
 		 * @brief How far below the non-Reforged player's move a floor still catches it while falling sideways
 		 *
@@ -946,6 +950,10 @@ namespace Jazz2::Actors
 		 * Changes only the speed, not the travel, but a jump out of the launch takes its boost from it.
 		 */
 		static constexpr float LegacySpringHoldTicks = 4.0f;
+		/** @brief Ticks before a horizontal spring can launch the player again, measured in JJ2+ */
+		static constexpr float LegacySpringRetriggerTicks = 4.0f;
+		/** @brief Sprite pixels the player and a spring must share to launch it, as in the original */
+		static constexpr std::int32_t LegacySpringMinOverlapPixels = 8;
 		/** @brief Ticks an upward spring's launch speed is held before gravity acts on it, measured in the original */
 		static constexpr float LegacySpringRiseHoldTicks = 2.0f;
 		/** @brief Ticks a horizontal pole's carry lasts after a vertical spring that keeps the horizontal speed */
@@ -1191,6 +1199,14 @@ namespace Jazz2::Actors
 		float _tubeHeldSpeedY = 0.0f;
 		// Limit on holding that speed, so a ceiling can't keep the player for good
 		float _tubeHeldTimeLeft = 0.0f;
+		// Whether the tube the player is in is too low for its standing hitbox
+		bool _tubeCurled;
+		// The spring that launched the player last, only compared, never used
+		const ActorBase* _lastSpring;
+		// Pushing an object that isn't solid (a rolling rock), counted down in frames
+		float _pushObjectHoldTime;
+		// Ticks since the last push contact, the push pose starts over after more than 2
+		float _pushGapTicks;
 		float _controllableTimeout = 0.0f;
 		// Outside RevUpState because it carries over between wind-ups
 		float _revUpSparkCooldown = 0.0f;
@@ -1713,6 +1729,8 @@ namespace Jazz2::Actors
 		static constexpr float BirdChargeHitInterval = 30.0f;
 		// How much lower a perched bird stands than its flying box reaches
 		static constexpr float BirdStandingDrop = 8.0f;
+		// How far the bird's body reaches either side of its centre
+		static constexpr float BirdHalfWidth = 10.0f;
 		// Angle below the first shot of the second bird's pair, in radians
 		static constexpr float BirdShotSpread = 0.2f;
 

@@ -15,13 +15,13 @@ namespace Jazz2::Actors::Enemies
 		constexpr AnimState AnimWindUp = (AnimState)1073741825;
 		constexpr AnimState AnimBrake = (AnimState)1073741826;
 
-		constexpr float AttackDistance = 180.0f;
+		constexpr float AttackDistanceSqr = 32768.0f;
+		constexpr float AttackBandHeight = 8.0f;
 		constexpr float FloatRadius = 16.0f;
 		constexpr std::int32_t FloatPeriod = 1024;
-		constexpr std::int32_t FloatTicksBeforeAttack = 370;
-		constexpr std::int32_t WindUpTicks = 32;
+		constexpr std::int32_t FloatTicksBeforeAttack = 281;
+		constexpr std::int32_t ClipFrameTicks = 4;
 		constexpr std::int32_t LungeTicks = 71;
-		constexpr std::int32_t BrakeTicks = 20;
 		constexpr std::int32_t ReturnTicks = 64;
 		constexpr float LungeAccelerationX = 1.0f / 16.0f;
 		constexpr float LungeSpringY = 1.0f / 256.0f;
@@ -29,7 +29,7 @@ namespace Jazz2::Actors::Enemies
 	}
 
 	Rapier::Rapier()
-		: _rapierState(RapierState::Floating), _counter(0), _floatCounter(FloatPeriod / 4), _tickTime(0.0f), _noiseCooldown(Random().FastFloat(200.0f, 400.0f))
+		: _rapierState(RapierState::Floating), _counter(0), _floatCounter(Random().Next(0, FloatPeriod / 2)), _tickTime(0.0f), _noiseCooldown(Random().FastFloat(200.0f, 400.0f))
 	{
 	}
 
@@ -89,26 +89,27 @@ namespace Jazz2::Actors::Enemies
 			case RapierState::Floating: {
 				_floatCounter++;
 				Vector2f targetPos;
-				bool found = (_floatCounter >= FloatTicksBeforeAttack && FindTarget(targetPos));
+				bool found = (_floatCounter >= FloatTicksBeforeAttack && FindTarget(targetPos) && (targetPos - _pos).SqrLength() < AttackDistanceSqr);
 				MoveInstantly(GetFloatPos(), MoveType::Absolute | MoveType::Force);
 				ShowFrame(AnimState::Idle, _floatCounter / 8);
 
-				// Measured in JJ2+: it turns to the player only when it winds up
-				if (found && (targetPos - _pos).SqrLength() < AttackDistance * AttackDistance) {
+				// Like the original it keeps facing a player in reach, and attacks only one at its own height
+				if (found) {
 					SetFacingLeft(targetPos.X < _pos.X);
-					ChangeState(RapierState::WindingUp);
+					if (std::floor((targetPos.Y + 4.0f) / AttackBandHeight) == std::floor((_pos.Y + 4.0f) / AttackBandHeight)) {
+						ChangeState(RapierState::WindingUp);
+					}
 				}
 				break;
 			}
 
 			case RapierState::WindingUp: {
-				if (_counter >= WindUpTicks) {
+				ShowFrame(AnimWindUp, _counter / ClipFrameTicks);
+				if (_counter >= _renderer.FrameCount * ClipFrameTicks) {
 					_speedPerTick = Vector2f::Zero;
 					ChangeState(RapierState::Lunging);
 					PlaySfx("Attack"_s, 0.7f);
 					ShowFrame(AnimLunge, 0);
-				} else {
-					ShowFrame(AnimWindUp, _counter / 4);
 				}
 				break;
 			}
@@ -132,9 +133,9 @@ namespace Jazz2::Actors::Enemies
 			case RapierState::Braking: {
 				_speedPerTick *= BrakeFactor;
 				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
-				ShowFrame(AnimBrake, _counter / 4);
+				ShowFrame(AnimBrake, _counter / ClipFrameTicks);
 
-				if (_counter >= BrakeTicks) {
+				if (_counter >= _renderer.FrameCount * ClipFrameTicks) {
 					_returnFrom = _pos;
 					SetFacingLeft(_originPos.X < _pos.X);
 					ChangeState(RapierState::Returning);

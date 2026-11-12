@@ -460,6 +460,8 @@ namespace Jazz2::Actors
 		bool IsCollidingWith(ActorBase* other);
 		/** @brief Returns `true` if this object is colliding with a given AABB */
 		bool IsCollidingWith(const AABBf& aabb);
+		/** @brief Counts the opaque pixels the drawn frames of both objects share, up to @p limit */
+		std::int32_t GetOverlappingPixelCount(ActorBase* other, std::int32_t limit);
 		/**
 		 * @brief Returns `true` if this object crossed over a given object during the current frame
 		 *
@@ -686,14 +688,6 @@ namespace Jazz2::Actors
 		 * Only the player sets it, see @ref Player::LegacyLandingTolerance.
 		 */
 		float _landingTolerance = 0.0f;
-		/**
-		 * @brief How far the floor still holds the actor up past either side of its hitbox (0 = the hitbox only)
-		 *
-		 * Only the player sets it, see @ref Player::LegacyFootingExtraLeft.
-		 */
-		float _footingExtraLeft = 0.0f;
-		/** @brief See @ref _footingExtraLeft */
-		float _footingExtraRight = 0.0f;
 		/** @brief Whether footing found at the start of a tick holds for that tick, as the original's player */
 		bool _footingGrace = false;
 		/** @brief Whether each tick's gravity is applied before that tick's move, as the original's player */
@@ -816,6 +810,20 @@ namespace Jazz2::Actors
 		/** @brief Sets how long the animation or transition just started lasts, in ticks of the original game (70 a second) */
 		void SetAnimationTicks(float ticks) {
 			_renderer.AnimDuration = ticks / 70.0f;
+		}
+		/** @brief Like @ref SetAnimationTicks(), but keeps how far through the animation it is */
+		void ChangeAnimationTicks(float ticks) {
+			float duration = ticks / 70.0f;
+			if (_renderer.AnimDuration != duration) {
+				if (_renderer.AnimDuration > 0.0f) {
+					_renderer.AnimTime *= duration / _renderer.AnimDuration;
+				}
+				_renderer.AnimDuration = duration;
+			}
+		}
+		/** @brief Sets how far into the current animation it is, in ticks of the original game */
+		void SetAnimationTimeTicks(float ticks) {
+			_renderer.AnimTime = ticks / 70.0f;
 		}
 		/** @brief Returns @p baseGravity with the gravity of the level replaced by the given one, for an override of @ref GetGravityModifier() */
 		float ReplaceLevelGravity(float gravity, float baseGravity) const;
@@ -951,8 +959,6 @@ namespace Jazz2::Actors
 
 		// Returns `true` if the actor would still have ground under it after a given relative move
 		bool IsSupportedAfterMove(float stepX, float stepY);
-		// Returns `true` if the floor past the sides of the feet holds the actor up, see `_footingExtraLeft`
-		bool HasExtendedFooting(const AABBf& feet);
 		// Resolves one bounded sub-step of the standard movement, returns `false` if the actor couldn't move at all
 		bool TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, Tiles::TileCollisionParams& params, MovementResult& result);
 

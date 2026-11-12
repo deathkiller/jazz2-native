@@ -11,21 +11,20 @@ namespace Jazz2::Actors::Enemies
 {
 	namespace
 	{
+		// The original's rules, in its ticks and px per tick
 		constexpr float NoticeDistance = 192.0f;
 		constexpr float PatrolHeight = 64.0f;
-		constexpr float RiseSpeed = 2.3f;
-		constexpr float PatrolAcceleration = 0.035f;
-		constexpr float PatrolSpeed = 2.4f;
+		constexpr float SweepWidth = 96.0f;
+		constexpr std::int32_t SweepStep = 4;
 		constexpr std::int32_t PatrolTicksBeforeGlide = 176;
-		constexpr float GlideStartDistance = 40.0f;
-		constexpr std::int32_t GlideTicks = 76;
-		constexpr float GlideSpeedX = 1.0f;
+		constexpr std::int32_t GlideTicks = 141;
 		constexpr float GlideSpeedY = 0.5f;
-		constexpr float SwoopSpeed = 5.0f;
+		constexpr float GlideAbovePlayer = 28.0f;
+		constexpr float ArrivedDistance = 1.0f / 16.0f;
 	}
 
 	Raven::Raven()
-		: _counter(0), _tickTime(0.0f), _ravenState(RavenState::Perched)
+		: _counter(0), _tickTime(0.0f), _angle(0), _angleStep(0), _ravenState(RavenState::Perched)
 	{
 	}
 
@@ -71,38 +70,42 @@ namespace Jazz2::Actors::Enemies
 	{
 		_counter++;
 
+		std::int32_t globalTick = GetElapsedTicks();
+		// 2, 3 or 4 px per tick by difficulty
+		float maxSpeed = 2.0f + (float)GetDifficultyIndex();
 		Vector2f targetPos;
 		switch (_ravenState) {
 			case RavenState::Perched: {
+				// It drifts slowly up and down while it waits
+				MoveInstantly(Vector2f(0.0f, Sin1024(4 * globalTick)), MoveType::Relative | MoveType::Force);
 				if (FindTarget(targetPos, NoticeDistance * NoticeDistance)) {
+					// It sweeps from its own side over the player to the other one
+					bool fromLeft = (_pos.X < targetPos.X);
+					_angle = (fromLeft ? 768 : 256);
+					_angleStep = (fromLeft ? SweepStep : -SweepStep);
 					ChangeState(RavenState::Patrolling);
-					_speedPerTick = Vector2f::Zero;
 				}
 				break;
 			}
 
 			case RavenState::Patrolling: {
-				// Measured in JJ2+: it flies back and forth over the player, 64 px above its perch
-				bool found = FindTarget(targetPos, FLT_MAX);
-				if (!found) {
+				if (!FindTarget(targetPos, FLT_MAX)) {
 					targetPos = _originPos;
 				}
-
-				float patrolY = _originPos.Y - PatrolHeight;
-				float waterLevel = _levelHandler->GetWaterLevel() - 20.0f;
-				if (patrolY > waterLevel) {
-					patrolY = waterLevel;
+				_angle += _angleStep;
+				float stepX = std::clamp(targetPos.X + SweepWidth * Sin1024(_angle) - _pos.X, -maxSpeed, maxSpeed);
+				float stepY = std::clamp(targetPos.Y - PatrolHeight - _pos.Y, -maxSpeed, maxSpeed) + Sin1024(4 * globalTick);
+				MoveInstantly(ClampAboveWater(_pos + Vector2f(stepX, stepY)), MoveType::Absolute | MoveType::Force);
+				if (stepX < -0.25f) {
+					Face(true);
+				} else if (stepX > 0.25f) {
+					Face(false);
 				}
 
-				float dx = targetPos.X - _pos.X;
-				_speedPerTick.X = std::clamp(_speedPerTick.X + (dx < 0.0f ? -PatrolAcceleration : PatrolAcceleration), -PatrolSpeed, PatrolSpeed);
-				_speedPerTick.Y = std::clamp(patrolY - _pos.Y, -RiseSpeed, RiseSpeed);
-				MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
-				if (_speedPerTick.X != 0.0f) {
-					Face(_speedPerTick.X < 0.0f);
-				}
-
-				if (found && _counter >= PatrolTicksBeforeGlide && std::abs(dx) < GlideStartDistance && (dx < 0.0f) == (_speedPerTick.X < 0.0f)) {
+				if (_counter >= PatrolTicksBeforeGlide) {
+					// Then it always glides down at the player, aimed where the player was when it set off
+					float glideX = std::clamp(targetPos.X - _pos.X, -(maxSpeed + 1.0f), maxSpeed + 1.0f) * 0.25f;
+					_speedPerTick = Vector2f(glideX, GlideSpeedY);
 					ChangeState(RavenState::Gliding);
 					SetAnimation(AnimState::TransitionAttack);
 					PlaySfx("Attack"_s, 0.7f, Random().NextFloat(1.4f, 1.8f));
@@ -111,8 +114,9 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			case RavenState::Gliding: {
-				MoveInstantly(Vector2f(IsFacingLeft() ? -GlideSpeedX : GlideSpeedX, GlideSpeedY), MoveType::Relative | MoveType::Force);
-				if (_counter >= GlideTicks) {
+				MoveInstantly(ClampAboveWater(_pos + _speedPerTick), MoveType::Absolute | MoveType::Force);
+				bool belowPlayer = (FindTarget(targetPos, FLT_MAX) && targetPos.Y < _pos.Y + GlideAbovePlayer);
+				if (_counter >= GlideTicks || belowPlayer) {
 					ChangeState(RavenState::Swooping);
 					SetAnimation(AnimState::Idle);
 				}
@@ -120,16 +124,18 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			case RavenState::Swooping: {
-				// Measured in JJ2+: it swoops straight back to its perch at up to 5 px a tick on each axis
+				// Back to its perch, easing in
+				float returnSpeed = maxSpeed + 2.0f;
 				Vector2f diff = _originPos - _pos;
-				Vector2f step = Vector2f(std::clamp(diff.X, -SwoopSpeed, SwoopSpeed), std::clamp(diff.Y, -SwoopSpeed, SwoopSpeed));
-				MoveInstantly(step, MoveType::Relative | MoveType::Force);
-				if (step.X != 0.0f) {
-					Face(step.X < 0.0f);
+				_speedPerTick = (_speedPerTick + Vector2f(std::clamp(diff.X, -returnSpeed, returnSpeed), std::clamp(diff.Y, -returnSpeed, returnSpeed))) * 0.5f;
+				MoveInstantly(_pos + _speedPerTick, MoveType::Absolute | MoveType::Force);
+				if (std::abs(_speedPerTick.X) > 0.122f) {
+					Face(_speedPerTick.X < 0.0f);
 				}
-				if (std::abs(diff.X) <= SwoopSpeed && std::abs(diff.Y) <= SwoopSpeed) {
-					ChangeState(RavenState::Patrolling);
+				if (std::abs(diff.X) < ArrivedDistance && std::abs(diff.Y) < ArrivedDistance) {
+					MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
 					_speedPerTick = Vector2f::Zero;
+					ChangeState(RavenState::Perched);
 				}
 				break;
 			}
@@ -160,6 +166,8 @@ namespace Jazz2::Actors::Enemies
 		dest.WriteVariableInt32(_counter);
 		dest.WriteValueAsLE<float>(_speedPerTick.X);
 		dest.WriteValueAsLE<float>(_speedPerTick.Y);
+		dest.WriteVariableInt32(_angle);
+		dest.WriteVariableInt32(_angleStep);
 	}
 
 	void Raven::OnDeserializeState(Stream& src)
@@ -171,6 +179,8 @@ namespace Jazz2::Actors::Enemies
 		_counter = src.ReadVariableInt32();
 		_speedPerTick.X = src.ReadValueAsLE<float>();
 		_speedPerTick.Y = src.ReadValueAsLE<float>();
+		_angle = src.ReadVariableInt32();
+		_angleStep = src.ReadVariableInt32();
 		SetAnimation(_ravenState == RavenState::Gliding ? AnimState::TransitionAttack : AnimState::Idle);
 	}
 
@@ -186,19 +196,11 @@ namespace Jazz2::Actors::Enemies
 
 	bool Raven::FindTarget(Vector2f& targetPos, float maxDistanceSqr)
 	{
-		float nearestSqr = maxDistanceSqr;
-		bool found = false;
-		for (auto* player : _levelHandler->GetPlayers()) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-			float distanceSqr = (player->GetPos() - _pos).SqrLength();
-			if (distanceSqr < nearestSqr) {
-				nearestSqr = distanceSqr;
-				targetPos = player->GetPos();
-				found = true;
-			}
+		Player* player = FindNearestPlayer(maxDistanceSqr);
+		if (player == nullptr) {
+			return false;
 		}
-		return found;
+		targetPos = player->GetPos();
+		return true;
 	}
 }

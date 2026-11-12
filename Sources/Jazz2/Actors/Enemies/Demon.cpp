@@ -8,7 +8,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Demon::Demon()
-		: _attackTime(IdleTicks / TicksPerFrame), _walkTime(0.0f), _attacking(false), _stuck(false)
+		: _attackTime(IdleTicks / TicksPerFrame), _walkTime(0.0f), _lastIdleFrame(-1), _attacking(false), _stuck(false)
 	{
 	}
 
@@ -42,8 +42,12 @@ namespace Jazz2::Actors::Enemies
 		}
 
 		if (!_attacking) {
-			// Measured in JJ2+: it slides to a stop
-			_speed.X *= powf(BrakeFactor, timeMult * TicksPerFrame);
+			// Measured in JJ2+: it slides to a stop only while its stop animation plays
+			if (_currentTransition != nullptr) {
+				_speed.X *= powf(BrakeFactor, timeMult * TicksPerFrame);
+			} else {
+				_speed.X = 0.0f;
+			}
 		}
 
 		if (_currentTransition != nullptr) {
@@ -68,53 +72,44 @@ namespace Jazz2::Actors::Enemies
 				}
 			}
 
-			// Measured in JJ2+: it stops only after walking away from the player for a while
+			// Measured in JJ2+: after a while of walking it stops as soon as nobody is near
 			_walkTime += timeMult;
-			if (_walkTime >= MinWalkAwayTicks / TicksPerFrame && IsWalkingAwayFromPlayer()) {
+			if (_walkTime > MinWalkTicks / TicksPerFrame && FindNearestPlayer(StopDistance * StopDistance) == nullptr) {
 				_attacking = false;
 				_attackTime = IdleTicks / TicksPerFrame;
 
 				SetAnimation(AnimState::Idle);
 				SetTransition((AnimState)1073741826, false);
 			}
-		} else if (_attackTime > 0.0f) {
-			_attackTime -= timeMult;
 		} else {
-			for (auto& player : _levelHandler->GetPlayers()) {
-				if (player->GetHealth() <= 0) {
-					continue;
-				}
+			// The idle loop rings once a cycle
+			std::int32_t frame = _renderer.CurrentFrame - _renderer.FirstFrame;
+			if (frame == IdleBellFrame && _lastIdleFrame != IdleBellFrame) {
+				PlaySfx("Idle"_s, 0.4f);
+			}
+			_lastIdleFrame = frame;
 
-				Vector2f newPos = player->GetPos();
-				if ((newPos - _pos).Length() < 256.0f) {
+			if (_attackTime > 0.0f) {
+				_attackTime -= timeMult;
+			} else if (Player* player = FindNearestPlayer(NoticeDistance * NoticeDistance)) {
+				// It always turns to the player in range, but charges only one at about its own height
+				Vector2f diff = player->GetPos() - _pos;
+				if (diff.X != 0.0f) {
+					SetFacingLeft(diff.X < 0.0f);
+				}
+				if (std::abs(diff.Y) < NoticeHeight) {
 					_attacking = true;
 					_walkTime = 0.0f;
-
-					SetFacingLeft(newPos.X < _pos.X);
 					_speed.X = 0.0f;
 
+					PlaySfx("AttackStart"_s, 0.6f);
 					SetAnimation((AnimState)1073741824);
-					SetTransition((AnimState)1073741825, false);
-					break;
+					SetTransition((AnimState)1073741825, false, [this]() {
+						PlaySfx("Attack"_s, 0.6f);
+					});
 				}
 			}
 		}
-	}
-
-	bool Demon::IsWalkingAwayFromPlayer() const
-	{
-		bool found = false;
-		for (auto& player : _levelHandler->GetPlayers()) {
-			if (player->GetHealth() <= 0) {
-				continue;
-			}
-			float dx = player->GetPos().X - _pos.X;
-			if (std::abs(dx) <= StopDistance || (dx < 0.0f) == IsFacingLeft()) {
-				return false;
-			}
-			found = true;
-		}
-		return found;
 	}
 
 	void Demon::OnSerializeState(Stream& dest)

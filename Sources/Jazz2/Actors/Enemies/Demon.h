@@ -7,9 +7,9 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Demon
 		
-		Ground-bound creature that idles until a player comes within range, then charges toward them,
-		turning at walls and ledges, and slides to a stop once it has been walking away from the player
-		for a while. Takes a couple of hits to defeat.
+		Ground-bound creature that idles until a player at about its height comes within range, then
+		charges toward them, turning at walls and ledges, and slides to a stop once nobody is near.
+		Takes a couple of hits to defeat.
 	*/
 	class Demon : public EnemyBase
 	{
@@ -35,16 +35,18 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr float WalkSpeed = 1.45f;
-		static constexpr float BrakeFactor = 0.89f;
+		static constexpr float BrakeFactor = 0.875f;
 		static constexpr float IdleTicks = 140.0f;
-		static constexpr float MinWalkAwayTicks = 96.0f;
-		static constexpr float StopDistance = 90.0f;
+		static constexpr float MinWalkTicks = 140.0f;
+		static constexpr float NoticeDistance = 256.0f;
+		static constexpr float NoticeHeight = 64.0f;
+		static constexpr float StopDistance = 96.0f;
+		static constexpr std::int32_t IdleBellFrame = 5;
 
 		float _attackTime;
 		float _walkTime;
+		std::int32_t _lastIdleFrame;
 		bool _attacking;
 		bool _stuck;
-
-		bool IsWalkingAwayFromPlayer() const;
 	};
 }

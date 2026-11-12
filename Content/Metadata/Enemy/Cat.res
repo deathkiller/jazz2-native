@@ -6,11 +6,12 @@
 	"Animations": {
 		"Walk": {
 			"Path": "Doggy/xmas_walk.aura",
-			"FrameRate": 6,
+			"FrameRate": 5.47,
 			"States": [ 1 ]
 		},
 		"Attack": {
 			"Path": "Doggy/xmas_attack.aura",
+			"FrameRate": 14,
 			"States": [ 1325400065 ]
 		}
 	},
@@ -23,7 +24,7 @@
 			"Paths": [ "Doggy/xmas_noise.wav" ]
 		},
 		"Woof": {
-			"Paths": [ "Doggy/xmas_woof_1.wav", "Doggy/xmas_woof_2.wav", "Doggy/xmas_woof_3.wav" ]
+			"Paths": [ "Doggy/xmas_woof_1.wav", "Doggy/xmas_woof_2.wav", "Doggy/xmas_woof_3.wav", "Doggy/xmas_woof_3.wav" ]
 		}
 	}
 }

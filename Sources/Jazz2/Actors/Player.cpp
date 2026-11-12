@@ -80,7 +80,7 @@ namespace Jazz2::Actors
 	Player::Player()
 		:
 		// 0 = original colors; remote players get theirs from the network
-		_furColor(PreferencesCache::PlayerFurColor), _birdPose(0), _birdChargeDirY(0),
+		_furColor(PreferencesCache::PlayerFurColor), _tubeCurled(false), _lastSpring(nullptr), _pushObjectHoldTime(0.0f), _pushGapTicks(0.0f), _birdPose(0), _birdChargeDirY(0),
 		_isActivelyPushing(false), _wasActivelyPushing(false), _wasOnAccBelt(false), _pushContactThisFrame(false),
 		_kickPushedThisFrame(false), _kickWasPushing(false), _controllable(true), _controllableExternal(true),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
@@ -443,8 +443,15 @@ namespace Jazz2::Actors
 			// The original shows the push pose only after pressing on for a moment
 			if (_isActivelyPushing && _pushContactThisFrame) {
 				_pushPressTicks += timeMult * LegacyFrameRateScale;
+				_pushGapTicks = 0.0f;
 			} else if (!_isActivelyPushing) {
 				_pushPressTicks = 0.0f;
+			} else {
+				// More than 2 ticks without contact start it over, e.g. following a rock that rolls away
+				_pushGapTicks += timeMult * LegacyFrameRateScale;
+				if (_pushGapTicks > 2.0f) {
+					_pushPressTicks = 0.0f;
+				}
 			}
 		}
 
@@ -611,14 +618,14 @@ namespace Jazz2::Actors
 			_landingTolerance = LegacyLandingTolerance;
 		}
 		bool legacyFooting = (!_levelHandler->IsReforged() && !IsBird());
-		_footingExtraLeft = (legacyFooting ? LegacyFootingExtraLeft : 0.0f);
-		_footingExtraRight = (legacyFooting ? LegacyFootingExtraRight : 0.0f);
 		_footingGrace = legacyFooting;
 		_gravityBeforeMove = legacyFooting;
 		_landingStall = legacyFooting;
-		_airFloorSnapReach = (!legacyFooting ? 0.0f : IsDashActive()
-			? std::max(LegacyAirFloorSnap, std::abs(_speed.X) / LegacyFrameRateScale + LegacyAirFloorSnapDashExtra)
-			: LegacyAirFloorSnap);
+		// The original reaches further the faster the player moves sideways, in whole pixels per tick, dashing or not;
+		// a held spring launch counts at the run cap, the original has clamped it to that by then (measured in JJ2+)
+		float snapSpeedX = (_springHoldLeft > 0.0f ? std::min(std::abs(_speed.X), LegacyCarryExitRunSpeed) : std::abs(_speed.X));
+		_airFloorSnapReach = (!legacyFooting ? 0.0f
+			: std::max(LegacyAirFloorSnap, std::floor(snapSpeedX / LegacyFrameRateScale) + LegacyAirFloorSnapDashExtra));
 
 		// Tubes are exempt from speed clamps in both modes; only existing limits are raised (0 means no cap)
 		if (_inTubeTime > 0.0f) {
@@ -2696,7 +2703,8 @@ namespace Jazz2::Actors
 				}
 				default: break;
 			}
-		} else {
+		} else if (_onPinballPaddleTime <= 0.0f) {
+			// On a pinball paddle the press is the paddle's, it doesn't start a copter or a double jump
 			switch (profile.AirJump) {
 				case CharacterAirJump::Copter: TryStartCopter(profile); break;
 				case CharacterAirJump::DoubleJump: TryDoubleJump(profile, timeMult); break;
@@ -2856,8 +2864,8 @@ namespace Jazz2::Actors
 	{
 		// Fire
 		bool weaponInUse = false;
-		// Measured in the original: no shooting while riding a pinball paddle
-		bool onPinballPaddle = (!_levelHandler->IsReforged() && _onPinballPaddleTime > 0.0f);
+		// Measured in the original: no shooting while riding a pinball paddle or rolled into a ball
+		bool onPinballPaddle = (!_levelHandler->IsReforged() && (_onPinballPaddleTime > 0.0f || _tubeBallPoseLeft > 0.0f));
 		// Measured in the original: one shot per Lori's kick, the weapon cooldown still applies on top
 		bool loriKickShotSpent = (!_levelHandler->IsReforged() && _playerType == PlayerType::Lori &&
 			_currentSpecialMove == SpecialMoveType::Sidekick && _loriKickShotUsed);
@@ -3435,13 +3443,13 @@ namespace Jazz2::Actors
 		// The hitbox must stay constant relative to the hotspot, otherwise the player gets stuck at walls
 		if (IsBird()) {
 			// Only the bird's body, centered on the hotspot, a perched bird stands lower
-			float halfWidth = (_levelHandler->IsReforged() ? 11.0f : 10.0f);
 			float bottom = (_birdStanding ? 12.0f + BirdStandingDrop : 12.0f);
-			AABBInner = AABBf(_pos.X - halfWidth, _pos.Y - 8.0f, _pos.X + halfWidth, _pos.Y + bottom);
-		} else if (_levelHandler->IsReforged()) {
-			AABBInner = AABBf(_pos.X - 11.0f, _pos.Y + 8.0f - 18.0f, _pos.X + 11.0f, _pos.Y + 8.0f + 12.0f);
+			AABBInner = AABBf(_pos.X - BirdHalfWidth, _pos.Y - 8.0f, _pos.X + BirdHalfWidth, _pos.Y + bottom);
+		} else if (_inTubeTime > 0.0f && _tubeCurled) {
+			// Curled up in a tube it is only as tall as the tube is inside, or it drags along the tube's floor
+			AABBInner = AABBf(_pos.X - HitboxLeft, _pos.Y - 8.0f, _pos.X + HitboxRight, _pos.Y + 12.0f);
 		} else {
-			AABBInner = AABBf(_pos.X - 10.0f, _pos.Y + 8.0f - 16.0f, _pos.X + 10.0f, _pos.Y + 8.0f + 12.0f);
+			AABBInner = AABBf(_pos.X - HitboxLeft, _pos.Y + 8.0f - 16.0f, _pos.X + HitboxRight, _pos.Y + 8.0f + 12.0f);
 		}
 	}
 
@@ -3547,10 +3555,19 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (auto* spring = runtime_cast<Environment::Spring>(other)) {
-			// Hitbox only, plus the path taken, a spring can be skipped over at a low frame rate
-			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f &&
-				(spring->AABBInner.Overlaps(AABBInner) || HasCrossedOver(spring))) {
+			// Hitbox in Reforged, outside it more than 7 shared sprite pixels like the original, plus the path taken,
+			// a spring can be skipped over at a low frame rate
+			bool touching = (_levelHandler->IsReforged()
+				? spring->AABBInner.Overlaps(AABBInner)
+				: GetOverlappingPixelCount(spring, LegacySpringMinOverlapPixels) >= LegacySpringMinOverlapPixels);
+			// The wait is for the spring that just fired, another one fires at once like in the original (bouncing between two)
+			bool cooledDown = (_springCooldown <= 0.0f || (!_levelHandler->IsReforged() && spring != _lastSpring));
+			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && cooledDown &&
+				(touching || HasCrossedOver(spring))) {
 				Vector2f force = spring->Activate();
+				if (force != Vector2f::Zero) {
+					_lastSpring = spring;
+				}
 				OnHitSpring(spring->GetPos(), force, spring->KeepSpeedX, spring->KeepSpeedY, removeSpecialMove);
 			}
 
@@ -3634,7 +3651,9 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (!_inWater && _activeModifier == Modifier::None && !IsBird()) {
-			if (_hitFloorTime <= 0.0f && !CanJump()) {
+			// The original lands only when the floor stops a fall faster than 3 px per tick, so sliding along a floor (or a tube) is silent
+			float fallSpeed = std::max(_frameStartSpeedY, _speed.Y);
+			if (_hitFloorTime <= 0.0f && !CanJump() && fallSpeed > LandSoundMinFallSpeed) {
 				_hitFloorTime = 30.0f;
 				PlaySfx("Land"_s, 0.8f);
 				if (PreferencesCache::GamepadRumble >= 2) {
@@ -3723,7 +3742,10 @@ namespace Jazz2::Actors
 				}
 			}
 		} else {
-			if (IsLedgeClimbAllowed() && _isActivelyPushing && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
+			// The direction key must be held into the wall now, a carry (spring, pole) or a stale push doesn't count
+			float pushInput = (_controllable && _controllableExternal ? _levelHandler->PlayerHorizontalMovement(this) : 0.0f);
+			bool pushingIntoWall = (IsFacingLeft() ? pushInput < -0.4f : pushInput > 0.4f);
+			if (IsLedgeClimbAllowed() && _isActivelyPushing && pushingIntoWall && _suspendType == SuspendType::None && _activeModifier == Modifier::None && !CanJump() &&
 				!_inWater && _currentSpecialMove == SpecialMoveType::None && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionUppercutEnd) &&
 				_speed.Y >= -1.0f && _externalForce.Y >= 0.0f && _copterFramesLeft <= 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f && _dizzyTime <= 0.0f) {
 
@@ -3859,9 +3881,14 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		if (force.X != 0.0f || force.Y != 0.0f) {
+			// A launch takes the player off a bridge or platform, its carry would zero the speed before it lets go
+			CancelCarryingObject();
+		}
+
 		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 		if (std::abs(force.X) > 0.0f) {
-			// The original doesn't move the player towards a horizontal spring
+			// The spring itself doesn't move the player up or down, the air floor snap puts it on a floor close below
 			_copterFramesLeft = 0.0f;
 			if (!_levelHandler->IsReforged()) {
 				// The original simply assigns the spring's speed
@@ -3877,10 +3904,16 @@ namespace Jazz2::Actors
 				_speed.X = (1.0f + std::abs(force.X)) * sign;
 				_externalForce.X = force.X * 0.6f;
 			}
-			_springCooldown = 10.0f;
+			_springCooldown = (_levelHandler->IsReforged() ? 10.0f : LegacySpringRetriggerTicks / LegacyFrameRateScale);
 			SetState(ActorState::CanJump, false);
 			// A spring restores the double jump like landing does
 			ResetAirJumps();
+
+			// The launch takes over from a tube, so the tube's exit clamp doesn't cut it short
+			if (_inTubeTime > 0.0f && GetState(ActorState::CollideWithTileset)) {
+				_inTubeTime = 0.0f;
+				SetState(ActorState::ApplyGravitation, true);
+			}
 
 			_wasActivelyPushing = false;
 			_keepRunningTime = (_levelHandler->IsReforged() ? 100.0f : 80.0f);
@@ -3910,8 +3943,6 @@ namespace Jazz2::Actors
 
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
 		} else if (std::abs(force.Y) > 0.0f) {
-			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
-
 			if (_activeModifier == Modifier::None && _copterFramesLeft > 0.0f) {
 				_copterFramesLeft = 0.0f;
 				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
@@ -3953,6 +3984,11 @@ namespace Jazz2::Actors
 				_inIdleTransition = false;
 				CancelTransition();
 			}
+			// A landing that started the same moment doesn't show, the launch takes over
+			if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionFallToIdle) {
+				_currentTransitionCancellable = true;
+				CancelTransition();
+			}
 
 			if (sign > 0) {
 				removeSpecialMove = false;
@@ -3968,7 +4004,8 @@ namespace Jazz2::Actors
 				// A spring restores the double jump like landing does
 				ResetAirJumps();
 				if (_activeModifier == Modifier::None) {
-					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
+					// The launch pose shows at once, a landing pose of the same moment doesn't flash
+					SetAnimation((_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup | VerticalAnimMask)) | AnimState::Spring);
 				}
 			}
 
@@ -4255,6 +4292,11 @@ namespace Jazz2::Actors
 		}
 
 		AnimState state = _currentAnimation->State;
+		if ((state & AnimState::Dizzy) == AnimState::Dizzy) {
+			// The dizzy walk keeps the rate from its metadata, the slow dizzy speed would make it crawl
+			return;
+		}
+
 		float frameTicks;
 		if ((state & AnimState::Spring) == AnimState::Spring) {
 			// The spring launch pose follows the vertical speed, the shooting pose keeps its own rate
@@ -4482,8 +4524,12 @@ namespace Jazz2::Actors
 
 	void Player::PushSolidObjects(float timeMult)
 	{
-		// Re-established below and in OnHitWall()
-		_pushContactThisFrame = false;
+		// Re-established below and in OnHitWall(), or held by a pushed object that isn't solid
+		_pushContactThisFrame = (_pushObjectHoldTime > 0.0f);
+		if (_pushObjectHoldTime > 0.0f) {
+			_pushObjectHoldTime -= timeMult;
+			_pushFramesLeft = 12.0f;
+		}
 		// A kick met a pushable, set only by the push path below (not by a plain wall)
 		_kickPushedThisFrame = false;
 
@@ -5261,12 +5307,17 @@ namespace Jazz2::Actors
 				// Snap onto the tile the event was found in, not the one the frame ended in
 				float tubeSnapY = TubeSnapY;
 				Vector2f pos = Vector2f(x, y);
+				// A tube too low for a standing player holds it curled up, also through a turn (see OnUpdateHitbox())
+				TileCollisionParams fitProbe = { TileDestructType::None, true };
 				if (_speed.X == 0.0f) {
-					pos.X = (floorFast(pos.X / 32) * 32) + 16;
+					// The original holds the player at pixel 15 of the tile on either axis
+					pos.X = (floorFast(pos.X / 32) * 32) + TubeSnapY;
+					_tubeCurled = !_levelHandler->IsPositionEmpty(this, AABBf(pos.X - 10.0f, pos.Y - 8.0f, pos.X + 10.0f, pos.Y + 20.0f), fitProbe);
 					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_speed.Y == 0.0f) {
 					pos.Y = (floorFast(pos.Y / 32) * 32) + tubeSnapY;
+					_tubeCurled = !_levelHandler->IsPositionEmpty(this, AABBf(pos.X - 10.0f, pos.Y - 8.0f, pos.X + 10.0f, pos.Y + 20.0f), fitProbe);
 					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_inTubeTime <= 0.0f) {

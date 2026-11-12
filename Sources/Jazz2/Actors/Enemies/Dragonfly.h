@@ -7,9 +7,9 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Dragonfly
 		
-		Flying insect that bobs in place until a player comes near, then buzzes in a straight line to
-		a point beside and above the player and hovers there, following the player around. Stays above
-		the water surface. Defeated by a single hit.
+		Buzzing insect that bobs in place until a player comes near, then flies to a point past and
+		above the player, hovers there following the player around, charges at them and flies home.
+		Stays above the water surface. Defeated by a single hit.
 	*/
 	class Dragonfly : public EnemyBase
 	{
@@ -44,15 +44,17 @@ namespace Jazz2::Actors::Enemies
 		std::int32_t _counter;
 		std::int32_t _animTicks;
 		float _tickTime;
+		std::int32_t _phase;
+		std::int32_t _wobbleTime;
+		bool _behind;
 		Vector2f _originPos;
 		Vector2f _basePos;
-		Vector2f _targetPos;
-		Vector2f _diveFrom;
+		// In flight to the player it's the approach step, then the charge and the way home
+		Vector2f _speedPerTick;
 		std::shared_ptr<AudioBufferPlayer> _noise;
 
 		void AdvanceTick();
-		Player* FindNearestPlayer(float maxDistance, bool aboveWaterOnly) const;
-		bool FindTargetPos(Vector2f& targetPos, float maxDistance) const;
+		void StartNoise();
 		void StopNoise();
 	};
 }

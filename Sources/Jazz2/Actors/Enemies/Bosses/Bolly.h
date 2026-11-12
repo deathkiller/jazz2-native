@@ -44,6 +44,10 @@ namespace Jazz2::Actors::Bosses
 		 */
 		static void GetChainOffsets(float chainPhase, std::int32_t chainLength, SmallVectorImpl<Vector2f>& offsets);
 
+		bool TakesSingleBlastDamage() const override {
+			return true;
+		}
+
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnActivatedBoss() override;

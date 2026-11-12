@@ -7,9 +7,8 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Sparks
 		
-		Floating ghost-like enemy that hovers idly until a player approaches, then accelerates toward
-		them. Once it reaches the player, it coasts on and slowly comes to a stop. It doesn't chase
-		players under the water and is defeated by a single hit.
+		Floating ghost-like enemy that creeps up on a player who turns away from it and slows down
+		while it is watched. With nobody near it stops where it is. Defeated by a single hit.
 	*/
 	class Sparks : public EnemyBase
 	{
@@ -32,8 +31,8 @@ namespace Jazz2::Actors::Enemies
 	private:
 		Vector2f _speedPerTick;
 		float _tickTime;
-		bool _coasting;
 
 		void AdvanceTick();
+		static float ApproachSpeed(float speed, float target);
 	};
 }

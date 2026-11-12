@@ -30,6 +30,10 @@ namespace Jazz2::Actors::Enemies
 		virtual Vector2f GetContactThrowSpeed() const {
 			return Vector2f::Zero;
 		}
+		/** @brief Returns `true` if a TNT blast takes only one point of health however close it is */
+		virtual bool TakesSingleBlastDamage() const {
+			return false;
+		}
 
 		/** @brief Whether the enemy can hurt player */
 		bool CanHurtPlayer() const {
@@ -81,6 +85,14 @@ namespace Jazz2::Actors::Enemies
 		}
 		/** @brief Returns the nearest living player within the squared distance or `nullptr`, optionally with its squared distance */
 		Player* FindNearestPlayer(float maxDistanceSqr, float* distanceSqr = nullptr) const;
+		/** @brief Returns the difficulty as a number, 0 for Easy, 1 for Normal and 2 for Hard */
+		std::int32_t GetDifficultyIndex() const;
+		/** @brief Returns the original's ticks elapsed in the level, the same for every actor */
+		std::int32_t GetElapsedTicks() const;
+		/** @brief Returns @p pos kept above the water surface, for an enemy that can't fly into the water */
+		Vector2f ClampAboveWater(Vector2f pos) const;
+		/** @brief Returns the sine of an angle in 1024 steps per turn, as the original's table */
+		static float Sin1024(std::int32_t angle);
 		/** @brief Randomly spawns a drop (collectible) at the enemy's position */
 		void TryGenerateRandomDrop();
 		/** @brief Starts the white-mask blinking effect */

@@ -128,6 +128,7 @@ namespace Jazz2::Actors::Bosses
 		void StartIdle();
 		void StartAttack(float distanceSqr);
 		void StartShot();
+		void EndShot();
 		void LogicTick();
 		void UpdateAttack(float timeMult);
 		void UpdateDying(float timeMult);

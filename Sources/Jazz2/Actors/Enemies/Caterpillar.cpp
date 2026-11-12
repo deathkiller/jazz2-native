@@ -9,7 +9,7 @@
 namespace Jazz2::Actors::Enemies
 {
 	Caterpillar::Caterpillar()
-		: _state(StateIdle), _smokesLeft(0), _attackTime(0.0f)
+		: _state(StateIdle), _count(0), _time(0.0f)
 	{
 	}
 
@@ -26,6 +26,7 @@ namespace Jazz2::Actors::Enemies
 
 		_canHurtPlayer = false;
 		_health = INT32_MAX;
+		_count = Random().Next(0, 32);
 
 		async_await RequestMetadataAsync("Enemy/Caterpillar"_s);
 		SetAnimation(AnimState::Idle);
@@ -42,47 +43,76 @@ namespace Jazz2::Actors::Enemies
 			return;
 		}
 
+		// The cycle runs in ticks of the original, each step shows its frames at a fixed rate
+		_time += timeMult * TicksPerFrame;
+		std::int32_t step = (std::int32_t)(_time / FrameTicks);
+
 		switch (_state) {
 			case StateIdle: {
-				if (_currentTransition == nullptr) {
-					// Measured in JJ2+: one loop of idle, then InhaleStart, Inhale and ExhaleStart
-					SetTransition(AnimState::Idle, true, [this]() {
-						SetTransition((AnimState)1, true, [this]() {
-							SetTransition((AnimState)2, true, [this]() {
-								SetTransition((AnimState)3, true, [this]() {
-									_state = StateAttacking;
-									_smokesLeft = SmokeCount;
-								});
-							});
-						});
-					});
+				ShowFrame(AnimState::Idle, 0);
+				if (_time > (float)_count) {
+					StartStep(StateInhaleStart);
 				}
-
 				break;
 			}
-			case StateAttacking: {
-				if (_attackTime <= 0.0f) {
-					_attackTime = 60.0f;
-
-					SetAnimation((AnimState)5);
-					SetTransition((AnimState)4, true, [this]() {
-						std::shared_ptr<Smoke> smoke = std::make_shared<Smoke>();
-						smoke->OnActivated(ActorActivationDetails(
-							_levelHandler,
-							Vector3i((std::int32_t)_pos.X - 26, (std::int32_t)_pos.Y - 18, _renderer.GetLayer() + 20)
-						));
-						_levelHandler->AddActor(smoke);
-
-						_smokesLeft--;
-						if (_smokesLeft <= 0) {
-							// Measured in JJ2+: ExhaleStart again before it goes idle
-							_state = StateIdle;
-							SetAnimation(AnimState::Idle);
-							SetTransition((AnimState)3, true);
-						}
-					});
+			case StateInhaleStart: {
+				if (ShowFrame(AnimStateInhaleStart, step) >= 0) {
+					StartStep(StateInhale);
+					_count = Random().Next(1, 5);
+				}
+				break;
+			}
+			case StateInhale: {
+				// The last frame is held for a few ticks before it breathes out
+				std::int32_t over = ShowFrame(AnimStateInhale, step);
+				if (over >= 0 && _time - (float)((step - over) * FrameTicks) >= (float)_count) {
+					StartStep(StateExhaleStart);
+				}
+				break;
+			}
+			case StateExhaleStart: {
+				if (ShowFrame(AnimStateExhaleStart, step) >= 0) {
+					StartStep(StateExhale);
+					_count = Random().Next(4, 12);
+				}
+				break;
+			}
+			case StateExhale: {
+				// Each puff plays the frames, holds the last one for another frame and releases a smoke ring
+				std::int32_t frame = (std::int32_t)(_time / ExhaleFrameTicks);
+				ShowFrame(AnimStateExhale, frame);
+				if (frame > _renderer.FrameCount) {
+					_time = 0.0f;
+					SpawnSmoke();
+					_count--;
+					if (_count <= 0) {
+						StartStep(StateExhaleEnd);
+					}
+				}
+				break;
+			}
+			case StateExhaleEnd: {
+				// The mouth closes by playing the exhale start backwards
+				SetAnimation(AnimStateExhaleStart);
+				std::int32_t frame = _renderer.FrameCount - 1 - step;
+				if (frame < 0) {
+					StartStep(StateIdle);
+					_count = Random().Next(0, 32);
+					ShowFrame(AnimState::Idle, 0);
 				} else {
-					_attackTime -= timeMult;
+					SetAnimationFrame(frame);
+				}
+				break;
+			}
+			case StateDisoriented: {
+				SetAnimation(AnimStateDisoriented);
+				if (_renderer.FrameCount > 0) {
+					SetAnimationFrame(step % _renderer.FrameCount);
+				}
+				if (_time >= DisorientedTicks) {
+					StartStep(StateIdle);
+					_count = Random().Next(70, 198);
+					ShowFrame(AnimState::Idle, 0);
 				}
 				break;
 			}
@@ -94,8 +124,8 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnSerializeState(dest);
 
 		dest.WriteVariableInt32(_state);
-		dest.WriteVariableInt32(_smokesLeft);
-		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteVariableInt32(_count);
+		dest.WriteValueAsLE<float>(_time);
 	}
 
 	void Caterpillar::OnDeserializeState(Stream& src)
@@ -103,41 +133,48 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnDeserializeState(src);
 
 		_state = src.ReadVariableInt32();
-		_smokesLeft = src.ReadVariableInt32();
-		_attackTime = src.ReadValueAsLE<float>();
+		_count = src.ReadVariableInt32();
+		_time = src.ReadValueAsLE<float>();
 
-		// Disoriented state is left only from its transition callback
-		if (_state == StateDisoriented) {
+		if (_state < StateIdle || _state > StateDisoriented) {
 			_state = StateIdle;
-			SetAnimation(AnimState::Idle);
 		}
 	}
 
 	bool Caterpillar::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
+			// A shot leaves it dizzy for a while, another one meanwhile doesn't make it longer
 			if (_state != StateDisoriented) {
-				Disoriented(Random().Next(8, 13));
+				StartStep(StateDisoriented);
 			}
 		}
 
 		return false;
 	}
 
-	void Caterpillar::Disoriented(std::int32_t count)
+	void Caterpillar::StartStep(std::int32_t state)
 	{
-		_attackTime = 0.0f;
-		_smokesLeft = 0;
-		_state = StateDisoriented;
+		_state = state;
+		_time = 0.0f;
+	}
 
-		SetTransition((AnimState)6, false, [this, count]() {
-			if (count > 1) {
-				Disoriented(count - 1);
-			} else {
-				_state = StateIdle;
-				SetAnimation(AnimState::Idle);
-			}
-		});
+	std::int32_t Caterpillar::ShowFrame(AnimState state, std::int32_t frame)
+	{
+		SetAnimation(state);
+		std::int32_t frameCount = std::max(_renderer.FrameCount, 1);
+		SetAnimationFrame(std::min(frame, frameCount - 1));
+		return (frame >= frameCount ? frame - frameCount : -1);
+	}
+
+	void Caterpillar::SpawnSmoke()
+	{
+		std::shared_ptr<Smoke> smoke = std::make_shared<Smoke>();
+		smoke->OnActivated(ActorActivationDetails(
+			_levelHandler,
+			Vector3i((std::int32_t)_pos.X - 26, (std::int32_t)_pos.Y - 18, _renderer.GetLayer() + 20)
+		));
+		_levelHandler->AddActor(smoke);
 	}
 
 	Task<bool> Caterpillar::Smoke::OnActivatedAsync(const ActorActivationDetails& details)

@@ -12,6 +12,7 @@
 		},
 		"PaddleActivate": {
 			"Path": "Pinball/paddle_left.aura",
+			"FrameRate": 21,
 			"States": [ 1325400064 ]
 		}
 	},

@@ -7,7 +7,7 @@
 namespace Jazz2::Actors::Solid
 {
 	PinballBumper::PinballBumper()
-		: _cooldown(0.0f), _lightIntensity(0.0f), _lightBrightness(0.0f)
+		: _cooldown(0.0f), _tickTime(0.0f), _lightIntensity(0.0f), _lightBrightness(0.0f)
 	{
 	}
 
@@ -36,7 +36,17 @@ namespace Jazz2::Actors::Solid
 		// animation held until it thaws
 		UpdateFrozenState(timeMult);
 
-		if (_cooldown <= 0.0f) {
+		if (!_levelHandler->IsReforged()) {
+			// Checked every tick of the original, a player still overlapping is thrown out again, so it can't get through
+			_tickTime += timeMult * Player::LegacyFrameRateScale;
+			while (_tickTime >= 1.0f) {
+				_tickTime -= 1.0f;
+				LegacyTick();
+			}
+			if (_cooldown > 0.0f) {
+				_cooldown -= timeMult;
+			}
+		} else if (_cooldown <= 0.0f) {
 			// Measured against the original by dropping the player past a bumper at a set horizontal offset,
 			// leftwards where no second bumper is overhead: it fires at 0 and at 16 px and misses from 48 px
 			// out. This engine fired at 48 as well - the player's own hitbox extends whatever is asked for
@@ -59,52 +69,6 @@ namespace Jazz2::Actors::Solid
 
 					// Move the player back
 					player->MoveInstantly(-player->_speed * timeMult, MoveType::Relative);
-
-					if (!_levelHandler->IsReforged()) {
-						// A straight speed **assignment**, linear in the offset from the bumper's centre and
-						// independent of how fast the player arrived. Not a normalised radial impulse: the
-						// launch scales with the distance rather than only with the direction. In the
-						// original's own units it is exactly
-						//
-						//     speed = (playerPos - bumperPos + 1) / 4
-						//
-						// on both axes, which reproduces every hit measured - a drop through the centre
-						// caught 36 px up leaves at -8.75; one 16 px to the side caught 28 px up leaves at
-						// (-3.75, -6.75); an approach from below caught 47.25 px down is driven back down at
-						// +12.0625; and a later bounce at an offset of (0.134, -38.12) leaves at
-						// (0.2834, -9.2803). All four to four decimal places.
-						//
-						// **The `+1` is the whole reason a player ever escapes a bumper.** A dead-centre drop
-						// is otherwise a perfect fixed point - zero horizontal, straight back up, forever -
-						// and that is what this engine did: `pb_bump_fall` bounced on the spot thirteen times
-						// in 800 ticks and was still going. The bias breaks the symmetry, the offset grows
-						// with every bounce because the rule is linear in it, and the original's player is
-						// thrown clear after about eight.
-						Vector2f offset = player->GetPos() - _pos;
-						player->_speed.X = (offset.X + LegacyImpulseBias) * LegacyImpulseScale * Player::LegacyFrameRateScale;
-						player->_speed.Y = (offset.Y + LegacyImpulseBias) * LegacyImpulseScale * Player::LegacyFrameRateScale;
-
-						if (player->_activeModifier == Player::Modifier::None) {
-							// End a copter properly rather than just shortening it, the way a spring does:
-							// Jazz's copter switches gravity **off**, and setting `_copterFramesLeft` alone
-							// does not turn it back on, so a player launched out of one keeps the launch
-							// speed indefinitely instead of arcing.
-							if (player->_copterFramesLeft > 0.0f) {
-								player->_copterFramesLeft = 0.0f;
-								player->SetAnimation(player->_currentAnimation->State & ~AnimState::Copter);
-							}
-							player->SetState(ActorState::ApplyGravitation, true);
-
-							player->_externalForceCooldown = 10.0f;
-							player->_controllable = true;
-							player->SetState(ActorState::CanJump, false);
-							player->EndDamagingMove();
-						}
-
-						player->AddScore(500);
-						_levelHandler->HandlePlayerPushed(player);
-						return true;
-					}
 
 					Vector2f force = (player->GetPos() - _pos).Normalize() * 12.0f;
 
@@ -172,6 +136,74 @@ namespace Jazz2::Actors::Solid
 
 			if (_lightIntensity < 0.0f) {
 				_lightIntensity = 0.0f;
+			}
+		}
+	}
+
+	void PinballBumper::LegacyTick()
+	{
+		bool carrotPending = false;
+		// Only players can be bumped, so they are checked directly instead of searching all actors around
+		for (auto* player : _levelHandler->GetPlayers()) {
+			if ((player->GetState() & (ActorState::CollideWithOtherActors | ActorState::IsDestroyed | ActorState::ForceDisableCollisions)) != ActorState::CollideWithOtherActors) {
+				continue;
+			}
+			float closestX = std::clamp(_pos.X, player->AABB.L, player->AABB.R);
+			float closestY = std::clamp(_pos.Y, player->AABB.T, player->AABB.B);
+			if ((Vector2f(closestX, closestY) - _pos).SqrLength() >= LegacyBroadRadius * LegacyBroadRadius ||
+				player->GetOverlappingPixelCount(this, LegacyMinOverlapPixels) < LegacyMinOverlapPixels) {
+				continue;
+			}
+
+			// Speed is set to a quarter of the offset every overlapping tick (an eighth while frozen), the bias stands in for the original's origin
+			Vector2f offset = player->GetPos() - _pos;
+			float scale = (_frozenTimeLeft > 0.0f ? LegacyImpulseScale * 0.5f : LegacyImpulseScale) * Player::LegacyFrameRateScale;
+			player->_speed.X = (offset.X + LegacyImpulseBias) * scale;
+			player->_speed.Y = (offset.Y + LegacyImpulseBias) * scale;
+			// The original's physics caps sideways speed at the walk or run limit on the next tick
+			float maxSpeedX = (player->IsDashActive() ? Player::LegacyDashSpeed : Player::LegacyWalkSpeed);
+			player->_speed.X = std::clamp(player->_speed.X, -maxSpeedX, maxSpeedX);
+			// Rolled into a ball for 35 ticks, which also blocks shooting
+			player->_tubeBallPoseLeft = Player::TubeBallPoseTime;
+			// Measured in the original: the rise reads the live jump key, like a float-up's (the released rate without it)
+			player->_jumpReleased = true;
+			player->_riseFromFloatUp = true;
+			player->_riseOwnedByJump = false;
+
+			if (player->_activeModifier == Player::Modifier::None) {
+				// End a copter properly rather than just shortening it, the way a spring does: Jazz's copter
+				// switches gravity off, so a player launched out of one would keep the launch speed for ever
+				if (player->_copterFramesLeft > 0.0f) {
+					player->_copterFramesLeft = 0.0f;
+					player->SetAnimation(player->_currentAnimation->State & ~AnimState::Copter);
+				}
+				player->SetState(ActorState::ApplyGravitation, true);
+
+				player->_externalForceCooldown = 10.0f;
+				player->_controllable = true;
+				player->SetState(ActorState::CanJump, false);
+				player->EndDamagingMove();
+			}
+			_levelHandler->HandlePlayerPushed(player);
+
+			// The flash, the sound, the score and the carrot only once per hit
+			if (_cooldown <= 0.0f) {
+				_cooldown = 16.0f;
+				if (_frozenTimeLeft <= 0.0f) {
+					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
+				}
+				PlaySfx("Hit"_s, 0.8f);
+				player->AddScore(500);
+				carrotPending |= (_isCarrot && Random().Next(0, 4) == 3);
+			}
+		}
+
+		if (carrotPending) {
+			std::uint8_t carrotParams[Events::EventSpawner::SpawnParamsSize] = { 0 };
+			std::shared_ptr<ActorBase> carrot = _levelHandler->EventSpawner()->SpawnEvent(EventType::Carrot, carrotParams,
+				ActorState::None, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.GetLayer() - 10));
+			if (carrot != nullptr) {
+				_levelHandler->AddActor(carrot);
 			}
 		}
 	}

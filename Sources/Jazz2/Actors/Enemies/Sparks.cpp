@@ -10,15 +10,15 @@ namespace Jazz2::Actors::Enemies
 {
 	namespace
 	{
-		constexpr float NoticeDistance = 180.0f;
+		constexpr float NoticeDistance = 256.0f;
 		constexpr float ReachDistance = 16.0f;
 		constexpr float Acceleration = 1.0f / 16.0f;
-		constexpr float MaxSpeed = 3.0f;
 		constexpr float CoastFactor = 31.0f / 32.0f;
+		constexpr float FrameTicks = 6.0f;
 	}
 
 	Sparks::Sparks()
-		: _tickTime(0.0f), _coasting(false)
+		: _tickTime(0.0f)
 	{
 	}
 
@@ -37,6 +37,9 @@ namespace Jazz2::Actors::Enemies
 		async_await RequestMetadataAsync("Enemy/Sparks"_s);
 		SetFacingLeft(true);
 		SetAnimation(AnimState::Idle);
+		if (_renderer.FrameCount > 0) {
+			SetAnimationTicks(_renderer.FrameCount * FrameTicks);
+		}
 
 		async_return true;
 	}
@@ -60,39 +63,37 @@ namespace Jazz2::Actors::Enemies
 
 	void Sparks::AdvanceTick()
 	{
-		// Measured in JJ2+: once it reaches the player, it only coasts and never chases again
-		if (!_coasting) {
-			Player* target = nullptr;
-			float targetDistanceSqr = NoticeDistance * NoticeDistance;
-			float waterLevel = _levelHandler->GetWaterLevel();
-			for (auto* player : _levelHandler->GetPlayers()) {
-				// Chases an invulnerable player too, as in JJ2+
-				if (player->GetHealth() <= 0 || player->GetPos().Y >= waterLevel) {
-					continue;
-				}
-				float distanceSqr = (player->GetPos() - _pos).SqrLength();
-				if (distanceSqr < targetDistanceSqr) {
-					target = player;
-					targetDistanceSqr = distanceSqr;
-				}
-			}
-
-			if (target != nullptr && targetDistanceSqr < ReachDistance * ReachDistance) {
-				_coasting = true;
-				SetFacingLeft(!IsFacingLeft());
-			} else if (target != nullptr) {
-				Vector2f targetPos = target->GetPos();
-				_speedPerTick.X = std::clamp(_speedPerTick.X + (targetPos.X > _pos.X ? Acceleration : -Acceleration), -MaxSpeed, MaxSpeed);
-				_speedPerTick.Y = std::clamp(_speedPerTick.Y + (targetPos.Y > _pos.Y ? Acceleration : -Acceleration), -MaxSpeed, MaxSpeed);
-				SetFacingLeft(_speedPerTick.X >= 0.0f);
-			}
-		}
-
-		if (_coasting) {
+		// Chases an invulnerable player too, as in JJ2+
+		Player* target = FindNearestPlayer(NoticeDistance * NoticeDistance);
+		if (target == nullptr) {
+			// Nobody around, it stops where it is
 			_speedPerTick *= CoastFactor;
+			return;
 		}
+
+		// Like the original it only chases a player who turns away, one facing it (or right next to it) makes it slow down
+		Vector2f diff = target->GetPos() - _pos;
+		bool watched = (diff.X > 0.0f ? target->IsFacingLeft() : !target->IsFacingLeft());
+		if (watched || (std::abs(diff.X) <= ReachDistance && std::abs(diff.Y) <= ReachDistance)) {
+			_speedPerTick *= CoastFactor;
+		} else {
+			// 2, 3 or 4 px per tick by difficulty
+			float maxSpeed = 2.0f + (float)GetDifficultyIndex();
+			Vector2f targetSpeed = Vector2f(std::clamp(diff.X, -maxSpeed, maxSpeed), std::clamp(diff.Y, -maxSpeed, maxSpeed));
+			_speedPerTick.X = ApproachSpeed(_speedPerTick.X, targetSpeed.X);
+			_speedPerTick.Y = ApproachSpeed(_speedPerTick.Y, targetSpeed.Y);
+		}
+		SetFacingLeft(diff.X > 0.0f);
 
 		MoveInstantly(_speedPerTick, MoveType::Relative | MoveType::Force);
+	}
+
+	float Sparks::ApproachSpeed(float speed, float target)
+	{
+		if (speed < target) {
+			return std::min(speed + Acceleration, target);
+		}
+		return std::max(speed - Acceleration, target);
 	}
 
 	void Sparks::OnSerializeState(Stream& dest)
@@ -101,7 +102,7 @@ namespace Jazz2::Actors::Enemies
 
 		dest.WriteValueAsLE<float>(_speedPerTick.X);
 		dest.WriteValueAsLE<float>(_speedPerTick.Y);
-		dest.WriteValue<std::uint8_t>(_coasting ? 1 : 0);
+		dest.WriteValue<std::uint8_t>(0);	// Unused
 	}
 
 	void Sparks::OnDeserializeState(Stream& src)
@@ -110,7 +111,7 @@ namespace Jazz2::Actors::Enemies
 
 		_speedPerTick.X = src.ReadValueAsLE<float>();
 		_speedPerTick.Y = src.ReadValueAsLE<float>();
-		_coasting = (src.ReadValue<std::uint8_t>() != 0);
+		src.ReadValue<std::uint8_t>();	// Unused
 	}
 
 	bool Sparks::OnPerish(ActorBase* collider)

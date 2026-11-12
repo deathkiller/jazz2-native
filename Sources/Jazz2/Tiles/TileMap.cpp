@@ -2820,7 +2820,7 @@ namespace Jazz2::Tiles
 		float* v = vertices.data() + base;
 		auto put = [&](float px, float py, float pu, float pv) {
 			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
-			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = debris.Alpha;
+			*v++ = debris.Tint.X; *v++ = debris.Tint.Y; *v++ = debris.Tint.Z; *v++ = debris.Alpha;
 		};
 		put(x0,           y0,           u0, v0);
 		put(x0 + ex,      y0 + ey,      u1, v0);
@@ -4801,6 +4801,12 @@ namespace Jazz2::Tiles
 			debris.Scale += debris.ScaleSpeed * timeMult;
 			debris.Angle += debris.AngleSpeed * timeMult;
 			debris.Alpha += debris.AlphaSpeed * timeMult;
+
+			if (debris.TintSpeed != Vector3f::Zero) {
+				debris.Tint.X = std::clamp(debris.Tint.X + debris.TintSpeed.X * timeMult, 0.0f, 1.0f);
+				debris.Tint.Y = std::clamp(debris.Tint.Y + debris.TintSpeed.Y * timeMult, 0.0f, 1.0f);
+				debris.Tint.Z = std::clamp(debris.Tint.Z + debris.TintSpeed.Z * timeMult, 0.0f, 1.0f);
+			}
 		}
 	}
 
@@ -4889,7 +4895,7 @@ namespace Jazz2::Tiles
 
 			commandUniforms->TexRect->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
 			commandUniforms->SpriteSize->SetFloatValue(debris.Size.X, debris.Size.Y);
-			commandUniforms->Color->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+			commandUniforms->Color->SetFloatVector(Colorf(debris.Tint.X, debris.Tint.Y, debris.Tint.Z, debris.Alpha).Data());
 
 			// Translation * RotationZ * Scaling * Translation, composed directly. Chaining the four
 			// operations meant three 4x4 multiplies per particle - and a burst of debris is hundreds of

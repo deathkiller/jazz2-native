@@ -11,7 +11,7 @@
 		},
 		"Attack": {
 			"Path": "Demon/attack.aura",
-			"FrameRate": 5,
+			"FrameRate": 5.47,
 			"States": [ 1073741824 ]
 		},
 		"AttackStart": {
@@ -21,8 +21,20 @@
 		},
 		"AttackEnd": {
 			"Path": "Demon/attack_end.aura",
-			"FrameRate": 17.5,
+			"FrameRate": 14,
 			"States": [ 1073741826 ]
+		}
+	},
+
+	"Sounds": {
+		"Idle": {
+			"Paths": [ "Common/hibell.wav" ]
+		},
+		"AttackStart": {
+			"Paths": [ "Common/swish_10.wav" ]
+		},
+		"Attack": {
+			"Paths": [ "Demon/attack.wav" ]
 		}
 	}
 }

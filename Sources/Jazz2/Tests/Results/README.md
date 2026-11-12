@@ -11,7 +11,7 @@ written as `.csv` when only the `.gz` is present, so nothing needs to know which
 | Path | Captured from | Settings |
 |---|---|---|
 | `original/` | Original Jazz Jackrabbit 2 with JJ2+ Beta v6.6h, driven by `Level/_pt.j2as` | Its own fixed tick rate, measured at 70.021 Hz. 601 scenarios, 357 350 rows across 24 category files (counted 2026-10-27). |
-| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64, original-style camera pinned with `/config` (see below). 610 scenarios, 312 596 rows across 25 category files, one whole sweep (2026-11-11, the last of that day). |
+| `engine/` | This engine, driven by `PhysicsProbe.cpp` | **`/max-fps:60`**, Debug x64, original-style camera pinned with `/config` (see below). 610 scenarios, 312 684 rows across 25 category files, one whole sweep (2026-11-11, the last of that day). |
 | `diam3-original.csv.gz`, `diam3-engine.csv.gz` | The same two probes in a **different level** — the original game's own Diamondus 3 — for the single `dm_chain` scenario | Kept apart from the pair above on purpose: a trace holds one level's geometry, and merging two would make the level-version caveat below meaningless. See *Running it in another level* in `../README.md`. |
 
 **Split by category, one file per category on each side.** A full sweep is about eighty minutes a side, so
@@ -95,6 +95,12 @@ and narrowed fields, none of which is meant to move the player. Scores: 348 / 48
 1 / 5 / 10 / 25 px/s, median 0.1 px/s. The `cp_mod_*` family changed on purpose: a copter now exists for the whole
 ride as in the original, so its generator starts waiting when the ride ends, and each scenario has to hop for a
 fresh copter (in `cp_mod_get` it is caught at tick 232 against 234, the ride ends at 511 against 513).
+
+**Re-swept again the same day** after three changes found by scripted runs through the tubes of a stock level: the
+air floor snap reaches `max(8, 4 + whole pixels of sideways speed per tick)` whether the player dashes or not (a
+horizontal spring's 16 px/tick therefore lands a player 18 px above the floor on the next tick, which is what lets
+it catch a pole behind the spring), a tube holds the player at pixel 15 of the tile on both axes, and a player in
+a tube too low for its standing hitbox is curled up. Scores: 349 / 487 / 531 / 548 of 599, median 0.1 px/s.
 
 **Blank the level's own script before a sweep.** `_pt` carries the probe script of the original game, and left in
 `Cache/Episodes/unknown/_pt.j2as` it runs in this engine too and presses keys of its own: every scenario starts

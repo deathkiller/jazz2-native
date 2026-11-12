@@ -159,6 +159,34 @@ namespace Jazz2::Actors::Enemies
 		return result;
 	}
 
+	std::int32_t EnemyBase::GetDifficultyIndex() const
+	{
+		switch (_levelHandler->GetDifficulty()) {
+			case GameDifficulty::Easy: return 0;
+			case GameDifficulty::Hard: return 2;
+			default: return 1;
+		}
+	}
+
+	std::int32_t EnemyBase::GetElapsedTicks() const
+	{
+		return (std::int32_t)(_levelHandler->GetElapsedFrames() * TicksPerFrame);
+	}
+
+	Vector2f EnemyBase::ClampAboveWater(Vector2f pos) const
+	{
+		float waterLevel = _levelHandler->GetWaterLevel() - 12.0f;
+		if (pos.Y > waterLevel) {
+			pos.Y = waterLevel;
+		}
+		return pos;
+	}
+
+	float EnemyBase::Sin1024(std::int32_t angle)
+	{
+		return sinf((float)(angle & 1023) * (fTwoPi / 1024.0f));
+	}
+
 	void EnemyBase::TryGenerateRandomDrop()
 	{
 		constexpr struct {

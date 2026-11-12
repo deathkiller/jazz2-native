@@ -76,7 +76,7 @@ namespace Jazz2
 	{
 		// Version of the level state snapshot format, snapshots are also stored in resumable states. Object states
 		// aren't versioned, so only the current version is accepted.
-		constexpr std::uint16_t LevelStateVersion = 3;
+		constexpr std::uint16_t LevelStateVersion = 4;
 		// Flag of a level state left through a secret exit, the secret level returns to it from any level exit
 		constexpr std::uint8_t LevelStateLeftBySecretExit = 0x08;
 

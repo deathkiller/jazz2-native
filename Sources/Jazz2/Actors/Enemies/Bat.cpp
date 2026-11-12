@@ -135,17 +135,22 @@ namespace Jazz2::Actors::Enemies
 				float stepX = Random().FastFloat(0.0f, MaxStepX);
 				if (targetPos.X < _pos.X) {
 					stepX = -stepX;
+				} else if (targetPos.X == _pos.X) {
+					stepX = 0.0f;
 				}
 				MoveInstantly(Vector2f(stepX, _speedPerTickY), MoveType::Relative | MoveType::Force);
-				SetFacingLeft(targetPos.X < _pos.X);
 
-				// A new speed up or down each wing beat
+				// A new speed up or down each wing beat, and it turns only then, when the player is a whole pixel to the other side
 				_counter++;
 				if (_counter >= TicksPerAnimFrame) {
 					_counter = 0;
 					_frame = (_frame + 1) % std::max<std::int32_t>(_renderer.FrameCount, 1);
 					float speedY = Random().FastFloat(0.0f, MaxSpeedY);
 					_speedPerTickY = (_pos.Y > targetPos.Y ? -speedY : speedY);
+					float dx = std::trunc(targetPos.X - _pos.X);
+					if (dx != 0.0f) {
+						SetFacingLeft(dx < 0.0f);
+					}
 				}
 				SetAnimationFrame(_frame);
 				break;

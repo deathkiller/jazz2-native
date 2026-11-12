@@ -32,10 +32,23 @@ namespace Jazz2::Actors::Enemies
 
 	private:
 		static constexpr std::int32_t StateIdle = 0;
-		static constexpr std::int32_t StateAttacking = 1;
-		static constexpr std::int32_t StateDisoriented = 2;
-		// Measured in JJ2+: 6 smoke rings 70 ticks apart each time
-		static constexpr std::int32_t SmokeCount = 6;
+		static constexpr std::int32_t StateInhaleStart = 1;
+		static constexpr std::int32_t StateInhale = 2;
+		static constexpr std::int32_t StateExhaleStart = 3;
+		static constexpr std::int32_t StateExhale = 4;
+		static constexpr std::int32_t StateExhaleEnd = 5;
+		static constexpr std::int32_t StateDisoriented = 6;
+
+		static constexpr AnimState AnimStateInhaleStart = (AnimState)1;
+		static constexpr AnimState AnimStateInhale = (AnimState)2;
+		static constexpr AnimState AnimStateExhaleStart = (AnimState)3;
+		static constexpr AnimState AnimStateExhale = (AnimState)4;
+		static constexpr AnimState AnimStateDisoriented = (AnimState)6;
+
+		// Ticks of the original per frame, a puff shows each frame longer
+		static constexpr std::int32_t FrameTicks = 8;
+		static constexpr float ExhaleFrameTicks = 12.0f;
+		static constexpr float DisorientedTicks = 350.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -57,9 +70,11 @@ namespace Jazz2::Actors::Enemies
 #endif
 
 		std::int32_t _state;
-		std::int32_t _smokesLeft;
-		float _attackTime;
+		std::int32_t _count;
+		float _time;
 
-		void Disoriented(std::int32_t count);
+		void StartStep(std::int32_t state);
+		std::int32_t ShowFrame(AnimState state, std::int32_t frame);
+		void SpawnSmoke();
 	};
 }

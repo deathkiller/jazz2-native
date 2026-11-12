@@ -571,6 +571,11 @@ namespace Jazz2::Tiles
 			/** @brief Alpha change speed */
 			float AlphaSpeed;
 
+			/** @brief Color multiplier (RGB) */
+			Vector3f Tint = Vector3f(1.0f, 1.0f, 1.0f);
+			/** @brief Color multiplier change speed, each channel is clamped to `[0, 1]` */
+			Vector3f TintSpeed;
+
 			/** @brief Time remaining until disposal */
 			float Time;
 

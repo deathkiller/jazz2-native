@@ -7,10 +7,9 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Doggy
 		
-		Dog that trots back and forth along the ground, turning at walls and ledges. When it comes close
-		to a player in front of it, it becomes enraged and runs back and forth barking until the player
-		is far away. When shot, it turns to the shooter and dashes. Appears as a cat in the Secret Files
-		episode. Takes several hits to defeat.
+		Dog that trots back and forth along the ground, turning at walls and ledges. When a player touches
+		or shoots it, it turns to them and runs barking, fast while the player is ahead of it, until it
+		has to turn or tires out. Appears as a cat in the Secret Files episode. Takes several hits to defeat.
 	*/
 	class Doggy : public EnemyBase
 	{
@@ -25,9 +24,9 @@ namespace Jazz2::Actors::Enemies
 
 		bool OnHandleCollision(ActorBase* other) override;
 
-		/** @brief Returns `true` while it's enraged or dashes after being shot */
+		/** @brief Returns `true` while it runs after a player that touched or shot it */
 		bool IsAttacking() const {
-			return (_enraged || _attackTime > 0.0f);
+			return (_attackTime > 0.0f);
 		}
 
 	protected:
@@ -44,11 +43,13 @@ namespace Jazz2::Actors::Enemies
 	private:
 		float _attackTime;
 		float _noiseCooldown;
-		bool _enraged;
+		std::weak_ptr<ActorBase> _attackTarget;
 		bool _stuck;
 
+		void StartAttack(Player* player);
+		void EndAttack();
+		bool CanAttackRunOn();
 		void UpdateSpeed();
-		bool IsPlayerInFront() const;
-		bool IsPlayerFarAway() const;
+		void ResetSniffTime();
 	};
 }

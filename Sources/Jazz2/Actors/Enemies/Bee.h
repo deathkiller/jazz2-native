@@ -7,9 +7,9 @@ namespace Jazz2::Actors::Enemies
 	/**
 		@brief Bee
 
-		Floating insect that waits at its origin until a player comes within range, then swarms around them,
-		accelerating toward their position and overshooting, before flying straight back to its starting
-		point and attacking again. Buzzes while attacking. Defeated by a single hit.
+		Buzzing insect that circles its origin until a player comes within range, then swarms around them,
+		steering its speed toward their position and overshooting, before flying straight back to its starting
+		point and attacking again. Defeated by a single hit.
 	*/
 	class Bee : public EnemyBase
 	{
@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Enemies
 		BeeState _beeState;
 
 		void AdvanceTick();
-		bool FindTarget(Vector2f& targetPos, float maxDistance) const;
+		bool FindTarget(Vector2f& targetPos, float maxDistanceSqr) const;
 		void StartNoise();
 		void StopNoise();
 	};
