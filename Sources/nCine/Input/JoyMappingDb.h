@@ -44,6 +44,15 @@ static const char* ControllerMappings[] = {
 #if defined(DEATH_TARGET_SWITCH)
 	"53776974636820436f6e74726f6c6c65,Switch Controller,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
 #endif
+#if defined(DEATH_TARGET_WIIU)
+	// devkitPro SDL2 (wiiu-sdl2), GUIDs are the names plus their CRC16 (bytes 2-3), the button
+	// layout follows the labels like the Switch mapping above (from SDL_gamecontrollerdb.h of that port)
+	"0000e2e757696920552047616d657000,Wii U Gamepad,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
+	"0000e45c57696920552050726f204300,Wii U Pro Controller,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
+	"00005ef057696920436c617373696300,Wii Classic Controller,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
+	"0000bce1576969204e756e6368756b00,Wii Remote + Nunchuk,a:b0,b:b1,back:b11,dpdown:b15,dpleft:b12,dpright:b14,dpup:b13,leftshoulder:b6,leftstick:b4,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b5,righttrigger:b9,rightx:a2,righty:a3,start:b10,x:b2,y:b3,",
+	"00001d695769692052656d6f74650000,Wii Remote,a:b7,b:b6,back:b11,dpdown:b12,dpleft:b13,dpright:b15,dpup:b14,start:b10,x:b1,y:b0,",
+#endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// SDL2 on Windows
 	"030057564c050000e60c000000016800,PS5 Controller,a:b0,b:b1,back:b4,dpdown:b12,dpleft:b13,dpright:b14,dpup:b11,guide:b5,leftshoulder:b9,leftstick:b7,lefttrigger:a4,leftx:a0,lefty:a1,touchpad:b15,misc1:b16,rightshoulder:b10,rightstick:b8,righttrigger:a5,rightx:a2,righty:a3,start:b6,x:b2,y:b3,",

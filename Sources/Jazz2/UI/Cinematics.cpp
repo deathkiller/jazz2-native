@@ -339,7 +339,7 @@ namespace Jazz2::UI
 			Everything else plays a quarter of that.
 		*/
 		constexpr std::uint32_t VideoReadAheadCapacity =
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU)
 			1024 * 1024;
 #else
 			256 * 1024;
@@ -423,7 +423,7 @@ namespace Jazz2::UI
 		// Frames are delta-encoded against their predecessor, so a frame cannot be skipped - it always has
 		// to be decoded, and decoding is nearly the whole cost (applying the palette and uploading the
 		// texture is a few percent on top).
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2)
 		// On a machine that decodes slower than the video's frame rate, catching up buys nothing: it hides
 		// all but the last of the decoded frames while making the stall worse. At most one frame is decoded
@@ -657,7 +657,7 @@ namespace Jazz2::UI
 		if (maxTextureSize > 0) {
 			widthLimit = heightLimit = (std::uint32_t)maxTextureSize;
 		}
-#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
 		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		const Vector2i drawableSize = theApplication().GetResolution();

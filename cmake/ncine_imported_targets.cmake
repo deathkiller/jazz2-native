@@ -595,7 +595,13 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(SDL3 CONFIG QUIET)
 	endif()
 
-	if(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
+	if(NINTENDO_WIIU)
+		# devkitPro ships libcurl for the Wii U, but the console's network stack (nn::ac, nsysnet) is not brought
+		# up by this port, so the update check would only wait for a connection that never comes. Online
+		# multiplayer is off there as well.
+		unset(CURL_LIBRARY CACHE)
+		unset(CURL_INCLUDE_DIR CACHE)
+	elseif(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
 		# The Amiga PowerPC SDKs do ship libcurl, but its link-library autoinit opens bsdsocket.library
 		# and usergroup.library before main() runs, and puts a requester on screen when they are not
 		# there - which is every machine without a TCP/IP stack started. The update check and the online
@@ -626,6 +632,12 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			# devkitPro ships no OpenAL for these consoles. libogc's ASND drives the DSP mixer instead
 			# and comes with the toolchain, so there is nothing to look for - see AsndAudioDevice
 			set(ASND_FOUND 1)
+		elseif(NINTENDO_WIIU)
+			# devkitPro ships no OpenAL for the Wii U. SDL2 (wiiu-sdl2) is the window backend there and its
+			# audio driver feeds AX voices, so the software mixer of SdlAudioDevice is used
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(SDLAUDIO_FOUND 1)
 		elseif(NINTENDO_3DS)
 			# devkitPro ships no OpenAL for the 3DS either. The console's sound path is NDSP - libctru's driver
 			# for the DSP's 24 hardware channels, which resample and mix in hardware - but the engine mixes in
@@ -768,7 +780,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
-	if(NINTENDO_SWITCH OR PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS OR IOS)
+	if(NINTENDO_SWITCH OR PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_WIIU OR NINTENDO_3DS OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS OR IOS)
 		# These platforms support only static linking
 		set(LIBRARY_LINKAGE STATIC)
 	else()

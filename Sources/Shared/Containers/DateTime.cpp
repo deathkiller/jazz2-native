@@ -204,7 +204,7 @@ namespace Death { namespace Containers {
 			(void)_tzSet;
 
 #	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || \
-		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || \
 		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3) || \
 		defined(DEATH_TARGET_AMIGAOS)
 			return _timezone;

@@ -81,7 +81,7 @@
 #	endif
 
 	// BoundedSPSCQueue includes
-#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
+#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_AMIGAOS4)
 #		include <malloc.h>
 #	else
@@ -577,7 +577,7 @@ namespace Death { namespace Trace {
 				void* p = _aligned_malloc(size, alignment);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS4)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_AMIGAOS4)
 				void* p = ::memalign(alignment, size);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
@@ -628,7 +628,7 @@ namespace Death { namespace Trace {
 			static void freeAligned(void* ptr) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS4)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_AMIGAOS4)
 				::free(ptr);
 #	else
 				// Retrieve the size and offset information from the metadata

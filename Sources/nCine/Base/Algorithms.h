@@ -264,7 +264,7 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || \
-	defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
+	defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
 	defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 	/**
 	 * @brief Defined where libm is a software newlib: @ref sinApprox() and friends approximate, @ref floorFast() and friends avoid the call
@@ -304,7 +304,7 @@ namespace nCine
 		 */
 		inline float FoldHalfTurn(float x)
 		{
-#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
 			constexpr float RoundingBias = 12582912.0f;	// 1.5 * 2^23, the ulp is exactly 1 for |turns| < 2^22
 			const float whole = (x * (0.5f / fPi) + RoundingBias) - RoundingBias;
 #	else
@@ -548,7 +548,7 @@ namespace nCine
 	inline float floorFast(float x)
 	{
 #if defined(NCINE_APPROX_TRIG)
-#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
 		const float r = (x + 12582912.0f) - 12582912.0f;
 #	else
 		const float r = (float)(std::int32_t)x;
@@ -563,7 +563,7 @@ namespace nCine
 	inline float ceilFast(float x)
 	{
 #if defined(NCINE_APPROX_TRIG)
-#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
 		const float r = (x + 12582912.0f) - 12582912.0f;
 #	else
 		const float r = (float)(std::int32_t)x;

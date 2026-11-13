@@ -1061,7 +1061,9 @@ namespace nCine::Backends
 			_monitors[i].Position.X = bounds.x;
 			_monitors[i].Position.Y = bounds.y;
 
-			float hDpi, vDpi;
+			// SDL leaves the outputs untouched when the video driver cannot report DPI (wiiu-sdl2 has no such
+			// callback), so they start at the default for a scale of 1.0
+			float hDpi = DefaultDPI, vDpi = DefaultDPI;
 			SDL_GetDisplayDPI(i, nullptr, &hDpi, &vDpi);
 			_monitors[i].Scale.X = hDpi / DefaultDPI;
 			_monitors[i].Scale.Y = vDpi / DefaultDPI;

@@ -186,6 +186,8 @@ using namespace Death::IO;
 #		include <switch.h>
 #	elif defined(DEATH_TARGET_VITA)
 #		include <psp2/kernel/clib.h>
+#	elif defined(DEATH_TARGET_WIIU)
+#		include <coreinit/debug.h>
 #	elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 #		include <ogc/exi.h>
 #		include <ogc/usbgecko.h>
@@ -1988,6 +1990,19 @@ namespace nCine
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_WIIU)
+		// OSReport() reaches Cemu's log (with coreinit logging on) and, on a console, any logging module of the
+		// Aroma environment that listens to it
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		OSReport("%s", logEntryWithColors);
 #elif defined(DEATH_TARGET_N64)
 		// Write the message to fd 2, which libdragon routes to every log channel that answered during
 		// startup: the emulator log (ISViewer/emux, shown in the Ares log) and the flashcart's USB log.
@@ -2324,7 +2339,7 @@ namespace nCine
 
 			if (logFile != nullptr) {
 				logFile->Write(logEntryWithColors, length3);
-#	if defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
+#	if defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
 		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 				// This file is effectively the only debugging channel these consoles have, and a hard kill
 				// (the PS button, vitacompanion's "destroy", the PS2's reset switch) runs no shutdown code,
@@ -3126,7 +3141,7 @@ namespace nCine
 #		elif defined(DEATH_TARGET_ANDROID)
 		flags |= 0x04 | 0x20;	// ProcessIdEqualsToMainThreadId | RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-#		elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#		elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 				defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || \
 				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		flags |= 0x20;	// RemoteDevice

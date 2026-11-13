@@ -1051,6 +1051,20 @@ else()
 			ICON "${NCINE_SOURCE_DIR}/Icons/256px.png"
 			ROMFS "${NCINE_CONTENT_DIR}"
 		)
+	elseif(NINTENDO_WIIU)
+		# Converts the ELF to an .rpx and bundles it with "Content" into a .wuhb (Wii U Homebrew Bundle). The Aroma
+		# environment lists every .wuhb in "sd:/wiiu/apps/" on the Wii U Menu and mounts its content read-only
+		# at "/vol/content" when it is started (see ContentResolver::GetContentPath())
+		wut_create_rpx(${NCINE_APP})
+		wut_create_wuhb(${NCINE_APP}
+			CONTENT "${NCINE_CONTENT_DIR}"
+			NAME "${NCINE_APP_NAME}"
+			SHORTNAME "${NCINE_APP_NAME}"
+			AUTHOR "${NCINE_APP_VENDOR}"
+			ICON "${NCINE_SOURCE_DIR}/Icons/WiiU/Icon.png"
+			TVSPLASH "${NCINE_SOURCE_DIR}/Icons/WiiU/SplashTv.png"
+			DRCSPLASH "${NCINE_SOURCE_DIR}/Icons/WiiU/SplashDrc.png"
+		)
 	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 		# Converts the ELF to the .dol format loadable by Swiss/Homebrew Channel/Dolphin
 		ogc_create_dol(${NCINE_APP})

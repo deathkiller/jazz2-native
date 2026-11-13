@@ -19,6 +19,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 @ref consoles-n64 "Nintendo 64" | libdragon @m_span{m-text m-dim} (`cmake/toolchains/n64.cmake`) @m_endspan | `RDP` --- fixed-function | `N64` | `jazz2.z64` @m_span{m-text m-dim} (bootable ROM) @m_endspan
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
+@ref consoles-wiiu "Nintendo Wii U" | devkitPPC + wut @m_span{m-text m-dim} (`WiiU.cmake`) @m_endspan | `Software` @m_span{m-text m-dim} (CPU rasterizer, presented through SDL2) @m_endspan | SDL2 | `jazz2.wuhb` @m_span{m-text m-dim} (Wii U Homebrew Bundle) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan and `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-3ds "Nintendo 3DS" | devkitARM + libctru + citro3d @m_span{m-text m-dim} (`3DS.cmake`) @m_endspan | `PICA` --- fixed-function | `Ctr` | `Jazz2.3dsx` @m_span{m-text m-dim} (in a staged `sdmc/` tree) @m_endspan
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
@@ -944,6 +945,71 @@ Dolphin's TCP socket on port <b>55020</b>. Without the adapter nothing is writte
 -   Online multiplayer is disabled, but local splitscreen works.
 
 - - -
+
+@section consoles-wiiu Nintendo Wii U
+
+Three 1.24 GHz PowerPC cores (Espresso) with 1 GB of memory for applications. There is no OpenGL on the
+console and no backend for its GX2 GPU yet, so the frame is drawn by the `Software` backend
+@m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/Software" @ce) @m_endspan and handed to SDL2
+(devkitPro's `wiiu-sdl2`), whose GX2 renderer shows it on the TV and on the GamePad. Input and audio go
+through SDL2 as well. The result is a native application for the <b>Aroma</b> environment, not a vWii one.
+
+@subsection consoles-wiiu-toolchain Toolchain
+
+@code{.sh}
+# Install devkitPro's pacman, then the Wii U group, SDL2 and zlib
+sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis
+
+export DEVKITPRO=/opt/devkitpro
+@endcode
+
+@m_class{m-noindent}
+
+The `devkitpro/devkitppc` Docker image has all of it. The toolchain file is
+@cpp "$DEVKITPRO/cmake/WiiU.cmake" @ce.
+
+@subsection consoles-wiiu-build Building
+
+@code{.sh}
+cmake -B ./build/wiiu/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/WiiU.cmake
+make -j $(nproc) -C ./build/wiiu/
+@endcode
+
+@m_class{m-noindent}
+
+The build makes @cpp "build/wiiu/jazz2.rpx" @ce and @cpp "build/wiiu/jazz2.wuhb" @ce, a bundle of
+the executable, @cpp "Content" @ce, the icon and the splash screens
+@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. A tree prepared with AssetPacker
+can be bundled instead with `-D NCINE_CONTENT_DIR=...`, but it is not needed: there is enough memory to
+convert the original files on the console.
+
+@subsection consoles-wiiu-deploy Deploying and running
+
+-   Copy @cpp "jazz2.wuhb" @ce to @cpp "sd:/wiiu/apps/" @ce. Aroma shows every bundle there as an
+    icon on the Wii U Menu, nothing has to be installed.
+-   Copy the original Jazz Jackrabbit 2 files to @cpp "sd:/wiiu/apps/Jazz2/Source/" @ce. They are
+    converted into @cpp "sd:/wiiu/apps/Jazz2/Cache/" @ce on the first start, which takes a while.
+    Settings, saves and @cpp "Jazz2.log" @ce are written next to them.
+-   <b>Cemu</b> (2.6) runs the @cpp ".wuhb" @ce too, with its emulated SD card holding
+    @cpp "wiiu/apps/Jazz2/Source" @ce. It does not evaluate the condition of a trap instruction and never moves
+    past a conditional one (`tw`/`twi`), even though it never fires on hardware, and GCC 16 emits
+    those for libstdc++'s checks (the `shared_ptr` reference count overflow test, for example). The
+    game then hangs with a grey screen at the first one. Replacing the conditional traps in @cpp "jazz2.elf" @ce with `nop` and
+    running `elf2rpl` and `wuhbtool` again gives a build Cemu can run. The console is not affected.
+
+@m_class{m-noindent}
+
+<b>Logs:</b> @cpp "Jazz2.log" @ce on the SD card, and every line also goes to `OSReport()`, which
+Cemu shows with coreinit logging on.
+
+@subsection consoles-wiiu-limits Limits and known issues
+
+-   Software rendering only. Lower <b>Rendering resolution</b> in the graphics options if the frame
+    rate drops.
+-   No online multiplayer, update check or level pack downloads: the console's network stack is not
+    brought up. Local multiplayer works with any mix of the GamePad, Pro Controllers and Wii Remotes.
+-   Asynchronous tracing is off, because the RPX format has no thread-local storage.
 
 @section consoles-gamecube Nintendo GameCube
 

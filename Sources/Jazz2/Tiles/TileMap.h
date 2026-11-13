@@ -785,7 +785,7 @@ namespace Jazz2::Tiles
 			thousand of them - more than the whole heap the consoles have left. Desktop targets have the memory,
 			so the effect stays unbounded there.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxDebrisCount = 448;
 #elif defined(DEATH_TARGET_N64)
@@ -801,7 +801,7 @@ namespace Jazz2::Tiles
 			`intensity * ~190` live particles. Left alone it would sit at @ref MaxDebrisCount on its own and
 			leave nothing for a death burst, which is the effect that actually matters.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxWeatherDebrisCount = 128;
 #elif defined(DEATH_TARGET_N64)
@@ -817,8 +817,8 @@ namespace Jazz2::Tiles
 			be batched with the others. Rounded to a few levels on the consoles that budget their particles
 			(see @ref MaxWeatherDebrisCount), the weather is a few draws.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t WeatherDepthStep = 40;
 #else
 		static constexpr std::int32_t WeatherDepthStep = 1;
@@ -842,7 +842,7 @@ namespace Jazz2::Tiles
 			the step instead of dropping the tail keeps the burst covering the whole sprite - the particles just
 			get proportionally fewer and bigger (see @ref GetParticleDebrisStep()).
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxParticleDebrisPerBurst = 256;
 #elif defined(DEATH_TARGET_N64)
