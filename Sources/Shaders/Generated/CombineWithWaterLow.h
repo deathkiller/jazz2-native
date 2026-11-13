@@ -36,7 +36,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-uniform vec2 uCameraPos;
+uniform mediump vec2 uCameraPos;
 
 void main()
 {
@@ -71,7 +71,7 @@ uniform mat4 uViewMatrix;
 
 
 
-uniform vec2 uCameraPos;
+uniform mediump vec2 uCameraPos;
 
 void main()
 {
@@ -350,7 +350,7 @@ layout (std140) uniform InstanceBlock
 
 
 
-uniform vec2 uCameraPos;
+uniform mediump vec2 uCameraPos;
 
 #define DITHER_LEVELS vec3(31.0, 63.0, 31.0)
 
@@ -387,7 +387,7 @@ uniform mat4 uViewMatrix;
 
 
 
-uniform vec2 uCameraPos;
+uniform mediump vec2 uCameraPos;
 
 void main()
 {

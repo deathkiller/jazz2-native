@@ -990,7 +990,7 @@ namespace Jazz2::Actors
 			}
 
 			// Smoke rising from what's left
-			std::int32_t smokeCount = std::clamp(debrisRect.W * debrisRect.H / 600, 1, 3);
+			std::int32_t smokeCount = std::clamp<std::int32_t>(debrisRect.W * debrisRect.H / 600, 1, 3);
 			for (std::int32_t i = 0; i < smokeCount; i++) {
 				Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + Random().FastFloat(-0.3f, 0.3f) * debrisRect.W),
 					(std::int32_t)(y + frameOffset.Y + Random().FastFloat(0.0f, 0.4f) * debrisRect.H), _renderer.GetLayer() + 10), Explosion::Type::SmokeGray, 1.0f);

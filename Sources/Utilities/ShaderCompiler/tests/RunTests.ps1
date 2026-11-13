@@ -112,6 +112,17 @@ Assert ($fs.Contains("#ifdef GL_ES`n#ifdef GL_FRAGMENT_PRECISION_HIGH`nprecision
 Assert (([regex]::Matches($fs, [regex]::Escape('precision highp float;'))).Count -eq 2) 'PrecisionHighp: three-token passthrough missing from FS globals'
 Assert ($vs.Contains("precision highp float;")) 'PrecisionHighp: three-token passthrough missing from VS globals'
 
+# UnreadUniformPrecision: a uniform neither stage reads stays in both (reflection), so its vertex declaration takes the
+# mediump of the fragment stage - a strict ES linker (Mesa) rejects mismatching precisions - and one the VS reads does not
+$h = Emit 'UnreadUniformPrecision'
+foreach ($suffix in @('', '100')) {
+    $vs = Get-Source $h "UnreadUniformPrecision_Vs$suffix"
+    $fs = Get-Source $h "UnreadUniformPrecision_Fs$suffix"
+    Assert ($vs.Contains("uniform mediump vec2 uUnread;")) "UnreadUniformPrecision: VS$suffix declaration of the unread uniform is not mediump"
+    Assert ($vs.Contains("uniform float uScale;")) "UnreadUniformPrecision: VS$suffix declaration of a read uniform changed"
+    Assert ($fs.Contains("uniform vec2 uUnread;")) "UnreadUniformPrecision: FS$suffix declaration of the unread uniform changed"
+}
+
 # DeadFunctions: FS-only helpers vanish from the VS (transitively), VS-only helper vanishes from
 # the FS, unused helper vanishes from both, used helpers survive; stage-guarded declarations are
 # resolved at compile time (attribute only in VS, sampler only in FS, no stage macros anywhere)

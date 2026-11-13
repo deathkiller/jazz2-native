@@ -340,6 +340,11 @@ namespace Jazz2::Rendering
 		}
 
 		auto* instanceBlock = command.GetMaterial().UniformBlock(Material::InstanceBlockName);
+		if DEATH_UNLIKELY(instanceBlock == nullptr) {
+			// The program failed to link (a driver rejected it), so none of its uniforms exist - skip the pass
+			// rather than dereference them every frame
+			return false;
+		}
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());

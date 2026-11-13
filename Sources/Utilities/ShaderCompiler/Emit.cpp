@@ -382,6 +382,85 @@ namespace ShaderCompiler
 			return result;
 		}
 
+		/** Whether @p text names the identifier @p name anywhere outside the line that starts at @p skipLine */
+		bool NamesIdentifier(StringView text, StringView name, const char* skipLine)
+		{
+			auto isIdentChar = [](char c) {
+				return (std::isalnum(static_cast<unsigned char>(c)) || c == '_');
+			};
+			StringView rest = text;
+			while (true) {
+				StringView found = rest.find(name);
+				if (found.empty()) {
+					return false;
+				}
+				const char* lineStart = found.begin();
+				while (lineStart != text.begin() && lineStart[-1] != '\n') {
+					lineStart--;
+				}
+				bool wholeIdentifier = ((found.begin() == text.begin() || !isIdentChar(found.begin()[-1])) &&
+					(found.end() == text.end() || !isIdentChar(*found.end())));
+				if (wholeIdentifier && lineStart != skipLine) {
+					return true;
+				}
+				rest = text.suffix(found.end());
+			}
+		}
+
+		/**
+			Gives the loose uniforms of a vertex stage that it never reads the float precision of the fragment stage
+			@p fragmentSource. TrimUnusedUniforms() keeps a uniform that neither stage reads in both, so that it still
+			reflects (one used only by a `fixed_function` block, like `uCameraPos` of the combine shaders) - on ES the
+			vertex declaration is then `highp` by default and the fragment one `mediump` under `precision mediump float`,
+			and a strict linker (Mesa) rejects the program ("declarations for uniform ... have mismatching precision
+			qualifiers"), while ANGLE lets it through. Matching a declaration the vertex stage never reads changes no
+			result, and desktop GLSL 3.30 accepts and ignores the qualifier. Fragment stages with `precision highp`
+			(which falls back to `mediump` only without GL_FRAGMENT_PRECISION_HIGH) are left as they are.
+		*/
+		String MatchUnreadUniformPrecision(StringView vertexSource, StringView fragmentSource)
+		{
+			if (fragmentSource.contains("precision highp float;"_s) || !fragmentSource.contains("precision mediump float;"_s)) {
+				return vertexSource;
+			}
+
+			String result;
+			StringView source = vertexSource;
+			while (!source.empty()) {
+				std::size_t end = source.findOr('\n', source.end()).begin() - source.begin();
+				StringView line = source.prefix(end < source.size() ? end + 1 : end);
+				source = source.exceptPrefix(line.size());
+
+				// Only a plain single declaration, "uniform <type> <name>;", is considered
+				StringView trimmed = line.trimmed();
+				if (trimmed.hasPrefix("uniform "_s) && trimmed.hasSuffix(';') && !trimmed.contains(',') && !trimmed.contains('[')) {
+					StringView declaration = trimmed.exceptPrefix("uniform "_s.size());
+					StringView name = declaration.exceptSuffix(1).trimmed();
+					std::size_t space = FindLastOf(name, " \t");
+					if (space != Npos) {
+						name = name.exceptPrefix(space + 1);
+					}
+					if (TakesPrecision(declaration) && !name.empty() && !NamesIdentifier(vertexSource, name, line.begin())) {
+						bool declaredInFragment = false;
+						for (StringView fragmentLine : fragmentSource.splitWithoutEmptyParts('\n')) {
+							if (fragmentLine.trimmed() == trimmed) {
+								declaredInFragment = true;
+								break;
+							}
+						}
+						if (declaredInFragment) {
+							std::size_t indent = trimmed.begin() - line.begin();
+							result += line.prefix(indent);
+							result += "uniform mediump "_s;
+							result += line.exceptPrefix(indent + "uniform "_s.size());
+							continue;
+						}
+					}
+				}
+				result += line;
+			}
+			return result;
+		}
+
 		// Both backends' symbols are ALWAYS defined by their aggregate - as the real array when the
 		// compiler was there, as a null pointer otherwise - so the per-shader table can name them
 		// unconditionally. Sizes are named too (`<symbol>Size`) rather than baked in as literals here: an
@@ -438,25 +517,18 @@ namespace ShaderCompiler
 				VkSpirvSymbols vk;
 				MslSymbols msl;
 
+				// Both stages are built before anything is emitted - the GL vertex texts are matched against the fragment
+				// ones (see MatchUnreadUniformPrecision())
+				String sources[2];
+				String es2sources[2];
 				for (std::int32_t stage = 0; stage < 2; stage++) {
 					bool vertexStage = (stage == 0);
-					String source = ShaderParser::BuildStageSource(document, vertexStage, v.Define);
-					if (source.contains(")__SHDR__\""_s)) {
+					sources[stage] = ShaderParser::BuildStageSource(document, vertexStage, v.Define);
+					if (sources[stage].contains(")__SHDR__\""_s)) {
 						diag.Message = "shader source contains the raw string terminator sequence )__SHDR__\"";
 						diag.Line = 1;
 						return false;
 					}
-					// OpenGL-family (GL 3.3 / ES 3.0 / WebGL 2) stage source — compiled only into the OpenGL backend
-					// build's non-ES2 profile; the RHI_GL_PROFILE_ES2 profile uses the _Vs100/_Fs100 source below
-					// instead, so exactly one of the two GL variants is ever compiled in.
-					output += "#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)\n";
-					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
-					output += "R\"__SHDR__(";
-					// Only the GL text, the other backends below take the uniform blocks from the same `source`
-					output += (vertexStage ? String(source) : AddBlockMemberPrecision(source));
-					output += ")__SHDR__\";\n";
-					output += "#endif\n";
-					output += "\n";
 
 					// OpenGL|ES 2.0 (ESSL 100) lowering of the same stage, lowered from the LOW_POWER_GPU view
 					// of it rather than from the source above. The ES2 profile is never a default: it is
@@ -469,22 +541,38 @@ namespace ShaderCompiler
 						/*softwareRenderer*/ false, /*noDynamicBranching*/ false, /*lowPowerGpu*/ true);
 					// A decline here should not happen for committed shaders (enforced by --essl100-check);
 					// fall back to the untransformed source so the field is never null for a precompiled program.
-					String es2source;
 					Diagnostic es2diag;
-					if (!Essl100Emitter::Transform(lowPowerSource, vertexStage, es2source, es2diag)) {
-						es2source = Death::move(lowPowerSource);
+					if (!Essl100Emitter::Transform(lowPowerSource, vertexStage, es2sources[stage], es2diag)) {
+						es2sources[stage] = Death::move(lowPowerSource);
 					}
-					if (es2source.contains(")__SHDR__\""_s)) {
+					if (es2sources[stage].contains(")__SHDR__\""_s)) {
 						diag.Message = "ES2 shader source contains the raw string terminator sequence )__SHDR__\"";
 						diag.Line = 1;
 						return false;
 					}
+				}
+
+				for (std::int32_t stage = 0; stage < 2; stage++) {
+					bool vertexStage = (stage == 0);
+					const String& source = sources[stage];
+					// OpenGL-family (GL 3.3 / ES 3.0 / WebGL 2) stage source — compiled only into the OpenGL backend
+					// build's non-ES2 profile; the RHI_GL_PROFILE_ES2 profile uses the _Vs100/_Fs100 source below
+					// instead, so exactly one of the two GL variants is ever compiled in.
+					output += "#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)\n";
+					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
+					output += "R\"__SHDR__(";
+					// Only the GL text, the other backends below take the uniform blocks from the same `source`
+					output += (vertexStage ? MatchUnreadUniformPrecision(source, sources[1]) : AddBlockMemberPrecision(source));
+					output += ")__SHDR__\";\n";
+					output += "#endif\n";
+					output += "\n";
+
 					// OpenGL|ES 2.0 (ESSL 100) stage source — compiled only into the OpenGL backend build's ES2
 					// profile (RHI_GL_PROFILE_ES2); the non-ES2 profile uses the _Vs/_Fs source above instead.
 					output += "#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs100" : "_Fs100") + "[] =\n";
 					output += "R\"__SHDR__(";
-					output += es2source;
+					output += (vertexStage ? MatchUnreadUniformPrecision(es2sources[0], es2sources[1]) : es2sources[1]);
 					output += ")__SHDR__\";\n";
 					output += "#endif\n";
 					output += "\n";

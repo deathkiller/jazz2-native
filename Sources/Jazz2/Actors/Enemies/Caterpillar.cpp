@@ -162,7 +162,7 @@ namespace Jazz2::Actors::Enemies
 	std::int32_t Caterpillar::ShowFrame(AnimState state, std::int32_t frame)
 	{
 		SetAnimation(state);
-		std::int32_t frameCount = std::max(_renderer.FrameCount, 1);
+		std::int32_t frameCount = std::max<std::int32_t>(_renderer.FrameCount, 1);
 		SetAnimationFrame(std::min(frame, frameCount - 1));
 		return (frame >= frameCount ? frame - frameCount : -1);
 	}
