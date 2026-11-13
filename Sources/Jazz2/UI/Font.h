@@ -145,6 +145,11 @@ namespace Jazz2::UI
 		FontFormat::Glyph _asciiChars[128];
 		HashMap<std::uint32_t, FontFormat::Glyph> _unicodeChars;
 		std::unique_ptr<Texture> _texture;
+#if defined(CANVAS_RETAINED_DRAWS)
+		// Tells the font from one that was at the same address before, for what a canvas keeps of its strings
+		static inline std::uint32_t _lastSerial = 0;
+		std::uint32_t _serial = ++_lastSerial;
+#endif
 		/** @brief How far one line of text sits below the previous one */
 		std::int32_t _lineHeight;
 		std::int32_t _baseSpacing;

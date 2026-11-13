@@ -94,23 +94,27 @@ namespace Jazz2::Rendering::SoftwareLighting
 	}
 
 #if defined(DEATH_TARGET_N64)
+	/** @brief Steps of the squared distance, from the centre of a light to its far radius, in @ref CorelessFalloffTable() */
+	constexpr std::int32_t CorelessFalloffSteps = 256;
+
 	/**
-	 * @brief Returns the falloff of a light with no flat core over the squared-distance steps of @ref Distance()
+	 * @brief Returns the falloff of a light with no flat core over @ref CorelessFalloffSteps steps of the squared distance
 	 *
-	 * Most lights of a level have no core (a near radius of zero) - every collectible's glow, the lights of the
-	 * enemies and bosses - and for those the falloff is a function of the squared distance alone, the same for
-	 * every light. Tabulated over the very steps the square root is, it is a convert and a load per texel of the
-	 * annulus instead of that and a subtraction, two compares with their branches and two multiplies. Every entry
-	 * is computed from the square-root table's own value by the function the loop calls, so the lightmap comes out
-	 * bit-identical.
+	 * A light with no core (a near radius of zero, most lights of a level) falls off by the squared distance
+	 * alone, the same for every light, so a table lookup replaces a square root, two compares and two
+	 * multiplies per texel.
+	 *
+	 * The table is small because the lightmap already takes over half of the 8 KB data cache, at 4 KB the
+	 * two kept evicting each other. The index is rounded to the nearest step, which keeps the error under
+	 * 1/100 of a light's strength everywhere but in the texel of its centre.
 	 */
 	inline const float* CorelessFalloffTable()
 	{
-		static float table[1026];
+		static float table[CorelessFalloffSteps + 2];
 		static bool tableReady = false;
 		if (!tableReady) {
-			for (std::int32_t i = 0; i < 1026; i++) {
-				table[i] = FalloffStrength(Distance(float(i) / 1024.0f), 1.0f);
+			for (std::int32_t i = 0; i < CorelessFalloffSteps + 2; i++) {
+				table[i] = FalloffStrength(std::sqrt(std::min(float(i) / float(CorelessFalloffSteps), 1.0f)), 1.0f);
 			}
 			tableReady = true;
 		}
@@ -295,7 +299,9 @@ namespace Jazz2::Rendering::SoftwareLighting
 		const float invRLm = 1.0f / rLm;
 #if defined(DEATH_TARGET_N64)
 		const float* corelessFalloff = (Coreless ? CorelessFalloffTable() : nullptr);
-		const float invRLmScaled = invRLm * 32.0f;
+		// The square of this is the table's steps to a unit of the squared distance (see below)
+		const float invRLmScaled = invRLm * 16.0f;
+		static_assert(CorelessFalloffSteps == 16 * 16, "The column terms are scaled to the table's steps");
 #endif
 		const float denom = (1.0f - radiusNearNorm);
 		// A light without falloff (near >= far) has no annulus at all: the core test below covers the whole disc
@@ -332,6 +338,35 @@ namespace Jazz2::Rendering::SoftwareLighting
 			if (outerSq <= 0.0f) {
 				continue;
 			}
+
+#if defined(DEATH_TARGET_N64)
+			if (Coreless && hasColumnTerms) {
+				// No core, so the squared distance only indexes the falloff table, with the scale of the table folded
+				// into both terms: (16 dx)^2 + 256 dy^2. The texels of the row inside the disc are found by scanning
+				// from both ends of the light's columns, cheaper than a square root for every row. Two texels an
+				// iteration, the second one fills the waits of the first one's dependent float operations.
+				const float dySqScaled = dySq * float(CorelessFalloffSteps);
+				const float limit = float(CorelessFalloffSteps) - dySqScaled;
+				std::int32_t first = 0, last = bx1 - bx0;
+				while (first <= last && columnTerms[first] > limit) {
+					first++;
+				}
+				while (last >= first && columnTerms[last] > limit) {
+					last--;
+				}
+				float* row = &lightmap[((std::size_t)y * lmW + bx0 + first) * 2];
+				// Rounded to the nearest step
+				const float bias = dySqScaled + 0.5f;
+#pragma GCC unroll 2
+				for (std::int32_t i = first; i <= last; i++, row += 2) {
+					const float strength = corelessFalloff[std::int32_t(columnTerms[i] + bias)];
+					row[0] += strength * intensity;
+					row[1] += strength * brightness;
+				}
+				continue;
+			}
+#endif
+
 			// Texels inside the disc on this row (the ceil/floor of the two real bounds). The fast forms, because
 			// `std::ceil` and `std::floor` are library calls on most of the consoles this runs on, four a row.
 			const float halfW = RowHalfWidth(outerSq) * rLm;
@@ -341,37 +376,6 @@ namespace Jazz2::Rendering::SoftwareLighting
 				continue;
 			}
 			float* row = &lightmap[((std::size_t)y * lmW + xs) * 2];
-
-#if defined(DEATH_TARGET_N64)
-			if constexpr (Coreless) {
-				// No core, so the whole row is annulus, and its squared distance only ever indexes the falloff table -
-				// Distance()'s 1024 steps per unit - so the scale is folded into the two terms instead: (32 dx)^2 +
-				// 1024 dy^2 is the very float (dx^2 + dy^2) * 1024 is, as scaling by a power of two commutes with the
-				// rounding, for one multiplication a texel fewer. The texel's coordinate counts up as a float (exact
-				// at any lightmap size) instead of being converted from the integer every time. Two texels an
-				// iteration: one texel is a single chain of dependent float operations and a table load, which the
-				// in-order VR4300 waits out stage by stage, and a second, independent one fills those waits.
-				const float dySqScaled = dySq * 1024.0f;
-				if (hasColumnTerms) {
-#pragma GCC unroll 2
-					for (std::int32_t x = xs; x <= xe; x++, row += 2) {
-						const float strength = corelessFalloff[std::min<std::int32_t>(std::int32_t(columnTerms[x - bx0] + dySqScaled), 1025)];
-						row[0] += strength * intensity;
-						row[1] += strength * brightness;
-					}
-					continue;
-				}
-				float fx = float(xs);
-#pragma GCC unroll 2
-				for (std::int32_t x = xs; x <= xe; x++, row += 2, fx += 1.0f) {
-					const float dxScaled = (fx - cx) * invRLmScaled;
-					const float strength = corelessFalloff[std::min<std::int32_t>(std::int32_t(dxScaled * dxScaled + dySqScaled), 1025)];
-					row[0] += strength * intensity;
-					row[1] += strength * brightness;
-				}
-				continue;
-			}
-#endif
 
 			// The flat core, if this row crosses it
 			std::int32_t cs = xe + 1;

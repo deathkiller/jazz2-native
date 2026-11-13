@@ -24,6 +24,168 @@ namespace nCine::RHI::Software
 {
 	namespace
 	{
+		/*
+			Row forms of generated fragment shaders (see SpanShaderInput).
+
+			The textured background of a level is a quad the size of the view whose shader depends mostly on the
+			row: depth, fade and texture row are the same along it, only the texel column changes. The generated
+			fragment worked all of that out for every pixel, 17 ms of a 20 ms frame at 720x405.
+
+			The row form evaluates the same expressions in the same order, the row's part once, so its output is
+			byte-identical (a debug build compares every span). A run of pixels on one texel is shaded once. A
+			texture with no fast case (not 4 bytes a texel, or with a swizzle) goes through the fragment.
+		*/
+		struct ByteToUnit
+		{
+			float Values[256];
+			ByteToUnit() {
+				for (std::int32_t i = 0; i < 256; i++) {
+					// Verbatim division, see sw::swTexture()
+					Values[i] = i / 255.0f;
+				}
+			}
+		};
+		const ByteToUnit byteToUnit;
+
+		inline std::uint8_t QuantizeUnit(float v)
+		{
+			// sw::packColor()'s quantization
+			v = (v < 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v);
+			const std::int32_t i = static_cast<std::int32_t>(v * 255.0f + 0.5f);
+			return static_cast<std::uint8_t>((i < 0) ? 0 : (i > 255 ? 255 : i));
+		}
+
+		template<class Uniforms, FragmentShaderFn Fragment>
+		void TexturedBackgroundSpan(const SpanShaderInput& in)
+		{
+			using namespace sw;
+			const SwTexture* tex = in.textures[0];
+			const std::uint8_t* pixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
+			const SwizzleChannel* swizzle = (tex != nullptr ? tex->GetSwizzle() : nullptr);
+			const bool direct = (pixels != nullptr && tex->GetWidth() > 0 && tex->GetHeight() > 0 && tex->GetBytesPerPixel() == 4 &&
+				swizzle[0] == SwizzleChannel::Red && swizzle[1] == SwizzleChannel::Green &&
+				swizzle[2] == SwizzleChannel::Blue && swizzle[3] == SwizzleChannel::Alpha);
+			if DEATH_UNLIKELY(!direct) {
+				FragmentShaderInput fsInput;
+				fsInput.v = in.v;
+				fsInput.y = in.y;
+				fsInput.texWidth = in.texWidth;
+				fsInput.texHeight = in.texHeight;
+				fsInput.textures = in.textures;
+				fsInput.color = in.color;
+				fsInput.userData = in.userData;
+				std::int32_t txFix = in.txBase;
+				for (std::int32_t i = 0; i < in.count; i++, txFix += in.dtxFix) {
+					fsInput.rgba = &in.rgba[i * 4];
+					fsInput.u = txFix / 65536.0f * in.invTexWidth;
+					fsInput.x = in.x + i;
+					Fragment(fsInput);
+				}
+				return;
+			}
+
+			// A copy, so that nothing written to the pixels can be taken for a change of the uniforms
+			const Uniforms unis = *static_cast<const Uniforms*>(in.userData);
+			const float opacity = in.color[3];
+
+			// legacyWarp() of TexturedBackground.shader as generated, the terms of the row
+			const float horizonY = clamp(0.5f + unis.uHorizonOffset.y, 0.0f, 1.0f);
+			const float aboveHorizon = in.v <= horizonY ? 1.0f : 0.0f;
+			const float fromHorizon = aboveHorizon > 0.5f ? (horizonY - in.v) / max(horizonY, 0.0001f) : (in.v - horizonY) / max(1.0f - horizonY, 0.0001f);
+			const float distance = 1.3f - fromHorizon;
+			const float horizonDepth = distance;
+			const float correction = unis.uViewSize.x * 9.0f / (unis.uViewSize.y * 16.0f);
+			const float shiftX = unis.uShift.x / 256.0f;
+			const float depthScale = 0.5f + 1.5f * horizonDepth;
+			const float texturePosY = unis.uShift.y / 256.0f + (2.0f * aboveHorizon - 1.0f) * 0.5f * (1.0f - fromHorizon) * 1.4f * distance;
+			const float horizonOpacity = clamp(distance * distance - 0.3f, 0.0f, 1.0f);
+			// fragment(): mix(texColor, horizonColor, t) is texColor * (1 - t) + horizonColor * t
+			const float t = horizonOpacity * (1.0f - unis.uHorizonOffset.z);
+			const float texelWeight = 1.0f - t;
+			const float horizonR = unis.uHorizonColor.x * t, horizonG = unis.uHorizonColor.y * t, horizonB = unis.uHorizonColor.z * t;
+			const std::uint8_t alpha = QuantizeUnit(opacity);
+
+			// swTexture(): the row of the texture is the same along the span
+			const std::int32_t width = tex->GetWidth(), height = tex->GetHeight();
+			const float widthF = static_cast<float>(width);
+			const SamplerWrapping wrapS = tex->GetWrapS();
+			// The sky repeats, so most columns wrap, through a division per pixel in wrapTexel(). For a width
+			// that is a power of two the wrapped column is its low bits.
+			const bool maskS = (wrapS == SamplerWrapping::Repeat && (width & (width - 1)) == 0);
+			const std::int32_t widthMask = width - 1;
+			const std::int32_t ty = detail::wrapTexel(detail::floorToInt(texturePosY * static_cast<float>(height)), height, tex->GetWrapT());
+			const std::uint8_t* texRow = pixels + static_cast<std::size_t>(ty) * static_cast<std::size_t>(tex->GetStrideBytes());
+			const float* unit = byteToUnit.Values;
+
+			std::uint8_t* out = in.rgba;
+			std::int32_t txFix = in.txBase;
+			std::int32_t lastTx = INT32_MIN;
+			std::uint32_t lastPixel = 0;
+			for (std::int32_t i = 0; i < in.count; i++, txFix += in.dtxFix, out += 4) {
+#if defined(RHI_SOFTWARE_REDUCED_DETAIL)
+				// With the detail reduced a pixel in an odd screen column takes the color of the one to its left.
+				// It goes by the column on the screen, not in the span, so the tiles agree where they meet.
+				const std::int32_t source = i - ((in.x + i) & 1);
+				if (source != i && i != 0) {
+					std::memcpy(out, &lastPixel, sizeof(lastPixel));
+					continue;
+				}
+				const float u = (in.txBase + source * in.dtxFix) / 65536.0f * in.invTexWidth;
+#else
+				const float u = txFix / 65536.0f * in.invTexWidth;
+#endif
+				const float texturePosX = shiftX + (u - 0.5f - unis.uHorizonOffset.x) * depthScale * correction;
+				const std::int32_t column = detail::floorToInt(texturePosX * widthF);
+				const std::int32_t tx = (maskS ? (column & widthMask) : detail::wrapTexel(column, width, wrapS));
+				if (tx != lastTx) {
+					lastTx = tx;
+					const std::uint8_t* texel = texRow + static_cast<std::size_t>(tx) * 4;
+					std::uint8_t pixel[4];
+					pixel[0] = QuantizeUnit((unit[texel[0]] * texelWeight + horizonR) * opacity);
+					pixel[1] = QuantizeUnit((unit[texel[1]] * texelWeight + horizonG) * opacity);
+					pixel[2] = QuantizeUnit((unit[texel[2]] * texelWeight + horizonB) * opacity);
+					pixel[3] = alpha;
+					std::memcpy(&lastPixel, pixel, sizeof(lastPixel));
+				}
+				std::memcpy(out, &lastPixel, sizeof(lastPixel));
+			}
+
+#if defined(DEATH_DEBUG) && !defined(RHI_SOFTWARE_REDUCED_DETAIL)
+			// The fragment this stands for has to agree on every byte
+			{
+				FragmentShaderInput fsInput;
+				fsInput.v = in.v;
+				fsInput.y = in.y;
+				fsInput.texWidth = in.texWidth;
+				fsInput.texHeight = in.texHeight;
+				fsInput.textures = in.textures;
+				fsInput.color = in.color;
+				fsInput.userData = in.userData;
+				std::int32_t checkFix = in.txBase;
+				for (std::int32_t i = 0; i < in.count; i++, checkFix += in.dtxFix) {
+					std::uint8_t expected[4] = {};
+					fsInput.rgba = expected;
+					fsInput.u = checkFix / 65536.0f * in.invTexWidth;
+					fsInput.x = in.x + i;
+					Fragment(fsInput);
+					DEATH_DEBUG_ASSERT(std::memcmp(expected, &in.rgba[i * 4], 4) == 0, "A row form of a shader differs from its fragment", );
+				}
+			}
+#endif
+		}
+
+		// Returns the row form of a generated fragment shader, or `nullptr` if it has none
+		SpanShaderFn FindSpanShader(FragmentShaderFn fragment)
+		{
+			if (fragment == &TexturedBackground_Fragment) {
+				return &TexturedBackgroundSpan<TexturedBackground_Uniforms, &TexturedBackground_Fragment>;
+			}
+			if (fragment == &TexturedBackground_DITHER_Fragment) {
+				return &TexturedBackgroundSpan<TexturedBackground_DITHER_Uniforms, &TexturedBackground_DITHER_Fragment>;
+			}
+			return nullptr;
+		}
+
 		// The DefaultSprite / DefaultBatchedSprites instance layout is a hard contract of the shader family
 		// (std140 offsets within the InstanceBlock / each batched Instance), so the effect reads members
 		// at these fixed byte offsets instead of chasing per-member reflection (the batched reflection only
@@ -632,6 +794,7 @@ namespace nCine::RHI::Software
 		// buffer, so a negative Brightness stays a no-op instead of becoming a "black light"), and a fully lit
 		// texel leaves the scene pixel as-is. The row cores are the CPU-dispatched SIMD kernels (the lighting one
 		// bit-identical to the scalar loop it replaced, see SwScanlineOps.h).
+		std::int32_t activeFirst = 0, activeLast = -1;
 		for (std::int32_t y = 0; y < vpH; y++) {
 			const std::size_t fbRow = (std::size_t)(vpY + vpH - 1 - y);
 			std::uint8_t* px;
@@ -654,7 +817,34 @@ namespace nCine::RHI::Software
 			if (hasLighting) {
 				const std::int32_t lmY = std::min(y / scale, lmH - 1);
 				const float* texelBase = light.Lightmap + (std::size_t)lmY * lmW * 2;
-				CombineLightingScanline(px, vpW, texelBase, lmW, scale, ambR, ambG, ambB);
+				// A fully lit texel with no brightness leaves its pixels as they are (see the kernel), in a level at
+				// full ambient light that is most of the view. The kernel is given only the pixels from the first
+				// texel of the row that changes something to the last, the same pixels come out.
+				if (y % scale == 0 || y == 0) {
+					activeFirst = lmW;
+					activeLast = -1;
+					for (std::int32_t x = 0; x < lmW; x++) {
+						if (texelBase[x * 2] < 1.0f || texelBase[x * 2 + 1] > 0.0f) {
+							activeFirst = x;
+							break;
+						}
+					}
+					for (std::int32_t x = lmW - 1; x >= activeFirst; x--) {
+						if (texelBase[x * 2] < 1.0f || texelBase[x * 2 + 1] > 0.0f) {
+							activeLast = x;
+							break;
+						}
+					}
+				}
+				if (activeFirst <= activeLast) {
+					const std::int32_t pxFirst = activeFirst * scale;
+					// The last texel of the map also covers whatever of the row lies past it
+					const std::int32_t pxEnd = (activeLast >= lmW - 1 ? vpW : std::min((activeLast + 1) * scale, vpW));
+					if (pxFirst < pxEnd) {
+						CombineLightingScanline(px + (std::size_t)pxFirst * 4, pxEnd - pxFirst, texelBase + (std::size_t)activeFirst * 2,
+							lmW - activeFirst, scale, ambR, ambG, ambB);
+					}
+				}
 			}
 
 			if (hasWater && !isUnderwaterRow && aboveWaterBlend[3] != 0) {
@@ -885,6 +1075,7 @@ namespace nCine::RHI::Software
 					generatedShader.computeVaryings(uniformScratch, inst);
 				}
 				ctx.fragmentShader = generatedShader.fragment;
+				ctx.spanShader = FindSpanShader(generatedShader.fragment);
 				ctx.fragmentShaderUserData = uniformScratch;
 				ctx.fragmentShaderUserDataSize = uniformsSize;
 				ctx.blendingEnabled = blendOn;
@@ -1040,6 +1231,7 @@ namespace nCine::RHI::Software
 			}
 			ctx.ff = ff;
 			ctx.fragmentShader = fragmentShader;
+			ctx.spanShader = (fragmentShader != nullptr ? FindSpanShader(fragmentShader) : nullptr);
 			ctx.fragmentShaderUserData = userData;
 			ctx.fragmentShaderUserDataSize = userDataSize;
 			// PaletteRemap(+Batched) draws qualify for the tile renderer's palette-LUT fast path (the

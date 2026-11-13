@@ -97,10 +97,15 @@ namespace nCine
 		 * @p batchCommand, a command of its own that it keeps from frame to frame - which saves looking one up in the
 		 * pool and setting up its material from scratch every time.
 		 *
+		 * With @p retainedMemory the uniforms and instances are allocated into it instead and stay valid while
+		 * the caller keeps it, so an unchanged batch can be queued again in later frames as it is. Only for a
+		 * backend that draws from the uniform memory in place.
+		 *
 		 * @return `false` with @p batch left empty if batching is disabled or the shader has no batched variant that
 		 *         draws without vertex data --- the caller then submits a command per instance as before
 		 */
-		bool BeginDirectBatch(RenderCommand& refCommand, std::uint32_t maxInstances, DirectBatch& batch, RenderCommand* batchCommand = nullptr);
+		bool BeginDirectBatch(RenderCommand& refCommand, std::uint32_t maxInstances, DirectBatch& batch, RenderCommand* batchCommand = nullptr,
+			std::unique_ptr<std::uint8_t[]>* retainedMemory = nullptr);
 		/** @brief Finishes a batch started by @ref BeginDirectBatch() for the instances written into it */
 		void EndDirectBatch(DirectBatch& batch);
 

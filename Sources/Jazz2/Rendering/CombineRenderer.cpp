@@ -484,12 +484,21 @@ namespace Jazz2::Rendering
 		// in local memory, which the texture cache is short of: 128x128 PSMT8 is two pages and 16 KB a frame
 		// across the bus, where the quarter took four pages and 32 KB (and half resolution would take 16).
 		constexpr std::int32_t Scale = 6;
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// An eighth (80x60 texels for 640x480). At a quarter the map took 13 ms in the torch-lit levels, which
+		// ran at 21 to 27 ms a frame; the cost follows the texel count. The map is stretched with bilinear
+		// filtering and a light falls off over 8 or more texels, so nothing sharp is lost.
+		constexpr std::int32_t Scale = 8;
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
 		// work; the map is stretched over the viewport with bilinear filtering either way, and the lights
 		// themselves are smooth cubic falloffs with nothing sharp to lose.
+		constexpr std::int32_t Scale = 4;
+#elif defined(RHI_SOFTWARE_REDUCED_DETAIL)
+		// Reduced detail of the software renderer (see NCINE_RHI_SOFTWARE_REDUCED_DETAIL): a quarter of the
+		// texels. Its combine samples the map point-wise, so lights show the coarser texels as steps.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;

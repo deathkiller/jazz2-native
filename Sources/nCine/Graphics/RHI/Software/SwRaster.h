@@ -119,6 +119,32 @@ namespace nCine::RHI::Software
 	/** @brief Optional per-pixel fragment callback; runs after sampling, before blending */
 	using FragmentShaderFn = void (*)(const FragmentShaderInput& input);
 
+	/**
+		@brief Inputs of an optional C++ callback that shades a whole run of pixels of one row
+
+		What @ref FragmentShaderInput is to one pixel, for @ref count pixels next to each other in a row of an
+		axis-aligned quad, so what is the same along the row is computed once. The callback writes the pixels
+		to @ref rgba and reads nothing from there. The texture coordinate of pixel `i` is
+		`(txBase + i * dtxFix) / 65536.0f * invTexWidth`, as in the per-pixel path, so it can produce the
+		same bytes as the fragment callback.
+	*/
+	struct SpanShaderInput
+	{
+		std::uint8_t* rgba;					/**< Output pixels (4 bytes each, RGBA order) */
+		std::int32_t count;					/**< Number of pixels */
+		std::int32_t txBase, dtxFix;		/**< Horizontal texel coordinate of the first pixel and its step, 16.16 fixed point */
+		float invTexWidth;					/**< Reciprocal of the width of the primary texture */
+		float v;							/**< Vertical texture coordinate of the row */
+		std::int32_t x, y;					/**< Destination coordinates of the first pixel */
+		std::int32_t texWidth, texHeight;	/**< Dimensions of the primary (unit `ff.textureUnit`) texture */
+		const SwTexture* const* textures;	/**< The bound textures (@ref MaxTextureUnits entries) */
+		const float* color;					/**< Instance color (4 floats, RGBA) */
+		void* userData;						/**< Effect-owned parameter block, opaque to the rasterizer */
+	};
+
+	/** @brief Optional callback that shades a run of pixels of a row in place of @ref FragmentShaderFn, see @ref SpanShaderInput */
+	using SpanShaderFn = void (*)(const SpanShaderInput& input);
+
 #if defined(RHI_USE_FB16)
 	/**
 		@brief Packs one 4-byte RGBA working pixel into an RGB565 framebuffer texel (alpha is dropped)
@@ -432,6 +458,13 @@ namespace nCine::RHI::Software
 		FFState ff;
 		/** @brief Optional per-pixel fragment callback (null for the plain textured / tinted path) */
 		FragmentShaderFn fragmentShader = nullptr;
+		/**
+		 * @brief Optional row form of @ref fragmentShader, with the same parameter block and the same output
+		 *
+		 * Used where a quad is drawn row by row (the axis-aligned path of the tile renderer), every other path
+		 * calls @ref fragmentShader, which has to be set as well.
+		 */
+		SpanShaderFn spanShader = nullptr;
 		/** @brief Opaque parameter block passed to @ref fragmentShader */
 		void* fragmentShaderUserData = nullptr;
 		/**

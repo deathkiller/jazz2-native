@@ -174,7 +174,9 @@ namespace Jazz2::Actors::Weapons
 
 	void ToasterShot::OnRicochet()
 	{
-		_speed.Y = _speed.Y * -0.2f * (Random().Next() % 100 - 50);
-		_speed.X = _speed.X * -0.2f + (Random().Next() % 100 - 50) * 0.02f;
+		// The remainder is unsigned, so the offset has to be taken from it as a signed number: left unsigned, any
+		// value below 50 wrapped round to four billion and the flame left with a speed of that order
+		_speed.Y = _speed.Y * -0.2f * (std::int32_t(Random().Next() % 100) - 50);
+		_speed.X = _speed.X * -0.2f + (std::int32_t(Random().Next() % 100) - 50) * 0.02f;
 	}
 }

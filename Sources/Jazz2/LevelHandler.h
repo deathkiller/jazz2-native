@@ -444,6 +444,8 @@ namespace Jazz2
 		Recti _levelBounds;
 		bool _isReforged, _cheatsUsed;
 		bool _checkpointCreated;
+		// Zone of each player its events were last activated in, see ProcessEvents()
+		SmallVector<AABBi, 4> _activatedZones;
 		SmallVector<String, 0> _levelTexts;
 		// Translations of the level texts the level carries, see Formats::LevelTextsChunk
 		SmallVector<LocalizedLevelTexts, 0> _localizedLevelTexts;

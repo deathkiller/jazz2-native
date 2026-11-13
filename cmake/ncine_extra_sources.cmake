@@ -216,6 +216,11 @@ if(NCINE_RHI_USE_FB16)
 	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_USE_FB16")
 endif()
 
+if(NCINE_RHI_SOFTWARE_REDUCED_DETAIL)
+	message(STATUS "Software renderer: reduced detail")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_SOFTWARE_REDUCED_DETAIL")
+endif()
+
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 	if(VITA AND WITH_ONLINE_MULTIPLAYER)
 		# The Vita reaches the display and the input devices through SDL2 and vitaGL, so it has no backend

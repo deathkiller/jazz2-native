@@ -40,8 +40,18 @@ namespace Jazz2::Collisions
 	constexpr std::int32_t NullNode = -1;
 	/** @brief Length units per meter */
 	constexpr float LengthUnitsPerMeter = 1.0f;
-	/** @brief AABB size extension to fat AABB */
+	/**
+		@brief AABB size extension to fat AABB
+
+		How far an object moves before its leaf is reinserted into the tree. The same collisions are found either
+		way, a pair is still decided by an exact test. With 0.1 every bobbing pickup is reinserted each frame,
+		a larger value avoids that where walking the tree is expensive (Nintendo 64, Dreamcast).
+	*/
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64)
+	constexpr float AabbExtension = 2.0f * LengthUnitsPerMeter;
+#else
 	constexpr float AabbExtension = 0.1f * LengthUnitsPerMeter;
+#endif
 	/** @brief AABB movement multiplier */
 	constexpr float AabbMultiplier = 4.0f;
 

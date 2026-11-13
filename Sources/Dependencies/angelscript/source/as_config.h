@@ -732,6 +732,10 @@
 		#undef STDCALL
 		#define STDCALL
 
+		// VitaSDK compiles to Thumb-2, so a non-virtual method pointer has the lowest bit set and would be
+		// taken for a virtual one, ARM EABI marks virtual methods in the lowest bit of the offset instead
+		#undef GNU_STYLE_VIRTUAL_METHOD
+
 		#define CDECL_RETURN_SIMPLE_IN_MEMORY
 		#define STDCALL_RETURN_SIMPLE_IN_MEMORY
 		#define THISCALL_RETURN_SIMPLE_IN_MEMORY

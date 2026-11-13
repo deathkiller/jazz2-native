@@ -2978,10 +2978,43 @@ namespace Jazz2
 				}
 			}
 
+			// Searching a whole zone (53x53 tiles) every frame almost never finds anything. A zone is searched whole
+			// only when it's new or an event in it changed (see EventMap::TakeActivationChanges()), otherwise only
+			// the rows and columns it moved into.
+			AABBi changedTiles;
+			const bool hasChangedTiles = _eventMap->TakeActivationChanges(changedTiles);
 			for (std::size_t i = 0; i < playerZones.size(); i += 2) {
 				const auto& activationZone = playerZones[i];
+				const std::size_t zoneIndex = i / 2;
+				if (zoneIndex < _activatedZones.size() && !(hasChangedTiles && changedTiles.Overlaps(activationZone))) {
+					const AABBi previousZone = _activatedZones[zoneIndex];
+					if (previousZone.Overlaps(activationZone)) {
+						if (activationZone.L < previousZone.L) {
+							_eventMap->ActivateEvents(activationZone.L, activationZone.T, previousZone.L - 1, activationZone.B, true);
+						}
+						if (activationZone.R > previousZone.R) {
+							_eventMap->ActivateEvents(previousZone.R + 1, activationZone.T, activationZone.R, activationZone.B, true);
+						}
+						const std::int32_t left = std::max(activationZone.L, previousZone.L);
+						const std::int32_t right = std::min(activationZone.R, previousZone.R);
+						if (activationZone.T < previousZone.T) {
+							_eventMap->ActivateEvents(left, activationZone.T, right, previousZone.T - 1, true);
+						}
+						if (activationZone.B > previousZone.B) {
+							_eventMap->ActivateEvents(left, previousZone.B + 1, right, activationZone.B, true);
+						}
+						_activatedZones[zoneIndex] = activationZone;
+						continue;
+					}
+				}
+
 				_eventMap->ActivateEvents(activationZone.L, activationZone.T, activationZone.R, activationZone.B, true);
+				if (zoneIndex >= _activatedZones.size()) {
+					_activatedZones.resize(zoneIndex + 1);
+				}
+				_activatedZones[zoneIndex] = activationZone;
 			}
+			_activatedZones.resize(playerZones.size() / 2);
 
 			if (!_checkpointCreated) {
 				// Create checkpoint after first call to ActivateEvents() to avoid duplication of objects that are spawned near player spawn
@@ -3158,7 +3191,8 @@ namespace Jazz2
 
 				TileMap::DestructibleDebris debris = { };
 				debris.Pos = debrisPos;
-				debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
+				// The depth follows the size, in the steps the particles of the weather are batched by (see TileMap::WeatherDepthStep)
+				debris.Depth = MainPlaneZ - 100 + (std::uint16_t)((std::int32_t)(200 * scale) / TileMap::WeatherDepthStep * TileMap::WeatherDepthStep);
 				// Sized by the frame's own area rather than the logical cell: with trimmed frames the two
 				// differ per frame, and stretching a trimmed frame over the whole cell visibly distorts it
 				debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
@@ -3178,8 +3212,13 @@ namespace Jazz2
 					float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
 					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(accel, -std::abs(accel));
-					debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-					debris.AngleSpeed = speedX * 0.02f;
+					if constexpr (TileMap::WeatherDebrisSpins) {
+						debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+						debris.AngleSpeed = speedX * 0.02f;
+					} else {
+						debris.Angle = 0.0f;
+						debris.AngleSpeed = 0.0f;
+					}
 				}
 
 				debris.Scale = scale;

@@ -772,6 +772,31 @@ namespace nCine::RHI::Software
 						continue;	// The destination row is final - phases 2 and 3 have nothing left to do
 					}
 
+					// A shader with a row form does phases 1 and 2 in one call, and takes no texels gathered for it
+					if DEATH_UNLIKELY(ctx.spanShader != nullptr && ctx.paletteLut == nullptr) {
+						SpanShaderInput span;
+						span.rgba = scanBuf;
+						span.count = scanWidth;
+						span.txBase = txBase;
+						span.dtxFix = dtxFix;
+						span.invTexWidth = 1.0f / static_cast<float>(texW > 0 ? texW : 1);
+						span.v = tyFix / 65536.0f / static_cast<float>(texH > 0 ? texH : 1);
+						span.x = xMin;
+						span.y = py;
+						span.texWidth = texW;
+						span.texHeight = texH;
+						span.textures = ctx.textures;
+						span.color = ctx.ff.color;
+						span.userData = ctx.fragmentShaderUserData;
+						ctx.spanShader(span);
+						if (useFastBlend) {
+							BlendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);
+						} else {
+							std::memcpy(dstRow, scanBuf, static_cast<std::size_t>(scanWidth) * 4);
+						}
+						continue;
+					}
+
 					// Phase 1: gather texels (narrow native stores expand to the 4-byte working form here)
 					if (useLinear) {
 						const BilinearRowCtx brow = PrepareBilinearRow(texPixels, texW, texH, texBpp, tyFix, wrapT);

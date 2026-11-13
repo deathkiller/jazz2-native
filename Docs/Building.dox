@@ -421,6 +421,12 @@ The following parameters can be used to customize the build:
     -   Every profile builds on every platform that can provide the matching client library, so an `ES2` build
         on Android or on the desktop is a normal configuration --- it is how the low-end paths are tested
         without the target hardware
+-   `NCINE_RHI_SOFTWARE_REDUCED_DETAIL` (default @cpp OFF @ce) --- `Software` backend only: trade some detail for
+    speed on a CPU that cannot afford the full picture
+    -   The lightmap is built at a quarter of the resolution instead of a half (the lights show coarser
+        steps), the textured background is sampled every second column, and the icons of the weapon wheel
+        lose the dark blots behind them. Measured on one core: about 15% of the frame in levels with a sky
+        or with lights. Everything the option does not name is drawn exactly as without it.
 -   `NCINE_RHI_USE_FB16` (default @cpp OFF @ce) --- Use 16-bit (RGB565) color surfaces instead of RGBA8
     -   Trades color depth (and destination alpha, which reads as opaque) for memory and bandwidth. Being a
         performance option, each backend applies it as deep as it pays off there: the `OpenGL` backend uses it

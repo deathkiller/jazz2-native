@@ -51,6 +51,16 @@ namespace Jazz2
 #endif
 
 /*
+	Whether the particles of a level (see TileMap::DestructibleDebris) are handed to the backend as packed
+	32-byte records, written while they are updated, instead of float quads built when they are drawn.
+	On the Nintendo 64 the quads of one defeated enemy were 6 ms of a frame, most of it cache misses
+	(see RHI::RDP::QuadRecord and TileMap::AppendDebrisRecord()).
+*/
+#if defined(TILEMAP_USE_SINGLE_DRAW) && defined(WITH_RHI_RDP)
+#	define TILEMAP_DEBRIS_RECORDS
+#endif
+
+/*
 	Whether a tile layer's mesh holds one packed record per tile instead of the four corners of a float quad.
 
 	A record is 16 bytes where the quad is 128 bytes of vertices and 12 of indices, and the tile map writes
@@ -799,6 +809,30 @@ namespace Jazz2::Tiles
 		static constexpr std::int32_t MaxWeatherDebrisCount = 0;
 #endif
 		/**
+			@brief Step the depth of a weather particle is rounded to
+
+			The depth comes from the size of the particle, so nearly each one had a depth of its own and couldn't
+			be batched with the others. Rounded to a few levels on the consoles that budget their particles
+			(see @ref MaxWeatherDebrisCount), the weather is a few draws.
+		*/
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || \
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
+		static constexpr std::int32_t WeatherDepthStep = 40;
+#else
+		static constexpr std::int32_t WeatherDepthStep = 1;
+#endif
+		/**
+			@brief Whether the snowflakes turn as they fall
+
+			Off on the Nintendo 64: a turned particle is two triangles instead of one rectangle, about four times
+			the cost, and the turn of a few pixels isn't visible.
+		*/
+#if defined(DEATH_TARGET_N64)
+		static constexpr bool WeatherDebrisSpins = false;
+#else
+		static constexpr bool WeatherDebrisSpins = true;
+#endif
+		/**
 			@brief Maximum number of particles one @ref CreateParticleDebris() burst emits, or `0` if unbounded
 
 			The producers walk the sprite frame in fixed steps, so the count grows with the sprite's area: the
@@ -1241,6 +1275,22 @@ namespace Jazz2::Tiles
 
 		SmallVector<DebrisMeshGroup, 4> _debrisMeshGroups;
 
+#	if defined(TILEMAP_DEBRIS_RECORDS)
+		/// Records of the particles that share a draw (see @ref DebrisMeshGroup), rebuilt by every
+		/// @ref UpdateDebris(). An empty group keeps its buffer for reuse.
+		struct DebrisRecordGroup
+		{
+			Texture* DiffuseTexture;
+			std::int32_t PaletteOffset;
+			std::uint16_t Depth;
+			bool AdditiveBlending;
+			Vector2i TextureSize;
+			SmallVector<float, 0> Records;
+		};
+
+		SmallVector<DebrisRecordGroup, 0> _debrisRecordGroups;
+#	endif
+
 #	if defined(TILEMAP_GROUP_MESH_BY_TILE)
 		/// One visible tile of the layer currently being built, held back so the layer can be emitted grouped by
 		/// the atlas slot its tiles sample instead of in screen order (see @ref DrawLayer()). Everything the
@@ -1462,6 +1512,10 @@ namespace Jazz2::Tiles
 		// Appends one particle's two triangles in the same layout, with its rotation, scale and frame offset already
 		// folded into the four corners - the quad the sprite shader would have synthesized from its model matrix
 		static void AppendDebrisQuad(SmallVector<float, 0>& vertices, const DestructibleDebris& debris);
+#	if defined(TILEMAP_DEBRIS_RECORDS)
+		// Appends the packed record of one particle to the group it draws with
+		void AppendDebrisRecord(const DestructibleDebris& debris);
+#	endif
 		// Rents a mesh vertex buffer from the per-frame pool and returns its index (the pool can reallocate, so
 		// callers hold indices rather than pointers)
 		std::int32_t RentMeshVertices();

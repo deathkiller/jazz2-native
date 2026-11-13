@@ -324,12 +324,15 @@ namespace nCine::RHI::RDP
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 			const std::uint16_t* indices = nullptr, std::int32_t indexCount = 0);
+		// The dispatch itself, entered by Dispatch() at a fixed place of the data cache
+		DEATH_NEVER_INLINE static void DispatchPlaced(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices, std::int32_t indexCount);
 		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)
 		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 			const std::uint16_t* indices, std::int32_t indexCount);
-		// Draws a vertex-fed textured line strip (the weapon wheel); the RDP has no line primitive, so
-		// every segment goes out as a thin screen-space quad, exactly like on the PVR
-		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);
+		// Draws a vertex-fed textured line strip, or a list of separate lines (the weapon wheel); the RDP has
+		// no line primitive, so every segment goes out as a thin screen-space quad, exactly like on the PVR
+		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices, bool separate = false);
 		static void ApplyPendingSoftwareLighting();
 	};
 }

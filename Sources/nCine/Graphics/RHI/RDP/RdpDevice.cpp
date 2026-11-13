@@ -1274,6 +1274,87 @@ namespace nCine::RHI::RDP
 		}
 
 		/**
+			@brief Draws a mesh given as packed quad records (see QuadRecord), the particles of a level
+
+			An upright quad is one textured rectangle (SubmitSpriteRect()), a turned one a triangle pair. The colour
+			goes through the PRIM register, changed only when it differs from the previous quad's. A quad outside
+			the scissor is skipped, the records are every particle of the level (see TileMap::AppendDebrisRecord()).
+		*/
+		void DispatchQuadRecords(DrawState& state, const float* records, std::int32_t unitCount, const Transform2D& raster,
+			const float* layerColor)
+		{
+			constexpr float EdgeStep = 1.0f / float(QuadRecord::EdgeScale);
+			constexpr float TexelStep = 1.0f / float(QuadRecord::TexelScale);
+			const float clipX0 = float(appliedScissor[0]), clipY0 = float(appliedScissor[1]);
+			const float clipX1 = float(appliedScissor[0] + appliedScissor[2]), clipY1 = float(appliedScissor[1] + appliedScissor[3]);
+			std::uint32_t lastColor = 0;
+			bool hasColor = false;
+
+			for (std::int32_t i = 0; i + 1 < unitCount; i += 2) {
+				QuadRecord quad;
+				std::memcpy(&quad, records + std::size_t(i) * (sizeof(TileRecord) / sizeof(float)), sizeof(quad));
+
+				const float ex = float(quad.Ex) * EdgeStep, ey = float(quad.Ey) * EdgeStep, fLen = float(quad.FLen) * EdgeStep;
+				float s0 = float(quad.TexX), t0 = float(quad.TexY);
+				float s1 = s0 + float(quad.TexW) * TexelStep, t1 = t0 + float(quad.TexH) * TexelStep;
+				float x0 = raster.Xx * quad.X + raster.Tx, y0 = raster.Yy * quad.Y + raster.Ty;
+
+				const bool upright = (quad.Ey == 0 && quad.Ex > 0);
+				float px[4], py[4];
+				if (upright) {
+					float x1 = x0 + raster.Xx * ex, y1 = y0 + raster.Yy * fLen;
+					// A mirrored view turns the rectangle over, and its texels with it
+					if (x0 > x1) { std::swap(x0, x1); std::swap(s0, s1); }
+					if (y0 > y1) { std::swap(y0, y1); std::swap(t0, t1); }
+					if (x1 <= clipX0 || x0 >= clipX1 || y1 <= clipY0 || y0 >= clipY1) {
+						continue;
+					}
+					px[0] = x0; py[0] = y0; px[1] = x1; py[1] = y1;
+				} else {
+					// The other edge is the first one turned a quarter and scaled to its own length
+					const float eLen = sqrtf(ex * ex + ey * ey);
+					if (eLen < 0.01f) {
+						continue;
+					}
+					const float k = fLen / eLen;
+					const float fx = -ey * k, fy = ex * k;
+					const float dex = raster.Xx * ex, dey = raster.Yy * ey, dfx = raster.Xx * fx, dfy = raster.Yy * fy;
+					// Corners 1, 2, 0 and 3 of the quad are the sprite corner order SubmitQuadPrimitive takes
+					px[0] = x0 + dex; py[0] = y0 + dey;
+					px[1] = x0 + dex + dfx; py[1] = y0 + dey + dfy;
+					px[2] = x0; py[2] = y0;
+					px[3] = x0 + dfx; py[3] = y0 + dfy;
+					const float minX = std::min(std::min(px[0], px[1]), std::min(px[2], px[3]));
+					const float maxX = std::max(std::max(px[0], px[1]), std::max(px[2], px[3]));
+					const float minY = std::min(std::min(py[0], py[1]), std::min(py[2], py[3]));
+					const float maxY = std::max(std::max(py[0], py[1]), std::max(py[2], py[3]));
+					if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
+						continue;
+					}
+				}
+
+				const std::uint32_t color = PackRgba(quad.TintR, quad.TintG, quad.TintB, quad.Alpha);
+				if (!hasColor || color != lastColor) {
+					hasColor = true;
+					lastColor = color;
+					constexpr float ByteStep = 1.0f / 255.0f;
+					state.PrimColor = PackRgba(QuantizeChannel(layerColor[0] * (float(quad.TintR) * ByteStep)),
+						QuantizeChannel(layerColor[1] * (float(quad.TintG) * ByteStep)),
+						QuantizeChannel(layerColor[2] * (float(quad.TintB) * ByteStep)),
+						QuantizeChannel(layerColor[3] * (float(quad.Alpha) * ByteStep)));
+				}
+
+				if (upright) {
+					SubmitSpriteRect(state, px[0], py[0], px[1], py[1], s0, t0, s1, t1);
+				} else {
+					const float pu[4] = { s1, s1, s0, s0 };
+					const float pvv[4] = { t0, t1, t0, t1 };
+					SubmitQuadPrimitive(state, px, py, pu, pvv);
+				}
+			}
+		}
+
+		/**
 			@brief The run of identical texels last found in a one-row texture (see SubmitLineQuad)
 
 			Keyed like the TMEM window, by the store and its content stamp, which is unique to the content - a texture
@@ -2400,6 +2481,104 @@ namespace nCine::RHI::RDP
 		const RdpRenderTarget* attachedTarget = nullptr;
 		bool rdpAttached = false;
 
+		/*
+			Where on the stack a dispatch runs, as a place in the data cache.
+
+			The data cache is 8 KB and direct-mapped: two addresses a multiple of 8 KB apart evict each other.
+			Whether the stack frames of the draw loops shared lines with the statics they use (the RDP state,
+			libdragon's write pointer) depended on the link and on how deep the caller was, the same build drew
+			the same frame in 16.5 to 20.2 ms. So the dispatch is entered at a fixed place of the cache, chosen
+			once to avoid those statics (see RdpDevice::Dispatch()).
+		*/
+		constexpr std::uint32_t DataCacheSize = 8192;
+		constexpr std::uint32_t DataCacheLineSize = 16;
+		// How far below its entry the frames of a dispatch and of everything it calls reach, and how much of the
+		// caller's frame above it belongs to the loop as well (its arguments)
+		constexpr std::uint32_t DispatchStackDepth = 0x600;
+		constexpr std::uint32_t DispatchStackHeadroom = 0x40;
+		// Offset into the data cache at which the dispatch is entered
+		std::uint32_t dispatchStackPlace = 0;
+
+		// libdragon's sync tracking, which every RDP command reads and updates; it is internal to the library, so
+		// only its address is taken
+		extern std::uint8_t RdpqTracking[] __asm__("rdpq_tracking");
+		constexpr std::size_t RdpqTrackingSize = 16;
+
+		constexpr std::uint32_t DataCacheLineCount = DataCacheSize / DataCacheLineSize;
+
+		// Marks the lines of the data cache an object lies on
+		void MarkDataCacheLines(std::uint8_t* busy, const void* object, std::size_t size)
+		{
+			const std::uintptr_t first = std::uintptr_t(object) / DataCacheLineSize;
+			const std::uintptr_t last = (std::uintptr_t(object) + size - 1) / DataCacheLineSize;
+			for (std::uintptr_t line = first; line <= last; line++) {
+				busy[line % DataCacheLineCount] = 1;
+			}
+		}
+
+		// Marks the lines of the state above that the draw loops keep coming back to, and of libdragon's
+		void MarkDispatchState(std::uint8_t* busy)
+		{
+			const auto mark = [busy](const void* object, std::size_t size) {
+				MarkDataCacheLines(busy, object, size);
+			};
+			mark(&tmemWindow, sizeof(tmemWindow));
+			mark(tmemSlots, sizeof(tmemSlots));
+			mark(&tmemCurrentSlot, sizeof(tmemCurrentSlot));
+			mark(&tmemNeedsSync, sizeof(tmemNeedsSync));
+			mark(&tmemImageBuffer, sizeof(tmemImageBuffer));
+			mark(&tmemTlut, sizeof(tmemTlut));
+			mark(&tmemTlutStamp, sizeof(tmemTlutStamp));
+			mark(&tmemImageFmt, sizeof(tmemImageFmt));
+			mark(&tmemImageWidth, sizeof(tmemImageWidth));
+			mark(&tmemImageHeight, sizeof(tmemImageHeight));
+			mark(&tmemImageStride, sizeof(tmemImageStride));
+			mark(&tmemLoader, sizeof(tmemLoader));
+			mark(triFmtTex, sizeof(triFmtTex));
+			mark(triFmtShadeTex, sizeof(triFmtShadeTex));
+			mark(&appliedState, sizeof(appliedState));
+			mark(&appliedStateValid, sizeof(appliedStateValid));
+			mark(&appliedBlendOn, sizeof(appliedBlendOn));
+			mark(&appliedAlphaCompare, sizeof(appliedAlphaCompare));
+			mark(&modeBaseDirty, sizeof(modeBaseDirty));
+			mark(&drawingToTarget, sizeof(drawingToTarget));
+			mark(appliedScissor, sizeof(appliedScissor));
+			mark(&uniformTexelRun, sizeof(uniformTexelRun));
+			mark(&tlutWriteCounter, sizeof(tlutWriteCounter));
+			mark(&screenSurface, sizeof(screenSurface));
+			mark(&attachedTarget, sizeof(attachedTarget));
+			mark(&rdpAttached, sizeof(rdpAttached));
+			mark(&rspq_cur_pointer, sizeof(rspq_cur_pointer));
+			mark(&rspq_cur_sentinel, sizeof(rspq_cur_sentinel));
+			mark(RdpqTracking, RdpqTrackingSize);
+			// What is looked at of a TLUT slot for every draw is what follows its 256 entries
+			for (const TlutSlot& slot : tlutSlots) {
+				mark(&slot.Palette, sizeof(TlutSlot) - offsetof(TlutSlot, Palette));
+			}
+		}
+
+		// Chooses the place of the dispatch in the data cache: the one whose stretch holds the fewest of the marked
+		// lines, which is none of them as long as they leave a gap that wide among the 512
+		void ChooseDispatchStackPlace(const std::uint8_t* busy)
+		{
+			constexpr std::uint32_t LineCount = DataCacheLineCount;
+			constexpr std::uint32_t Span = (DispatchStackDepth + DispatchStackHeadroom) / DataCacheLineSize;
+			std::uint32_t count = 0;
+			for (std::uint32_t i = 0; i < Span; i++) {
+				count += busy[i];
+			}
+			std::uint32_t bestStart = 0, bestCount = count;
+			for (std::uint32_t start = 1; start < LineCount && bestCount > 0; start++) {
+				count += busy[(start + Span - 1) % LineCount];
+				count -= busy[start - 1];
+				if (count < bestCount) {
+					bestCount = count;
+					bestStart = start;
+				}
+			}
+			dispatchStackPlace = ((bestStart + DispatchStackDepth / DataCacheLineSize) % LineCount) * DataCacheLineSize;
+		}
+
 		// The RDP's own performance counters - how many RCP cycles (62.5 MHz) it has been running, how many of
 		// them its pipeline was busy drawing, and how many it spent loading TMEM - and the status register they are
 		// cleared through: the four registers libultra's osDpGetCounters() reads. 24 bits each, so they span about
@@ -2700,6 +2879,23 @@ namespace nCine::RHI::RDP
 		// command layer on top of it. No Z buffer is ever attached - the game draws 2D in painter's order,
 		// so there is nothing for a depth test to arbitrate, and its 150 KB of RDRAM stay available.
 		rdpq_init();
+		{
+			// See ChooseDispatchStackPlace()
+			std::uint8_t busy[DataCacheLineCount] = {};
+			MarkDispatchState(busy);
+			MarkDataCacheLines(busy, &_currentProgram, sizeof(_currentProgram));
+			MarkDataCacheLines(busy, _boundTextures, sizeof(_boundTextures));
+			MarkDataCacheLines(busy, _boundUniformRanges, sizeof(_boundUniformRanges));
+			MarkDataCacheLines(busy, &_blending, sizeof(_blending));
+			MarkDataCacheLines(busy, &_scissor, sizeof(_scissor));
+			MarkDataCacheLines(busy, &_viewport, sizeof(_viewport));
+			MarkDataCacheLines(busy, &_currentRenderTarget, sizeof(_currentRenderTarget));
+			MarkDataCacheLines(busy, &_paletteTexture, sizeof(_paletteTexture));
+			MarkDataCacheLines(busy, &_paletteGeneration, sizeof(_paletteGeneration));
+			MarkDataCacheLines(busy, &_logicalWidth, sizeof(_logicalWidth));
+			MarkDataCacheLines(busy, &_logicalHeight, sizeof(_logicalHeight));
+			ChooseDispatchStackPlace(busy);
+		}
 		// SYNC_LOAD / SYNC_TILE are left AUTOMATIC. They used to be hand-issued around the double-buffered
 		// TMEM slots, on the reasoning that alternating slots gives the RDP a primitive of slack before a
 		// slot is rewritten (see the TMEM note above UploadWindow). libdragon's own validator disagrees, and
@@ -3567,8 +3763,19 @@ namespace nCine::RHI::RDP
 		};
 
 		if (packedTiles) {
-			// Only ever produced for an upright, point-sampled layer (see TileRecord)
-			if (raster.Xy != 0.0f || raster.Yx != 0.0f || state.Filter != FILTER_POINT || state.Texture == nullptr) {
+			// Only ever produced for an upright view
+			if (raster.Xy != 0.0f || raster.Yx != 0.0f || state.Texture == nullptr) {
+				return;
+			}
+			// The particles come as records too, of their own kind (see QuadRecord)
+			TileRecord first;
+			std::memcpy(&first, vertices, sizeof(first));
+			if ((first.Flags & QuadRecord::IsQuad) != 0) {
+				DispatchQuadRecords(state, vertices, numVertices, raster, layerColor);
+				return;
+			}
+			// A tile layer is point-sampled as well (see TileRecord)
+			if (state.Filter != FILTER_POINT) {
 				return;
 			}
 			DispatchTileRecords(state, vertices, numVertices, raster, layerColor);
@@ -3772,7 +3979,7 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	void RdpDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices)
+	void RdpDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices, bool separate)
 	{
 		// The weapon wheel arrives as a textured line strip of 4-float vertices (position.xy,
 		// texcoords.uv) - the layout the MeshSprite shader's attributes declare. The RDP has no line
@@ -3854,8 +4061,17 @@ namespace nCine::RHI::RDP
 		float prevY = raster.Xy * vertices[0] + raster.Yy * vertices[1] + raster.Ty;
 		float prevU = vertices[2] * uvScaleU;
 		float prevV = vertices[3] * uvScaleV;
-		for (std::int32_t i = 1; i < numVertices; i++) {
+		// A list of separate lines is the same segments, each from a vertex of its own instead of from the end of
+		// the one before
+		for (std::int32_t i = 1; i < numVertices; i += (separate ? 2 : 1)) {
 			const float* v = vertices + std::size_t(i) * FloatsPerVertex;
+			if (separate && i > 1) {
+				const float* p = v - FloatsPerVertex;
+				prevX = raster.Xx * p[0] + raster.Yx * p[1] + raster.Tx;
+				prevY = raster.Xy * p[0] + raster.Yy * p[1] + raster.Ty;
+				prevU = p[2] * uvScaleU;
+				prevV = p[3] * uvScaleV;
+			}
 			const float curX = raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx;
 			const float curY = raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty;
 			const float curU = v[2] * uvScaleU;
@@ -3886,6 +4102,18 @@ namespace nCine::RHI::RDP
 	}
 
 	void RdpDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
+	{
+		// Moves the stack down, by under 8 KB, to the place chosen in ChooseDispatchStackPlace(). The dispatch
+		// runs in a function of its own, so its frames start there however deep the caller is.
+		const std::uint32_t frame = std::uint32_t(reinterpret_cast<std::uintptr_t>(__builtin_frame_address(0)));
+		void* skipped = __builtin_alloca((frame - dispatchStackPlace) & (DataCacheSize - DataCacheLineSize));
+		// The allocation has no other use, which must not let the compiler drop it
+		__asm__ volatile("" : : "r"(skipped));
+		DispatchPlaced(primitive, firstVertex, numVertices, indices, indexCount);
+	}
+
+	void RdpDevice::DispatchPlaced(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		if (_currentProgram == nullptr || numVertices <= 0 || !_rdpInitialized) {
@@ -3929,12 +4157,12 @@ namespace nCine::RHI::RDP
 			return;
 		}
 
-		// The weapon wheel is the one vertex-fed mesh on this tier, a textured line strip
+		// The weapon wheel is the one vertex-fed mesh on this tier, textured lines as a strip or as a list
 		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
-			if (primitive == PrimitiveType::LineStrip) {
-				DispatchLineStrip(firstVertex, numVertices);
+			if (primitive == PrimitiveType::LineStrip || primitive == PrimitiveType::Lines) {
+				DispatchLineStrip(firstVertex, numVertices, primitive == PrimitiveType::Lines);
 			} else if (!_currentProgram->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the RDP dispatch", _currentProgram->GetObjectLabel());
+				LOGW("Skipping draws of program \"{}\": Only the line forms of the mesh pipeline are supported by the RDP dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}

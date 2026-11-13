@@ -6,6 +6,9 @@
 #include "../../nCine/Graphics/RenderResources.h"
 #include "../../nCine/Base/Random.h"
 
+#include <cstddef>
+#include <cstring>
+
 namespace Jazz2::UI
 {
 	Canvas::Canvas()
@@ -37,7 +40,14 @@ namespace Jazz2::UI
 			glyphBatch.StandIn = nullptr;
 			glyphBatch.Batch = RenderBatcher::DirectBatch();
 			glyphBatch.BatchCommandsUsed = 0;
+#if defined(CANVAS_RETAINED_DRAWS)
+			glyphBatch.ChunksQueued = 0;
+#endif
 		}
+#if defined(CANVAS_RETAINED_DRAWS)
+		_retainedFrame++;
+		_stringMemosCount = 0;
+#endif
 		// The runs of rectangles too, each record keeps the commands of its batches
 		for (QuadBatch& quadBatch : _quadBatches) {
 			quadBatch.Open = false;
@@ -65,6 +75,40 @@ namespace Jazz2::UI
 		size = size * LayerScale;
 		const Colorf finalColor = color * LayerColor;
 
+#if defined(CANVAS_RETAINED_DRAWS)
+		// The command this one would rent was set up with exactly this in the previous frame, it's queued as it is
+		// (see CANVAS_RETAINED_DRAWS). The depth of its layer was committed for the clip planes of the camera.
+		const std::int32_t slot = _renderCommandsCount;
+		const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
+		TextureMemo drawn;
+		std::memset(static_cast<void*>(&drawn), 0, sizeof(drawn));
+		drawn.Source = &texture;
+		drawn.Palette = (paletteOffset >= 0 ? ContentResolver::Get().GetPaletteTexture() : nullptr);
+		drawn.CustomShader = shader;
+		const float drawnValues[] = {
+			pos.X, pos.Y, size.X, size.Y, texCoords.X, texCoords.Y, texCoords.Z, texCoords.W,
+			finalColor.R, finalColor.G, finalColor.B, finalColor.A, angle, LayerScale, LayerOffset.X, LayerOffset.Y,
+			ClipRect.X, ClipRect.Y, ClipRect.W, ClipRect.H, projection.NearClip, projection.FarClip
+		};
+		static_assert(sizeof(drawnValues) <= sizeof(drawn.Values), "TextureMemo::Values is too small");
+		std::memcpy(drawn.Values, drawnValues, sizeof(drawnValues));
+		drawn.PaletteOffset = paletteOffset;
+		drawn.Layer = z;
+		drawn.Blending = std::uint8_t(blending);
+		if (slot < std::int32_t(_textureMemos.size())) {
+			TextureMemo& memo = _textureMemos[slot];
+			if (memo.Frame != 0 && memo.Frame + 1 == _retainedFrame && std::memcmp(&memo, &drawn, offsetof(TextureMemo, Frame)) == 0) {
+				EndQuadRun(z);
+				RenderCommand* command = _renderCommands[slot].get();
+				_renderCommandsCount++;
+				command->SetVisitOrder(TakeVisitOrder());
+				memo.Frame = _retainedFrame;
+				_currentRenderQueue->AddCommand(command);
+				return;
+			}
+		}
+#endif
+
 		Vector4f clippedTexCoords = texCoords;
 		if (std::abs(angle) > 0.01f) {
 			// A rotated rectangle can't be cut down, it's only left out if all of it is outside. It turns about its
@@ -82,6 +126,16 @@ namespace Jazz2::UI
 		}
 
 		DrawTransformedTexture(texture, pos, z, size, clippedTexCoords, finalColor, blending, angle, paletteOffset, shader);
+
+#if defined(CANVAS_RETAINED_DRAWS)
+		if (_renderCommandsCount == slot + 1) {
+			if (slot >= std::int32_t(_textureMemos.size())) {
+				_textureMemos.resize(slot + 1);
+			}
+			drawn.Frame = _retainedFrame;
+			std::memcpy(static_cast<void*>(&_textureMemos[slot]), &drawn, sizeof(drawn));
+		}
+#endif
 	}
 
 	void Canvas::DrawTextureBatched(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
@@ -533,6 +587,21 @@ namespace Jazz2::UI
 
 		GlyphBatch& glyphBatch = _glyphBatches[index];
 		if (!glyphBatch.Active) {
+#if defined(CANVAS_RETAINED_DRAWS)
+			// A record that was set up before goes on with the chunks it has, a new one is given a stand-in
+			// only when it's needed (see NextRetainedChunk())
+			const Camera::ProjectionValues& clipPlanes = RenderResources::GetCurrentCamera()->GetProjectionValues();
+			if (glyphBatch.Retained && glyphBatch.ColorizeShader == colorizeShader &&
+				glyphBatch.NearClip == clipPlanes.NearClip && glyphBatch.FarClip == clipPlanes.FarClip) {
+				glyphBatch.Active = true;
+				glyphBatch.Direct = true;
+				glyphBatch.VisitOrder = TakeVisitOrder();
+				return index;
+			}
+			glyphBatch.Retained = false;
+			glyphBatch.Chunks.clear();
+			glyphBatch.Serial = ++_lastGlyphBatchSerial;
+#endif
 			// The first glyph of the record in this frame: the stand-in, and everything its glyphs share
 			glyphBatch.Active = true;
 			glyphBatch.Direct = false;
@@ -557,6 +626,13 @@ namespace Jazz2::UI
 				const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
 				glyphBatch.Depth = RenderCommand::CalculateDepth(layer, projection.NearClip, projection.FarClip);
 				glyphBatch.Direct = true;
+#if defined(CANVAS_RETAINED_DRAWS)
+				glyphBatch.Retained = true;
+				glyphBatch.ColorizeShader = colorizeShader;
+				glyphBatch.NearClip = projection.NearClip;
+				glyphBatch.FarClip = projection.FarClip;
+				glyphBatch.VisitOrder = glyphBatch.StandIn->GetVisitOrder();
+#endif
 			}
 		}
 		return index;
@@ -569,6 +645,111 @@ namespace Jazz2::UI
 		}
 		return glyphBatch.BatchCommands[glyphBatch.BatchCommandsUsed++].get();
 	}
+
+#if defined(CANVAS_RETAINED_DRAWS)
+	bool Canvas::NextRetainedChunk(GlyphBatch& glyphBatch)
+	{
+		const std::uint32_t index = glyphBatch.ChunksQueued;
+		if (index >= glyphBatch.Chunks.size()) {
+			if (glyphBatch.StandIn == nullptr) {
+				glyphBatch.StandIn = RentGlyphCommand(*glyphBatch.FontTexture, glyphBatch.ColorizeShader);
+				glyphBatch.StandIn->SetLayer(glyphBatch.Layer);
+			}
+			// A HUD counter is a few glyphs, a menu a few hundred
+			GlyphBatch::RetainedChunk& chunk = glyphBatch.Chunks.emplace_back();
+			chunk.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Text);
+			RenderBatcher::DirectBatch batch;
+			if (!RenderResources::GetRenderBatcher().BeginDirectBatch(*glyphBatch.StandIn, 16u << std::min<std::uint32_t>(index, 2), batch, chunk.Command.get(), &chunk.Memory)) {
+				glyphBatch.Chunks.pop_back();
+				glyphBatch.Batch = RenderBatcher::DirectBatch();
+				return false;
+			}
+			chunk.InstancesBlock = batch.InstancesBlock;
+			chunk.Instances = batch.Instances;
+			chunk.Capacity = batch.Capacity;
+			glyphBatch.Stride = batch.Stride;
+		}
+
+		GlyphBatch::RetainedChunk& chunk = glyphBatch.Chunks[index];
+		glyphBatch.ChunksQueued++;
+		chunk.Command->SetVisitOrder(glyphBatch.VisitOrder);
+		glyphBatch.Batch.Command = chunk.Command.get();
+		glyphBatch.Batch.InstancesBlock = chunk.InstancesBlock;
+		glyphBatch.Batch.Instances = chunk.Instances;
+		glyphBatch.Batch.Stride = glyphBatch.Stride;
+		glyphBatch.Batch.Capacity = chunk.Capacity;
+		glyphBatch.Batch.Count = 0;
+		_currentRenderQueue->AddCommand(chunk.Command.get());
+		return true;
+	}
+
+	bool Canvas::RepeatString(const StringMemo::Arguments& arguments, std::int32_t& charOffset, StringMemo*& memo)
+	{
+		if (_stringMemosCount >= _stringMemos.size()) {
+			_stringMemos.emplace_back();
+		}
+		memo = &_stringMemos[_stringMemosCount++];
+
+		if (memo->Frame != 0 && memo->Frame + 1 == _retainedFrame && std::memcmp(&memo->Drawn, &arguments, sizeof(arguments)) == 0) {
+			// The glyphs are still in place only if each record is the same one and has taken as many glyphs so
+			// far as it had then, a record is filled from its start in every frame
+			bool repeatable = true;
+			for (const StringMemo::Part& part : memo->Parts) {
+				if (part.Count == 0) {
+					continue;
+				}
+				if (part.Record >= std::int32_t(_glyphBatches.size()) || _glyphBatches[part.Record].Serial != part.Serial) {
+					repeatable = false;
+					break;
+				}
+				const GlyphBatch& before = _glyphBatches[part.Record];
+				const std::int32_t index = GetGlyphBatch(*before.FontTexture, before.ColorizeShader, before.Layer);
+				const GlyphBatch& record = _glyphBatches[part.Record];
+				std::uint32_t capacity = 0;
+				for (const GlyphBatch::RetainedChunk& chunk : record.Chunks) {
+					capacity += chunk.Capacity;
+				}
+				if (index != part.Record || record.Serial != part.Serial || !record.Direct || record.Count != part.First || capacity < part.First + part.Count) {
+					repeatable = false;
+					break;
+				}
+			}
+
+			if (repeatable) {
+				RenderBatcher& batcher = RenderResources::GetRenderBatcher();
+				for (const StringMemo::Part& part : memo->Parts) {
+					if (part.Count == 0) {
+						continue;
+					}
+					GlyphBatch& record = _glyphBatches[part.Record];
+					RenderBatcher::DirectBatch& batch = record.Batch;
+					std::uint32_t left = part.Count;
+					while (left > 0) {
+						if (batch.Count == batch.Capacity) {
+							batcher.EndDirectBatch(batch);
+							NextRetainedChunk(record);
+						}
+						const std::uint32_t taken = std::min(left, batch.Capacity - batch.Count);
+						batch.Count += taken;
+						left -= taken;
+					}
+					record.Count += part.Count;
+					batcher.EndDirectBatch(batch);
+				}
+				memo->Frame = _retainedFrame;
+				charOffset = memo->CharOffsetAfter;
+				return true;
+			}
+		}
+
+		std::memcpy(static_cast<void*>(&memo->Drawn), &arguments, sizeof(arguments));
+		for (StringMemo::Part& part : memo->Parts) {
+			part = StringMemo::Part();
+		}
+		memo->Frame = 0;
+		return false;
+	}
+#endif
 
 	void Canvas::FinishGlyphBatches()
 	{

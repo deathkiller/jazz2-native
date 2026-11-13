@@ -132,6 +132,13 @@ namespace Jazz2::UI
 			// but the highlight share one size, and powf() is slow on the consoles
 			float SegmentSize[2];
 			float SegmentSizePow[2];
+#	if defined(WITH_RHI_RDP)
+			// The arcs that share a layer and a color, as one list of lines (see DrawWeaponWheelSegment())
+			std::unique_ptr<Vertex[]> MergedVertices;
+			std::int32_t MergedVerticesCount;
+			std::uint16_t MergedLayer;
+			Colorf MergedColor;
+#	endif
 			bool Shown;
 
 			WeaponWheelState();
@@ -263,6 +270,16 @@ namespace Jazz2::UI
 
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
 		static constexpr std::int32_t WeaponWheelMaxVertices = 768;
+#if defined(WITH_RHI_RDP)
+		static constexpr std::int32_t WeaponWheelMaxMergedVertices = 256;
+#endif
+		// Whether each icon of the weapon wheel gets a dark blot behind it. Nine large blended sprites for a
+		// barely visible shade, left out on the Nintendo 64 and by the software renderer with reduced detail.
+#if defined(DEATH_TARGET_N64) || defined(RHI_SOFTWARE_REDUCED_DETAIL)
+		static constexpr bool WeaponWheelDimsEnabled = false;
+#else
+		static constexpr bool WeaponWheelDimsEnabled = true;
+#endif
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 		static constexpr Alignment Fixed = (Alignment)0x40;

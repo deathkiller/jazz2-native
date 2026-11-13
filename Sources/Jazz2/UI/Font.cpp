@@ -10,6 +10,8 @@
 
 #include <IO/Compression/DeflateStream.h>
 
+#include <cstring>
+
 #include <Utf8.h>
 
 using namespace Death;
@@ -357,6 +359,36 @@ namespace Jazz2::UI
 		if (textLength == 0 || _lineHeight <= 0) {
 			return;
 		}
+
+#if defined(CANVAS_RETAINED_DRAWS)
+		// A string that doesn't wobble is laid out the same whenever it's drawn with the same arguments on the same
+		// canvas, its glyphs are left where they are in the batches then (see CANVAS_RETAINED_DRAWS)
+		Canvas::StringMemo* memo = nullptr;
+		bool memoComplete = true;
+		if (angleOffset <= 0.0f && textLength <= Canvas::StringMemo::MaxLength) {
+			Canvas::StringMemo::Arguments arguments;
+			std::memset(static_cast<void*>(&arguments), 0, sizeof(arguments));
+			const float values[] = {
+				x, y, scale, charSpacing, lineSpacing, color.R, color.G, color.B, color.A,
+				canvas->LayerScale, canvas->LayerOffset.X, canvas->LayerOffset.Y,
+				canvas->LayerColor.R, canvas->LayerColor.G, canvas->LayerColor.B, canvas->LayerColor.A,
+				canvas->ClipRect.X, canvas->ClipRect.Y, canvas->ClipRect.W, canvas->ClipRect.H, canvas->PixelScale,
+				float(canvas->ViewSize.X), float(canvas->ViewSize.Y)
+			};
+			static_assert(sizeof(values) <= sizeof(arguments.Values), "StringMemo::Arguments::Values is too small");
+			std::memcpy(arguments.Values, values, sizeof(values));
+			arguments.CharOffset = charOffset;
+			arguments.FontSerial = _serial;
+			arguments.Layer = z;
+			arguments.Align = std::uint8_t(align);
+			arguments.Additive = (canvas->AdditiveText ? 1 : 0);
+			arguments.Length = std::uint8_t(textLength);
+			std::memcpy(arguments.Text, text.data(), textLength);
+			if (canvas->RepeatString(arguments, charOffset, memo)) {
+				return;
+			}
+		}
+#endif
 
 		// TODO: Revise this
 		float phase = canvas->AnimTime * speed * 16.0f;
@@ -713,6 +745,14 @@ namespace Jazz2::UI
 								std::int32_t& recordIndex = glyphRecords[colorizeShader != nullptr ? 1 : 0][charOffset & 1];
 								if (recordIndex < 0) {
 									recordIndex = canvas->GetGlyphBatch(*_texture.get(), colorizeShader, glyphLayer);
+#if defined(CANVAS_RETAINED_DRAWS)
+									if (memo != nullptr) {
+										Canvas::StringMemo::Part& part = memo->Parts[(colorizeShader != nullptr ? 2 : 0) + (charOffset & 1)];
+										part.Record = recordIndex;
+										part.Serial = canvas->_glyphBatches[recordIndex].Serial;
+										part.First = canvas->_glyphBatches[recordIndex].Count;
+									}
+#endif
 								}
 								Canvas::GlyphBatch& record = canvas->_glyphBatches[recordIndex];
 
@@ -724,6 +764,12 @@ namespace Jazz2::UI
 										// record took in the previous frame, or for all the glyphs of this parity that can
 										// still come in this string - at most half of the bytes left - if that is more.
 										batcher.EndDirectBatch(batch);
+#if defined(CANVAS_RETAINED_DRAWS)
+										// It goes on in the next chunk of the record, whatever that holds from before
+										if (!canvas->NextRetainedChunk(record)) {
+											record.Direct = false;
+										}
+#else
 										const std::uint32_t leftInString = std::uint32_t(textLength - std::size_t(idx)) / 2 + 1;
 										const std::uint32_t leftFromLastFrame = (record.LastCount > record.Count ? record.LastCount - record.Count : 0);
 										if (batcher.BeginDirectBatch(*record.StandIn, std::max(leftInString, leftFromLastFrame), batch, canvas->NextGlyphBatchCommand(record))) {
@@ -731,6 +777,7 @@ namespace Jazz2::UI
 										} else {
 											record.Direct = false;
 										}
+#endif
 									}
 									if (record.Direct) {
 										// Exactly what the glyph's own command would have carried once committed: a translation
@@ -759,10 +806,18 @@ namespace Jazz2::UI
 										batch.Count++;
 										record.Count++;
 										batched = true;
+#if defined(CANVAS_RETAINED_DRAWS)
+										if (memo != nullptr) {
+											memo->Parts[(colorizeShader != nullptr ? 2 : 0) + (charOffset & 1)].Count++;
+										}
+#endif
 									}
 								}
 
 								if (!batched) {
+#if defined(CANVAS_RETAINED_DRAWS)
+									memoComplete = false;
+#endif
 									// The shader cannot be batched this way, so the glyph gets a command of its own
 									RenderCommand* command = canvas->RentGlyphCommand(*_texture.get(), colorizeShader);
 
@@ -790,6 +845,13 @@ namespace Jazz2::UI
 			idx = std::int32_t(cursor.second());
 		} while (idx < textLength);
 		charOffset++;
+
+#if defined(CANVAS_RETAINED_DRAWS)
+		if (memo != nullptr && memoComplete) {
+			memo->CharOffsetAfter = charOffset;
+			memo->Frame = canvas->_retainedFrame;
+		}
+#endif
 
 		canvas->FinishGlyphBatches();
 	}

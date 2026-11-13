@@ -94,6 +94,8 @@ namespace Jazz2::Tiles
 		// of storage each in the vertex buffers they are written into
 		constexpr std::uint32_t TileRecordFloats = sizeof(RHI::RDP::TileRecord) / sizeof(float);
 		static_assert(RHI::RDP::TileRecord::Size == TileSet::DefaultTileSize, "The packed tile records assume the tile size");
+		// The particles are records of the RDP as well (see RHI::RDP::QuadRecord), each the size of two of a tile
+		constexpr std::uint32_t QuadRecordFloats = sizeof(RHI::RDP::QuadRecord) / sizeof(float);
 
 		/** @brief Record flags for a layer tile's flip bits */
 		inline std::uint8_t MeshTileFlags(LayerTileFlags flags)
@@ -2326,7 +2328,7 @@ namespace Jazz2::Tiles
 							continue;
 						}
 						RenderCommand* command = piece.Command.get();
-						command->GetInstanceBlock()->GetUniform(Material::ColorUniformName)->SetFloatVector(layerColor.Data());
+						command->GetInstanceUniforms()->Color->SetFloatVector(layerColor.Data());
 						command->SetTransformation(Matrix4x4f::Translation(windowOriginX, windowOriginY, 0.0f));
 						command->SetLayer(layer.Description.Depth);
 						renderQueue.AddCommand(command);
@@ -2870,8 +2872,7 @@ namespace Jazz2::Tiles
 			}
 
 			// The mesh-wide tint goes in the instance color; the per-vertex color carries each quad's own alpha
-			auto instanceBlock = command->GetInstanceBlock();
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+			command->GetInstanceUniforms()->Color->SetFloatVector(color.Data());
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(FloatsPerVertex);
@@ -3066,8 +3067,7 @@ namespace Jazz2::Tiles
 				}
 			}
 
-			auto instanceBlock = command->GetInstanceBlock();
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+			command->GetInstanceUniforms()->Color->SetFloatVector(color.Data());
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(TileRecordFloats);
@@ -3359,8 +3359,7 @@ namespace Jazz2::Tiles
 				}
 			}
 
-			auto instanceBlock = command->GetInstanceBlock();
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+			command->GetInstanceUniforms()->Color->SetFloatVector(color.Data());
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(TileRecordFloats);
@@ -3535,7 +3534,7 @@ namespace Jazz2::Tiles
 				continue;
 			}
 			RenderCommand* command = chunk.Command.get();
-			command->GetInstanceBlock()->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+			command->GetInstanceUniforms()->Color->SetFloatVector(color.Data());
 			command->SetTransformation(Matrix4x4f::Translation(float(x1i), float(y1i), 0.0f));
 			command->SetLayer(depth);
 			renderQueue.AddCommand(command);
@@ -4731,6 +4730,13 @@ namespace Jazz2::Tiles
 	{
 		ZoneScopedC(0xA09359);
 
+#if defined(TILEMAP_DEBRIS_RECORDS)
+		// What is drawn is rebuilt along the way (see AppendDebrisRecord())
+		for (auto& group : _debrisRecordGroups) {
+			group.Records.clear();
+		}
+#endif
+
 		std::int32_t size = (std::int32_t)_debrisList.size();
 		for (std::int32_t i = 0; i < size; i++) {
 			DestructibleDebris& debris = _debrisList[i];
@@ -4807,13 +4813,153 @@ namespace Jazz2::Tiles
 				debris.Tint.Y = std::clamp(debris.Tint.Y + debris.TintSpeed.Y * timeMult, 0.0f, 1.0f);
 				debris.Tint.Z = std::clamp(debris.Tint.Z + debris.TintSpeed.Z * timeMult, 0.0f, 1.0f);
 			}
+
+#if defined(TILEMAP_DEBRIS_RECORDS)
+			if (debris.Scale > 0.0f && debris.Alpha > 0.0f) {
+				AppendDebrisRecord(debris);
+			}
+#endif
 		}
 	}
+
+#if defined(TILEMAP_DEBRIS_RECORDS)
+	void TileMap::AppendDebrisRecord(const DestructibleDebris& debris)
+	{
+		/*
+			The record of the particle as it will be drawn, nothing moves it between this update and the draw.
+			Written here while the particle is in the cache, walking the particles again to draw them cost as
+			much as updating them. A particle out of view gets one too, the dispatch drops it cheaply.
+		*/
+		const bool additiveBlending = ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending);
+		DebrisRecordGroup* group = nullptr;
+		DebrisRecordGroup* unused = nullptr;
+		// A handful of groups at most (the burst, the tile debris, the weather), so a linear scan beats a map
+		for (auto& candidate : _debrisRecordGroups) {
+			if (candidate.Records.empty()) {
+				if (unused == nullptr) {
+					unused = &candidate;
+				}
+			} else if (candidate.DiffuseTexture == debris.DiffuseTexture && candidate.PaletteOffset == debris.PaletteOffset &&
+				candidate.Depth == debris.Depth && candidate.AdditiveBlending == additiveBlending) {
+				group = &candidate;
+				break;
+			}
+		}
+		if (group == nullptr) {
+			group = (unused != nullptr ? unused : &_debrisRecordGroups.emplace_back());
+			group->DiffuseTexture = debris.DiffuseTexture;
+			group->PaletteOffset = debris.PaletteOffset;
+			group->Depth = debris.Depth;
+			group->AdditiveBlending = additiveBlending;
+			group->TextureSize = debris.DiffuseTexture->GetSize();
+		}
+
+		// The corner and the edge with the scale and spin applied, as in AppendDebrisQuad(). A particle that
+		// doesn't turn needs no sine. A spinning one of a few pixels is drawn upright too: the turn isn't
+		// visible there and an upright quad is one rectangle instead of two triangles.
+		constexpr float MinTurnedSize = 8.0f;
+		const float localX = debris.FrameOffset.X - debris.Size.X * 0.5f;
+		const float localY = debris.FrameOffset.Y - debris.Size.Y * 0.5f;
+		float x0, y0, ex, ey;
+		if (debris.Angle == 0.0f || (debris.AngleSpeed != 0.0f && debris.Scale * std::max(debris.Size.X, debris.Size.Y) < MinTurnedSize)) {
+			x0 = debris.Pos.X + debris.Scale * localX;
+			y0 = debris.Pos.Y + debris.Scale * localY;
+			ex = debris.Scale * debris.Size.X;
+			ey = 0.0f;
+		} else {
+			float s, c;
+			sincosApprox(debris.Angle, s, c);
+			const float xx = c * debris.Scale, xy = s * debris.Scale;
+			x0 = debris.Pos.X + xx * localX - xy * localY;
+			y0 = debris.Pos.Y + xy * localX + xx * localY;
+			ex = xx * debris.Size.X;
+			ey = xy * debris.Size.X;
+		}
+
+		constexpr float EdgeScale = float(RHI::RDP::QuadRecord::EdgeScale);
+		constexpr float TexelScale = float(RHI::RDP::QuadRecord::TexelScale);
+		RHI::RDP::QuadRecord record;
+		record.X = x0;
+		record.Y = y0;
+		record.TexX = std::uint16_t(std::max(debris.TexBiasX * float(group->TextureSize.X) + 0.5f, 0.0f));
+		record.TexY = std::uint16_t(std::max(debris.TexBiasY * float(group->TextureSize.Y) + 0.5f, 0.0f));
+		record.Alpha = std::uint8_t(std::min(debris.Alpha, 1.0f) * 255.0f + 0.5f);
+		record.Flags = RHI::RDP::QuadRecord::IsQuad;
+		record.FLen = std::uint16_t(std::min(debris.Scale * debris.Size.Y * EdgeScale + 0.5f, 65535.0f));
+		record.Ex = std::int16_t(std::clamp(ex * EdgeScale, -32767.0f, 32767.0f));
+		record.Ey = std::int16_t(std::clamp(ey * EdgeScale, -32767.0f, 32767.0f));
+		record.TexW = std::uint16_t(std::clamp(debris.TexScaleX * float(group->TextureSize.X) * TexelScale + 0.5f, 0.0f, 65535.0f));
+		record.TexH = std::uint16_t(std::clamp(debris.TexScaleY * float(group->TextureSize.Y) * TexelScale + 0.5f, 0.0f, 65535.0f));
+		record.TintR = std::uint8_t(std::clamp(debris.Tint.X, 0.0f, 1.0f) * 255.0f + 0.5f);
+		record.TintG = std::uint8_t(std::clamp(debris.Tint.Y, 0.0f, 1.0f) * 255.0f + 0.5f);
+		record.TintB = std::uint8_t(std::clamp(debris.Tint.Z, 0.0f, 1.0f) * 255.0f + 0.5f);
+		std::memset(record.Reserved, 0, sizeof(record.Reserved));
+
+		const std::size_t base = group->Records.size();
+		group->Records.resize_for_overwrite(base + QuadRecordFloats);
+		std::memcpy(group->Records.data() + base, &record, sizeof(record));
+	}
+#endif
 
 	void TileMap::DrawDebris(RenderQueue& renderQueue)
 	{
 		ZoneScopedNC("Debris", 0xA09359);
 
+#if defined(TILEMAP_DEBRIS_RECORDS)
+		// The particles were written out as packed records while they were updated (see AppendDebrisRecord()),
+		// one stream for all that share a texture, a palette row, a blending and a depth - each is one draw here
+		const std::uint32_t maxQuadsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
+		for (auto& group : _debrisRecordGroups) {
+			const std::uint32_t totalQuads = std::uint32_t(group.Records.size() / QuadRecordFloats);
+			const bool indexed = (group.PaletteOffset >= 0);
+			for (std::uint32_t firstQuad = 0; firstQuad < totalQuads; firstQuad += maxQuadsPerChunk) {
+				const std::uint32_t count = std::min(maxQuadsPerChunk, totalQuads - firstQuad);
+
+				if (_meshCommandCount >= (std::int32_t)_meshCommands.size()) {
+					auto& newCommand = _meshCommands.emplace_back(std::make_unique<RenderCommand>());
+					newCommand->GetMaterial().SetBlendingEnabled(true);
+				}
+				RenderCommand* command = _meshCommands[_meshCommandCount++].get();
+
+				command->SetType(RenderCommand::Type::Particle);
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha,
+					group.AdditiveBlending ? BlendingFactor::One : BlendingFactor::OneMinusSrcAlpha);
+
+				bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
+					indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+				if (shaderChanged) {
+					command->GetMaterial().ReserveUniformsDataMemory();
+
+					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+					if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+						textureUniform->SetIntValue(0);
+					}
+					auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+					if (paletteUniform != nullptr) {
+						paletteUniform->SetIntValue(1);
+					}
+				}
+
+				command->GetInstanceUniforms()->Color->SetFloatValue(1.0f, 1.0f, 1.0f, 1.0f);
+
+				// A quad is two records of the size of a tile's, which is what the stream is counted in
+				auto& geometry = command->GetGeometry();
+				geometry.SetElementsPerVertex(TileRecordFloats);
+				geometry.SetHostVertexPointer(group.Records.data() + std::size_t(firstQuad) * QuadRecordFloats);
+				// The command pool is shared with EmitMesh(), which leaves its indices set up
+				geometry.SetIndexCount(0);
+				geometry.SetHostIndexPointer(nullptr);
+				geometry.SetDrawParameters(PrimitiveType::Points, 0, count * (QuadRecordFloats / TileRecordFloats));
+
+				command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+				command->SetLayer(group.Depth);
+				ContentResolver::Get().BindSpritePalette(*command, *group.DiffuseTexture, indexed,
+					(std::uint16_t)(indexed ? group.PaletteOffset : 0));
+
+				renderQueue.AddCommand(command);
+			}
+		}
+#else
 		constexpr float MaxDebrisSize = 128.0f;
 
 		Rectf viewportRect = RenderResources::GetCurrentViewport()->GetCullingRect();
@@ -4930,6 +5076,7 @@ namespace Jazz2::Tiles
 
 			renderQueue.AddCommand(command);
 		}
+#endif
 #endif
 	}
 

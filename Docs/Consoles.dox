@@ -543,8 +543,13 @@ a level frame takes about 14--31 ms in ares depending on the level.
     by a whole tile. Animated tiles are kept out and resolved per frame. Records wholly outside the
     scissor are neither uploaded nor drawn.
 -   Tiles reach the RDP as one 16-byte integer record each (@cpp RHI::RDP::TileRecord @ce, drawn as
-    @cpp PrimitiveType::Points @ce, a form only this backend gets). Debris keeps the indexed
-    four-corner form (rotated quads).
+    @cpp PrimitiveType::Points @ce, a form only this backend gets).
+-   <b>Debris is packed records too</b> (@cpp RHI::RDP::QuadRecord @ce, 32 bytes), written while the
+    particles are updated and batched by texture, palette row, blending and depth. An upright
+    particle is one rectangle, a turned one two triangles at about four times the cost, so
+    <b>snowflakes do not spin</b>, spinning particles under 8 pixels are drawn upright, and the depth
+    of weather particles is rounded to four levels (each depth is a draw; the other consoles with a
+    particle budget round it as well, see @cpp TileMap::WeatherDepthStep @ce).
 -   Sprites whose window fits TMEM are rounded to the fixed-point grid once and drawn from integers
     (@cpp SubmitSpriteRect() @ce), including the HUD icons. A point-sampled mirrored sprite starts
     1/32 texel inside its far edge, as mirrored tiles do.
@@ -554,7 +559,28 @@ a level frame takes about 14--31 ms in ares depending on the level.
 -   <b>Text is drawn without shadows</b> (@cpp Font::ShadowsEnabled @ce is off), but sprite shadows under
     the HUD icons and the logo stay.
 -   Glyphs are written straight into batched commands (@cpp RenderBatcher::BeginDirectBatch() @ce).
--   When profiling, compare release builds --- code layout alone moves timings by milliseconds.
+-   <b>A canvas keeps what it drew</b> (@cpp CANVAS_RETAINED_DRAWS @ce): a rectangle or a string
+    drawn with the same arguments as in the previous frame reuses the command or the glyphs of that
+    frame, whatever changed is drawn as before. The HUD went from 1.6 to 0.9 ms a frame with hearts
+    and from 1.85 to 1.15 ms with the carrots of the Reforged HUD, which wobble. It relies on the
+    dispatch reading the uniform memory of a command in place, so it is on for this backend only.
+-   <b>The weapon wheel</b> draws its arcs as one list of lines per color instead of a strip each (a
+    render command costs about a quarter of a millisecond whatever it draws) and leaves out the dark
+    blots behind the icons, a large blended area for a barely visible shade.
+-   The collision tree keeps its boxes 2 pixels fat (@cpp Collisions::AabbExtension @ce, 0.1 where it
+    was not measured), which stops every bobbing pickup from being reinserted each frame. The same
+    collisions are found.
+-   The software lightmap's falloff table is 1 KB (256 steps, rounded): together with the map it
+    has to fit the 8 KB data cache.
+-   <b>Both caches of the CPU are direct-mapped</b> (16 KB of instructions, 8 KB of data), so what
+    shares a cache line decides the frame time as much as the code does:
+    -   The hot code is linked in a fixed order made from a profile (@cpp "cmake/n64_text_order.ld" @ce).
+        Make it again when the frame changes a lot.
+    -   The RDP dispatch is entered at a fixed place of the data cache, chosen at startup so that its
+        stack frames share no line with the state the draw loops use
+        (@cpp RdpDevice::Dispatch() @ce). Left to chance, the same build drew the same frame in 16.5
+        to 20.2 ms.
+-   When profiling, compare release builds --- layout alone still moves timings by a millisecond.
 
 <b>Audio and video</b>
 
@@ -769,6 +795,10 @@ and serial output is block-buffered, so a crash loses everything since the last 
     menu scissors still clip, and primitives wholly inside a narrower scissor skip clipping.
 -   The lightmap's ARGB4444 texture persists. Only the lit spans of this and the previous frame are
     converted (`RHI_LIGHTING_LIT_SPANS`) while size and ambient stay unchanged.
+-   The lightmap is built at <b>1/8 of the output resolution</b> (80x60 texels). At 1/4 the torch-lit
+    levels spent 11--18 ms a frame on it and were the only ones below 60 Hz.
+-   Weather particles are batched by depth rounded to four levels (each depth is a draw), and the
+    collision tree keeps its boxes 2 pixels fat, as on the @ref consoles-n64-limits "Nintendo 64".
 
 <b>Audio</b>
 

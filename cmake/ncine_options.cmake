@@ -336,6 +336,11 @@ if(PLATFORM_AMIGA)
 	set(NCINE_RHI_USE_FB16 ON)
 endif()
 
+# ── Reduced detail of the software renderer ───────────────────────────────────────────────────────────
+# For a CPU that cannot afford the full picture: the lightmap at a quarter of the resolution instead of a half,
+# the textured background sampled every second column, no blots behind the icons of the weapon wheel.
+cmake_dependent_option(NCINE_RHI_SOFTWARE_REDUCED_DETAIL "Software renderer trades some detail of the lighting and of the sky for speed" OFF "NCINE_PREFERRED_RHI STREQUAL Software" OFF)
+
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT IOS AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 # Only for consoles that get game data from the asset packer, which stores sprites and tilesets in LZ4
 cmake_dependent_option(NCINE_WITH_LZ4 "Enable LZ4 compression support" ON "PLATFORM_N64 OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR NINTENDO_GAMECUBE" OFF)

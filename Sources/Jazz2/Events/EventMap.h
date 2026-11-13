@@ -7,6 +7,7 @@
 #include "../PitType.h"
 
 #include "../../nCine/Base/BitArray.h"
+#include "../../nCine/Primitives/AABB.h"
 
 #include <IO/Stream.h>
 #include <algorithm>
@@ -99,6 +100,13 @@ namespace Jazz2::Events
 		void ProcessGenerators(float timeMult);
 		/** @brief Activates all inactive events in specified tile restangle */
 		void ActivateEvents(std::int32_t tx1, std::int32_t ty1, std::int32_t tx2, std::int32_t ty2, bool allowAsync);
+		/**
+		 * @brief Returns `true` if an event was deactivated or put in a tile since the last call
+		 *
+		 * @p bounds are the tiles around those events. A rectangle searched by @ref ActivateEvents() doesn't have
+		 * to be searched again until a change in it is reported here.
+		 */
+		bool TakeActivationChanges(AABBi& bounds);
 		/** @brief Deactivates event on specified tile position */
 		void Deactivate(std::int32_t x, std::int32_t y);
 		/** @brief Resets generator on specified tile position */
@@ -390,6 +398,9 @@ namespace Jazz2::Events
 		SmallVector<std::int32_t, 0> _offGridRowStart;
 		/// Rows of the layout, those of the grid and those past it that hold the off-grid events
 		std::int32_t _layoutRows;
+		/// Tiles around every event that could have become inactive or been put in since @ref TakeActivationChanges(),
+		/// the left edge is right of the right one if there is none; everything in a new map
+		mutable AABBi _activationChanges = AABBi(INT32_MIN, INT32_MIN, INT32_MAX, INT32_MAX);
 		/// The tile whose object is being spawned right now, its position and event type, the X is negative otherwise;
 		/// an event of the grid and an off-grid one can share a position, the tile spawning tells them apart; cleared
 		/// by the lookup of the spawned object, so another one it spawns at the same position doesn't take it
@@ -404,6 +415,10 @@ namespace Jazz2::Events
 		bool IsInLayout(std::int32_t x, std::int32_t y) const;
 		/** @brief Activates the event of a tile, spawns its object */
 		void SpawnTileEvent(EventTile& tile, std::int32_t x, std::int32_t y, Actors::ActorState flags, std::int32_t z);
+		/** @brief Notes that the event of a tile could have become inactive or been put in, see @ref TakeActivationChanges() */
+		void MarkActivationChange(std::int32_t x, std::int32_t y) const;
+		/** @brief Notes that as @ref MarkActivationChange() for every tile */
+		void MarkAllActivationChanges() const;
 		/** @brief Reads the off-grid events, they're appended to the layout */
 		void LoadOffGridEvents(Formats::LevelReader& reader, Tiles::TileMap& tileMap, const LevelLoadOptions& options, std::uint8_t difficultyFlag,
 			BitArray& occupiedTiles);

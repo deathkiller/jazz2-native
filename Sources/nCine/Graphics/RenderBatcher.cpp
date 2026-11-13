@@ -240,7 +240,8 @@ namespace nCine
 		}
 	}
 
-	bool RenderBatcher::BeginDirectBatch(RenderCommand& refCommand, std::uint32_t maxInstances, DirectBatch& batch, RenderCommand* batchCommand)
+	bool RenderBatcher::BeginDirectBatch(RenderCommand& refCommand, std::uint32_t maxInstances, DirectBatch& batch, RenderCommand* batchCommand,
+		std::unique_ptr<std::uint8_t[]>* retainedMemory)
 	{
 		batch = DirectBatch();
 		if (maxInstances == 0 || !theApplication().GetRenderingSettings().BatchingEnabled) {
@@ -291,7 +292,12 @@ namespace nCine
 			return false;
 		}
 
-		batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonInstanceUniformsSize + capacity * stride));
+		if (retainedMemory != nullptr) {
+			*retainedMemory = std::make_unique<std::uint8_t[]>(nonInstanceUniformsSize + capacity * stride);
+			batchCommand->GetMaterial().SetUniformsDataPointer(retainedMemory->get());
+		} else {
+			batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonInstanceUniformsSize + capacity * stride));
+		}
 		CopyNonInstanceUniforms(batchCommand, &refCommand, singleInstanceBlock, commandAdded);
 		CopyMaterialState(batchCommand, &refCommand);
 
