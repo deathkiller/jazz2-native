@@ -237,6 +237,19 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GX2")
+	# Nintendo Wii U native GX2 rendering backend (wut). Mirrors the RSX backend; Gx2Memory hands out MEM2
+	# from the default heap, and MEM1 (owned by wiiu-sdl2) only for the hottest render targets (see Gx2Memory.h).
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2BufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2Device.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2Memory.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2RenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2ShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2ShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2Texture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX2/Gx2UniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "RSX")
 	# PlayStation 3 native RSX rendering backend (PSL1GHT librsx/libgcm_sys). A shader backend like GXM
 	# rather than a fixed-function one - RsxVram owns the GDDR3/XDR suballocation the way GsVram owns the

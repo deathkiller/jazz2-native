@@ -40,7 +40,7 @@ namespace nCine
 		// like `UseBufferMapping` below, the ES2 profile being Vita's vitaGL.
 #if !defined(WITH_IMGUI) && (defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || \
 		defined(WITH_RHI_GX) || defined(WITH_RHI_GS) || defined(WITH_RHI_PICA) || defined(WITH_RHI_SOFTWARE) || \
-		defined(WITH_RHI_LEGACYGL) || defined(WITH_RHI_GXM) || defined(WITH_RHI_RSX) || defined(RHI_GL_PROFILE_ES2))
+		defined(WITH_RHI_LEGACYGL) || defined(WITH_RHI_GXM) || defined(WITH_RHI_RSX) || defined(WITH_RHI_GX2) || defined(RHI_GL_PROFILE_ES2))
 		VboSize(64 * 1024),
 		IboSize(8 * 1024),
 #else

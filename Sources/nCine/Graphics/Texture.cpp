@@ -261,6 +261,17 @@ namespace nCine
 #endif
 	}
 
+	void Texture::SetPreferFastMemory(bool value)
+	{
+#if defined(WITH_RHI_GX2)
+		if (_rhiTexture != nullptr) {
+			_rhiTexture->SetPreferFastMemory(value);
+		}
+#else
+		static_cast<void>(value);
+#endif
+	}
+
 	void Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
 		_rhiTexture->SetSwizzle(r, g, b, a);

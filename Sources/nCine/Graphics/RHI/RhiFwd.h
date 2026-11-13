@@ -10,7 +10,7 @@
 #if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_METAL) && \
 		!defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PICA) && !defined(WITH_RHI_PVR) && \
 		!defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_RDP) && \
-		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX) && !defined(WITH_RHI_LEGACYGL)
+		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX) && !defined(WITH_RHI_GX2) && !defined(WITH_RHI_LEGACYGL)
 #	define WITH_RHI_GL
 #endif
 
@@ -1088,6 +1088,103 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::RSX::RsxDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_GX2)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The Wii U
+// backend drives the console's GPU (Latte, an R700-class part) through GX2 from wut. Latte is fully
+// programmable, so this is a full-pipeline backend like the RSX one it mirrors: both capabilities are
+// advertised and the whole bloom / lighting / combine / rescale chain is meant to run. The shaders are the
+// GLSL the OpenGL targets use, compiled offline by CafeGLSL and embedded per program variant (see
+// `--emit-gx2` in Docs/ShaderCompiler.dox).
+//
+// `RHI_CAP_BATCHING` is defined: a GX2 uniform block holds 64 KB, which fits 585 sprite instances, and the
+// batched shaders are compiled with that `BATCH_SIZE` (see Gx2Device::MaxBatchSize).
+//
+// `RHI_CAP_STREAMING_TEXTURES` holds: textures live in MEM2, which the CPU writes directly, so content
+// regenerated every frame (the cinematics) is written straight into a linear texture's storage and flushed
+// from the CPU cache on the next bind.
+//
+// `RHI_LINEAR_SUPERSAMPLE_RESOLVE` is not a capability but a cost choice: when the scene is supersampled and
+// nothing else asks for the antialiasing subpass, UpscaleRenderPass skips it and scales the supersampled texture
+// to the screen with a linear filter. On the console the 2880x1620 subpass and its bicubic resolve cost about
+// 11 ms with four players at 1080p; the linear resolve looks nearly the same (slightly softer, no more shimmer).
+#define RHI_CAP_SHADERS
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
+#define RHI_CAP_HEAVY_RESCALE_SHADERS
+#define RHI_CAP_BATCHING
+#define RHI_CAP_STREAMING_TEXTURES
+#define RHI_LINEAR_SUPERSAMPLE_RESOLVE
+
+namespace nCine::RHI::GX2
+{
+	class Gx2Device;
+	class Gx2Texture;
+	class Gx2BufferObject;
+	class Gx2Shader;
+	class Gx2ShaderProgram;
+	class Gx2ShaderUniforms;
+	class Gx2ShaderUniformBlocks;
+	class Gx2Uniform;
+	class Gx2UniformBlock;
+	class Gx2UniformCache;
+	class Gx2UniformBlockCache;
+	class Gx2Attribute;
+	class Gx2Framebuffer;
+	class Gx2Renderbuffer;
+	class Gx2RenderTarget;
+	class Gx2VertexArray;
+	class Gx2VertexFormat;
+	class Gx2RhiCapabilities;
+	class Gx2Debug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::GX2::Gx2Device;
+	using Texture = RHI::GX2::Gx2Texture;
+	using Buffer = RHI::GX2::Gx2BufferObject;
+	using Shader = RHI::GX2::Gx2Shader;
+	using ShaderProgram = RHI::GX2::Gx2ShaderProgram;
+	using ShaderUniforms = RHI::GX2::Gx2ShaderUniforms;
+	using ShaderUniformBlocks = RHI::GX2::Gx2ShaderUniformBlocks;
+	using Uniform = RHI::GX2::Gx2Uniform;
+	using UniformBlock = RHI::GX2::Gx2UniformBlock;
+	using UniformCache = RHI::GX2::Gx2UniformCache;
+	using UniformBlockCache = RHI::GX2::Gx2UniformBlockCache;
+	using Attribute = RHI::GX2::Gx2Attribute;
+	using Framebuffer = RHI::GX2::Gx2Framebuffer;
+	using Renderbuffer = RHI::GX2::Gx2Renderbuffer;
+	using RenderTarget = RHI::GX2::Gx2RenderTarget;
+	using VertexArray = RHI::GX2::Gx2VertexArray;
+	using VertexFormat = RHI::GX2::Gx2VertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GX2::Gx2RhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::GX2::Gx2Debug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

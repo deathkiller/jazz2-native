@@ -187,6 +187,22 @@
 #include "RSX/RsxDevice.h"
 #include "RSX/RsxRhiCapabilities.h"
 
+#elif defined(WITH_RHI_GX2)
+
+#include "GX2/Gx2Debug.h"
+#include "GX2/Gx2Shader.h"
+#include "GX2/Gx2Memory.h"
+#include "GX2/Gx2BufferObject.h"
+#include "GX2/Gx2Texture.h"
+#include "GX2/Gx2VertexFormat.h"
+#include "GX2/Gx2ShaderTypes.h"
+#include "GX2/Gx2UniformCache.h"
+#include "GX2/Gx2ShaderUniforms.h"
+#include "GX2/Gx2ShaderProgram.h"
+#include "GX2/Gx2RenderTarget.h"
+#include "GX2/Gx2Device.h"
+#include "GX2/Gx2RhiCapabilities.h"
+
 #elif defined(WITH_RHI_D3D11)
 
 #include "D3D11/D3D11Debug.h"

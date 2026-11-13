@@ -1741,6 +1741,19 @@ namespace nCine
 				case SDL_APP_LOWMEMORY:
 					LOGW("The system is running low on memory");
 					break;
+#if defined(WITH_RHI_GX2)
+				case SDL_APP_WILLENTERBACKGROUND:
+					// Wii U (HOME menu): wiiu-sdl2 releases the foreground and its scan buffers on the next event
+					// pump, so the GX2 backend has to stop submitting work now
+					RHI::Device::EnterBackground();
+					SetFocus(false);
+					break;
+				case SDL_APP_DIDENTERFOREGROUND:
+					// Also sent once at startup, where it changes nothing
+					RHI::Device::EnterForeground();
+					SetFocus(true);
+					break;
+#endif
 				case SDL_DISPLAYEVENT:
 					_gfxDevice->UpdateMonitors();
 					break;

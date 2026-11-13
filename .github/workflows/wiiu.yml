@@ -19,6 +19,11 @@ jobs:
       matrix:
         include:
         - BuildType: Release
+          RHI: Software
+
+        # Native GX2 backend; its shaders are committed (Gx2GeneratedShaders.h), so CafeGLSL isn't needed here
+        - BuildType: Release
+          RHI: GX2
 
     runs-on: 'ubuntu-latest'
     container:
@@ -36,7 +41,7 @@ jobs:
         rm -f ./Content/Translations/*.po
 
         git config --global --add safe.directory '*'
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/WiiU.cmake
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/WiiU.cmake -D NCINE_PREFERRED_RHI=${{ matrix.RHI }}
 
     - name: 'Build'
       run: |
@@ -49,8 +54,12 @@ jobs:
         cp -f ./_build/jazz2.wuhb ./_package/jazz2.wuhb
         cp -f ./LICENSE ./_package/LICENSE
 
+        rhiSuffix=""
+        if [ "${{ matrix.RHI }}" != "Software" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
+        echo "rhiSuffix=$rhiSuffix" >> $GITHUB_ENV
+
     - name: 'Upload Package'
       uses: actions/upload-artifact@v7
       with:
-        name: Jazz2_WiiU
+        name: Jazz2_WiiU${{ env.rhiSuffix }}
         path: ./_package/

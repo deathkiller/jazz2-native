@@ -82,6 +82,9 @@ using namespace Jazz2::Multiplayer;
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
+#if defined(WITH_RHI_GX2)
+#	include <gx2/display.h>
+#endif
 
 #include <atomic>
 
@@ -465,9 +468,21 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 		// also picks its own screen mode, from the performance preset)
 		config.Resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #elif defined(DEATH_TARGET_WIIU)
+#	if defined(WITH_RHI_GX2)
+		// The GPU backend can fill 1080p, so the screen buffer follows the console's TV output setting; wiiu-sdl2
+		// sizes the TV scan buffer after the same setting, so the frame reaches the TV without scaling. GX2 scales
+		// it to the GamePad.
+		GX2TVScanMode tvMode = GX2GetSystemTVScanMode();
+		if (tvMode == GX2_TV_SCAN_MODE_1080I || tvMode == GX2_TV_SCAN_MODE_1080P) {
+			config.Resolution.Set(1920, 1080);
+		} else {
+			config.Resolution.Set(1280, 720);
+		}
+#	else
 		// SDL2 sizes the TV render target after the system setting (up to 1920x1080), which is far too many pixels
 		// for the software rasterizer. The window is fixed at 720p instead and GX2 scales it to the TV and the GamePad.
 		config.Resolution.Set(1280, 720);
+#	endif
 		config.Fullscreen = false;
 		config.Resizable = false;
 #endif

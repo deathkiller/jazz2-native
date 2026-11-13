@@ -233,10 +233,11 @@ namespace
 			"  --msl             Print the Metal Shading Language transform of every stage to stdout\n"
 			"  --glslang <path>  glslangValidator to compile SPIR-V with (default: VULKAN_SDK / PATH)\n"
 			"  --cgcomp <path>   cgcomp to compile RSX microcode with (default: PS3DEV / PATH)\n"
+			"  --cafeglsl <path> CafeGLSL glslcompiler to compile GX2 shaders with (default: CAFEGLSL / PATH)\n"
 			"  --target <t>      Selects an inspection target for the transform dump (only: essl100)\n"
 			"\n"
 			"Standalone modes:\n"
-			"  --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>] [--cgcomp <path>]\n"
+			"  --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>] [--cgcomp <path>] [--cafeglsl <path>]\n"
 			"                                                    Regenerate every committed artifact (the shared types, one\n"
 			"                                                    header per shader, the umbrella and the aggregates)\n"
 			"                                                    from one enumeration of the shader directory; --check only\n"
@@ -246,6 +247,7 @@ namespace
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
 			"  --emit-rsx <output.h> [--cgcomp <path>] <input.shader ...>  Compile every stage to RSX microcode (PlayStation 3)\n"
+			"  --emit-gx2 <output.h> [--cafeglsl <path>] <input.shader ...>  Compile every program with CafeGLSL (Wii U GX2)\n"
 			"  --emit-fixed-function <pvr|gx|pica|gu|gs|rdp|legacygl> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
@@ -2211,6 +2213,846 @@ namespace
 		return 0;
 	}
 
+	// ── Wii U GX2 Shaders via a Child CafeGLSL Process ───────────────────────────────────────────
+
+	/**
+		@brief Largest batch a Wii U batched shader is compiled for
+
+		Must match `Gx2Device::MaxBatchSize`. A GX2 uniform block holds at most 64 KB, and the largest sprite
+		instance stride is 112 bytes, so 585 instances fit; a program with a smaller stride still gets this
+		many, because the engine publishes one batch size for all batched programs.
+	*/
+	constexpr std::int32_t Gx2MaxBatchSize = 585;
+	/** @brief Byte budget of one GX2 uniform block */
+	constexpr std::uint32_t Gx2MaxUniformBlockSize = 65536;
+	/** @brief Name CafeGLSL gives the block it gathers a stage's loose uniforms into */
+	constexpr StringView Gx2LooseUniformBlockName = "__cafe_loose_uniforms"_s;
+
+	/** @brief One stage of a compiled GX2 shader, taken out of the GFD file CafeGLSL writes */
+	struct Gx2Stage
+	{
+		struct Block { String Name; std::uint32_t Location; std::uint32_t Size; };
+		struct Var { String Name; std::uint32_t Type; std::uint32_t Count; std::uint32_t Offset; std::int32_t Block; };
+		struct Sampler { String Name; std::uint32_t Type; std::uint32_t Location; };
+		struct Attrib { String Name; std::uint32_t Type; std::uint32_t Count; std::uint32_t Location; };
+
+		/** @brief The `regs` words of `GX2VertexShader` / `GX2PixelShader` */
+		SmallVector<std::uint32_t, 0> Registers;
+		SmallVector<std::uint8_t, 0> Program;
+		SmallVector<Block, 0> Blocks;
+		/** @brief Only the members of the loose-uniform block; the explicit blocks use the std140 reflection */
+		SmallVector<Var, 0> Vars;
+		SmallVector<std::pair<std::uint32_t, std::uint32_t>, 0> LoopVars;
+		SmallVector<Sampler, 0> Samplers;
+		SmallVector<Attrib, 0> Attribs;
+		std::uint32_t RingItemSize = 0;
+	};
+
+	/** @brief One program variant's pair of compiled GX2 shaders */
+	struct Gx2ShaderEntry
+	{
+		String ProgramName;
+		String VariantName;
+		std::int32_t BatchSize = 0;
+		Gx2Stage Vertex;
+		Gx2Stage Pixel;
+	};
+
+	/** Resolves CafeGLSL's `glslcompiler`, from @p explicitPath, then `$CAFEGLSL/bin`, then `PATH` */
+	bool LocateCafeglsl(StringView explicitPath, String& outPath)
+	{
+		if (!explicitPath.empty()) {
+			outPath = String{explicitPath};
+			return fs::FileExists(outPath);
+		}
+		String root;
+		if (TryGetEnvironmentVariable("CAFEGLSL"_s, root)) {
+#if defined(DEATH_TARGET_WINDOWS)
+			String candidate = fs::CombinePath({ root, "bin"_s, "glslcompiler.exe"_s });
+#else
+			String candidate = fs::CombinePath({ root, "bin"_s, "glslcompiler"_s });
+#endif
+			if (fs::FileExists(candidate)) {
+				outPath = Death::move(candidate);
+				return true;
+			}
+		}
+		outPath = "glslcompiler"_s;
+		return true;
+	}
+
+	/** Reads a big-endian 32-bit word; the GFD file is written for the console's PowerPC */
+	std::uint32_t ReadBe32(const std::uint8_t* p)
+	{
+		return (std::uint32_t(p[0]) << 24) | (std::uint32_t(p[1]) << 16) | (std::uint32_t(p[2]) << 8) | std::uint32_t(p[3]);
+	}
+
+	/**
+		Pulls one shader header block of a GFD file apart
+
+		@p data is the block's payload: the `GX2VertexShader` / `GX2PixelShader` structure followed by the
+		arrays and strings it points to. Every pointer in it is stored as a tagged offset from the start of
+		the payload (`0xD06xxxxx` for data, `0xCA7xxxxx` for strings), which is what `GFDGet*Shader()` relocates
+		at run time; the offset is the low 20 bits.
+	*/
+	bool ParseGfdShaderHeader(const std::uint8_t* data, std::uint32_t dataSize, bool vertexStage, Gx2Stage& stage,
+		std::uint32_t& programSize, String& error)
+	{
+		// Field offsets of GX2VertexShader and GX2PixelShader (wut's gx2/shaders.h checks the same values)
+		const std::uint32_t registerWords = (vertexStage ? 52 : 41);
+		const std::uint32_t fieldsBase = registerWords * 4;
+		const std::uint32_t structSize = (vertexStage ? 0x134 : 0xE8);
+		if (dataSize < structSize) {
+			error = "GFD shader header block is too small"_s;
+			return false;
+		}
+
+		bool ok = true;
+		const auto offsetOf = [&](std::uint32_t pointer, std::uint32_t needed) -> const std::uint8_t* {
+			const std::uint32_t offset = (pointer & 0x000FFFFFu);
+			if (pointer == 0 || offset + needed > dataSize) {
+				ok = false;
+				return nullptr;
+			}
+			return data + offset;
+		};
+		const auto stringAt = [&](std::uint32_t pointer) -> String {
+			const std::uint8_t* s = offsetOf(pointer, 1);
+			if (s == nullptr) {
+				return {};
+			}
+			std::size_t length = 0;
+			while (s + length < data + dataSize && s[length] != 0) {
+				length++;
+			}
+			return String{reinterpret_cast<const char*>(s), length};
+		};
+		const auto field = [&](std::uint32_t index) {
+			return ReadBe32(data + fieldsBase + index * 4);
+		};
+
+		stage.Registers.clear();
+		for (std::uint32_t i = 0; i < registerWords; i++) {
+			stage.Registers.push_back(ReadBe32(data + i * 4));
+		}
+
+		// Fields after `regs`: size, program, mode, then (count, pointer) pairs for uniform blocks, uniform
+		// vars, initial values, loop vars and sampler vars, and on the vertex stage attrib vars and the ring
+		// item size
+		programSize = field(0);
+		const std::uint32_t mode = field(2);
+		if (mode != 1) {
+			// GX2_SHADER_MODE_UNIFORM_BLOCK, which the device sets once for every program
+			error = Death::format("shader was compiled for shader mode {}, not uniform blocks", mode);
+			return false;
+		}
+
+		const std::uint32_t blockCount = field(3);
+		const std::uint8_t* blocks = (blockCount > 0 ? offsetOf(field(4), blockCount * 12) : nullptr);
+		std::int32_t looseBlock = -1;
+		for (std::uint32_t i = 0; blocks != nullptr && i < blockCount; i++) {
+			const std::uint8_t* b = blocks + i * 12;
+			Gx2Stage::Block block{stringAt(ReadBe32(b)), ReadBe32(b + 4), ReadBe32(b + 8)};
+			if (block.Name == Gx2LooseUniformBlockName) {
+				looseBlock = std::int32_t(i);
+			}
+			stage.Blocks.push_back(Death::move(block));
+		}
+
+		const std::uint32_t varCount = field(5);
+		const std::uint8_t* vars = (varCount > 0 ? offsetOf(field(6), varCount * 20) : nullptr);
+		for (std::uint32_t i = 0; vars != nullptr && i < varCount; i++) {
+			const std::uint8_t* v = vars + i * 20;
+			const std::int32_t block = std::int32_t(ReadBe32(v + 16));
+			// Members of the explicit blocks are left out: their std140 offsets are already in the engine's
+			// reflection, and a batched instance array would list every element (thousands of entries)
+			if (block != looseBlock || looseBlock < 0) {
+				continue;
+			}
+			stage.Vars.push_back({stringAt(ReadBe32(v)), ReadBe32(v + 4), ReadBe32(v + 8), ReadBe32(v + 12), block});
+		}
+
+		if (field(7) != 0) {
+			error = "shader has uniform initial values, which the backend does not upload"_s;
+			return false;
+		}
+
+		const std::uint32_t loopCount = field(9);
+		const std::uint8_t* loops = (loopCount > 0 ? offsetOf(field(10), loopCount * 8) : nullptr);
+		for (std::uint32_t i = 0; loops != nullptr && i < loopCount; i++) {
+			stage.LoopVars.emplace_back(ReadBe32(loops + i * 8), ReadBe32(loops + i * 8 + 4));
+		}
+
+		const std::uint32_t samplerCount = field(11);
+		const std::uint8_t* samplers = (samplerCount > 0 ? offsetOf(field(12), samplerCount * 12) : nullptr);
+		for (std::uint32_t i = 0; samplers != nullptr && i < samplerCount; i++) {
+			const std::uint8_t* s = samplers + i * 12;
+			stage.Samplers.push_back({stringAt(ReadBe32(s)), ReadBe32(s + 4), ReadBe32(s + 8)});
+		}
+
+		if (vertexStage) {
+			const std::uint32_t attribCount = field(13);
+			const std::uint8_t* attribs = (attribCount > 0 ? offsetOf(field(14), attribCount * 16) : nullptr);
+			for (std::uint32_t i = 0; attribs != nullptr && i < attribCount; i++) {
+				const std::uint8_t* a = attribs + i * 16;
+				stage.Attribs.push_back({stringAt(ReadBe32(a)), ReadBe32(a + 4), ReadBe32(a + 8), ReadBe32(a + 12)});
+			}
+			stage.RingItemSize = field(15);
+			if (field(16) != 0) {
+				error = "vertex shader uses stream out"_s;
+				return false;
+			}
+		}
+
+		if (!ok) {
+			error = "GFD shader header block has a pointer outside the block"_s;
+			return false;
+		}
+		return true;
+	}
+
+	/** Extracts the vertex and pixel shader of a GFD (`.gsh`) file */
+	bool ParseGfdShaders(StringView bytes, Gx2Stage& vertex, Gx2Stage& pixel, String& error)
+	{
+		const std::uint8_t* data = reinterpret_cast<const std::uint8_t*>(bytes.data());
+		const std::size_t size = bytes.size();
+		if (size < 32 || ReadBe32(data) != 0x47667832u) {	// "Gfx2"
+			error = "not a GFD file"_s;
+			return false;
+		}
+
+		std::uint32_t vertexProgramSize = 0, pixelProgramSize = 0;
+		bool haveVertex = false, havePixel = false;
+		std::size_t pos = ReadBe32(data + 4);
+		while (pos + 32 <= size) {
+			const std::uint8_t* header = data + pos;
+			if (ReadBe32(header) != 0x424C4B7Bu) {	// "BLK{"
+				error = "malformed GFD block"_s;
+				return false;
+			}
+			const std::uint32_t headerSize = ReadBe32(header + 4);
+			const std::uint32_t type = ReadBe32(header + 16);
+			const std::uint32_t dataSize = ReadBe32(header + 20);
+			const std::uint8_t* blockData = header + headerSize;
+			if (pos + headerSize + dataSize > size) {
+				error = "truncated GFD block"_s;
+				return false;
+			}
+			switch (type) {
+				case 1:		// End of file
+					pos = size;
+					continue;
+				case 3:		// Vertex shader header
+					if (!ParseGfdShaderHeader(blockData, dataSize, true, vertex, vertexProgramSize, error)) {
+						return false;
+					}
+					haveVertex = true;
+					break;
+				case 5:		// Vertex shader program
+					vertex.Program.assign(blockData, blockData + dataSize);
+					break;
+				case 6:		// Pixel shader header
+					if (!ParseGfdShaderHeader(blockData, dataSize, false, pixel, pixelProgramSize, error)) {
+						return false;
+					}
+					havePixel = true;
+					break;
+				case 7:		// Pixel shader program
+					pixel.Program.assign(blockData, blockData + dataSize);
+					break;
+				default:
+					break;
+			}
+			pos += headerSize + dataSize;
+		}
+
+		if (!haveVertex || !havePixel || vertex.Program.empty() || pixel.Program.empty()) {
+			error = "GFD file lacks a vertex or pixel shader"_s;
+			return false;
+		}
+		if (vertex.Program.size() != vertexProgramSize || pixel.Program.size() != pixelProgramSize) {
+			error = "GFD shader program size does not match its header"_s;
+			return false;
+		}
+		return true;
+	}
+
+	/**
+		Splits the burst parameter exports of a vertex shader into one export per parameter
+
+		CafeGLSL writes consecutive varyings with one burst export (`EXPORT PARAM 1-4 R1-4`, BURST_COUNT > 0).
+		The console handles it, but Cemu 2.6 translates only the first parameter of a burst, so the others reach
+		the pixel shader undefined (HQ2x, 3xBRZ and SABR come out wrong; fixed in Cemu after 2.6). Each burst
+		becomes BURST_COUNT + 1 single exports. The CF program grows by the inserted instructions (rounded up
+		to an even count with a NOP after the end, so the fetch clauses stay 128-bit aligned), the clauses
+		behind it move up by as much, and every clause address and CF jump target is relocated. Returns false
+		without changing the program on a CF instruction it does not know how to relocate.
+	*/
+	bool SplitParamExportBursts(SmallVectorImpl<std::uint8_t>& program, String& error)
+	{
+		// R600/R700 control-flow opcodes (CF_INST, bits 23-29 of the second word; ALU clauses use 0x40 and up)
+		enum : std::uint32_t {
+			CfNop = 0x00, CfTex = 0x01, CfVtx = 0x02, CfVtxTc = 0x03, CfLoopStart = 0x04, CfPopPushElse = 0x11,
+			CfCall = 0x12, CfCallFs = 0x13, CfReturn = 0x14, CfExport = 0x27, CfExportDone = 0x28, CfAluFirst = 0x40
+		};
+		constexpr std::uint32_t ExportTypeParam = 2;
+
+		auto readLe32 = [&program](std::size_t offset) {
+			return std::uint32_t(program[offset]) | (std::uint32_t(program[offset + 1]) << 8) |
+				(std::uint32_t(program[offset + 2]) << 16) | (std::uint32_t(program[offset + 3]) << 24);
+		};
+
+		SmallVector<std::pair<std::uint32_t, std::uint32_t>, 0> cf;
+		bool foundEnd = false;
+		bool hasBurst = false;
+		for (std::size_t offset = 0; offset + 8 <= program.size(); offset += 8) {
+			std::uint32_t w0 = readLe32(offset), w1 = readLe32(offset + 4);
+			cf.emplace_back(w0, w1);
+			std::uint32_t inst = (w1 >> 23) & 0x7F;
+			if (inst >= CfAluFirst) {
+				continue;
+			}
+			if ((inst == CfExport || inst == CfExportDone) && ((w0 >> 13) & 0x3) == ExportTypeParam && ((w1 >> 17) & 0xF) != 0) {
+				hasBurst = true;
+			}
+			if ((w1 >> 21) & 1) {	// END_OF_PROGRAM
+				foundEnd = true;
+				break;
+			}
+		}
+		if (!hasBurst) {
+			return true;
+		}
+		if (!foundEnd) {
+			error = "vertex shader has no end of program"_s;
+			return false;
+		}
+
+		const std::uint32_t oldCount = std::uint32_t(cf.size());
+		SmallVector<std::uint32_t, 0> newIndex;
+		SmallVector<std::pair<std::uint32_t, std::uint32_t>, 0> out;
+		for (std::uint32_t i = 0; i < oldCount; i++) {
+			newIndex.push_back(std::uint32_t(out.size()));
+			auto [w0, w1] = cf[i];
+			std::uint32_t inst = (w1 >> 23) & 0x7F;
+			std::uint32_t burst = (w1 >> 17) & 0xF;
+			if ((inst == CfExport || inst == CfExportDone) && ((w0 >> 13) & 0x3) == ExportTypeParam && burst != 0) {
+				std::uint32_t arrayBase = w0 & 0x1FFF;
+				std::uint32_t gpr = (w0 >> 15) & 0x7F;
+				if (((w0 >> 22) & 1) != 0 || gpr + burst > 127 || arrayBase + burst > 0x1FFF) {
+					error = "vertex shader has a relative or out-of-range burst export"_s;
+					return false;
+				}
+				for (std::uint32_t j = 0; j <= burst; j++) {
+					std::uint32_t p0 = (w0 & ~((0x7Fu << 15) | 0x1FFFu)) | ((gpr + j) << 15) | (arrayBase + j);
+					std::uint32_t p1 = w1 & ~(0xFu << 17);
+					if (j < burst) {
+						// Only the last one keeps EXPORT_DONE and the end of program
+						p1 = (p1 & ~((0x7Fu << 23) | (1u << 21))) | (CfExport << 23);
+					}
+					out.emplace_back(p0, p1);
+				}
+			} else {
+				out.emplace_back(w0, w1);
+			}
+		}
+		if ((out.size() - oldCount) % 2 != 0) {
+			out.emplace_back(0u, CfNop << 23);
+		}
+		const std::uint32_t delta = std::uint32_t(out.size()) - oldCount;
+
+		// Relocate clause addresses (64-bit units from the program start) and jump targets (CF indices)
+		for (auto& [w0, w1] : out) {
+			std::uint32_t inst = (w1 >> 23) & 0x7F;
+			if (inst >= CfAluFirst) {
+				std::uint32_t addr = w0 & 0x3FFFFF;
+				if (addr < oldCount || addr + delta > 0x3FFFFF) {
+					error = "vertex shader has an ALU clause inside its CF program"_s;
+					return false;
+				}
+				w0 = (w0 & ~0x3FFFFFu) | (addr + delta);
+			} else if (inst == CfTex || inst == CfVtx || inst == CfVtxTc) {
+				if (w0 < oldCount) {
+					error = "vertex shader has a fetch clause inside its CF program"_s;
+					return false;
+				}
+				w0 += delta;
+			} else if (inst >= CfLoopStart && inst <= CfPopPushElse) {
+				if (w0 >= oldCount) {
+					error = "vertex shader jumps out of its CF program"_s;
+					return false;
+				}
+				w0 = newIndex[w0];
+			} else if (inst == CfCall || inst == CfReturn) {
+				error = "vertex shader has subroutines"_s;
+				return false;
+			}
+			// NOP, CALL_FS (its address is the fetch shader's), exports and the rest carry no address of ours
+		}
+
+		SmallVector<std::uint8_t, 0> result;
+		result.reserve(program.size() + delta * 8);
+		for (auto [w0, w1] : out) {
+			for (std::uint32_t w : { w0, w1 }) {
+				result.push_back(std::uint8_t(w));
+				result.push_back(std::uint8_t(w >> 8));
+				result.push_back(std::uint8_t(w >> 16));
+				result.push_back(std::uint8_t(w >> 24));
+			}
+		}
+		result.insert(result.end(), program.begin() + oldCount * 8, program.end());
+		program = Death::move(result);
+		return true;
+	}
+
+	/**
+		Turns the integer divisions of the vertex index by a constant into floating-point ones
+
+		The sprite shaders find their instance and quad corner as `gl_VertexID / 6` and `(gl_VertexID + K) / 3`.
+		An integer division by a constant becomes `MULHI_INT` (or `MULHI_UINT` when unsigned), which the console
+		runs but Cemu 2.6 cannot translate: it rejects the whole vertex shader, and every draw using it vanishes.
+		`int((float(x) + 0.5) / N.0)` gives the same quotient for a non-negative `x` far beyond any vertex index
+		a batch reaches (the half-unit bias keeps the rounding of the reciprocal away from the integer steps).
+		Only the two forms above are rewritten, and only as a whole dividend: after `*`, `/` or `%` (as in
+		`2 * gl_VertexID / 6`) the match is just the right operand, so it is left as an integer division.
+	*/
+	String MakeVertexIdDivisionsFloat(StringView source)
+	{
+		constexpr StringView Id = "gl_VertexID"_s;
+		const auto skipSpaces = [&](std::size_t pos) {
+			while (pos < source.size() && (source[pos] == ' ' || source[pos] == '\t')) {
+				pos++;
+			}
+			return pos;
+		};
+		const auto readNumber = [&](std::size_t pos, std::size_t& end) -> StringView {
+			end = pos;
+			while (end < source.size() && source[end] >= '0' && source[end] <= '9') {
+				end++;
+			}
+			return source.slice(pos, end);
+		};
+		const auto isIdentifierChar = [](char c) {
+			return (c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+		};
+
+		String result;
+		std::size_t copied = 0;
+		for (std::size_t pos = 0; pos + Id.size() <= source.size(); pos++) {
+			if (source.slice(pos, pos + Id.size()) != Id || (pos > 0 && isIdentifierChar(source[pos - 1])) ||
+				(pos + Id.size() < source.size() && isIdentifierChar(source[pos + Id.size()]))) {
+				continue;
+			}
+			std::size_t start = pos, after = pos + Id.size();
+			String dividend = String{Id};
+			// "(gl_VertexID + K)"
+			std::size_t open = start;
+			while (open > 0 && (source[open - 1] == ' ' || source[open - 1] == '\t')) {
+				open--;
+			}
+			// Only a bare group: after a name the parentheses belong to a call or a constructor like "int(...)"
+			std::size_t beforeOpen = (open > 0 ? open - 1 : 0);
+			while (beforeOpen > 0 && (source[beforeOpen - 1] == ' ' || source[beforeOpen - 1] == '\t')) {
+				beforeOpen--;
+			}
+			if (open > 0 && source[open - 1] == '(' && (beforeOpen == 0 || !isIdentifierChar(source[beforeOpen - 1]))) {
+				std::size_t p = skipSpaces(after);
+				if (p < source.size() && source[p] == '+') {
+					std::size_t numberEnd;
+					StringView k = readNumber(skipSpaces(p + 1), numberEnd);
+					std::size_t close = skipSpaces(numberEnd);
+					if (!k.empty() && close < source.size() && source[close] == ')') {
+						start = open - 1;
+						after = close + 1;
+						dividend = String{Id} + " + "_s + k;
+					}
+				}
+			}
+			// Not the right operand of a multiplicative operator, which binds to it before the division does
+			std::size_t before = start;
+			while (before > 0 && (source[before - 1] == ' ' || source[before - 1] == '\t')) {
+				before--;
+			}
+			if (before > 0 && (source[before - 1] == '*' || source[before - 1] == '/' || source[before - 1] == '%')) {
+				continue;
+			}
+			// " / N"
+			std::size_t slash = skipSpaces(after);
+			if (slash >= source.size() || source[slash] != '/') {
+				continue;
+			}
+			std::size_t numberEnd;
+			StringView n = readNumber(skipSpaces(slash + 1), numberEnd);
+			if (n.empty() || (numberEnd < source.size() && (isIdentifierChar(source[numberEnd]) || source[numberEnd] == '.'))) {
+				continue;
+			}
+			// A leading zero makes an integer literal octal, but "010.0" would be read as decimal
+			std::uint32_t divisor = 0;
+			bool isOctal = (n.size() > 1 && n[0] == '0');
+			bool valid = true;
+			for (char c : n) {
+				if (isOctal && c > '7') {
+					valid = false;
+					break;
+				}
+				divisor = divisor * (isOctal ? 8u : 10u) + std::uint32_t(c - '0');
+			}
+			if (!valid) {
+				continue;
+			}
+			result += source.slice(copied, start);
+			result += "int((float("_s + dividend + ") + 0.5) / "_s + Death::format("{}.0)", divisor);
+			copied = numberEnd;
+			pos = numberEnd - 1;
+		}
+		result += source.exceptPrefix(copied);
+		return result;
+	}
+
+	/** Compiles one program variant's GLSL pair with CafeGLSL and parses the GFD file it writes */
+	bool CompileGx2Shaders(const String& compilerPath, const String& vertexSource, const String& fragmentSource,
+		Gx2ShaderEntry& entry, String& log)
+	{
+		log = {};
+		static unsigned counter = 0;
+		String base = MakeTemporaryPathPrefix("sc_gx2"_s, counter++);
+		if (base.empty()) {
+			log = "cannot resolve the temporary directory"_s;
+			return false;
+		}
+		String vertexPath = base + ".vert"_s;
+		String fragmentPath = base + ".frag"_s;
+		String outputPath = base + ".gsh"_s;
+		String logPath = base + ".log"_s;
+		if (!WriteStringToFile(vertexPath, vertexSource) || !WriteStringToFile(fragmentPath, fragmentSource)) {
+			log = "cannot write the temporary shader input"_s;
+			return false;
+		}
+
+		int exitCode = -1;
+		bool ran;
+#if defined(DEATH_TARGET_WINDOWS)
+		String command = "\""_s + compilerPath + "\" -vs \""_s + vertexPath + "\" -ps \""_s + fragmentPath +
+			"\" -o \""_s + outputPath + "\" --uniform-mode block"_s;
+		DWORD win32ExitCode = ~DWORD{0};
+		ran = RunProcessCaptured(command, logPath, win32ExitCode);
+		exitCode = static_cast<int>(win32ExitCode);
+#else
+		// Uniform-block mode throughout: register mode allows only 1024 scalar components, cannot hold the
+		// explicit std140 blocks at all, and the device sets one shader mode for every program
+		SmallVector<String, 0> argv{InPlaceInit, { compilerPath, "-vs"_s, vertexPath, "-ps"_s, fragmentPath,
+			"-o"_s, outputPath, "--uniform-mode"_s, "block"_s }};
+		ran = RunProcessCaptured(argv, logPath, exitCode);
+#endif
+		{
+			String logContent;
+			if (ReadFileToString(logPath, logContent)) {
+				log = Death::move(logContent);
+			}
+		}
+		bool ok = ran && (exitCode == 0);
+		if (ok) {
+			String bytes;
+			String error;
+			if (!ReadFileToString(outputPath, bytes) || !ParseGfdShaders(bytes, entry.Vertex, entry.Pixel, error) ||
+				!SplitParamExportBursts(entry.Vertex.Program, error)) {
+				log = (error.empty() ? String{"CafeGLSL produced no output"_s} : error);
+				ok = false;
+			}
+		} else if (log.empty()) {
+			log = "CafeGLSL could not be run"_s;
+		}
+		fs::RemoveFile(vertexPath);
+		fs::RemoveFile(fragmentPath);
+		fs::RemoveFile(outputPath);
+		fs::RemoveFile(logPath);
+		return ok;
+	}
+
+	/** Strips CafeGLSL's diagnostics down to the first line that names a problem */
+	String FirstCafeglslError(StringView log)
+	{
+		for (StringView rest = log; !rest.empty(); ) {
+			String line = FirstLine(rest);
+			std::size_t skip = line.size();
+			while (skip < rest.size() && (rest[skip] == '\n' || rest[skip] == '\r')) {
+				skip++;
+			}
+			rest = rest.exceptPrefix(skip);
+			if (line.contains("rror"_s)) {
+				return line;
+			}
+		}
+		return FirstLine(log);
+	}
+
+	/** Appends the GX2 tables of one stage to @p out, named after @p prefix */
+	void AppendGx2StageTables(String& out, const Gx2Stage& stage, StringView prefix)
+	{
+		out += Death::format("\t\tconst std::uint32_t {}Regs[] = {{\n", prefix);
+		for (std::size_t i = 0; i < stage.Registers.size(); i += 8) {
+			out += "\t\t\t"_s;
+			const std::size_t lineEnd = (i + 8 < stage.Registers.size() ? i + 8 : stage.Registers.size());
+			for (std::size_t j = i; j < lineEnd; j++) {
+				out += Death::format("0x{:.8x}", stage.Registers[j]);
+				if (j + 1 < lineEnd) {
+					out += ", "_s;
+				}
+			}
+			out += (lineEnd < stage.Registers.size() ? ",\n"_s : "\n"_s);
+		}
+		out += "\t\t};\n"_s;
+		out += Death::format("\t\talignas(256) const std::uint8_t {}Program[] = {{\n", prefix);
+		out += RsxByteArrayLiteral(stage.Program, "\t\t\t"_s);
+		out += "\t\t};\n"_s;
+		if (!stage.Blocks.empty()) {
+			out += Death::format("\t\tconst GX2UniformBlock {}Blocks[] = {{", prefix);
+			for (const Gx2Stage::Block& b : stage.Blocks) {
+				out += Death::format(" {{ \"{}\", {}, {} }},", b.Name, b.Location, b.Size);
+			}
+			out += " };\n"_s;
+		}
+		if (!stage.Vars.empty()) {
+			out += Death::format("\t\tconst GX2UniformVar {}Vars[] = {{", prefix);
+			for (const Gx2Stage::Var& v : stage.Vars) {
+				out += Death::format(" {{ \"{}\", GX2ShaderVarType({}), {}, {}, {} }},", v.Name, v.Type, v.Count, v.Offset, v.Block);
+			}
+			out += " };\n"_s;
+		}
+		if (!stage.LoopVars.empty()) {
+			out += Death::format("\t\tconst GX2LoopVar {}Loops[] = {{", prefix);
+			for (const auto& l : stage.LoopVars) {
+				out += Death::format(" {{ 0x{:.8x}, 0x{:.8x} }},", l.first, l.second);
+			}
+			out += " };\n"_s;
+		}
+		if (!stage.Samplers.empty()) {
+			out += Death::format("\t\tconst GX2SamplerVar {}Samplers[] = {{", prefix);
+			for (const Gx2Stage::Sampler& s : stage.Samplers) {
+				out += Death::format(" {{ \"{}\", GX2SamplerVarType({}), {} }},", s.Name, s.Type, s.Location);
+			}
+			out += " };\n"_s;
+		}
+		if (!stage.Attribs.empty()) {
+			out += Death::format("\t\tconst GX2AttribVar {}Attribs[] = {{", prefix);
+			for (const Gx2Stage::Attrib& a : stage.Attribs) {
+				out += Death::format(" {{ \"{}\", GX2ShaderVarType({}), {}, {} }},", a.Name, a.Type, a.Count, a.Location);
+			}
+			out += " };\n"_s;
+		}
+	}
+
+	/** Returns the `GeneratedGx2Stage` initializer referencing the tables AppendGx2StageTables() wrote */
+	String Gx2StageInitializer(const Gx2Stage& stage, StringView prefix)
+	{
+		const auto table = [&](bool present, StringView suffix) {
+			return (present ? String{String{prefix} + suffix} : String{"nullptr"_s});
+		};
+		return Death::format("{{ {}Regs, {}, {}Program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }}",
+			prefix, stage.Registers.size(), prefix, stage.Program.size(),
+			stage.Blocks.size(), table(!stage.Blocks.empty(), "Blocks"_s),
+			stage.Vars.size(), table(!stage.Vars.empty(), "Vars"_s),
+			stage.LoopVars.size(), table(!stage.LoopVars.empty(), "Loops"_s),
+			stage.Samplers.size(), table(!stage.Samplers.empty(), "Samplers"_s),
+			stage.Attribs.size(), table(!stage.Attribs.empty(), "Attribs"_s),
+			stage.RingItemSize);
+	}
+
+	/** Builds the aggregate header the GX2 backend loads its shaders from */
+	String BuildGx2GeneratedHeader(const SmallVectorImpl<Gx2ShaderEntry>& entries)
+	{
+		String out;
+		out += "// Generated by ShaderCompiler (--emit-gx2). Do not edit manually.\n"_s;
+		out += "#pragma once\n\n"_s;
+		out += "#if defined(WITH_RHI_GX2)\n\n"_s;
+		out += "#include <cstddef>\n"_s;
+		out += "#include <cstdint>\n"_s;
+		out += "#include <cstring>\n\n"_s;
+		out += "#include <gx2/shaders.h>\n\n"_s;
+		out += "namespace nCine::RHI::GX2\n{\n"_s;
+		out += "\tnamespace\n\t{\n"_s;
+		out += "\t\t/**\n"_s;
+		out += "\t\t\t@brief One stage of a program variant, compiled offline by CafeGLSL (uniform-block mode)\n\n"_s;
+		out += "\t\t\tThe fields mirror `GX2VertexShader` / `GX2PixelShader`. Of the uniform variables only the\n"_s;
+		out += "\t\t\tmembers of the loose-uniform block (`__cafe_loose_uniforms`) are kept.\n"_s;
+		out += "\t\t*/\n"_s;
+		out += "\t\tstruct GeneratedGx2Stage\n\t\t{\n"_s;
+		out += "\t\t\tconst std::uint32_t* Registers;\n"_s;
+		out += "\t\t\tstd::uint32_t RegisterCount;\n"_s;
+		out += "\t\t\tconst std::uint8_t* Program;\n"_s;
+		out += "\t\t\tstd::uint32_t ProgramSize;\n"_s;
+		out += "\t\t\tstd::uint32_t UniformBlockCount;\n"_s;
+		out += "\t\t\tconst GX2UniformBlock* UniformBlocks;\n"_s;
+		out += "\t\t\tstd::uint32_t UniformVarCount;\n"_s;
+		out += "\t\t\tconst GX2UniformVar* UniformVars;\n"_s;
+		out += "\t\t\tstd::uint32_t LoopVarCount;\n"_s;
+		out += "\t\t\tconst GX2LoopVar* LoopVars;\n"_s;
+		out += "\t\t\tstd::uint32_t SamplerVarCount;\n"_s;
+		out += "\t\t\tconst GX2SamplerVar* SamplerVars;\n"_s;
+		out += "\t\t\tstd::uint32_t AttribVarCount;\n"_s;
+		out += "\t\t\tconst GX2AttribVar* AttribVars;\n"_s;
+		out += "\t\t\tstd::uint32_t RingItemSize;\n"_s;
+		out += "\t\t};\n\n"_s;
+		out += "\t\t/** @brief Vertex and pixel shader of one program variant; `BatchSize` is 0 for an unbatched program */\n"_s;
+		out += "\t\tstruct GeneratedGx2Shader\n\t\t{\n"_s;
+		out += "\t\t\tconst char* ProgramName;\n"_s;
+		out += "\t\t\tconst char* VariantName;\n"_s;
+		out += "\t\t\tstd::int32_t BatchSize;\n"_s;
+		out += "\t\t\tGeneratedGx2Stage Vertex;\n"_s;
+		out += "\t\t\tGeneratedGx2Stage Pixel;\n"_s;
+		out += "\t\t};\n\n"_s;
+		out += Death::format("\t\t/** @brief Batch size the batched programs were compiled for */\n"
+			"\t\tconstexpr std::int32_t GeneratedGx2MaxBatchSize = {};\n\n", Gx2MaxBatchSize);
+
+		for (std::size_t i = 0; i < entries.size(); i++) {
+			const Gx2ShaderEntry& e = entries[i];
+			out += "\t\t// "_s + e.ProgramName;
+			if (!e.VariantName.empty()) {
+				out += " ("_s + e.VariantName + ")"_s;
+			}
+			out += "\n"_s;
+			AppendGx2StageTables(out, e.Vertex, Death::format("_gx2Vs{}", i));
+			AppendGx2StageTables(out, e.Pixel, Death::format("_gx2Ps{}", i));
+			out += "\n"_s;
+		}
+
+		out += "\t\tconst GeneratedGx2Shader GeneratedGx2Shaders[] = {\n"_s;
+		for (std::size_t i = 0; i < entries.size(); i++) {
+			const Gx2ShaderEntry& e = entries[i];
+			out += Death::format("\t\t\t{{ \"{}\", \"{}\", {},\n\t\t\t\t{},\n\t\t\t\t{} }},\n",
+				e.ProgramName, e.VariantName, e.BatchSize,
+				Gx2StageInitializer(e.Vertex, Death::format("_gx2Vs{}", i)),
+				Gx2StageInitializer(e.Pixel, Death::format("_gx2Ps{}", i)));
+		}
+		out += "\t\t};\n\n"_s;
+		out += "\t\t/**\n"_s;
+		out += "\t\t\t@brief Looks up the shaders of one program variant\n\n"_s;
+		out += "\t\t\tReturns `nullptr` for a variant CafeGLSL could not compile when this table was generated;\n"_s;
+		out += "\t\t\tthe backend reports that as a load-time failure of that one program.\n"_s;
+		out += "\t\t*/\n"_s;
+		out += "\t\tinline const GeneratedGx2Shader* FindGeneratedGx2Shader(const char* programName, const char* variantName)\n"_s;
+		out += "\t\t{\n"_s;
+		out += "\t\t\tif (programName == nullptr) return nullptr;\n"_s;
+		out += "\t\t\tif (variantName == nullptr) variantName = \"\";\n"_s;
+		out += "\t\t\tfor (const GeneratedGx2Shader& s : GeneratedGx2Shaders) {\n"_s;
+		out += "\t\t\t\tif (std::strcmp(s.ProgramName, programName) == 0 && std::strcmp(s.VariantName, variantName) == 0) {\n"_s;
+		out += "\t\t\t\t\treturn &s;\n"_s;
+		out += "\t\t\t\t}\n"_s;
+		out += "\t\t\t}\n"_s;
+		out += "\t\t\treturn nullptr;\n"_s;
+		out += "\t\t}\n"_s;
+		out += "\t}\n}\n\n"_s;
+		out += "#endif\n"_s;
+		return out;
+	}
+
+	/**
+		Compiles a trivial program to find out whether @p compilerPath runs at all
+
+		@ref LocateCafeglsl() falls back to a bare name for `PATH` to resolve, so finding a path says nothing
+		about whether the compiler is there.
+	*/
+	bool ProbeCafeglsl(const String& compilerPath, String& log)
+	{
+		Gx2ShaderEntry probe;
+		return CompileGx2Shaders(compilerPath, "#version 330\nvoid main() { gl_Position = vec4(0.0); }\n"_s,
+			"#version 330\nout vec4 c;\nvoid main() { c = vec4(1.0); }\n"_s, probe, log);
+	}
+
+	int RunEmitGx2(const char* outputPath, StringView compilerOption, char** inputPaths, int inputCount)
+	{
+		String compilerPath;
+		if (!LocateCafeglsl(compilerOption, compilerPath)) {
+			std::fprintf(stderr, "error: CafeGLSL's glslcompiler not found at \"%s\"\n", String{compilerOption}.data());
+			return 1;
+		}
+		// Every variant would fail without a working compiler, and the header would be replaced by an empty table
+		String probeLog;
+		if (!ProbeCafeglsl(compilerPath, probeLog)) {
+			std::fprintf(stderr, "error: CafeGLSL's glslcompiler (\"%s\") cannot compile: %s\n", compilerPath.data(),
+				FirstLine(probeLog).data());
+			return 1;
+		}
+
+		SmallVector<Gx2ShaderEntry, 0> entries;
+		SmallVector<std::pair<String, String>, 0> declined;	// (prefix, reason)
+
+		for (int fi = 0; fi < inputCount; fi++) {
+			const char* inputPath = inputPaths[fi];
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
+			String errorMsg;
+			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
+				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
+				return 1;
+			}
+			for (const ProgramReflection& program : programs) {
+				const String& progName = program.Document->ProgramName;
+				for (const VariantReflection& v : program.Variants) {
+					String prefix = (v.Name.empty() ? progName : String(progName + "_" + v.Name));
+					Gx2ShaderEntry e;
+					e.ProgramName = progName;
+					e.VariantName = v.Name;
+
+					// The same GLSL the OpenGL 3.3 backend compiles, with the prelude GLShader.cpp gives it.
+					// A batched program gets its batch size baked in like RenderResources.cpp does at run
+					// time: the in-shader fallback is sized for exactly 64 KB, which a GX2 block cannot hold
+					// once the instance stride is not a divisor of it.
+					String prelude = "#version 330\n"_s;
+					for (const BlockInfo& b : v.Reflection.Blocks) {
+						if (b.InstanceStride > 0) {
+							std::int32_t batchSize = std::int32_t((Gx2MaxUniformBlockSize - b.BaseSize) / b.InstanceStride);
+							if (batchSize > Gx2MaxBatchSize) {
+								batchSize = Gx2MaxBatchSize;
+							}
+							if (batchSize < Gx2MaxBatchSize) {
+								declined.emplace_back(prefix, Death::format("instance stride {} leaves room for only {} of the {} "
+									"instances the device publishes", b.InstanceStride, batchSize, Gx2MaxBatchSize));
+							}
+							e.BatchSize = batchSize;
+							prelude += Death::format("#define BATCH_SIZE ({})\n", batchSize);
+							break;
+						}
+					}
+					if (e.BatchSize > 0 && e.BatchSize < Gx2MaxBatchSize) {
+						continue;
+					}
+					// R600 has a CEIL instruction, but Cemu (2.6 and later) cannot translate it and rejects the
+					// whole shader (CleanEdge rendered black); FLOOR it handles, and this form is exact
+					prelude += "#define ceil(x) (-floor(-(x)))\n"_s;
+					prelude += "#line 0\n"_s;
+
+					String vertexSource = prelude + MakeVertexIdDivisionsFloat(
+						ShaderParser::BuildStageSource(*program.Document, true, v.Define));
+					String fragmentSource = prelude + ShaderParser::BuildStageSource(*program.Document, false, v.Define);
+					String log;
+					if (!CompileGx2Shaders(compilerPath, vertexSource, fragmentSource, e, log)) {
+						declined.emplace_back(prefix, FirstCafeglslError(log));
+						continue;
+					}
+					entries.push_back(Death::move(e));
+				}
+			}
+		}
+
+		String header = BuildGx2GeneratedHeader(entries);
+		if (!WriteStringToFile(outputPath, header)) {
+			std::fprintf(stderr, "error: cannot write output file \"%s\"\n", outputPath);
+			return 1;
+		}
+
+		std::size_t total = 0;
+		for (const Gx2ShaderEntry& e : entries) {
+			total += e.Vertex.Program.size() + e.Pixel.Program.size();
+		}
+		std::fprintf(stdout, "[GX2] emitted %zu program-variant(s), %zu bytes of shader code, declined %zu\n",
+			entries.size(), total, declined.size());
+		for (const auto& d : declined) {
+			std::fprintf(stdout, "  declined %s: %s\n", d.first.data(), d.second.data());
+		}
+		return 0;
+	}
+
 	int RunEmitSwGenerated(const char* outputPath, char** inputPaths, int inputCount)
 	{
 		SmallVector<GeneratedShaderEntry, 0> supported;
@@ -2305,6 +3147,7 @@ namespace
 		String OutputDirectory;			// Empty: "<ShadersDirectory>/Generated"
 		const char* GlslangOverride = nullptr;
 		const char* CgcompPath = nullptr;	// Empty: "$PS3DEV/bin", then PATH
+		const char* CafeglslPath = nullptr;	// Empty: "$CAFEGLSL/bin", then PATH
 		bool Check = false;
 		bool NoDxbc = false;
 	};
@@ -2421,7 +3264,7 @@ namespace
 
 	int GenerateAllArtifacts(StringView shadersDirectory, const SmallVectorImpl<String>& shaderNames,
 		StringView outputDirectory, SpirvCompileFn& compileSpirv, DxbcCompileFn& compileDxbc,
-		StringView cgcompOption, SmallVectorImpl<String>& writtenNames)
+		StringView cgcompOption, StringView cafeglslOption, SmallVectorImpl<String>& writtenNames)
 	{
 		// The shared reflection types every generated header includes
 		{
@@ -2598,6 +3441,25 @@ namespace
 					FirstLine(probeLog).data());
 			}
 		}
+		{
+			// The Wii U header needs CafeGLSL's glslcompiler; like the PlayStation 3 one it is skipped rather
+			// than emptied when the compiler is missing, because the console has no compiler to fall back on
+			String cafeglslPath;
+			const bool haveCafeglsl = LocateCafeglsl(cafeglslOption, cafeglslPath);
+			String probeLog;
+			if (haveCafeglsl && ProbeCafeglsl(cafeglslPath, probeLog)) {
+				String path = fs::CombinePath(outputDirectory, "Gx2GeneratedShaders.h"_s);
+				// The option, not the located path: a bare name found through PATH would be taken as an explicit path
+				if (RunEmitGx2(path.data(), cafeglslOption, inputArgs.data(), inputCount) != 0) {
+					return 1;
+				}
+				writtenNames.emplace_back("Gx2GeneratedShaders.h"_s);
+				std::fprintf(stdout, "ok: GX2 shaders -> Gx2GeneratedShaders.h\n");
+			} else {
+				std::fprintf(stdout, "skipped: Gx2GeneratedShaders.h (CafeGLSL unavailable: %s)\n",
+					FirstLine(probeLog).data());
+			}
+		}
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
 			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "pica", "PicaGeneratedEffects.h" },
@@ -2701,7 +3563,7 @@ namespace
 		SmallVector<String, 0> writtenNames;
 		int result = GenerateAllArtifacts(shadersDirectory, shaderNames, outputDirectory, compileSpirv,
 			compileDxbc, (options.CgcompPath != nullptr ? StringView{options.CgcompPath} : StringView{}),
-			writtenNames);
+			(options.CafeglslPath != nullptr ? StringView{options.CafeglslPath} : StringView{}), writtenNames);
 
 		if (!options.Check) {
 			if (result == 0) {
@@ -2778,7 +3640,7 @@ int main(int argc, char* argv[])
 		GenerateAllOptions options;
 		for (int i = 2; i < argc; i++) {
 			StringView arg = argv[i];
-			if (arg == "--shaders-dir" || arg == "--out-dir" || arg == "--glslang" || arg == "--cgcomp") {
+			if (arg == "--shaders-dir" || arg == "--out-dir" || arg == "--glslang" || arg == "--cgcomp" || arg == "--cafeglsl") {
 				if (i + 1 >= argc) {
 					std::fprintf(stderr, "error: %s requires a path argument\n", arg.data());
 					return 2;
@@ -2790,6 +3652,8 @@ int main(int argc, char* argv[])
 					options.OutputDirectory = value;
 				} else if (arg == "--cgcomp") {
 					options.CgcompPath = value;
+				} else if (arg == "--cafeglsl") {
+					options.CafeglslPath = value;
 				} else {
 					options.GlslangOverride = value;
 				}
@@ -2861,6 +3725,30 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return RunEmitRsx(argv[2], cgcompOption, shadersDirectory, inputs.data(), static_cast<int>(inputs.size()));
+	}
+
+	// Standalone mode: compile every input shader's GLSL with CafeGLSL and write the aggregate
+	// "Gx2GeneratedShaders.h" the Wii U's GX2 backend loads its shaders from. Usage:
+	//   ShaderCompiler --emit-gx2 <output.h> [--cafeglsl <path to glslcompiler>] <input1.shader> ...
+	if (argc >= 2 && StringView(argv[1]) == "--emit-gx2") {
+		if (argc < 4) {
+			std::fprintf(stderr, "error: --emit-gx2 requires <output.h> and at least one input .shader\n");
+			return 2;
+		}
+		StringView compilerOption;
+		SmallVector<char*, 0> inputs;
+		for (int i = 3; i < argc; i++) {
+			if (StringView(argv[i]) == "--cafeglsl" && i + 1 < argc) {
+				compilerOption = StringView(argv[++i]);
+			} else {
+				inputs.push_back(argv[i]);
+			}
+		}
+		if (inputs.empty()) {
+			std::fprintf(stderr, "error: --emit-gx2 requires at least one input .shader\n");
+			return 2;
+		}
+		return RunEmitGx2(argv[2], compilerOption, inputs.data(), static_cast<int>(inputs.size()));
 	}
 
 	// Standalone mode: transpile every input shader's fixed_function block (once per program variant) to
