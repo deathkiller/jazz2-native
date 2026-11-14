@@ -194,6 +194,19 @@ namespace Jazz2::Tiles
 			// Only a baked atlas carries the colours themselves; an indexed tile's palette is not known here
 			_isTileOpaque.set(tileId, filled && channels > 2);
 
+			if (_visibleMask != nullptr) {
+				std::uint8_t* bits = &_visibleMask[std::size_t(tileId) * MaskBytesPerTile];
+				std::memset(bits, 0, MaskBytesPerTile);
+				for (std::int32_t py = 0; py < DefaultTileSize; py++) {
+					for (std::int32_t px = 0; px < DefaultTileSize; px++) {
+						const std::uint32_t c = tileDiffuse[(py + TilePadding) * PaddedTileSize + (px + TilePadding)];
+						if (((c >> 24) & 0xFF) != 0 && (channels > 2 || (c & 0xFF) != 0)) {
+							bits[(py * DefaultTileSize + px) >> 3] |= std::uint8_t(1u << (px & 7));
+						}
+					}
+				}
+			}
+
 #if defined(TILEMAP_LAYER_EFFECTS)
 			if (_tileEffectInfo != nullptr) {
 				// The same as the content loader works out (see GetTileEffectInfo()); an indexed tile's colour is

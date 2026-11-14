@@ -1794,6 +1794,8 @@ namespace Jazz2::Actors
 				}
 			} else if (canWalk && playerMovementVelocity > 0.4f) {
 				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
+				// Up still held looks up again once the player stops, see HandleLookupAndCrouch()
+				_wasUpPressed = false;
 
 				bool wasFacingLeft = IsFacingLeft();
 				bool isFacingLeft;
@@ -2335,7 +2337,9 @@ namespace Jazz2::Actors
 		if (_levelHandler->PlayerActionPressed(this, upAction)) {
 			if (!_wasUpPressed && (_dizzyTime <= 0.0f || legacyDizzy)) {
 				// Check also previous CanJump to avoid animation glitches on Springs
-				if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
+				// No direction held, or walking into a wall would drop and retake the pose every frame
+				if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting &&
+					std::abs(_speed.X) < std::numeric_limits<float>::epsilon() && std::abs(_levelHandler->PlayerHorizontalMovement(this)) <= 0.4f) {
 					_wasUpPressed = true;
 
 					SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
@@ -2469,6 +2473,7 @@ namespace Jazz2::Actors
 					if (_isLifting && CanJump() && _currentSpecialMove == SpecialMoveType::None) {
 						SetState(ActorState::CanJump, false);
 						SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
+						_wasUpPressed = false;
 						PlayPlayerSfx("Jump"_s);
 						_carryingObject = nullptr;
 
@@ -2581,6 +2586,7 @@ namespace Jazz2::Actors
 		SetState(ActorState::CanJump, false);
 		_isFreefall = false;
 		SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
+		_wasUpPressed = false;
 		PlayPlayerSfx("Jump"_s);
 		_jumpTime = 10.0f;
 		_carryingObject = nullptr;
@@ -3939,6 +3945,7 @@ namespace Jazz2::Actors
 					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup | AnimState::Buttstomp));
 					SetPlayerTransition(AnimState::Dash | AnimState::Jump, true, false, SpecialMoveType::None);
 				}
+				_wasUpPressed = false;
 			}
 
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);
@@ -4007,6 +4014,7 @@ namespace Jazz2::Actors
 					// The launch pose shows at once, a landing pose of the same moment doesn't flash
 					SetAnimation((_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup | VerticalAnimMask)) | AnimState::Spring);
 				}
+				_wasUpPressed = false;
 			}
 
 			_levelHandler->PlayerExecuteRumble(this, "Spring"_s);

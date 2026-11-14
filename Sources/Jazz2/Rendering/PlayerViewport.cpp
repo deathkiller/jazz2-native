@@ -548,7 +548,8 @@ namespace Jazz2::Rendering
 	void PlayerViewport::OnEndFrame()
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
-		_lightingView->SetClearColor(_ambientLight.W, 0.0f, 0.0f, 1.0f);
+		Vector2f light = GetAmbientLightChannels(_ambientLight.W);
+		_lightingView->SetClearColor(light.X, light.Y, 0.0f, 1.0f);
 #endif
 	}
 
@@ -557,14 +558,14 @@ namespace Jazz2::Rendering
 		ZoneScopedC(0x4876AF);
 
 		// Ambient Light Transition
-		float ambientLightTarget = _ambientLightTarget;
+		float ambientLightTarget = std::min(_ambientLightTarget, MaxAmbientLight);
 		if (_levelHandler->_waterLighting == Formats::LevelSettingsChunk::WaterLighting::Depth && _targetActor != nullptr) {
 			// Full light above the water, below it the light of the level is reached in the depth of WaterLightingDepth
 			float depth = _targetActor->GetPos().Y - _levelHandler->GetWaterLevel();
 			ambientLightTarget = (depth <= 0.0f ? 1.0f : lerp(1.0f, _ambientLightTarget, std::min(depth / WaterLightingDepth, 1.0f)));
 		}
 		if (_ambientLight.W != ambientLightTarget) {
-			float step = timeMult * 0.012f;
+			float step = timeMult * AmbientLightStep;
 			if (std::abs(_ambientLight.W - ambientLightTarget) < step) {
 				_ambientLight.W = ambientLightTarget;
 			} else {

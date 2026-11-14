@@ -106,9 +106,15 @@ namespace Jazz2::Actors::Weapons
 			_isExploded = true;
 			_lightIntensity = 0.8f;
 
-			SetTransition(AnimState::TransitionActivate, false, [this]() {
-				DecreaseHealth(INT32_MAX);
-			});
+			if (_explosionOverride) {
+				// Another explosion where it blows up, it's gone once its light is
+				_renderer.SetDrawEnabled(false);
+				_explosionOverride(_pos);
+			} else {
+				SetTransition(AnimState::TransitionActivate, false, [this]() {
+					DecreaseHealth(INT32_MAX);
+				});
+			}
 
 			_renderer.SetScale(1.0f);
 			PlaySfx("Explosion"_s);
@@ -147,7 +153,15 @@ namespace Jazz2::Actors::Weapons
 		} else {
 			_lightIntensity -= timeMult * 0.02f;
 			_renderer.SetScale(_renderer.GetScale() + timeMult * 0.01f);
+			if (_explosionOverride && _lightIntensity <= 0.0f) {
+				DecreaseHealth(INT32_MAX);
+			}
 		}
+	}
+
+	void TNT::SetExplosionOverride(Function<void(Vector2f)>&& callback)
+	{
+		_explosionOverride = Death::move(callback);
 	}
 
 	void TNT::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)

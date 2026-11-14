@@ -226,7 +226,24 @@ namespace Jazz2::Rendering
 		/** @brief Converts a position in the view, in pixels from its top left corner, to a position in the level */
 		Vector2f ViewToWorld(Vector2f viewPos) const;
 
+		/**
+		 * @brief Returns the ambient light level split into the channels of the lighting buffer
+		 *
+		 * The intensity (up to 1) in X and the brightness in Y - light above full brightens the view and lifts dark
+		 * colors as JJ2+ does with lighting above 100, by the brightness the lights add (see `Combine.shader`).
+		 */
+		static Vector2f GetAmbientLightChannels(float ambientLevel)
+		{
+			return Vector2f(std::min(ambientLevel, 1.0f), std::clamp((ambientLevel - 1.0f) / AmbientBrightnessScale, 0.0f, 1.0f));
+		}
+
 	private:
+		// Brightness of the lighting buffer per ambient light level above full, `Combine.shader` scales the colors by
+		// 1 + 0.607 * brightness
+		static constexpr float AmbientBrightnessScale = 0.607f;
+		// The ambient light moves towards its target by 1/64 per tick of 70 a second, as in JJ2+, up to 127/64
+		static constexpr float AmbientLightStep = (70.0f / 60.0f) / 64.0f;
+		static constexpr float MaxAmbientLight = 127.0f / 64.0f;
 		// Below this focus speed there is no look-ahead - the camera stays exactly on the player, so slow nudging or
 		// pushing keeps the player perfectly centered and pixel-crisp. Above it the lead eases in, scaled by the excess.
 		static constexpr float CameraStickSpeed = 1.0f;

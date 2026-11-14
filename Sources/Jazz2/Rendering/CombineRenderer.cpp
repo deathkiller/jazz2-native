@@ -406,7 +406,9 @@ namespace Jazz2::Rendering
 		// ambient colour by (1 - light.r). A fully-lit level with no lights therefore leaves the scene
 		// untouched, so it can be skipped entirely - this keeps normal levels at full speed. With water in
 		// view the combine must still run (a fully-lit water level still tints), just without a lightmap.
-		const float ambientLevel = _owner->_ambientLight.W;
+		const Vector2f ambientChannels = PlayerViewport::GetAmbientLightChannels(_owner->_ambientLight.W);
+		const float ambientLevel = ambientChannels.X;
+		const float ambientBrightness = ambientChannels.Y;
 		const float ambR = _owner->_ambientLight.X;
 		const float ambG = _owner->_ambientLight.Y;
 		const float ambB = _owner->_ambientLight.Z;
@@ -417,7 +419,7 @@ namespace Jazz2::Rendering
 		// paid for with a map reset, the splats and the conversion every frame
 		const bool fullyLit = (ambientLevel >= 0.999f);
 #else
-		const bool fullyLit = (ambientLevel >= 0.999f && _swLightsCache.empty());
+		const bool fullyLit = (ambientLevel >= 0.999f && ambientBrightness <= 0.0f && _swLightsCache.empty());
 #endif
 		if (fullyLit && !viewHasWater) {
 			return false;
@@ -514,8 +516,10 @@ namespace Jazz2::Rendering
 		// keeps its size and the ambient level, only the spans they did reach are reset again. A light covers a
 		// fraction of the viewport, and the full pass rewrote every texel of the map each frame - as much work as
 		// the splats, and on the consoles a whole buffer's worth of cache lines on top.
+		// G starts at the brightness of light above full (see PlayerViewport::GetAmbientLightChannels()), which is only
+		// ever there with the ambient level at full, so the level alone still tells the reset apart
 		const bool resetLitSpansOnly = (_swLitWidth == lmW && _swLitSpans.size() == std::size_t(lmH) * 2 &&
-			_swLitAmbient == ambientLevel);
+			_swLitAmbient == ambientLevel + ambientBrightness);
 		_swLightmap.resize_for_overwrite(texelCount * 2);
 		float* DEATH_RESTRICT lightmap = _swLightmap.data();
 		if (resetLitSpansOnly) {
@@ -523,17 +527,17 @@ namespace Jazz2::Rendering
 				float* DEATH_RESTRICT row = lightmap + (std::size_t)y * lmW * 2;
 				for (std::int32_t x = _swLitSpans[y * 2]; x <= _swLitSpans[y * 2 + 1]; x++) {
 					row[x * 2] = ambientLevel;
-					row[x * 2 + 1] = 0.0f;
+					row[x * 2 + 1] = ambientBrightness;
 				}
 			}
 		} else {
 			for (std::size_t i = 0; i < texelCount; i++) {
 				lightmap[i * 2] = ambientLevel;
-				lightmap[i * 2 + 1] = 0.0f;
+				lightmap[i * 2 + 1] = ambientBrightness;
 			}
 			_swLitSpans.resize_for_overwrite(std::size_t(lmH) * 2);
 			_swLitWidth = lmW;
-			_swLitAmbient = ambientLevel;
+			_swLitAmbient = ambientLevel + ambientBrightness;
 		}
 		for (std::int32_t y = 0; y < lmH; y++) {
 			_swLitSpans[y * 2] = lmW;

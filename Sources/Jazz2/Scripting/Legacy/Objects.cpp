@@ -2065,15 +2065,6 @@ namespace Jazz2::Scripting
 		auto leafJiggle = []() {
 			return float(Random().Next(0, 32)) / 8.0f;
 		};
-		std::int32_t rainFrameCount = 0;
-		{
-			auto& tables = GetAnimationTables();
-			std::uint32_t firstAnim = tables.GetFirstAnim(Legacy::AnimationTables::GetSetID(Legacy::mCOMMON, versionTSF));
-			std::uint32_t frameCount, firstFrame;
-			if (firstAnim != 0 && tables.GetAnimationFrames(firstAnim + 2, frameCount, firstFrame)) {
-				rainFrameCount = std::int32_t(frameCount);
-			}
-		}
 		while (_particlesTick < currentTick) {
 			_particlesTick++;
 			SpawnWeatherParticles();
@@ -2185,13 +2176,19 @@ namespace Jazz2::Scripting
 							remove = (p._age >= 122);
 							break;
 						}
-						// A drop of the weather falls with frames 1-7, then splashes where it hit the ground with frames 8-17
+						// A drop of the weather falls with frames 1-7, then splashes where it hit the ground or the water with frames
+						// 8-17; one that hits a wall from the side is gone without a splash
 						if (data[0] >= 8) {
 							remove = (++data[0] > 17);
-						} else if (isMasked(p.xPos, p.yPos)) {
+						} else if (isMasked(p.xPos, p.yPos) || p.yPos > _levelHandler->GetWaterLevel()) {
+							remove = (data[0] == 0);
 							data[0] = 8;
 						} else {
 							p.xPos += p.xSpeed;
+							if (isMasked(p.xPos, p.yPos)) {
+								remove = true;
+								break;
+							}
 							p.yPos += p.ySpeed;
 							data[0] = std::uint8_t(data[0] % 7 + 1);
 							remove = isOutsideViews(p, 8.0f, 64.0f, 8.0f, 12.0f);
@@ -2254,21 +2251,24 @@ namespace Jazz2::Scripting
 						break;
 				}
 
-				// Flowers of the outdoors only are gone where they fall into a wall, the rest of the weather lands there
-				if (p._weather && snowingOutdoors && p.particleType == Legacy::particleFLOWER && isMasked(p.xPos, p.yPos)) {
-					remove = true;
-				}
 				if (remove) {
 					p.particleType = Legacy::particleNONE;
 					p.active = false;
 				}
 			}
 		}
+		_particlesDrawPending = true;
+	}
 
-		if (ContentResolver::Get().IsHeadless()) {
+	void LevelScriptLoader::DrawParticles()
+	{
+		constexpr std::int32_t LeafFrames = 17;
+
+		if (_particles == nullptr || ContentResolver::Get().IsHeadless()) {
 			return;
 		}
-		// Drawn in the sprite layer, as JJ2+ draws them, until the next tick
+		// Drawn in the sprite layer, as JJ2+ draws them, until the next tick - after the scripts of the tick ran, so what they
+		// removed isn't drawn (rain a level takes out indoors)
 		auto& canvas = GetWorldCanvas();
 		auto& tables = GetAnimationTables();
 		std::uint16_t z = GetLayerDrawZ(4);
@@ -2334,6 +2334,7 @@ namespace Jazz2::Scripting
 				case Legacy::particleLEAF: {
 					std::uint16_t frameBase;
 					std::uint32_t frame;
+					float scale = 1.0f;
 					if (p.particleType == Legacy::particleLEAF) {
 						std::memcpy(&frameBase, &data[4], sizeof(frameBase));
 						frame = (frameBase != 0 ? frameBase + (data[0] / 2) % LeafFrames : 0);
@@ -2344,16 +2345,17 @@ namespace Jazz2::Scripting
 							? p._snowFrameBase : frameBase);
 						frame = (base != 0 ? base + data[0] : 0);
 					} else {
-						// A splash past the frames of the drops isn't drawn
-						if (p._weather && data[0] >= 8 && std::int32_t(data[0]) >= rainFrameCount) {
-							break;
-						}
+						// The splash is the frames that follow those of the drops (the splash of water of the common set), as
+						// JJ2+ draws them - at 80/256 of their size
 						std::memcpy(&frameBase, &data[1], sizeof(frameBase));
 						frame = (frameBase != 0 ? frameBase + data[0] : 0);
+						if (data[0] >= 8) {
+							scale = 80.0f / 256.0f;
+						}
 					}
 					std::int32_t cell = 0;
 					if (auto* graphics = (frame != 0 ? tables.ResolveFrame(frame, cell) : nullptr)) {
-						canvas.AddSprite({ graphics, cell, p.xPos, p.yPos, 1, 1.0f, 1.0f, 0, Legacy::spriteType_NORMAL, 0, z, paletteOffset });
+						canvas.AddSprite({ graphics, cell, p.xPos, p.yPos, 1, scale, scale, 0, Legacy::spriteType_NORMAL, 0, z, paletteOffset });
 					} else if (p.particleType == Legacy::particleRAIN) {
 						// No frames of rain, a streak of the color of the drops
 						canvas.AddSolid({ p.xPos, p.yPos - 3.0f, 1.0f, 6.0f, 34, Legacy::spriteType_TRANSLUCENT, 0, z });
@@ -2425,14 +2427,18 @@ namespace Jazz2::Scripting
 				}
 			}
 			for (std::int32_t i = 0; i < count; i++) {
-				float spawnX = 0.0f, spawnY = 0.0f;
-				if (type != Legacy::particleFLOWER) {
-					// Up to 32 px around the view, but not in its bottom 32 px; rain never in a wall, the outdoors only weather neither
-					spawnX = view.X + Random().FastFloat(-32.0f, view.W + 32.0f);
-					spawnY = view.Y + Random().FastFloat(-32.0f, view.H - 32.0f);
-					if ((snowingOutdoors || type == Legacy::particleRAIN) && isMasked(spawnX, spawnY)) {
-						continue;
-					}
+				// Up to 32 px around the view, flowers anywhere in it, the rest not in its bottom 32 px
+				float spawnX = view.X + Random().FastFloat(-32.0f, view.W + 32.0f);
+				float spawnY = (type == Legacy::particleFLOWER
+					? view.Y + Random().FastFloat(-32.0f, view.H)
+					: view.Y + Random().FastFloat(-32.0f, view.H - 32.0f));
+				// The outdoors only weather isn't made where the sprite layer is drawn (indoors), whatever its mask, as JJ2+
+				// does; rain isn't made in a wall at all, JJ2+ removes it before it's drawn
+				if (snowingOutdoors && tileMap != nullptr && tileMap->IsTilePixelDrawn(std::int32_t(std::floor(spawnX)), std::int32_t(std::floor(spawnY)))) {
+					continue;
+				}
+				if (type == Legacy::particleRAIN && isMasked(spawnX, spawnY)) {
+					continue;
 				}
 				Legacy::jjPARTICLE* p = AddScriptParticle(type);
 				if (p == nullptr) {
@@ -2460,9 +2466,7 @@ namespace Jazz2::Scripting
 						p->ySpeed = 7.5f;
 						break;
 					case Legacy::particleFLOWER: {
-						// Anywhere in the view, white, 64 ticks long (now and then 128), drifting left and down
-						p->xPos = view.X + Random().FastFloat(-32.0f, view.W + 32.0f);
-						p->yPos = view.Y + Random().FastFloat(-32.0f, view.H);
+						// White, 64 ticks long (now and then 128), drifting left and down
 						p->xSpeed = Random().FastFloat(-0.75f, -0.5f);
 						p->ySpeed = Random().FastFloat(0.0f, 2.0f);
 						std::uint8_t* data = p->GENERIC.raw;
@@ -2562,6 +2566,17 @@ namespace Jazz2::Scripting
 			obj->Release();
 		}
 		return id;
+	}
+
+	void LevelScriptLoader::AddExplosion(float xPixel, float yPixel, std::int16_t anim)
+	{
+		// An object of BEHAVIOR::EXPLOSION playing the animation once, as the game makes for the kill animation of an object
+		std::int32_t id = AddScriptControlledObject(Legacy::aEXPLOSION, xPixel, yPixel, nullptr);
+		if (auto* explosion = runtime_cast<Legacy::ScriptLegacyObject>(GetScriptObject(id))) {
+			Legacy::jjOBJ* obj = explosion->GetObject();
+			obj->behavior = Legacy::aEXPLOSION;
+			obj->curAnim = anim;
+		}
 	}
 
 	std::int32_t LevelScriptLoader::GetActiveBossObjectID()

@@ -71,6 +71,12 @@ namespace Jazz2::UI::Menu
 			[]() -> StringView { return (PreferencesCache::ToggleRunAction ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction; _isDirty = true; });
 
+		// TRANSLATORS: Menu item in Options > Controls section, keys of Jump action work as Change Weapon in menus and vice versa
+		list->Add<ChoiceItem>(_("Swap Jump/Weapon in Menus"),
+			// TRANSLATORS: Option for on/off items in Options > Controls section
+			[]() -> StringView { return (PreferencesCache::SwapJumpAndChangeWeaponInMenu ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::SwapJumpAndChangeWeaponInMenu = !PreferencesCache::SwapJumpAndChangeWeaponInMenu; _isDirty = true; });
+
 		// TRANSLATORS: Menu item in Options > Controls section, which gamepad's button names and icons are shown
 		list->Add<ChoiceItem>(_("Gamepad Button Labels"),
 			[]() -> StringView {

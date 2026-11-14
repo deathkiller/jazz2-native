@@ -215,7 +215,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath, StringView scriptText)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
-			_enabledCallbacks(NoInit, 256)
+			_enabledCallbacks(NoInit, 256), _particlesDrawPending(false)
 	{
 		if (!scriptText.empty()) {
 			_scriptText = scriptText;
@@ -482,11 +482,18 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		}
 		_appliedWeather = _levelHandler->_weatherType;
 		_appliedWeatherIntensity = _levelHandler->_weatherIntensity;
-		WeatherType weatherKind = (_appliedWeather & ~WeatherType::OutdoorsOnly);
-		snowing = (weatherKind != WeatherType::None);
-		snowingOutdoors = ((_appliedWeather & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly);
+		snowing = IsWeatherActive(_appliedWeather);
 		snowingIntensity = _appliedWeatherIntensity;
-		snowingType = (snowing ? std::int32_t(weatherKind) - 1 : 0);
+		// The type and outdoors-only are kept while nothing falls (WeatherType::Inactive), as JJ2+ keeps them; weather
+		// stopped without them leaves what the script has
+		WeatherType weatherKind = GetWeatherKind(_appliedWeather);
+		if (weatherKind != WeatherType::None) {
+			snowingOutdoors = ((_appliedWeather & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly);
+			snowingType = std::int32_t(weatherKind) - 1;
+		} else if (force) {
+			snowingOutdoors = false;
+			snowingType = 0;
+		}
 	}
 
 	bool LevelScriptLoader::OwnsWeather() const
@@ -505,10 +512,13 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 		// The weather as the script set it, SNOWING::Type is one less than WeatherType
 		WeatherType weather = WeatherType::None;
-		if (snowing && snowingType >= 0 && snowingType <= 3) {
+		if (snowingType >= 0 && snowingType <= 3) {
 			weather = WeatherType(snowingType + 1);
 			if (snowingOutdoors) {
 				weather |= WeatherType::OutdoorsOnly;
+			}
+			if (!snowing) {
+				weather |= WeatherType::Inactive;
 			}
 		}
 		if (weather != _appliedWeather || snowingIntensity != _appliedWeatherIntensity) {
@@ -878,6 +888,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			}
 		}
 
+		if (_particlesDrawPending) {
+			_particlesDrawPending = false;
+			DrawParticles();
+		}
+
 		for (auto* player : _levelHandler->_players) {
 			auto it = _playerBackingStore.find(player->GetPlayerIndex());
 			if (it != _playerBackingStore.end()) {
@@ -948,9 +963,9 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			case LevelSettingsChunk::WaterLighting::Depth: waterLightMode = LegacyWaterLightingLagunicus; break;
 			default: waterLightMode = LegacyWaterLightingNone; break;
 		}
-		// The number of the layer in the original game, 1 in front of all of them, 0 hides the water
+		// The number of the layer in the original game, 1 in front of all of them, a number of no layer hides the water
 		if (settings.WaterLayer == LevelSettingsChunk::WaterHidden) {
-			_waterLayer = 0;
+			_waterLayer = -1;
 		} else if (settings.WaterLayer == LevelSettingsChunk::WaterInFront) {
 			_waterLayer = 1;
 		} else {

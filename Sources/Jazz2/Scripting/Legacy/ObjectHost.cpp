@@ -3086,6 +3086,19 @@ namespace Jazz2::Scripting
 				HostObject(obj, actor.get());
 			}
 		}
+		// TNT whose template a script gave another kill animation blows up into that one, as the original makes its explosion
+		if (auto* tnt = runtime_cast<Actors::Weapons::TNT>(actor.get())) {
+			const Legacy::PresetAnimation* presetAnim = Legacy::FindPresetAnimation(eventId);
+			std::int32_t killSetID = (presetAnim != nullptr ? Legacy::AnimationTables::GetSetID(presetAnim->KillSet, versionTSF) : -1);
+			std::uint32_t killFirstAnim = (killSetID >= 0 ? GetAnimationTables().GetFirstAnim(killSetID) : 0);
+			std::int16_t defaultKillAnim = std::int16_t(killFirstAnim != 0 ? killFirstAnim + presetAnim->KillAnimation : 0);
+			std::int16_t killAnim = preset->killAnim;
+			if (killAnim > 0 && killAnim != defaultKillAnim) {
+				tnt->SetExplosionOverride([this, killAnim](Vector2f pos) {
+					AddExplosion(pos.X, pos.Y, killAnim);
+				});
+			}
+		}
 		// A template turned upside down turns its objects (bird cages hanging from the ceiling)
 		if (Legacy::ScriptObjectHost::IsUpsideDown(preset->direction)) {
 			Legacy::ScriptObjectHost::TurnUpsideDown(*actor);
@@ -3244,6 +3257,10 @@ namespace Jazz2::Scripting
 		std::uint32_t shown = (look.DrawnFrame != 0 ? look.DrawnFrame : look.CurFrame);
 		look.Steady = !_lookGameBehavior;
 		for (std::int32_t i = 0; i < SteadyTicks && look.Steady; i++) {
+			// A template that made itself a spring of the game (custom springs of MLLE) stands still as the spring does
+			if (obj->behavior.function == nullptr && obj->behavior.object == nullptr && IsStillUntilUsed(obj->behavior.behaviorId)) {
+				break;
+			}
 			_onLevelUpdateLastFrame++;
 			_lookDrawnFrame = 0;
 			behavior = obj->behavior;
@@ -3277,11 +3294,16 @@ namespace Jazz2::Scripting
 		}
 	}
 
-	void LevelScriptLoader::OnGameBehavior(const Legacy::jjOBJ& obj, std::uint32_t behavior)
+	bool LevelScriptLoader::IsStillUntilUsed(std::uint32_t behavior)
 	{
 		// BEHAVIOR::SPRING, AMMO15 and CRATE, whose objects stand still until a player uses them
 		constexpr std::uint32_t BehaviorSpring = Legacy::aCOUNT + 6, BehaviorAmmo15 = Legacy::aCOUNT + 7, BehaviorCrate = Legacy::aCOUNT + 9;
-		if (&obj == _lookObject && behavior != BehaviorSpring && behavior != BehaviorAmmo15 && behavior != BehaviorCrate) {
+		return (behavior == BehaviorSpring || behavior == BehaviorAmmo15 || behavior == BehaviorCrate);
+	}
+
+	void LevelScriptLoader::OnGameBehavior(const Legacy::jjOBJ& obj, std::uint32_t behavior)
+	{
+		if (&obj == _lookObject && !IsStillUntilUsed(behavior)) {
 			_lookGameBehavior = true;
 		}
 	}
@@ -3359,6 +3381,29 @@ namespace Jazz2::Scripting
 				case Legacy::aGREENGEM: case Legacy::aRECTGREENGEM: preset->set_var(0, 2); break;
 				case Legacy::aBLUEGEM: case Legacy::aRECTBLUEGEM: preset->set_var(0, 3); break;
 				case Legacy::aPURPLEGEM: preset->set_var(0, 4); break;
+			}
+			// The weapon (0 is the Blaster) of an ammo pickup, an ammo crate and a power-up in var[3], and the pickup a crate
+			// gives in var[2], as the original game sets them - the pickups of weapons of scripts give ammo by it
+			switch (eventId) {
+				case Legacy::aGUN2AMMO3: preset->set_var(3, 1); break;
+				case Legacy::aGUN3AMMO3: preset->set_var(3, 2); break;
+				case Legacy::aGUN4AMMO3: case Legacy::aGUN5AMMO3: case Legacy::aGUN6AMMO3: case Legacy::aGUN7AMMO3:
+				case Legacy::aGUN8AMMO3: case Legacy::aGUN9AMMO3:
+					preset->set_var(3, 3 + (eventId - Legacy::aGUN4AMMO3));
+					break;
+				case Legacy::aGUN2AMMO15: preset->set_var(3, 1); preset->set_var(2, Legacy::aGUN2AMMO3); break;
+				case Legacy::aGUN3AMMO15: preset->set_var(3, 2); preset->set_var(2, Legacy::aGUN3AMMO3); break;
+				case Legacy::aGUN4AMMO15: case Legacy::aGUN5AMMO15: case Legacy::aGUN6AMMO15:
+					preset->set_var(3, 3 + (eventId - Legacy::aGUN4AMMO15));
+					preset->set_var(2, Legacy::aGUN4AMMO3 + (eventId - Legacy::aGUN4AMMO15));
+					break;
+				case Legacy::aGUN1POWER: case Legacy::aGUN2POWER: case Legacy::aGUN3POWER: case Legacy::aGUN4POWER:
+				case Legacy::aGUN5POWER: case Legacy::aGUN6POWER:
+					preset->set_var(3, eventId - Legacy::aGUN1POWER);
+					break;
+				case Legacy::aTNTPOWER: case Legacy::aGUN8POWER: case Legacy::aGUN9POWER:
+					preset->set_var(3, 6 + (eventId - Legacy::aTNTPOWER));
+					break;
 			}
 			// As measured in JJ2+, these never deactivate
 			switch (eventId) {

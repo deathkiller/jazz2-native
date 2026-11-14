@@ -161,6 +161,7 @@ namespace Jazz2
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
 #endif
 	bool PreferencesCache::ToggleRunAction = false;
+	bool PreferencesCache::SwapJumpAndChangeWeaponInMenu = false;
 #if defined(DEATH_TARGET_N64)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Nintendo64;
 #elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
@@ -1372,6 +1373,7 @@ namespace
 					EnableRgbLights = ((boolOptions & BoolOptions::EnableRgbLights) == BoolOptions::EnableRgbLights);
 					AllowUnsignedScripts = ((boolOptions & BoolOptions::AllowUnsignedScripts) == BoolOptions::AllowUnsignedScripts);
 					ToggleRunAction = ((boolOptions & BoolOptions::ToggleRunAction) == BoolOptions::ToggleRunAction);
+					SwapJumpAndChangeWeaponInMenu = ((boolOptions & BoolOptions::SwapJumpAndChangeWeaponInMenu) == BoolOptions::SwapJumpAndChangeWeaponInMenu);
 					UseNativeBackButton = ((boolOptions & BoolOptions::UseNativeBackButton) == BoolOptions::UseNativeBackButton);
 					EnableDiscordIntegration = ((boolOptions & BoolOptions::EnableDiscordIntegration) == BoolOptions::EnableDiscordIntegration);
 					TutorialCompleted = ((boolOptions & BoolOptions::TutorialCompleted) == BoolOptions::TutorialCompleted);
@@ -1882,6 +1884,7 @@ namespace
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (ToggleRunAction) boolOptions |= BoolOptions::ToggleRunAction;
+		if (SwapJumpAndChangeWeaponInMenu) boolOptions |= BoolOptions::SwapJumpAndChangeWeaponInMenu;
 		if (UseNativeBackButton) boolOptions |= BoolOptions::UseNativeBackButton;
 		if (EnableDiscordIntegration) boolOptions |= BoolOptions::EnableDiscordIntegration;
 		if (TutorialCompleted) boolOptions |= BoolOptions::TutorialCompleted;

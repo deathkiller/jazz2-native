@@ -353,6 +353,15 @@ namespace Jazz2::Input
 			}
 		}
 
+		if (PreferencesCache::SwapJumpAndChangeWeaponInMenu) {
+			// Flips the two bits only if exactly one of them is set
+			constexpr std::uint32_t SwapMask = (1u << (std::uint32_t)PlayerAction::Jump) | (1u << (std::uint32_t)PlayerAction::ChangeWeapon);
+			std::uint32_t swapBits = (pressedActions & SwapMask);
+			if (swapBits != 0 && swapBits != SwapMask) {
+				pressedActions ^= SwapMask;
+			}
+		}
+
 		// Menu buttons are fixed on every gamepad assigned to a player, regardless of action bindings
 		for (std::uint32_t joyIdx = 0; joyIdx < joyStateCount && joyIdx < 32; joyIdx++) {
 			if ((assignedGamepads & (1u << joyIdx)) == 0) {

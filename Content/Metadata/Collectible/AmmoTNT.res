@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"Ammo": {
-			"Path": "Object/tnt.aura",
+			"Path": "Weapon/bullet_tnt.aura",
 			"States": [ 0, 1 ]
 		}
 	}

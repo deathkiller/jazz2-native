@@ -3114,7 +3114,7 @@ namespace Jazz2
 		// A headless server has no viewport to spawn the debris around and loads no textures to size it by,
 		// so none of the work below applies there - and the weather type turns non-empty as soon as the first
 		// player activates an `AreaWeather` tile.
-		if (_weatherType == WeatherType::None || PreferencesCache::Particles == ParticleQuality::Off ||
+		if (!IsWeatherActive(_weatherType) || PreferencesCache::Particles == ParticleQuality::Off ||
 			ContentResolver::Get().IsHeadless()) {
 			return;
 		}
@@ -3150,7 +3150,7 @@ namespace Jazz2
 		float effectiveIntensity = IntensityScale * (PreferencesCache::Particles == ParticleQuality::Low ? _weatherIntensity * 0.5f : (float)_weatherIntensity);
 		std::int32_t weatherIntensity = std::max<std::int32_t>((std::int32_t)(effectiveIntensity * timeMult), 1);
 
-		bool isRain = ((_weatherType & ~WeatherType::OutdoorsOnly) == WeatherType::Rain);
+		bool isRain = (GetWeatherKind(_weatherType) == WeatherType::Rain);
 		auto* res = _commonResources->FindAnimation(isRain ? Rain : Snow);
 		if (res == nullptr) {
 			return;

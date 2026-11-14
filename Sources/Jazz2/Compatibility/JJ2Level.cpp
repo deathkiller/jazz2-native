@@ -484,12 +484,15 @@ namespace Jazz2::Compatibility
 		// Weather particles type (Snow, Flower, Rain, Leaf)
 		std::uint8_t snowType = block.ReadByte();
 
-		// The intensity is kept even without weather, scripts may start it later
+		// The intensity, the kind and outdoors-only are kept even without weather, a script may start it later
 		_weatherIntensity = snowIntensity;
-		if (isSnowing) {
+		if (snowType <= 3) {
 			_weatherType = (WeatherType)(snowType + 1);
-			if (_weatherType != WeatherType::None && isSnowingOutdoorsOnly) {
+			if (isSnowingOutdoorsOnly) {
 				_weatherType |= WeatherType::OutdoorsOnly;
+			}
+			if (!isSnowing) {
+				_weatherType |= WeatherType::Inactive;
 			}
 		}
 
@@ -1390,9 +1393,11 @@ namespace Jazz2::Compatibility
 			chunks.push_back(Death::move(layerPropertiesChunk));
 		}
 		// The water in front of a layer of the original game is in front of the layer it became, in front of the frontmost
-		// one it's in front of all of them, a number out of the layers hides it
+		// one it's in front of all of them, and so is 0 (measured in JJ2+), a number out of the layers hides it
 		Formats::LevelSettingsChunk::Settings levelSettings = _mlleSettings;
-		if (_mlleWaterLayer >= 1 && _mlleWaterLayer <= JJ2LayerCount) {
+		if (_mlleWaterLayer == 0) {
+			levelSettings.WaterLayer = Formats::LevelSettingsChunk::WaterInFront;
+		} else if (_mlleWaterLayer >= 1 && _mlleWaterLayer <= JJ2LayerCount) {
 			std::int32_t index = writtenIndexOfOriginal[_mlleWaterLayer - 1];
 			levelSettings.WaterLayer = (index > 0 ? index : Formats::LevelSettingsChunk::WaterInFront);
 		} else {

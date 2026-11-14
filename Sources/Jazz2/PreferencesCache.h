@@ -469,6 +469,8 @@ namespace Jazz2
 		// Controls
 		/** @brief Whether toggle Run action is enabled */
 		static bool ToggleRunAction;
+		/** @brief Whether bindings of Jump and Change Weapon actions are swapped in menus */
+		static bool SwapJumpAndChangeWeaponInMenu;
 		/** @brief Active gamepad button labels */
 		static GamepadType GamepadButtonLabels;
 		/** @brief Gamepad rumble intensity */
@@ -632,7 +634,8 @@ namespace Jazz2
 			ShowAllWeaponWheelSlots = 0x800000000,
 			// The two bits of DitheringScope, see DitheringShift
 			Dithering0 = 0x1000000000,
-			Dithering1 = 0x2000000000
+			Dithering1 = 0x2000000000,
+			SwapJumpAndChangeWeaponInMenu = 0x4000000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);

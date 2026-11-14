@@ -2428,6 +2428,8 @@ namespace Jazz2
 		// Per-tile first visible row and reflection flag for the blur-behind layers (see TileSet::GetTileEffectInfo());
 		// set by BuildTilesetDiffuse() only where those layers are drawn with their effects
 		std::unique_ptr<std::uint8_t[]> tileEffectInfo;
+		// Which pixels of the tiles are drawn (see TileSet::IsTilePixelVisible()), set by BuildTilesetDiffuse() only with scripts
+		std::unique_ptr<std::uint8_t[]> tileVisibleMask;
 		// Whether tiles keep raw palette indices (recolored at draw time) vs baked colors; set by BuildTilesetDiffuse()
 		bool indexTiles = false;
 
@@ -2436,7 +2438,8 @@ namespace Jazz2
 			const bool lz4Content = ((flags & Formats::TileSetFile::ImageLz4) == Formats::TileSetFile::ImageLz4);
 			String name = path;
 			textureDiffuse = BuildTilesetDiffuse(s, name.data(), channelCount, lz4Content, usedTiles, atlasSlot, width, height, tileCount,
-				is32bitTile.get(), paletteRemapping, trueColorPalette, captionTileId, indexTiles, tileDiffuseOpaque, tileEffectInfo, captionTile);
+				is32bitTile.get(), paletteRemapping, trueColorPalette, captionTileId, indexTiles, tileDiffuseOpaque, tileEffectInfo,
+				tileVisibleMask, captionTile);
 			if (textureDiffuse.empty()) {
 				// A valid header always gives at least one tile to the atlas, so nothing means it couldn't be built
 				LOGE("Cannot build atlas of tile set \"{}\"", path);
@@ -2453,6 +2456,7 @@ namespace Jazz2
 			maskSize, Death::move(captionTile), tileDiffuseOpaque.get());
 		tileSet->IsIndexed = indexTiles;
 		tileSet->AtlasSlot = Death::move(atlasSlot);
+		tileSet->SetTileVisibleMask(Death::move(tileVisibleMask));
 #if defined(TILEMAP_LAYER_EFFECTS)
 		tileSet->SetTileEffectInfo(Death::move(tileEffectInfo));
 #endif
@@ -2577,7 +2581,8 @@ namespace Jazz2
 		bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 		const std::uint8_t* paletteRemapping, const std::uint32_t* trueColorPalette, std::uint16_t captionTileId, bool& indexTiles,
-		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile)
+		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo,
+		std::unique_ptr<std::uint8_t[]>& tileVisibleMask, std::unique_ptr<Color[]>& captionTile)
 	{
 		// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked as RGBA;
 		// an all-8-bit tileset keeps raw palette indices and recolors at draw time (uploaded as R8). A single-channel
@@ -2768,6 +2773,10 @@ namespace Jazz2
 		const std::uint32_t dstChannels = (indexTiles ? 1u : 4u);
 
 		tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
+#if defined(WITH_ANGELSCRIPT)
+		// Scripts' weather isn't made where the sprite layer is drawn (see Scripting::LevelScriptLoader::SpawnWeatherParticles())
+		tileVisibleMask = std::make_unique<std::uint8_t[]>(std::size_t(tileCount) * TileSet::MaskBytesPerTile);
+#endif
 #if defined(TILEMAP_LAYER_EFFECTS)
 		// A tile the atlas leaves out has nothing visible and no reflection
 		tileEffectInfo = std::make_unique<std::uint8_t[]>(tileCount);
@@ -2975,6 +2984,18 @@ namespace Jazz2
 
 				if (tileIdx < (std::int32_t)tileCount) {
 					tileDiffuseOpaque[tileIdx] = (opaque ? (opaqueAsDrawn ? 2 : 1) : 0);
+					if (tileVisibleMask != nullptr) {
+						// A pixel of index 0 or of no alpha isn't drawn
+						std::uint8_t* bits = &tileVisibleMask[std::size_t(tileIdx) * TileSet::MaskBytesPerTile];
+						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+							const std::uint8_t* row = &dstTile[((y + TileSet::TilePadding) * paddedWidth + TileSet::TilePadding) * dstChannels];
+							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+								if (row[x * dstChannels + (dstChannels - 1)] != 0) {
+									bits[(y * TileSet::DefaultTileSize + x) >> 3] |= std::uint8_t(1u << (x & 7));
+								}
+							}
+						}
+					}
 #if defined(TILEMAP_LAYER_EFFECTS)
 					tileEffectInfo[tileIdx] = ComputeTileEffectInfo(dstTile, paddedWidth, dstChannels, _palettes);
 #endif

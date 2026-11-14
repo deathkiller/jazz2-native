@@ -656,6 +656,8 @@ namespace Jazz2::Tiles
 		bool IsTileCornerEmpty(std::int32_t tx, std::int32_t ty, std::int32_t cornerX, std::int32_t cornerY);
 		/** @brief Returns `true` if the tile's collision mask is neither fully empty nor fully filled (e.g., a slope or a thin solid band) */
 		bool IsTilePartiallySolid(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the main (sprite) layer draws the pixel of the level, whatever its mask */
+		bool IsTilePixelDrawn(std::int32_t x, std::int32_t y);
 		/** @brief Returns `true` if the tile on the main (sprite) layer is controlled by a trigger (toggled solid/empty by a trigger crate) */
 		bool IsTileTrigger(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the mask of tiles on the main (sprite) layer intersecting a given AABB is empty */

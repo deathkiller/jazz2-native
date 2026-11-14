@@ -938,11 +938,12 @@ namespace Jazz2::Editor
 			// TRANSLATORS: Label of a property in the Level Properties dialog
 			auto* row = AddRow(content, _x("editor", "Weather"));
 			auto* dropdown = AddChoiceDropdown(row, WeatherChoices, [s]() {
-				return std::int32_t(s->GetDocument().Properties.Weather & ~std::uint8_t(WeatherType::OutdoorsOnly));
+				return std::int32_t(GetWeatherKind(WeatherType(s->GetDocument().Properties.Weather)));
 			}, [s](std::int32_t value) {
 				std::uint8_t type = std::uint8_t(value);
 				ChangeProperties(*s, [type](LevelFlags&, Formats::LevelProperties& properties) {
-					properties.Weather = std::uint8_t((properties.Weather & std::uint8_t(WeatherType::OutdoorsOnly)) | type);
+					constexpr std::uint8_t Flags = std::uint8_t(WeatherType::OutdoorsOnly) | std::uint8_t(WeatherType::Inactive);
+					properties.Weather = std::uint8_t((properties.Weather & Flags) | type);
 				});
 			}, [](std::int32_t) {
 				// TRANSLATORS: In the Level Properties dialog for a weather the editor doesn't know
@@ -963,6 +964,14 @@ namespace Jazz2::Editor
 		}, [s](bool value) {
 			ChangeProperties(*s, [value](LevelFlags&, Formats::LevelProperties& properties) {
 				properties.Weather = std::uint8_t(value ? (properties.Weather | std::uint8_t(WeatherType::OutdoorsOnly)) : (properties.Weather & ~std::uint8_t(WeatherType::OutdoorsOnly)));
+			});
+		});
+		// TRANSLATORS: Check box in the Level Properties dialog, the weather doesn't fall until the script of the level starts it
+		content->Add<CheckBox>(_x("editor", "Weather started by script"), [s]() {
+			return (s->GetDocument().Properties.Weather & std::uint8_t(WeatherType::Inactive)) != 0;
+		}, [s](bool value) {
+			ChangeProperties(*s, [value](LevelFlags&, Formats::LevelProperties& properties) {
+				properties.Weather = std::uint8_t(value ? (properties.Weather | std::uint8_t(WeatherType::Inactive)) : (properties.Weather & ~std::uint8_t(WeatherType::Inactive)));
 			});
 		});
 		{

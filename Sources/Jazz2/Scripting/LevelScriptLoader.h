@@ -204,6 +204,8 @@ namespace Jazz2::Scripting
 		void OnFrameDrawn(float x, float y, std::uint32_t frame, std::uint32_t mode);
 		/** @brief Called when an object that isn't in the level runs a behavior of the game, see @ref GetStartingLook() */
 		void OnGameBehavior(const Legacy::jjOBJ& obj, std::uint32_t behavior);
+		/** @brief Returns whether objects of a behavior of the game stand still until a player uses them (springs, crates) */
+		static bool IsStillUntilUsed(std::uint32_t behavior);
 		/** @brief Stops a context running for @ref GetStartingLook() after too many lines, returns `true` if it's watched */
 		bool WatchLookContext(asIScriptContext* ctx);
 		/** @brief Returns the animation the template of an event has before a script changes it, 0 if it has none */
@@ -323,6 +325,8 @@ namespace Jazz2::Scripting
 		 * script object ID. Used by `jjAddObject` when a custom behavior function is supplied.
 		 */
 		std::int32_t AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc);
+		/** @brief Makes an explosion object playing an animation once, as the game does for the kill animation of an object */
+		void AddExplosion(float xPixel, float yPixel, std::int16_t anim);
 		/**
 		 * @brief Lets the object of the script of a crate that broke in the game go on without it
 		 *
@@ -706,9 +710,12 @@ namespace Jazz2::Scripting
 		std::unique_ptr<Legacy::jjPARTICLE[]> _particles;
 		std::int32_t _particlesTick = -1;
 		std::int32_t _nextParticle = 0;
+		// The particles moved in a tick are drawn after the scripts ran in it, which may remove them (see DrawParticles())
+		bool _particlesDrawPending;
 
 		// Moves the particles by the ticks since the last update and draws them in the level
 		void UpdateParticles(std::int32_t currentTick);
+		void DrawParticles();
 		// Makes the particles of the weather of a tick, see OwnsWeather()
 		void SpawnWeatherParticles();
 		// Takes the weather the level has now, changed by an area of weather, into the variables of the scripts

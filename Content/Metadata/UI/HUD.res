@@ -40,7 +40,7 @@
 			"States": [ 7 ]
 		},
 		"WeaponTNT": {
-			"Path": "Object/tnt.aura",
+			"Path": "Weapon/bullet_tnt.aura",
 			"States": [ 8 ]
 		},
 		"WeaponPepper": {
@@ -89,7 +89,7 @@
 			"States": [ 27 ]
 		},
 		"WeaponPowerUpTNT": {
-			"Path": "Object/tnt.aura",
+			"Path": "Weapon/bullet_tnt.aura",
 			"States": [ 28 ]
 		},
 		"WeaponPowerUpPepper": {

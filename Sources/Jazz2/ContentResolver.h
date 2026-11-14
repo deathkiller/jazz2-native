@@ -791,7 +791,8 @@ namespace Jazz2
 		// which `maskSize` receives in bytes
 		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint16_t tileCount, std::uint32_t& maskSize);
 		// Builds the padded tileset diffuse atlas (R8 indexed for all-8-bit tilesets, RGBA8 baked when any tile is
-		// 32-bit), the per-tile fully-opaque flags and the optional caption thumbnail. Reads pixels from the raw stream
+		// 32-bit), the per-tile fully-opaque flags, the visibility mask of the tiles (only with scripts, see
+		// TileSet::IsTilePixelVisible()) and the optional caption thumbnail. Reads pixels from the raw stream
 		// `s` (the image content follows the compressed block). Sets `indexTiles` to the chosen mode.
 		// Returns one texture normally, or several consecutive row-band chunks when the atlas exceeds the
 		// device's texture-size limit (console targets); see TileSet::ResolveTextureDiffuse
@@ -799,7 +800,8 @@ namespace Jazz2
 			bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, const std::uint32_t* trueColorPalette, std::uint16_t captionTileId, bool& indexTiles,
-			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile);
+			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo,
+			std::unique_ptr<std::uint8_t[]>& tileVisibleMask, std::unique_ptr<Color[]>& captionTile);
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
 		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index

@@ -783,6 +783,36 @@ namespace Jazz2::Tiles
 		return (tileSet != nullptr && !tileSet->IsTileMaskEmpty(tileId) && !tileSet->IsTileMaskFilled(tileId));
 	}
 
+	bool TileMap::IsTilePixelDrawn(std::int32_t x, std::int32_t y)
+	{
+		if (_sprLayerIndex == -1 || x < 0 || y < 0) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		std::int32_t tx = x / TileSet::DefaultTileSize;
+		std::int32_t ty = y / TileSet::DefaultTileSize;
+		if (tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		std::int32_t tileId = ResolveTileID(tile);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+		std::int32_t px = x % TileSet::DefaultTileSize;
+		std::int32_t py = y % TileSet::DefaultTileSize;
+		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			px = TileSet::DefaultTileSize - 1 - px;
+		}
+		if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			py = TileSet::DefaultTileSize - 1 - py;
+		}
+		return tileSet->IsTilePixelVisible(tileId, px, py);
+	}
+
 	bool TileMap::IsTileTrigger(std::int32_t tx, std::int32_t ty)
 	{
 		if (_sprLayerIndex == -1) {
@@ -6666,7 +6696,8 @@ namespace Jazz2::Tiles
 		// The horizon and the vanishing point are a fraction of the layer (SURFACE::INNERLAYER of JJ2+) or of the view
 		const Rectf reference = ((layer.Description.TextureFlags & Formats::TexturedLayerParams::InnerLayer) != 0
 			? area : Rectf(0.0f, 0.0f, cullingRect.W, cullingRect.H));
-		const float horizon = reference.Y + std::clamp<float>(layer.Description.TextureFadePosition.Y, 0.0f, 1.0f) * reference.H;
+		// On a whole row, rounded as JJ2+ rounds it (a view of an odd height has it half a row lower)
+		const float horizon = reference.Y + std::floor(std::clamp<float>(layer.Description.TextureFadePosition.Y, 0.0f, 1.0f) * reference.H + 0.5f);
 		const float vanishingPoint = reference.X + layer.Description.TextureFadePosition.X * reference.W;
 		// Only the part of the area below the horizon that is in the view is drawn, a horizon at the top of the view reflects black
 		const float top = std::max(std::max(horizon, area.Y), 0.0f);

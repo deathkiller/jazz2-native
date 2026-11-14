@@ -276,6 +276,29 @@ namespace Jazz2::Tiles
 		}
 #endif
 
+		/**
+		 * @brief Returns whether a pixel of a tile is drawn (not transparent)
+		 *
+		 * By the visibility mask of the tiles if the content loader made one (see @ref SetTileVisibleMask()), by whether
+		 * the whole tile is drawn otherwise.
+		 */
+		bool IsTilePixelVisible(std::int32_t tileId, std::int32_t x, std::int32_t y) const
+		{
+			if (tileId < 0 || tileId >= TileCount) {
+				return false;
+			}
+			if (_visibleMask == nullptr) {
+				return _isTileFilled[tileId];
+			}
+			return IsTileMaskBitSet(&_visibleMask[std::size_t(tileId) * MaskBytesPerTile], x, y);
+		}
+
+		/** @brief Sets the visibility mask of the tiles, packed as the collision mask (@ref MaskBytesPerTile bytes each) */
+		void SetTileVisibleMask(std::unique_ptr<std::uint8_t[]> visibleMask)
+		{
+			_visibleMask = Death::move(visibleMask);
+		}
+
 		/** @brief Returns a caption tile */
 		StaticArrayView<DefaultTileSize * DefaultTileSize, Color> GetCaptionTile() const
 		{
@@ -289,6 +312,8 @@ namespace Jazz2::Tiles
 
 	private:
 		std::unique_ptr<uint8_t[]> _mask;
+		// Which pixels of the tiles are drawn, see IsTilePixelVisible()
+		std::unique_ptr<std::uint8_t[]> _visibleMask;
 		std::unique_ptr<std::uint8_t[]> _columnSpans;
 		std::unique_ptr<Color[]> _captionTile;
 		BitArray _isMaskEmpty;
