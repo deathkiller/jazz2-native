@@ -18,12 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - BuildType: Release
-          RHI: Software
-
         # Native GX2 backend; its shaders are committed (Gx2GeneratedShaders.h), so CafeGLSL isn't needed here
         - BuildType: Release
           RHI: GX2
+
+        - BuildType: Release
+          RHI: Software
 
     runs-on: 'ubuntu-latest'
     container:
@@ -55,7 +55,7 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
 
         rhiSuffix=""
-        if [ "${{ matrix.RHI }}" != "Software" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
+        if [ "${{ matrix.RHI }}" != "GX2" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
         echo "rhiSuffix=$rhiSuffix" >> $GITHUB_ENV
 
     - name: 'Upload Package'

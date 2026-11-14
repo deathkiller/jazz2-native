@@ -378,7 +378,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita**, **Nintendo Switch** and **iOS**, where it is also the only choice) --- Preferred core backend
     -   Possible values: `GLFW`, `SDL2`, `SDL3`
     -   Ignored on **Android**, **UWP** and the @ref consoles "consoles with a bespoke window backend"
--   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce, @cpp "GXM" @ce on **PS Vita**, @cpp "Metal" @ce on **iOS**) --- Preferred rendering backend (RHI)
+-   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce, @cpp "GXM" @ce on **PS Vita**, @cpp "GX2" @ce on **Wii U**, @cpp "Metal" @ce on **iOS**) --- Preferred rendering backend (RHI)
     -   Possible values:
         - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
         - `D3D11` --- Uses Direct3D 11 (**Windows** with the **MSVC** toolchain only)
@@ -389,6 +389,8 @@ The following parameters can be used to customize the build:
         - `PVR` --- Fixed-function PowerVR backend on top of KallistiOS (**Sega Dreamcast** only), see @ref consoles-dreamcast
         - `GX` --- Fixed-function GX backend for Flipper/Hollywood (**Nintendo Wii** and **Nintendo GameCube** only),
           see @ref consoles-wii and @ref consoles-gamecube
+        - `GX2` --- Uses **GX2** directly, with the full shader pipeline (**Nintendo Wii U** only, and the default
+          there), see @ref consoles-wiiu
         - `GU` --- Fixed-function GU backend driving the Allegrex GE through `sceGu` (**PlayStation Portable** only),
           see @ref consoles-psp
         - `GS` --- Fixed-function Graphics Synthesizer backend writing GIF packets directly (**PlayStation 2** only),
