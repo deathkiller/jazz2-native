@@ -139,12 +139,11 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii/GameCube (expected GX)")
 		endif()
 	elseif(NINTENDO_WIIU)
-		# No OpenGL on the Wii U, only GX2. GX2 (default) is the native backend with the full shader pipeline;
-		# Software rasterizes on the CPU and presents through SDL2's GX2 renderer
-		set(NCINE_PREFERRED_RHI "GX2" CACHE STRING "Rendering backend on Nintendo Wii U: GX2 (native) or Software")
-		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX2;Software")
-		if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|GX2)$")
-			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii U (expected GX2 or Software)")
+		# No OpenGL on the Wii U, only GX2: the native backend with the full shader pipeline
+		set(NCINE_PREFERRED_RHI "GX2" CACHE STRING "Rendering backend on Nintendo Wii U: GX2")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX2")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX2")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii U (expected GX2)")
 		endif()
 		if(NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_BACKEND \"${NCINE_PREFERRED_BACKEND}\" on Nintendo Wii U (expected SDL2)")

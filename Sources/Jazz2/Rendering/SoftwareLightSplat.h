@@ -20,7 +20,7 @@ namespace Jazz2::Rendering::SoftwareLighting
 	 * its own). The lightmap is quantized to 8 bits per channel before anything sees it, so a relative
 	 * error of that size cannot change a single output value except at a quantization boundary.
 	 */
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(JAZZ2_SPLAT_TEST_RSQRTE)
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(JAZZ2_SPLAT_TEST_RSQRTE)
 	inline float RsqrtEstimate(float x)
 	{
 #	if defined(JAZZ2_SPLAT_TEST_RSQRTE)
@@ -57,7 +57,7 @@ namespace Jazz2::Rendering::SoftwareLighting
 		float r = std::max(d2, 1.0e-12f);
 		asm("fsrra %0" : "+f"(r));
 		return d2 * r;
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(JAZZ2_SPLAT_TEST_RSQRTE)
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(JAZZ2_SPLAT_TEST_RSQRTE)
 		const float x = std::max(d2, 1.0e-12f);
 		float r = RsqrtEstimate(x);
 		r = r * (1.5f - 0.5f * x * r * r);
@@ -139,7 +139,7 @@ namespace Jazz2::Rendering::SoftwareLighting
 	 */
 	inline float RowHalfWidth(float v)
 	{
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE)
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		return Distance(v);
 #else
 		return std::sqrt(v);

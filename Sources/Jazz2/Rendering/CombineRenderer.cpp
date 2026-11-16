@@ -491,7 +491,7 @@ namespace Jazz2::Rendering
 		// ran at 21 to 27 ms a frame; the cost follows the texel count. The map is stretched with bilinear
 		// filtering and a light falls off over 8 or more texels, so nothing sharp is lost.
 		constexpr std::int32_t Scale = 8;
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE)
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the

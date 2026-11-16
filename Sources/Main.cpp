@@ -465,14 +465,9 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 		// also picks its own screen mode, from the performance preset)
 		config.Resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #elif defined(DEATH_TARGET_WIIU)
-#	if !defined(WITH_RHI_GX2)
-		// SDL2 sizes the TV render target after the system setting (up to 1920x1080), which is far too many pixels
-		// for the software rasterizer. The window is fixed at 720p instead and GX2 scales it to the TV and the GamePad.
-		config.Resolution.Set(1280, 720);
-#	endif
-		// With the GX2 backend the resolution is left unset, so the window fills SDL's TV display, which wiiu-sdl2
-		// sizes after the console's TV setting (854x480, 1280x720 or 1920x1080). The frame then reaches the TV
-		// without scaling, and GX2 scales it to the GamePad.
+		// The resolution is left unset, so the window fills SDL's TV display, which wiiu-sdl2 sizes after the
+		// console's TV setting (854x480, 1280x720 or 1920x1080). The frame then reaches the TV without scaling,
+		// and GX2 scales it to the GamePad.
 		config.Fullscreen = false;
 		config.Resizable = false;
 #endif
