@@ -2340,10 +2340,10 @@ if(WITH_MULTIPLAYER)
 			message(STATUS "Building the game with online multiplayer support")
 		endif()
 		
-		if(NINTENDO_SWITCH OR NINTENDO_3DS OR PLATFORM_PSP OR VITA)
-			# None of these four stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no address
-			# family for it at all, and libctru's <netinet/in.h> declares no in6_addr - so ENet is built on
-			# its IPv4 arm
+		if(NINTENDO_SWITCH OR NINTENDO_3DS OR NINTENDO_WIIU OR PLATFORM_PSP OR VITA)
+			# None of these five stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no address
+			# family for it at all, and neither libctru's nor wut's <netinet/in.h> declares in6_addr - so ENet
+			# is built on its IPv4 arm
 			target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
 		elseif(WIN32)
 			# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)

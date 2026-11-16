@@ -531,12 +531,12 @@ cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_W
 #  - libogc consoles, N64, Dreamcast: no sockets stack wired up
 #  - PS2: the bundled IXWebSocket needs <netinet/ip.h>, which PS2SDK lacks
 #  - AmigaOS 4, MorphOS: IPv4-only stacks (TODO: ENET_IPV6=0 as on the PSP, then only threads are missing)
-# PSP, Vita and 3DS work with ENET_IPV6=0 and small shims (see ncine_extra_sources.cmake)
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_WIIU;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+# PSP, Vita, 3DS and Wii U work with ENET_IPV6=0 and small shims (see ncine_extra_sources.cmake)
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
-# IXWebSocket needs <netinet/ip.h> and <poll.h>: no <netinet/ip.h> on Switch, Vita, 3DS and PSP, no <poll.h>
+# IXWebSocket needs <netinet/ip.h> and <poll.h>: no <netinet/ip.h> on Switch, Vita, 3DS, PSP and Wii U, no <poll.h>
 # on AmigaOS 4 and PSP (MorphOS is off through WITH_ONLINE_MULTIPLAYER). ENet carries online play there.
-cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT NINTENDO_3DS;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT NINTENDO_3DS;NOT NINTENDO_WIIU;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	# OS-native TLS on Apple (SecureTransport) and Windows (Schannel, also UWP), so no OpenSSL is needed there
 	if(APPLE)

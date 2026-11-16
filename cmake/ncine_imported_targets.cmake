@@ -615,9 +615,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	endif()
 
 	if(NINTENDO_WIIU)
-		# devkitPro ships libcurl for the Wii U, but the console's network stack (nn::ac, nsysnet) is not brought
-		# up by this port, so the update check would only wait for a connection that never comes. Online
-		# multiplayer is off there as well.
+		# devkitPro ships libcurl for the Wii U, but it is not linked yet, so there is no update check and no
+		# online server list. Online multiplayer itself (ENet over wut's sockets) does not need it.
 		unset(CURL_LIBRARY CACHE)
 		unset(CURL_INCLUDE_DIR CACHE)
 	elseif(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
