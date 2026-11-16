@@ -50,6 +50,7 @@ Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce | `--emit-fixed-function rd
 Legacy OpenGL 1.x @m_span{m-text m-dim} (MorphOS' TinyGL) @m_endspan | @cpp "LegacyGlGeneratedEffects.h" @ce | `--emit-fixed-function legacygl`
 PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg sources compiled on the console | `--emit-cg`
 PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from the same Cg | `--emit-rsx` + cgcomp
+Wii U (GX2) | @cpp "Gx2GeneratedShaders.h" @ce --- R700 shaders compiled offline from the OpenGL GLSL | `--emit-gx2` + CafeGLSL
 
 @m_class{m-noindent}
 
@@ -109,6 +110,7 @@ Mode or option | Meaning
 `--emit-sw-generated <output.h> <in ...>` | Software-renderer header: every variant's fragment stage as C++
 `--emit-cg <output.h> <in ...>` | PS Vita header: every variant as Cg
 `--emit-rsx <output.h> <in ...>` | PlayStation 3 header: every variant as Cg compiled by `cgcomp` (path via `--cgcomp`). The only path building with `NO_DYNAMIC_BRANCHING`
+`--emit-gx2 <output.h> <in ...>` | Wii U header: every variant's OpenGL GLSL compiled in uniform-block mode by CafeGLSL's `glslcompiler` (path via `--cafeglsl`, else `$CAFEGLSL/bin`, else `PATH`). Works around what Cemu 2.6 cannot translate: vertex-index divisions become float, `ceil()` becomes `-floor(-x)`, and burst parameter exports are split
 `--emit-fixed-function <pvr\|gx\|pica\|gu\|gs\|rdp\|legacygl> <output.h> <in ...>` | Per-backend effect header: the applicable `fixed_function` block of every variant
 `--hlsl-check <in ...>` | Compiles every variant's HLSL via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Compiles every variant's Vulkan GLSL to SPIR-V via `glslangValidator`, printing a pass/fail table
@@ -547,6 +549,7 @@ The blocks: `(pvr, gs)` bare, `gu` repeat, `rdp` repeat in pass + tint, `pica` r
     @cpp "RdpGeneratedEffects.h" @ce, @cpp "LegacyGlGeneratedEffects.h" @ce,
     @cpp "PicaGeneratedEffects.h" @ce (`--emit-fixed-function`)
 7.  @cpp "RsxGeneratedShaders.h" @ce (`--emit-rsx`), <b>only on a host with `cgcomp`</b>
+8.  @cpp "Gx2GeneratedShaders.h" @ce (`--emit-gx2`), <b>only on a host with CafeGLSL</b>
 
 @m_class{m-block m-info}
 

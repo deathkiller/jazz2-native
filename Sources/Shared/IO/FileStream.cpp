@@ -686,7 +686,7 @@ namespace Death { namespace IO {
 		}
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
-		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_WIIU) && \
 		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && \
 		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
@@ -721,7 +721,7 @@ namespace Death { namespace IO {
 		if (::fstat(_fileDescriptor, &sb) == 0 && S_ISREG(sb.st_mode)) {
 			_size = std::int64_t(sb.st_size);
 		}
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
 		defined(DEATH_TARGET_PS2)
 		else {
 			// fstat() is not fully supported by some libfat/KOS filesystems (e.g., iso9660), measure the size

@@ -32,6 +32,8 @@
 #	define _i1a "\nOpenGL 1.x (fixed-function)"
 #elif defined(WITH_RHI_RSX)
 #	define _i1a "\nRSX"
+#elif defined(WITH_RHI_GX2)
+#	define _i1a "\nGX2"
 #elif defined(RHI_GL_PROFILE_ES2)
 #	define _i1a "\nOpenGL│ES 2.0"
 #elif defined(RHI_GL_PROFILE_ES3)

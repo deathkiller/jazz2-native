@@ -146,7 +146,7 @@ namespace Jazz2::Tiles
 		}
 #endif
 
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		// Slots the render command pool keeps even when nothing needs them - roughly what one viewport of a level
 		// asks for, so the common case never reallocates

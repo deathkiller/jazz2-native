@@ -1,0 +1,112 @@
+name: 'Nintendo Wii U (Cemu)'
+
+# Boots the GX2 build in Cemu and checks that it reaches the main menu. Independent of wiiu.yml, so it can
+# be removed on its own: delete this file and .github/wiiu-cemu/.
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CEMU_VERSION: '2.6'
+  CEMU_SHA256: '0c20c4aeb800bb13d9bab9474ef45a6f8fcde6402cad9b32ac2a1bbd03186313'
+
+jobs:
+  Build:
+    runs-on: 'ubuntu-latest'
+    container:
+      image: devkitpro/devkitppc:latest
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Build'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=Release -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/WiiU.cmake -D NCINE_PREFERRED_RHI=GX2
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Test Bundle'
+      run: |
+        # Cemu 2.6 hangs on the first conditional trap instruction (it never moves past one, although the condition
+        # is never true on hardware), so they are replaced with nop in a test copy; the released bundle is not touched
+        python3 -I ./.github/wiiu-cemu/patch_tw.py ./_build/jazz2.elf ./_build/jazz2_test.elf
+        ${DEVKITPRO}/tools/bin/elf2rpl ./_build/jazz2_test.elf ./_build/jazz2_test.rpx
+        mkdir ./_test/
+        ${DEVKITPRO}/tools/bin/wuhbtool ./_build/jazz2_test.rpx ./_test/jazz2_test.wuhb --content=./Content --name=Jazz2Test --short-name=Jazz2Test --author=test
+
+    - name: 'Upload Test Bundle'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_WiiU_CemuTest
+        path: ./_test/
+        retention-days: 7
+
+  Test:
+    needs: Build
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+
+    - name: 'Download Test Bundle'
+      uses: actions/download-artifact@v8
+      with:
+        name: Jazz2_WiiU_CemuTest
+        path: ./_test/
+
+    - name: 'Install Dependencies'
+      run: |
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libopengl0 libvulkan1 mesa-vulkan-drivers libgtk-3-0t64 \
+          libsecret-1-0 libusb-1.0-0 libpulse0 libbluetooth3 imagemagick x11-utils libxrandr2 libxi6 libxcursor1 \
+          libxinerama1 libxkbcommon-x11-0
+
+    - name: 'Cache Cemu'
+      id: cache-cemu
+      uses: actions/cache@v4
+      with:
+        path: ./_cemu/
+        key: cemu-${{ env.CEMU_VERSION }}
+
+    - name: 'Download Cemu'
+      if: steps.cache-cemu.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ./_cemu/
+        curl -sfL -o ./_cemu/Cemu.AppImage "https://github.com/cemu-project/Cemu/releases/download/v${CEMU_VERSION}/Cemu-${CEMU_VERSION}-x86_64.AppImage"
+        echo "${CEMU_SHA256}  ./_cemu/Cemu.AppImage" | sha256sum -c -
+
+    - name: 'Extract Cemu'
+      run: |
+        # Outside the cached directory, so the cache holds only the AppImage
+        chmod +x ./_cemu/Cemu.AppImage
+        mkdir ./_cemu_root/
+        cd ./_cemu_root/ && ../_cemu/Cemu.AppImage --appimage-extract > /dev/null
+
+    - name: 'Boot in Cemu'
+      run: |
+        ./.github/wiiu-cemu/smoke-test.sh ./_test/jazz2_test.wuhb ./_cemu_root/squashfs-root/usr/bin ./_result/
+
+    - name: 'Upload Result'
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_WiiU_CemuResult
+        path: ./_result/
+        retention-days: 7

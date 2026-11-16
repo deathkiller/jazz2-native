@@ -143,7 +143,14 @@ namespace Jazz2::Rendering
 			// Already at the size it's shown at, there is nothing to resolve
 			useAntialiasing = false;
 		}
-		if (!overlay && (_supersample > 1 || useAntialiasing)) {
+		// Backends where the subpass is too expensive resolve supersampling alone with a linear screen pass instead
+		// (see RHI_LINEAR_SUPERSAMPLE_RESOLVE in RhiFwd.h); a rescale shader still gets the subpass it expects
+		bool linearResolve = false;
+#if defined(RHI_LINEAR_SUPERSAMPLE_RESOLVE)
+		linearResolve = (!overlay && _supersample > 1 && !useAntialiasing &&
+			(PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) == RescaleMode::None);
+#endif
+		if (!overlay && (_supersample > 1 || useAntialiasing) && !linearResolve) {
 			float widthRatio, heightRatio;
 			float widthFrac = modff((float)targetWidth / textureWidth, &widthRatio);
 			float heightFrac = modff((float)targetHeight / textureHeight, &heightRatio);
@@ -188,9 +195,12 @@ namespace Jazz2::Rendering
 			_target->Init(nullptr, targetFormat, textureWidth, textureHeight);
 			_view->SetTexture(_target.get());
 		}
-		_target->SetMinFiltering(SamplerFilter::Nearest);
-		_target->SetMagFiltering(SamplerFilter::Nearest);
+		_target->SetMinFiltering(linearResolve ? SamplerFilter::Linear : SamplerFilter::Nearest);
+		_target->SetMagFiltering(linearResolve ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		_target->SetWrap(SamplerWrapping::ClampToEdge);
+		// The compose target is drawn into and read every frame, so worth fast memory where the backend has it (the HUD
+		// overlay is cheap and stays out of the way)
+		_target->SetPreferFastMemory(!overlay);
 
 		// The overlay layer is only partially covered by the HUD, so unlike the scene (which is fully repainted every
 		// frame and uses ClearMode::Never) it must be cleared to fully transparent each frame

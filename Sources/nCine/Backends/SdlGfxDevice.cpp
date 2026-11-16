@@ -182,9 +182,9 @@ namespace nCine::Backends
 			SDL_DestroyRenderer(_softwareRenderer);
 			_softwareRenderer = nullptr;
 		}
-#elif defined(DEATH_TARGET_VITA)
-		// Vita renders through vitaGL (brought up with vglInit() in initDevice), not an SDL-managed GL context.
-		// No explicit teardown is issued here.
+#elif defined(DEATH_TARGET_VITA) || defined(WITH_RHI_GX2)
+		// Vita renders through vitaGL (brought up with vglInit() in initDevice), not an SDL-managed GL context,
+		// and the Wii U's GX2 backend has no SDL context at all. No explicit teardown is issued here.
 #elif !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_METAL)
 #	if defined(WITH_RHI_LEGACYGL)
 		// Leave the context idle before it is destroyed - anything still batched refers to memory that is
@@ -216,6 +216,12 @@ namespace nCine::Backends
 		// the panel at present time, so the drawable size is the surface's - smaller than the panel, and nothing
 		// SDL knows about (see GxmDevice::ScreenWidth). Before the session is up this is the default size the
 		// surface is then created with; afterwards it is whatever setDrawableSize() last made it.
+		static_cast<void>(windowHandle);
+		width = RHI::Device::GetScreenWidth();
+		height = RHI::Device::GetScreenHeight();
+#elif defined(WITH_RHI_GX2)
+		// The GX2 backend renders into a screen colour buffer of its own and scales it to the TV and GamePad
+		// at present time, so the drawable size is that buffer's (the window size it was created with)
 		static_cast<void>(windowHandle);
 		width = RHI::Device::GetScreenWidth();
 		height = RHI::Device::GetScreenHeight();
@@ -360,6 +366,9 @@ namespace nCine::Backends
 #elif defined(WITH_RHI_GXM)
 		// The native sceGxm backend owns the Vita's display queue: it flips the frame's screen surface into the
 		// next display buffer and hands that to the display controller
+		RHI::Device::PresentFrame();
+#elif defined(WITH_RHI_GX2)
+		// The GX2 backend copies its screen buffer into SDL's TV and GamePad scan buffers and swaps them
 		RHI::Device::PresentFrame();
 #elif defined(DEATH_TARGET_VITA)
 		// Vita renders through vitaGL, which owns the GXM display; present its backbuffer directly (SDL neither
@@ -746,6 +755,10 @@ namespace nCine::Backends
 		// SDL_CreateWindow fail outright on this platform ("OpenGL support is either not configured in SDL or
 		// not available in current SDL video driver"). A plain window is all the input and event handling needs.
 		Uint32 flags = 0;
+#elif defined(WITH_RHI_GX2)
+		// The GX2 backend renders and presents itself; SDL's window only provides input and the ProcUI
+		// events, and no SDL_Renderer is created for it
+		Uint32 flags = 0;
 #else
 		Uint32 flags = SDL_WINDOW_OPENGL;
 #endif
@@ -776,8 +789,8 @@ namespace nCine::Backends
 		_windowHandle = SDL_CreateWindow("", windowPosX, windowPosY, _width, _height, flags);
 		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
 #endif
-#if defined(WITH_RHI_GXM) || defined(DEATH_TARGET_VITA)
-		// On the Vita the frame's pixel size comes from the rendering backend rather than from the window, and
+#if defined(WITH_RHI_GXM) || defined(WITH_RHI_GX2) || defined(DEATH_TARGET_VITA)
+		// On the Vita (and with the Wii U's GX2 backend) the frame's pixel size comes from the rendering backend rather than from the window, and
 		// queryDrawableSize() is where that is decided - going through it here as well is what keeps the size
 		// the game initializes with and the one the first window event resizes it to from disagreeing
 		QueryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
@@ -809,6 +822,12 @@ namespace nCine::Backends
 		// requested size below say nothing about, so they are ignored.
 		FATAL_ASSERT_MSG(RHI::Device::CreateSwapchain(nullptr, _drawableWidth, _drawableHeight, true),
 			"Failed to initialize the sceGxm rendering backend");
+#elif defined(WITH_RHI_GX2)
+		// wiiu-sdl2's video driver has already brought up GX2, ProcUI and the scan buffers; the backend only
+		// adds its own context state and the screen colour buffer, sized like the window
+		FATAL_ASSERT_MSG(RHI::Device::CreateSwapchain(nullptr, _width, _height, true),
+			"Failed to initialize the GX2 rendering backend");
+		QueryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
 #elif defined(DEATH_TARGET_VITA)
 		// PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation layered over SceGxm. This is not
 		// an SDL/EGL-managed context - SDL_GL_CreateContext() does not initialize vitaGL's internal GXM state - so
@@ -1061,7 +1080,9 @@ namespace nCine::Backends
 			_monitors[i].Position.X = bounds.x;
 			_monitors[i].Position.Y = bounds.y;
 
-			float hDpi, vDpi;
+			// SDL leaves the outputs untouched when the video driver cannot report DPI (wiiu-sdl2 has no such
+			// callback), so they start at the default for a scale of 1.0
+			float hDpi = DefaultDPI, vDpi = DefaultDPI;
 			SDL_GetDisplayDPI(i, nullptr, &hDpi, &vDpi);
 			_monitors[i].Scale.X = hDpi / DefaultDPI;
 			_monitors[i].Scale.Y = vDpi / DefaultDPI;

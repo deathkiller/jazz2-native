@@ -111,6 +111,8 @@ namespace Jazz2::Rendering
 #if defined(RHI_CAP_POSTPROCESSING)
 		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		// Drawn into and read every frame by each player, so worth fast memory where the backend has it
+		_viewTexture->SetPreferFastMemory(true);
 
 #if defined(RHI_GL_PROFILE_ES2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// OpenGL|ES 2.0 cannot render into a two-channel texture (GL_RG8 is ES 3.0 and the profile's RG8

@@ -82,7 +82,7 @@ endif()
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
 	# Only platforms with a windowing library can choose one
 	if(NOT NCINE_NATIVE_WINDOW_BACKEND)
-		if(NINTENDO_SWITCH OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS OR IOS)
+		if(NINTENDO_SWITCH OR NINTENDO_WIIU OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS OR IOS)
 			set(_NCINE_DEFAULT_BACKEND "SDL2")
 		else()
 			set(_NCINE_DEFAULT_BACKEND "GLFW")
@@ -137,6 +137,16 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii/GameCube (expected GX)")
+		endif()
+	elseif(NINTENDO_WIIU)
+		# No OpenGL on the Wii U, only GX2: the native backend with the full shader pipeline
+		set(NCINE_PREFERRED_RHI "GX2" CACHE STRING "Rendering backend on Nintendo Wii U: GX2")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX2")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX2")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii U (expected GX2)")
+		endif()
+		if(NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_BACKEND \"${NCINE_PREFERRED_BACKEND}\" on Nintendo Wii U (expected SDL2)")
 		endif()
 	elseif(NINTENDO_3DS)
 		# Fixed-function PICA200 through citro3d (programmable vertex stage only, a passthrough built by picasso)
@@ -354,7 +364,7 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 #  - PS Vita, 3DS: CPU (and memory on the 3DS)
 #  - PS2: libopenmpt doesn't compile there
 #  - PSP, Amiga: see below
-if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR VITA)
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_WIIU OR NINTENDO_3DS OR VITA)
 	set(_ncineXmpDefault ON)
 else()
 	set(_ncineXmpDefault OFF)
@@ -441,7 +451,8 @@ option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
 # Synchronous where the trace is the only debugging channel (a queued line is lost on a crash), where thread
 # scheduling can't be relied on, and in the libretro core (the worker races with core load/unload)
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT NINTENDO_3DS;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
+# Wii U: the RPX format has no TLS relocations, and the asynchronous logger is the only `thread_local` user
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_WIIU;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT NINTENDO_3DS;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
 # A trace line per file operation; turn off to save the cost on consoles with synchronous tracing
 cmake_dependent_option(DEATH_TRACE_VERBOSE_IO "Trace every file I/O operation" ON "DEATH_TRACE" OFF)
 if(DEATH_TRACE)
@@ -520,7 +531,7 @@ cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_W
 #  - PS2: the bundled IXWebSocket needs <netinet/ip.h>, which PS2SDK lacks
 #  - AmigaOS 4, MorphOS: IPv4-only stacks (TODO: ENET_IPV6=0 as on the PSP, then only threads are missing)
 # PSP, Vita and 3DS work with ENET_IPV6=0 and small shims (see ncine_extra_sources.cmake)
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_WIIU;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket needs <netinet/ip.h> and <poll.h>: no <netinet/ip.h> on Switch, Vita, 3DS and PSP, no <poll.h>
 # on AmigaOS 4 and PSP (MorphOS is off through WITH_ONLINE_MULTIPLAYER). ENet carries online play there.

@@ -106,11 +106,13 @@ namespace Jazz2
 	and the GE's, which do (see `GxDevice::DispatchTileMesh()`, `PicaDevice::DispatchTileMesh()`,
 	`GsDevice::DispatchTileMesh()` and `GuDevice::DispatchTileMesh()`). On the PSP the walk and the copy of its
 	quads into the streaming buffer were a fifth of the main thread's CPU time in a castle level standing still
-	(measured in PPSSPP).
+	(measured in PPSSPP). On a Wii U console with the GX2 backend the cache cut the layer walk and draw from 2.0 to
+	0.5 ms a frame with one player, and the CPU time of a four-player frame from 14.7 to 6.3 ms; a rewritten
+	buffer the GPU still reads is renamed (see `Gx2BufferObject::PrepareCpuWrite()`).
 */
 #if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE) && \
 	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL) || \
-	 defined(WITH_RHI_GX) || defined(WITH_RHI_PICA) || defined(WITH_RHI_GS) || defined(WITH_RHI_GU))
+	 defined(WITH_RHI_GX2) || defined(WITH_RHI_GX) || defined(WITH_RHI_PICA) || defined(WITH_RHI_GS) || defined(WITH_RHI_GU))
 #	define TILEMAP_CACHE_LAYER_WINDOW
 #endif
 
@@ -785,7 +787,7 @@ namespace Jazz2::Tiles
 			thousand of them - more than the whole heap the consoles have left. Desktop targets have the memory,
 			so the effect stays unbounded there.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxDebrisCount = 448;
 #elif defined(DEATH_TARGET_N64)
@@ -801,7 +803,7 @@ namespace Jazz2::Tiles
 			`intensity * ~190` live particles. Left alone it would sit at @ref MaxDebrisCount on its own and
 			leave nothing for a death burst, which is the effect that actually matters.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxWeatherDebrisCount = 128;
 #elif defined(DEATH_TARGET_N64)
@@ -817,8 +819,8 @@ namespace Jazz2::Tiles
 			be batched with the others. Rounded to a few levels on the consoles that budget their particles
 			(see @ref MaxWeatherDebrisCount), the weather is a few draws.
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t WeatherDepthStep = 40;
 #else
 		static constexpr std::int32_t WeatherDepthStep = 1;
@@ -842,7 +844,7 @@ namespace Jazz2::Tiles
 			the step instead of dropping the tail keeps the burst covering the whole sprite - the particles just
 			get proportionally fewer and bigger (see @ref GetParticleDebrisStep()).
 		*/
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxParticleDebrisPerBurst = 256;
 #elif defined(DEATH_TARGET_N64)

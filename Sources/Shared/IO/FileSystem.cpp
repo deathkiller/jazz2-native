@@ -337,8 +337,9 @@ namespace Death { namespace IO {
 				return AndroidAssetStream::Prefix.size();
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
-			defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+			defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
 			// Switch and 3DS mount points: romfs:, sdmc:, etc.
+			// Wii U mount points: fs: (wut's devoptab, with "/vol/external01" and "/vol/content" under it)
 			// N64 mount points: rom:, eeprom:, sd:, etc.
 			// PS2 mount points: cdfs:, cdrom0:, mc0:, mass:, host:, etc.
 			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
@@ -349,6 +350,21 @@ namespace Death { namespace IO {
 #		else
 			// "romfs" is the longest name there
 			constexpr std::size_t MaxMountPointLength = 5;
+#		endif
+#		if defined(DEATH_TARGET_WIIU)
+			// On the console, "fs:/vol" is no directory that stat() or mkdir() can reach, only the devices mounted
+			// under it are ("fs:/vol/external01", "fs:/vol/content"). So the device is part of the root, otherwise
+			// CreateDirectories() tries to create "fs:/vol" and fails. Cemu does report "fs:/vol", which hid it.
+			if (path.hasPrefix("fs:/vol/"_s)) {
+				std::size_t i = sizeof("fs:/vol/") - 1;
+				while (i < path.size() && path[i] != '/' && path[i] != '\\') {
+					i++;
+				}
+				if (i < path.size()) {
+					i++;
+				}
+				return i;
+			}
 #		endif
 			// The colon comes after the name, so for the longest one it is at index MaxMountPointLength - with
 			// the bound exclusive, "romfs:" was taken for a relative path and GetAbsolutePath() failed on it
@@ -525,7 +541,7 @@ namespace Death { namespace IO {
 		// Testing S_IRUSR there rejects everything that exists, so on those platforms the file type is all
 		// that is tested and a refused access only surfaces when it is actually attempted.
 #	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
 		static constexpr bool HasFilePermissions = false;
 #	else
 		static constexpr bool HasFilePermissions = true;
@@ -643,7 +659,7 @@ namespace Death { namespace IO {
 		}
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
-		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_WIIU) && !defined(DEATH_TARGET_GAMECUBE) && \
 		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
 		!defined(DEATH_TARGET_MORPHOS)
@@ -661,7 +677,7 @@ namespace Death { namespace IO {
 			static_cast<void>(path);
 			return false;
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || \
+		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || \
 		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS) || \
 		defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 			// nftw() is missing in libnx, libctru, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
@@ -2715,7 +2731,7 @@ namespace Death { namespace IO {
 		}
 
 #if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_WII) && \		
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_WIIU) && \		
 		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
 		!defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS) && \
@@ -2774,7 +2790,7 @@ namespace Death { namespace IO {
 		constexpr std::size_t BufferSize = 128 * 1024;
 #		endif
 #		if defined(DEATH_TARGET_SWITCH)|| defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_GAMECUBE) || \
-			defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || \
+			defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || \
 			defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || \
 			defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || \
 			defined(DEATH_TARGET_MORPHOS)
@@ -2821,11 +2837,13 @@ namespace Death { namespace IO {
 #	endif
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && \
-		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_3DS)
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_3DS) && \
+		!defined(DEATH_TARGET_WIIU)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		// PSL1GHT is excluded because its newlib declares fchmod() without implementing it - lv2 has only a
 		// path-based chmod - and the copy is no less correct for leaving the destination's own mode alone.
 		// libdragon has neither form of chmod, and nothing it mounts keeps permission bits to update.
+		// WUT's devoptab has only the path-based chmod too, so fchmod() fails there with ENOSYS.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;
 		}

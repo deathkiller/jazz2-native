@@ -19,6 +19,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 @ref consoles-n64 "Nintendo 64" | libdragon @m_span{m-text m-dim} (`cmake/toolchains/n64.cmake`) @m_endspan | `RDP` --- fixed-function | `N64` | `jazz2.z64` @m_span{m-text m-dim} (bootable ROM) @m_endspan
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
+@ref consoles-wiiu "Nintendo Wii U" | devkitPPC + wut @m_span{m-text m-dim} (`WiiU.cmake`) @m_endspan | `GX2` @m_span{m-text m-dim} (native, <b>shaders</b>) @m_endspan | SDL2 | `jazz2.wuhb` @m_span{m-text m-dim} (Wii U Homebrew Bundle) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan and `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-3ds "Nintendo 3DS" | devkitARM + libctru + citro3d @m_span{m-text m-dim} (`3DS.cmake`) @m_endspan | `PICA` --- fixed-function | `Ctr` | `Jazz2.3dsx` @m_span{m-text m-dim} (in a staged `sdmc/` tree) @m_endspan
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
@@ -29,10 +30,10 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 
 @m_class{m-noindent}
 
-On the first eight `NCINE_PREFERRED_RHI` is pinned to the console's one backend and any other value
-is a configure error. The PlayStation 3's `RSX` is a full shader backend, so it keeps the
-post-processing chain and differs from desktop mainly in <em>when</em> its shaders are compiled
-@m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita and the Switch are ordinary
+On the fixed-function ones `NCINE_PREFERRED_RHI` is pinned to the console's one backend and any other
+value is a configure error. The PlayStation 3's `RSX` and the Wii U's `GX2` are full shader backends, so
+they keep the post-processing chain and differ from desktop mainly in <em>when</em> their shaders are
+compiled @m_span{m-text m-dim} (see @ref consoles-ps3 and @ref consoles-wiiu) @m_endspan. The PS Vita and the Switch are ordinary
 shader platforms. For them mostly the deployment parts apply.
 
 @section consoles-common What every console build shares
@@ -202,20 +203,20 @@ can't be reconverted can be upgraded from the unversioned layout to version 1 by
 
 Decided at configure time from the platform. Values are for a default `Release` configuration.
 
-Feature | N64 | Dreamcast | Wii | GameCube | 3DS | PSP | PS2 | PS3 | Vita | Switch
-------- | --- | --------- | --- | -------- | --- | --- | --- | --- | ---- | ------
-Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (pthread shim over libctru) @m_endspan | Yes | **No** | **No** | Yes | Yes
-Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No | No
-Audio backend | `N64` @m_span{m-text m-dim} (RSP mixer) @m_endspan | `AICA` | `ASND` | `ASND` | `NDSP` | `PSP` | `PS2` | `PS3` | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
-Sound effects | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | Yes | Yes | SDK-dependent | SDK-dependent
-Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, with libxmp packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
-Underwater low-pass filter | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | SDK-dependent | Yes
-Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (one controller) @m_endspan | Yes @m_span{m-text m-dim} (one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
-Post-processing and rescale filters | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes | Yes
-X-ray and blur-behind tile layers @m_span{m-text m-dim} (`TILEMAP_LAYER_EFFECTS`) @m_endspan | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes @m_span{m-text m-dim} (microcode generated, not yet run on a console) @m_endspan | Yes | Yes
-External `.shader` files | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (no runtime compiler) @m_endspan | Yes | Yes
-Converts the game data itself | **No** | **No** | Yes | **No** | Yes | Yes | **No** | Yes | Yes | Yes
+Feature | N64 | Dreamcast | Wii | GameCube | Wii U | 3DS | PSP | PS2 | PS3 | Vita | Switch
+------- | --- | --------- | --- | -------- | ----- | --- | --- | --- | --- | ---- | ------
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (newlib pthreads) @m_endspan | Yes @m_span{m-text m-dim} (pthread shim over libctru) @m_endspan | Yes | **No** | **No** | Yes | Yes
+Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No | No | No
+Audio backend | `N64` @m_span{m-text m-dim} (RSP mixer) @m_endspan | `AICA` | `ASND` | `ASND` | `SDL` @m_span{m-text m-dim} (software mixer, AX voices through wiiu-sdl2) @m_endspan | `NDSP` | `PSP` | `PS2` | `PS3` | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | Yes | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | Yes | Yes | SDK-dependent | SDK-dependent
+Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, with libxmp packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
+Underwater low-pass filter | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | SDK-dependent | Yes
+Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (one controller) @m_endspan | Yes @m_span{m-text m-dim} (one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (not enabled yet, see @ref consoles-wiiu-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
+Post-processing and rescale filters | **No** | **No** | **No** | **No** | Yes | **No** | **No** | **No** | Yes | Yes | Yes
+X-ray and blur-behind tile layers @m_span{m-text m-dim} (`TILEMAP_LAYER_EFFECTS`) @m_endspan | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes @m_span{m-text m-dim} (microcode generated, not yet run on a console) @m_endspan | Yes | Yes
+External `.shader` files | **No** | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (shaders are compiled offline) @m_endspan | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (no runtime compiler) @m_endspan | Yes | Yes
+Converts the game data itself | **No** | **No** | Yes | **No** | Yes | Yes | Yes | **No** | Yes | Yes | Yes
 
 @subsection consoles-common-audio Audio backends
 
@@ -944,6 +945,93 @@ Dolphin's TCP socket on port <b>55020</b>. Without the adapter nothing is writte
 -   Online multiplayer is disabled, but local splitscreen works.
 
 - - -
+
+@section consoles-wiiu Nintendo Wii U
+
+Three 1.24 GHz PowerPC cores (Espresso) with 1 GB of memory for applications. There is no OpenGL on the
+console. The `GX2` rendering backend @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/GX2" @ce) @m_endspan
+draws with the console's R700-class GPU directly: the full shader pipeline, with lighting, blur, water and
+every rescale shader. It renders on the GX2 context SDL2's video driver (devkitPro's `wiiu-sdl2`) sets up
+and presents to the TV and GamePad scan buffers itself.
+
+Input and audio go through SDL2. The result is a native application for the
+<b>Aroma</b> environment, not a vWii one.
+
+@subsection consoles-wiiu-toolchain Toolchain
+
+@code{.sh}
+# Install devkitPro's pacman, then the Wii U group, SDL2 and zlib
+sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis
+
+export DEVKITPRO=/opt/devkitpro
+@endcode
+
+@m_class{m-noindent}
+
+The `devkitpro/devkitppc` Docker image has all of it. The toolchain file is
+@cpp "$DEVKITPRO/cmake/WiiU.cmake" @ce.
+
+@subsection consoles-wiiu-build Building
+
+@code{.sh}
+cmake -B ./build/wiiu/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/WiiU.cmake
+make -j $(nproc) -C ./build/wiiu/
+@endcode
+
+@m_class{m-noindent}
+
+This builds the native `GX2` backend. Its shaders are compiled offline and committed in
+@cpp "Sources/Shaders/Generated/Gx2GeneratedShaders.h" @ce, so the build does not need CafeGLSL; only
+changing a shader does @m_span{m-text m-dim} (`--emit-gx2`, see @ref shader-compiler) @m_endspan.
+
+The build makes @cpp "build/wiiu/jazz2.rpx" @ce and @cpp "build/wiiu/jazz2.wuhb" @ce, a bundle of
+the executable, @cpp "Content" @ce, the icon and the splash screens
+@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. A tree prepared with AssetPacker
+can be bundled instead with `-D NCINE_CONTENT_DIR=...`, but it is not needed: there is enough memory to
+convert the original files on the console.
+
+@subsection consoles-wiiu-deploy Deploying and running
+
+-   Copy @cpp "jazz2.wuhb" @ce to @cpp "sd:/wiiu/apps/" @ce. Aroma shows every bundle there as an
+    icon on the Wii U Menu, nothing has to be installed.
+-   Copy the original Jazz Jackrabbit 2 files to @cpp "sd:/wiiu/apps/Jazz2/Source/" @ce. They are
+    converted into @cpp "sd:/wiiu/apps/Jazz2/Cache/" @ce on the first start, which takes a while.
+    Settings, saves and @cpp "Jazz2.log" @ce are written next to them.
+-   <b>Cemu</b> (2.6) runs the @cpp ".wuhb" @ce too, with its emulated SD card holding
+    @cpp "wiiu/apps/Jazz2/Source" @ce. It does not evaluate the condition of a trap instruction and never moves
+    past a conditional one (`tw`/`twi`), even though it never fires on hardware, and GCC 16 emits
+    those for libstdc++'s checks (the `shared_ptr` reference count overflow test, for example). The
+    game then hangs with a grey screen at the first one. Replacing the conditional traps in @cpp "jazz2.elf" @ce with `nop` and
+    running `elf2rpl` and `wuhbtool` again gives a build Cemu can run. The console is not affected.
+
+@m_class{m-noindent}
+
+<b>Logs:</b> @cpp "Jazz2.log" @ce on the SD card, and every line also goes to `OSReport()`, which
+Cemu shows with coreinit logging on.
+
+@subsection consoles-wiiu-limits Limits and known issues
+
+-   The frame follows the console's TV output setting: 1920x1080 when the console outputs
+    1080i or 1080p, 1280x720 for 720p and 854x480 for 480p (the size wiiu-sdl2 gives the TV display). The screen buffer and the main render targets
+    go in MEM1, the console's fast memory, while it has room, and in MEM2 otherwise; if there is no room
+    for a 1920x1080 screen buffer at all, it falls back to 1280x720 and logs a warning. The level itself is still drawn at the
+    <b>Rendering resolution</b>; a bigger screen buffer sharpens the upscale, the rescale shaders and the
+    text. The same frame is shown on the GamePad.
+-   With <b>Zoom out</b> and three or four players, the supersampled scene is scaled to the
+    screen with a plain linear filter instead of the antialiasing pass other platforms use, which costs
+    the console about 11 ms per frame at 1080p. Turning on <b>Antialiasing</b> or a rescale mode brings
+    the full pass back, and with it the cost: with four players and Zoom out at 1080p, <b>Antialiasing</b>
+    drops the game from 60 to about 43 fps on the console; with it off, every setup measured there holds
+    60 fps. The GPU draws one frame while the game prepares the next, so the picture is up
+    to one frame late.
+-   Batched sprites (drawn as instances from a uniform block) and tile layers while
+    scrolling run on the console without problems. Cemu's frame rate says nothing about the console's.
+-   No online multiplayer, update check or level pack downloads yet. wut provides sockets and devkitPro
+    packages libcurl and mbedTLS for the Wii U, but the port does not enable them (`WITH_ONLINE_MULTIPLAYER`
+    is off, libcurl is not linked); that needs testing on a console first. Local multiplayer works with
+    any mix of the GamePad, Pro Controllers and Wii Remotes.
+-   Asynchronous tracing is off, because the RPX format has no thread-local storage.
 
 @section consoles-gamecube Nintendo GameCube
 

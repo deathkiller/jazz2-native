@@ -129,7 +129,7 @@ namespace
 	// they are released. The intro cinematic's full-screen PSMCT32 frame alone is 140 of the 422 pages the
 	// texture cache has.
 #if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || \
-		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2)
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2)
 	constexpr bool ReleaseAssetsBeforeLoading = true;
 #else
 	constexpr bool ReleaseAssetsBeforeLoading = false;
@@ -459,11 +459,17 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 				LOGI("Frame limit set to {} FPS", PreferencesCache::MaxFps);
 			}
 		}
-#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_WIIU) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS)
 		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
 		// aspect-fits the logical view into it, so no explicit override is wanted there (the Amiga backend
 		// also picks its own screen mode, from the performance preset)
 		config.Resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
+#elif defined(DEATH_TARGET_WIIU)
+		// The resolution is left unset, so the window fills SDL's TV display, which wiiu-sdl2 sizes after the
+		// console's TV setting (854x480, 1280x720 or 1920x1080). The frame then reaches the TV without scaling,
+		// and GX2 scales it to the GamePad.
+		config.Fullscreen = false;
+		config.Resizable = false;
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

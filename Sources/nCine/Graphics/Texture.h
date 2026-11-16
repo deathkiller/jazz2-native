@@ -200,6 +200,15 @@ namespace nCine
 		*/
 		void ReleaseHostCopy();
 
+		/**
+			@brief Hints that this render target is drawn into and read every frame, so it should be in fast memory
+
+			Backends with a small pool of faster video memory put such targets there while it has room; the Wii U's
+			GX2 backend uses MEM1, where these passes take about half the GPU time. Elsewhere it does nothing. Ask
+			for it only on the few targets that matter most, the pool is first come, first served.
+		*/
+		void SetPreferFastMemory(bool value);
+
 		/** @brief Sets the backend object label for the texture, for debugging */
 		void SetTextureLabel(const char* label);
 

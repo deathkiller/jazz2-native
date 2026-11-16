@@ -23,9 +23,17 @@ using namespace Death::Containers::Literals;
 // fetching for the frame in flight. Only the tile-layer and lighting MESHES stream through these buffers
 // (sprites take their geometry from the device's static corner stream), which is why they were the only
 // thing that flickered.
-#if defined(WITH_RHI_RSX)
+//
+// GX2 (Wii U) is the same story: its buffer objects live in MEM2, which the CPU writes straight into, and nothing
+// renames them. Unlike the RSX's, the CPU's data cache is not coherent with the GPU there, so the written part of
+// a section still has to be flushed (GX2Invalidate) before the frame's draws, which FlushUnmap() does when
+// NCINE_PERSISTENT_MAPPING_NEEDS_FLUSH is defined. Its fences are real, see Gx2Device::InsertFence().
+#if defined(WITH_RHI_RSX) || defined(WITH_RHI_GX2)
 #	define NCINE_HAS_PERSISTENT_MAPPING
 #	define NCINE_ALWAYS_PERSISTENT_MAPPING
+#endif
+#if defined(WITH_RHI_GX2)
+#	define NCINE_PERSISTENT_MAPPING_NEEDS_FLUSH
 #endif
 
 namespace nCine
@@ -188,6 +196,12 @@ namespace nCine
 			if (_specs[std::int32_t(buffer.type)].persistent) {
 				// Coherent persistent mappings need no flush or unmap, the free space
 				// is reclaimed when the ring advances to the next section in Remap()
+#if defined(NCINE_PERSISTENT_MAPPING_NEEDS_FLUSH)
+				// The mapping covers the whole storage, so the offset is the section's own
+				if (usedSize > 0) {
+					buffer.object->FlushMappedBufferRange(buffer.sectionOffset, usedSize);
+				}
+#endif
 				continue;
 			}
 

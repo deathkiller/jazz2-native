@@ -92,7 +92,7 @@ namespace Jazz2
 			The caption tile only feeds the RGB keyboard lighting on PC (HUD::UpdateRgbLights); the consoles
 			never read it, so they do not spend the decode and the 3 KB per level on it.
 		*/
-#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGA) || \
 		defined(DEATH_TARGET_MORPHOS) || defined(DEATH_TARGET_AMIGAOS4)
 		constexpr bool KeepCaptionTiles = false;
@@ -206,6 +206,9 @@ namespace Jazz2
 		// DragonFS image appended to the ROM, mounted read-only at "rom:/", the packaging
 		// stages the tree under "Content/" inside it
 		return "rom:/Content/"_s;
+#elif defined(DEATH_TARGET_WIIU)
+		// Packed inside the .wuhb bundle, which the Aroma environment mounts read-only at "/vol/content"
+		return "fs:/vol/content/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -411,6 +414,9 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_N64)
 		// Read-only like the content path - the cache is prebaked into the DragonFS image
 		return "rom:/Cache/"_s;
+#elif defined(DEATH_TARGET_WIIU)
+		// Next to the .wuhb in the standard Aroma layout ("sd:/wiiu/apps/"), the SD card is "fs:/vol/external01"
+		return "fs:/vol/external01/wiiu/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -450,6 +456,8 @@ namespace Jazz2
 		return "sdmc:/Games/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_N64)
 		return "rom:/Source/"_s;
+#elif defined(DEATH_TARGET_WIIU)
+		return "fs:/vol/external01/wiiu/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -2740,7 +2748,7 @@ namespace Jazz2
 		// power-of-two textures (TinyGL on MorphOS), and the source sheet's own row width is exactly what
 		// broke on the PlayStation 2 above - secretf/haunted1's 32-tile row is 1088 px padded, which no
 		// limit that is a power of two can hold.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_3DS) || defined(WITH_RHI_LEGACYGL)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
@@ -2816,7 +2824,7 @@ namespace Jazz2
 		// buffer needs), so the argument there is only about the SIZE of the run: a 510x1020 8-bit chunk is
 		// 64 contiguous pages out of a 352-page cache, which is the first thing to fail once the window is
 		// broken up. Half-height chunks are 32 pages each for the same total.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_3DS) || defined(WITH_RHI_LEGACYGL)
 #	if defined(DEATH_TARGET_N64)

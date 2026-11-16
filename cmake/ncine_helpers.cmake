@@ -396,6 +396,9 @@ function(ncine_apply_compiler_options target)
 	elseif(NINTENDO_GAMECUBE)
 		# devkitPPC/libogc (the devkitPro GameCube.cmake toolchain file sets NINTENDO_GAMECUBE)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_GAMECUBE")
+	elseif(NINTENDO_WIIU)
+		# devkitPPC/wut (the devkitPro WiiU.cmake toolchain file sets NINTENDO_WIIU, and __WIIU__ with it)
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_WIIU")
 	elseif(NINTENDO_3DS)
 		# devkitARM/libctru (the devkitPro 3DS.cmake toolchain file sets NINTENDO_3DS, and __3DS__ with it)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_3DS")
@@ -674,7 +677,7 @@ function(ncine_apply_compiler_options target)
 
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-fvar-tracking-assignments>)
 
-			if(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA)
+			if(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_WIIU OR NINTENDO_3DS OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA)
 				# Nothing reads errno after a math call, and without this every `std::sqrt` is the hardware square root
 				# followed by a NaN check and a fallback call into newlib's `sqrtf` to set it (seen in the SH-4 and
 				# MIPS output alike), and GCC cannot treat libm calls as pure for common-subexpression elimination.
@@ -686,7 +689,7 @@ function(ncine_apply_compiler_options target)
 			if(NINTENDO_SWITCH)
 				# -O3/-Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
-			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3 OR PLATFORM_AMIGA)
+			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_WIIU OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3 OR PLATFORM_AMIGA)
 				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3, where -O3's extra
 				# inlining and loop transformations aren't worth the code they add (24 MB GameCube, 16 MB
 				# Dreamcast, 24 MB usable of the PSP's 32 MB) - and where `DEATH_USE_FAST_MATH`, if it's turned on
