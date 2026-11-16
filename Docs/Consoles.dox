@@ -1021,7 +1021,7 @@ Cemu shows with coreinit logging on.
 -   With `Software`, lower <b>Rendering resolution</b> in the graphics options if the frame rate drops.
     It always draws a 1280x720 frame, scaled up by the console for a 1080p TV.
 -   With `GX2`, the frame follows the console's TV output setting: 1920x1080 when the console outputs
-    1080i or 1080p, otherwise 1280x720. The screen buffer and the main render targets
+    1080i or 1080p, 1280x720 for 720p and 854x480 for 480p (the size wiiu-sdl2 gives the TV display). The screen buffer and the main render targets
     go in MEM1, the console's fast memory, while it has room, and in MEM2 otherwise; if there is no room
     for a 1920x1080 screen buffer at all, it falls back to 1280x720 and logs a warning. The level itself is still drawn at the
     <b>Rendering resolution</b>; a bigger screen buffer sharpens the upscale, the rescale shaders and the
