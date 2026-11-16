@@ -963,8 +963,8 @@ Input and audio go through SDL2. The result is a native application for the
 @subsection consoles-wiiu-toolchain Toolchain
 
 @code{.sh}
-# Install devkitPro's pacman, then the Wii U group, SDL2 and zlib
-sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis
+# Install devkitPro's pacman, then the Wii U group, SDL2, zlib and libcurl
+sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis wiiu-curl
 
 export DEVKITPRO=/opt/devkitpro
 @endcode
@@ -990,7 +990,9 @@ changing a shader does @m_span{m-text m-dim} (`--emit-gx2`, see @ref shader-comp
 
 The build makes @cpp "build/wiiu/jazz2.rpx" @ce and @cpp "build/wiiu/jazz2.wuhb" @ce, a bundle of
 the executable, @cpp "Content" @ce, the icon and the splash screens
-@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. A tree prepared with AssetPacker
+@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. With libcurl found, the configure
+step also downloads curl.se's `cacert.pem`, and the build stages @cpp "Content" @ce with it in
+@cpp "build/wiiu/wuhb_content" @ce and bundles that instead, because `wuhbtool` takes one content directory. A tree prepared with AssetPacker
 can be bundled instead with `-D NCINE_CONTENT_DIR=...`, but it is not needed: there is enough memory to
 convert the original files on the console.
 
@@ -1019,6 +1021,11 @@ convert the original files on the console.
     With the CPU mode set to the single-core interpreter in the game profile
     @m_span{m-text m-dim} (`cpuMode = 0` under `[CPU]` in @cpp "gameProfiles/<title ID>.ini" @ce) @m_endspan
     the copies are correct. The console is not affected.
+-   Cemu on Linux reads `errno` for `connect()` after it has written its log line, and that line calls
+    @cpp localtime() @ce, which sets `errno` to `ENOENT` when there is no @cpp "/etc/localtime" @ce
+    (a bare Docker container, for example). Every non-blocking TCP connect then fails at once ("Immediate
+    connect fail ... Unknown error 109999" in curl's trace), so the update check and the server list
+    cannot connect. Setting `TZ` (`TZ=UTC0`) avoids it. UDP, and so ENet, is not affected.
 
 @m_class{m-noindent}
 
@@ -1049,8 +1056,19 @@ Cemu shows with coreinit logging on.
     console: joining the Linux dedicated server by a typed address and through local discovery (connect,
     asset download, joining a level), and hosting a game that the Linux client joined. In
     Cemu, local discovery finds nothing: sending to the broadcast address fails with error 109999.
--   No update check, online server list or level pack downloads yet: devkitPro packages libcurl and
-    mbedTLS for the Wii U, but libcurl is not linked. A server can still be joined by its address.
+-   <b>The update check and the online server list use devkitPro's libcurl</b> @m_span{m-text m-dim}
+    (`wiiu-curl`, on mbedTLS over wut's sockets) @m_endspan. It has no CMake config, so the mbedTLS and
+    Brotli archives it needs are linked by name. devkitPPC has no libatomic and the Espresso has no 64-bit
+    atomic instructions, so the `__atomic_*_8` calls the `std::atomic<std::int64_t>` byte counters of
+    `WebRequest` turn into are defined in @cpp "nCine/Backends/WiiU/Atomic64.c" @ce, under a coreinit
+    spin lock; the file is compiled without LTO, because the calls only appear during link-time code
+    generation. Level packs, which are built wherever there is an HTTP backend, are in as well. Tested on
+    a console: the server list over HTTPS. The update check is tested in Cemu only.
+-   <b>HTTPS needs the CA bundle in the bundle.</b> This libcurl's default CA path is the console's
+    certificate title @m_span{m-text m-dim} (@cpp "/vol/storage_mlc01/sys/title/0005001b/10054000/content/scerts" @ce)
+    @m_endspan, which holds only the roots Nintendo chose for its own services and is not there at all in
+    Cemu (the requests fail with mbedTLS `-0x2900` naming that path). `ApplyPlatformWebRequestOptions()`
+    points libcurl at @cpp "/vol/content/cacert.pem" @ce instead, as on the 3DS, PSP and Vita.
 -   Local multiplayer works with any mix of the GamePad, Pro Controllers and Wii Remotes.
 -   Asynchronous tracing is off, because the RPX format has no thread-local storage.
 
