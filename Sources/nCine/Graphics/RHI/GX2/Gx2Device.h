@@ -240,6 +240,14 @@ namespace nCine::RHI::GX2
 		static void EnterBackground();
 		/** @brief Resumes GPU submission (`SDL_APP_DIDENTERFOREGROUND`) */
 		static void EnterForeground();
+		/**
+		 * @brief Draws the system software keyboard over the frame from the next present on, until it has
+		 * disappeared
+		 *
+		 * wiiu-sdl2 shows the keyboard and feeds it the pads, but draws it only in its own renderer's present,
+		 * which this backend replaces. Call it once the keyboard was asked to appear (`SDL_StartTextInput()`).
+		 */
+		static void ShowScreenKeyboardOverlay();
 
 		/** @brief Width of the screen colour buffer, which is the drawable size the window backend reports */
 		static std::int32_t GetScreenWidth();
@@ -306,6 +314,8 @@ namespace nCine::RHI::GX2
 		static bool _inForeground;
 		static bool _vsync;
 		static bool _firstFrame;
+		/** @brief Whether the system software keyboard is drawn over the frame, see @ref ShowScreenKeyboardOverlay() */
+		static bool _screenKeyboardOverlay;
 		/** @brief Token of the batch that carried the last `GX2SwapScanBuffers()`, 0 if none */
 		static std::uint32_t _swapToken;
 		static std::uint32_t _frameCounter;
@@ -342,6 +352,8 @@ namespace nCine::RHI::GX2
 		/** @brief Program whose shaders are currently set on the GPU */
 		static const Gx2ShaderProgram* _lastProgram;
 
+		/** @brief Draws the system software keyboard into the screen colour buffer while it is on screen */
+		static void DrawScreenKeyboard();
 		/** @brief Allocates the screen colour buffer's image for `_screenBuffer.surface`, in MEM1 if it fits */
 		static bool AllocScreenMemory();
 		/** @brief Whether GX2 work may be submitted right now */

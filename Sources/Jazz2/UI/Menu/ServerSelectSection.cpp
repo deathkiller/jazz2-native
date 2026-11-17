@@ -145,11 +145,12 @@ namespace Jazz2::UI::Menu
 			if (_waitForIpInput) {
 				_ipInput.Update(timeMult);
 
-#if defined(DEATH_TARGET_ANDROID)
-				// The on-screen keyboard can also be dismissed by the user, so follow the reported state
-				// instead of assuming it stays shown until the game hides it
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WIIU)
+				// The on-screen keyboard can also be dismissed by the user (or closes on OK on the Wii U), so follow
+				// the reported state instead of assuming it stays shown until the game hides it
 				_keyboardVisible = theApplication().IsScreenKeyboardVisible();
-
+#endif
+#if defined(DEATH_TARGET_ANDROID)
 				_recalcVisibleBoundsTimeLeft -= timeMult;
 				if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 					_recalcVisibleBoundsTimeLeft = 60.0f;

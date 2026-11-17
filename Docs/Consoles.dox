@@ -1026,6 +1026,9 @@ convert the original files on the console.
     (a bare Docker container, for example). Every non-blocking TCP connect then fails at once ("Immediate
     connect fail ... Unknown error 109999" in curl's trace), so the update check and the server list
     cannot connect. Setting `TZ` (`TZ=UTC0`) avoids it. UDP, and so ENet, is not affected.
+-   Cemu 2.6 keeps reporting the system keyboard's OK button as pressed after the keyboard has closed, so
+    wiiu-sdl2 sends its OK events again on every frame, with an empty string, and a typed server address is
+    cleared right after it was entered. The console reports OK only once and is not affected.
 
 @m_class{m-noindent}
 
