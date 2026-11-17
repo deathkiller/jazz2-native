@@ -1810,10 +1810,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						auto s = fs::Open(fullPath, FileAccess::Read);
 
 						packetOut.WriteVariableInt64(s->GetSize());
-						packetOut.WriteValue<std::uint32_t>(nCine::crc32(*s));
+						packetOut.WriteValueAsLE<std::uint32_t>(nCine::crc32(*s));
 					} else {
 						packetOut.WriteVariableInt64(0);
-						packetOut.WriteValue<std::uint32_t>(0);
+						packetOut.WriteValueAsLE<std::uint32_t>(0);
 					}
 				}
 

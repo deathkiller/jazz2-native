@@ -90,7 +90,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableInt32(c.Gems[i]);
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			packet.WriteValue<std::uint16_t>(c.Ammo[i]);
+			packet.WriteValueAsLE<std::uint16_t>(c.Ammo[i]);
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
 			packet.WriteValue<std::uint8_t>(c.WeaponUpgrades[i]);
@@ -109,7 +109,7 @@ namespace Jazz2::Multiplayer
 			c.Gems[i] = packet.ReadVariableInt32();
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			c.Ammo[i] = packet.ReadValue<std::uint16_t>();
+			c.Ammo[i] = packet.ReadValueAsLE<std::uint16_t>();
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
 			c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
@@ -484,8 +484,8 @@ namespace Jazz2::Multiplayer
 				// TODO: sourceRelative
 				// TODO: looping
 				packet.WriteValue<std::uint8_t>((std::uint8_t)sfx.Flags);
-				packet.WriteValue<std::uint16_t>(sfx.Gain);
-				packet.WriteValue<std::uint16_t>(sfx.Pitch);
+				packet.WriteValueAsLE<std::uint16_t>(sfx.Gain);
+				packet.WriteValueAsLE<std::uint16_t>(sfx.Pitch);
 				packet.WriteVariableUint32((std::uint32_t)sfx.Identifier.size());
 				packet.Write(sfx.Identifier.data(), (std::uint32_t)sfx.Identifier.size());
 
@@ -1031,10 +1031,10 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(20);
 					packet.WriteVariableUint32(_lastSpawnedActorId);
 					packet.WriteVariableUint64(now);
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
+					packet.WriteValueAsLE<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
+					packet.WriteValueAsLE<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
+					packet.WriteValueAsLE<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+					packet.WriteValueAsLE<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
 					packet.WriteVariableUint32((std::uint32_t)flags);
 
 					if (_seqNumWarped != 0) {
@@ -1324,8 +1324,8 @@ namespace Jazz2::Multiplayer
 				// TODO: sourceRelative
 				// TODO: looping
 				packet.WriteValue<std::uint8_t>((std::uint8_t)flags);
-				packet.WriteValue<std::uint16_t>(floatToHalf(gain));
-				packet.WriteValue<std::uint16_t>(floatToHalf(pitch));
+				packet.WriteValueAsLE<std::uint16_t>(floatToHalf(gain));
+				packet.WriteValueAsLE<std::uint16_t>(floatToHalf(pitch));
 				packet.WriteVariableUint32((std::uint32_t)identifier.size());
 				packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
@@ -1386,8 +1386,8 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableInt32((std::int32_t)pos.X);
 			packet.WriteVariableInt32((std::int32_t)pos.Y);
 			// TODO: looping
-			packet.WriteValue<std::uint16_t>(floatToHalf(gain));
-			packet.WriteValue<std::uint16_t>(floatToHalf(pitch));
+			packet.WriteValueAsLE<std::uint16_t>(floatToHalf(gain));
+			packet.WriteValueAsLE<std::uint16_t>(floatToHalf(pitch));
 			packet.WriteVariableUint32((std::uint32_t)identifier.size());
 			packet.Write(identifier.data(), (std::uint32_t)identifier.size());
 
@@ -1676,8 +1676,8 @@ namespace Jazz2::Multiplayer
 
 								MemoryStream packet2(12);
 								packet2.WriteVariableUint32(peerDesc->Player->_playerIndex);
-								packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
-								packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+								packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+								packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
 								_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 							}
 						}
@@ -1713,8 +1713,8 @@ namespace Jazz2::Multiplayer
 
 					MemoryStream packet2(12);
 					packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
-					packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+					packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+					packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 				}
 				return canRespawn;
@@ -1734,8 +1734,8 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet2(12);
 				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
-				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.X * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_checkpointPos.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 			}
 
@@ -1827,12 +1827,12 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet(20);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
 			}
 		} else {
@@ -1848,10 +1848,10 @@ namespace Jazz2::Multiplayer
 		MemoryStream packetAck(24);
 		packetAck.WriteVariableUint32(_lastSpawnedActorId);
 		packetAck.WriteVariableUint64(now);
-		packetAck.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
-		packetAck.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-		packetAck.WriteValue<std::int16_t>((std::int16_t)(speed.X * 512.0f));
-		packetAck.WriteValue<std::int16_t>((std::int16_t)(speed.Y * 512.0f));
+		packetAck.WriteValueAsLE<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+		packetAck.WriteValueAsLE<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+		packetAck.WriteValueAsLE<std::int16_t>((std::int16_t)(speed.X * 512.0f));
+		packetAck.WriteValueAsLE<std::int16_t>((std::int16_t)(speed.Y * 512.0f));
 		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
 	}
 
@@ -4820,8 +4820,8 @@ namespace Jazz2::Multiplayer
 
 											MemoryStream packet2(12);
 											packet2.WriteVariableUint32(peerDesc->Player->_playerIndex);
-											packet2.WriteValue<std::int32_t>((std::int32_t)(checkpointPos.X * 512.0f));
-											packet2.WriteValue<std::int32_t>((std::int32_t)(checkpointPos.Y * 512.0f));
+											packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(checkpointPos.X * 512.0f));
+											packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(checkpointPos.Y * 512.0f));
 											_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet2);
 										}
 									}
@@ -5167,7 +5167,7 @@ namespace Jazz2::Multiplayer
 				String path{NoInit, pathLength};
 				packet.Read(path.data(), pathLength);
 				std::int64_t size = packet.ReadVariableInt64();
-				std::uint32_t crc32 = packet.ReadValue<std::uint32_t>();
+				std::uint32_t crc32 = packet.ReadValueAsLE<std::uint32_t>();
 
 				bool found = false;
 				for (std::size_t j = 0; j < _requiredAssets.size(); j++) {
@@ -5347,10 +5347,10 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(data);
 		std::uint32_t playerIndex = packet.ReadVariableUint32();
 		std::uint64_t now = packet.ReadVariableUint64();
-		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+		float posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
 		RemotePlayerOnServer::PlayerFlags flags = (RemotePlayerOnServer::PlayerFlags)packet.ReadVariableUint32();
 
 		// TODO: Special move
@@ -5478,12 +5478,12 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet2(20);
 				packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
-				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedPos.X * 512.0f));
-				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedPos.Y * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedX * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedY * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(acceptedPos.X * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(acceptedPos.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(acceptedSpeedX * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(acceptedSpeedY * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
 			}
 
@@ -5688,10 +5688,10 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(data);
 		std::uint32_t playerIndex = packet.ReadVariableUint32();
 		std::uint64_t seqNum = packet.ReadVariableUint64();
-		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+		float posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
 
 		InvokeAsync([this, peer, playerIndex, seqNum, posX, posY, speedX, speedY]() mutable {
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
@@ -5733,12 +5733,12 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet2(20);
 				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
-				packet2.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
-				packet2.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet2.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet2.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
 				return;
 			}
@@ -6168,8 +6168,8 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(data);
 		std::uint32_t actorId = packet.ReadVariableUint32();
 		SfxFlags flags = (SfxFlags)packet.ReadValue<std::uint8_t>();
-		float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
-		float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
+		float gain = halfToFloat(packet.ReadValueAsLE<std::uint16_t>());
+		float pitch = halfToFloat(packet.ReadValueAsLE<std::uint16_t>());
 		std::uint32_t identifierLength = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(identifierLength > 128) {
 			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
@@ -6273,8 +6273,8 @@ namespace Jazz2::Multiplayer
 		MemoryStream packet(data);
 		std::int32_t posX = packet.ReadVariableInt32();
 		std::int32_t posY = packet.ReadVariableInt32();
-		float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
-		float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
+		float gain = halfToFloat(packet.ReadValueAsLE<std::uint16_t>());
+		float pitch = halfToFloat(packet.ReadValueAsLE<std::uint16_t>());
 		std::uint32_t identifierLength = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(identifierLength > 128) {
 			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
@@ -7092,9 +7092,9 @@ namespace Jazz2::Multiplayer
 		String metadataPath = String(NoInit, metadataLength);
 		packet.Read(metadataPath.data(), metadataLength);
 		AnimState anim = (AnimState)packet.ReadVariableUint32();
-		float rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
-		float scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
-		float scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
+		float rotation = packet.ReadValueAsLE<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+		float scaleX = (float)Half{packet.ReadValueAsLE<std::uint16_t>()};
+		float scaleY = (float)Half{packet.ReadValueAsLE<std::uint16_t>()};
 		Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
 		std::uint8_t blendingPresetRaw = packet.ReadValue<std::uint8_t>();
 		if DEATH_UNLIKELY(blendingPresetRaw > (std::uint8_t)DrawableNode::BlendingPreset::Multiply) {
@@ -7286,8 +7286,8 @@ namespace Jazz2::Multiplayer
 			AnimState anim; Actors::ActorRendererType rendererType;
 
 			if (positionChanged) {
-				posX = packet.ReadValue<std::int32_t>() / 512.0f;
-				posY = packet.ReadValue<std::int32_t>() / 512.0f;
+				posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+				posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
 			} else {
 				posX = 0.0f;
 				posY = 0.0f;
@@ -7295,9 +7295,9 @@ namespace Jazz2::Multiplayer
 
 			if (animationChanged) {
 				anim = (AnimState)packet.ReadVariableUint32();
-				rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
-				scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
-				scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
+				rotation = packet.ReadValueAsLE<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+				scaleX = (float)Half{packet.ReadValueAsLE<std::uint16_t>()};
+				scaleY = (float)Half{packet.ReadValueAsLE<std::uint16_t>()};
 				rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
 			} else {
 				anim = AnimState::Idle;
@@ -8069,7 +8069,7 @@ namespace Jazz2::Multiplayer
 			}
 			case PlayerPropertyType::WeaponAmmo: {
 				std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-				std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
+				std::uint16_t weaponAmmo = packet.ReadValueAsLE<std::uint16_t>();
 				InvokeAsync([this, weaponType, weaponAmmo]() {
 					if (!_players.empty() && weaponType < arraySize(_players[0]->_inventory.WeaponAmmo)) {
 						_players[0]->_inventory.WeaponAmmo[weaponType] = weaponAmmo;
@@ -8245,8 +8245,8 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
 		LOGD("[MP] ServerPacketType::PlayerRespawn - playerIndex: {}, x: {}, y: {}", playerIndex, posX, posY);
 
 		InvokeAsync([this, posX, posY]() {
@@ -8274,12 +8274,12 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
-		float externalForceX = packet.ReadValue<std::int16_t>() / 512.0f;
-		float externalForceY = packet.ReadValue<std::int16_t>() / 512.0f;
+		float posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float externalForceX = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float externalForceY = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
 
 		LOGD("[MP] ServerPacketType::PlayerMoveInstantly - playerIndex: {}, x: {}, y: {}, sx: {}, sy: {}",
 			playerIndex, posX, posY, speedX, speedY);
@@ -8369,7 +8369,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		std::int32_t health = packet.ReadVariableInt32();
-		float pushForce = packet.ReadValue<std::int16_t>() / 512.0f;
+		float pushForce = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
 
 		LOGD("[MP] ServerPacketType::PlayerTakeDamage - playerIndex: {}, health: {}, pushForce: {}", playerIndex, health, pushForce);
 
@@ -8390,7 +8390,7 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		float pushSpeedX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float pushSpeedX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
 		InvokeAsync([this, pushSpeedX]() {
 			if (!_players.empty()) {
 				// TODO: Remove timeMult and make push speed consistent regardless of time multiplier
@@ -8410,10 +8410,10 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-		float forceX = packet.ReadValue<std::int16_t>() / 512.0f;
-		float forceY = packet.ReadValue<std::int16_t>() / 512.0f;
+		float posX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		float forceX = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
+		float forceY = packet.ReadValueAsLE<std::int16_t>() / 512.0f;
 		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 		InvokeAsync([this, posX, posY, forceX, forceY, flags]() {
 			if (!_players.empty()) {
@@ -9233,7 +9233,7 @@ namespace Jazz2::Multiplayer
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet(8);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(pushSpeedX * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(pushSpeedX * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerPush, packet);
 			}
 		}
@@ -9259,10 +9259,10 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet(17);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(force.X * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(force.Y * 512.0f));
 				packet.WriteValue<std::uint8_t>(flags);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerActivateSpring, packet);
 			}
@@ -9464,7 +9464,7 @@ namespace Jazz2::Multiplayer
 				MemoryStream packet(10);
 				packet.WriteVariableUint32(player->_playerIndex);
 				packet.WriteVariableInt32(player->_health);
-				packet.WriteValue<std::int16_t>((std::int16_t)(pushForce * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(pushForce * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerTakeDamage, packet);
 			}
 
@@ -9620,12 +9620,12 @@ namespace Jazz2::Multiplayer
 			if (peerDesc->RemotePeer) {
 				MemoryStream packet(20);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet.WriteValueAsLE<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
 			}
 		}
@@ -9751,7 +9751,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_inventory.WeaponAmmo[(std::uint8_t)weaponType]);
+				packet.WriteValueAsLE<std::uint16_t>((std::uint16_t)mpPlayer->_inventory.WeaponAmmo[(std::uint8_t)weaponType]);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -9878,7 +9878,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 			packet.WriteVariableUint32(mpPlayer->_playerIndex);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)i);
-			packet.WriteValue<std::uint16_t>(mpPlayer->_inventory.WeaponAmmo[i]);
+			packet.WriteValueAsLE<std::uint16_t>(mpPlayer->_inventory.WeaponAmmo[i]);
 			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 
 			MemoryStream packet2(7);
@@ -10265,8 +10265,8 @@ namespace Jazz2::Multiplayer
 						// Hidden and moved away, without saying where it really is
 						body.WriteVariableUint32(s.ActorID);
 						body.WriteValue<std::uint8_t>(0x01 | 0x40 | 0x80);
-						body.WriteValue<std::int32_t>(ParkedPosX);
-						body.WriteValue<std::int32_t>(ParkedPosY);
+						body.WriteValueAsLE<std::int32_t>(ParkedPosX);
+						body.WriteValueAsLE<std::int32_t>(ParkedPosY);
 						body.WriteValue<std::uint8_t>(0);
 						actorCount++;
 
@@ -10314,16 +10314,16 @@ namespace Jazz2::Multiplayer
 				body.WriteVariableUint32(s.ActorID);
 				body.WriteValue<std::uint8_t>(flags);
 				if (positionChanged) {
-					body.WriteValue<std::int32_t>(s.PosX);
-					body.WriteValue<std::int32_t>(s.PosY);
+					body.WriteValueAsLE<std::int32_t>(s.PosX);
+					body.WriteValueAsLE<std::int32_t>(s.PosY);
 					state.LastPosX = s.PosX;
 					state.LastPosY = s.PosY;
 				}
 				if (animationChanged) {
 					body.WriteVariableUint32(s.Animation);
-					body.WriteValue<std::uint16_t>(s.Rotation);
-					body.WriteValue<std::uint16_t>(s.ScaleX);
-					body.WriteValue<std::uint16_t>(s.ScaleY);
+					body.WriteValueAsLE<std::uint16_t>(s.Rotation);
+					body.WriteValueAsLE<std::uint16_t>(s.ScaleX);
+					body.WriteValueAsLE<std::uint16_t>(s.ScaleY);
 					body.WriteValue<std::uint8_t>(s.RendererType);
 					state.LastAnimation = s.Animation;
 					state.LastRotation = s.Rotation;
@@ -11222,8 +11222,8 @@ namespace Jazz2::Multiplayer
 
 				MemoryStream packet(12);
 				packet.WriteVariableUint32(player->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(spawnPos.Y * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(spawnPos.X * 512.0f));
+				packet.WriteValueAsLE<std::int32_t>((std::int32_t)(spawnPos.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerRespawn, packet);
 			}
 		} else if (peerDesc->IsSpectating != SpectateMode::None) {
@@ -14081,10 +14081,10 @@ namespace Jazz2::Multiplayer
 
 		float rotation = actor->_renderer.GetRotation();
 		if (rotation < 0.0f) rotation += fRadAngle360;
-		packet.WriteValue<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
+		packet.WriteValueAsLE<std::uint16_t>((std::uint16_t)(rotation * UINT16_MAX / fRadAngle360));
 		Vector2f scale = actor->_renderer.GetScale();
-		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
-		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
+		packet.WriteValueAsLE<std::uint16_t>((std::uint16_t)Half{scale.X});
+		packet.WriteValueAsLE<std::uint16_t>((std::uint16_t)Half{scale.Y});
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetBlendingPreset());
 
