@@ -185,6 +185,9 @@ namespace Jazz2::UI::Menu
 						theApplication().HideScreenKeyboard();
 						_keyboardVisible = false;
 						RecalcLayoutForScreenKeyboard();
+						_waitForIpInput = false;
+						_ipInput.Deactivate();
+						_shouldStart = true;
 						_transitionTime = 1.0f;
 					}
 				}
