@@ -503,8 +503,16 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 	void LevelScriptLoader::OnAfterScriptCall()
 	{
-		// The objects get what the script changed of them
+		// The objects and the players get what the script changed of them
 		SyncObjectsToActors();
+		for (auto& store : _playerBackingStore) {
+			store.second->ApplyScriptFields();
+		}
+		// Any echo makes the sounds of the level echo (caves)
+		float echo = (levelEcho > 0 ? 1.0f : 0.0f);
+		if (_levelHandler->GetSfxEcho() != echo) {
+			_levelHandler->SetSfxEcho(echo);
+		}
 		// The sprites of the game show what the script changed of the animations
 		if (_animTables != nullptr) {
 			_animTables->Flush();
@@ -632,6 +640,64 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		OnAfterScriptCall();
 	}
 
+	bool LevelScriptLoader::OnLocalChat(StringView text)
+	{
+		// Not for what a script says itself (jjChat())
+		if (GetContextType() != ScriptContextType::Legacy || _sendingScriptChat) {
+			return false;
+		}
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("bool onLocalChat(string &in, CHAT::Type)");
+		if (func == nullptr) {
+			return false;
+		}
+
+		OnBeforeScriptCall();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
+
+		// A message to everyone, CHAT::NORMAL
+		String message(text);
+		ctx->Prepare(func);
+		ctx->SetArgObject(0, &message);
+		ctx->SetArgDWord(1, 0);
+		bool handled = false;
+		std::int32_t r = ctx->Execute();
+		if (r == asEXECUTION_EXCEPTION) {
+			AS_LOG_EXCEPTION(ctx);
+		} else if (r == asEXECUTION_FINISHED) {
+			handled = (ctx->GetReturnByte() != 0);
+		}
+
+		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
+		return handled;
+	}
+
+	void LevelScriptLoader::OnReceivePacket(std::int32_t fromClientID, ArrayView<const std::uint8_t> data)
+	{
+		if (GetContextType() != ScriptContextType::Legacy) {
+			return;
+		}
+		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onReceive(jjSTREAM &in, int)");
+		if (func == nullptr) {
+			return;
+		}
+
+		Legacy::jjSTREAM* stream = Legacy::jjSTREAM::Create();
+		stream->AppendData(data);
+
+		OnBeforeScriptCall();
+		asIScriptContext* ctx = GetEngine()->RequestContext();
+		ctx->Prepare(func);
+		ctx->SetArgAddress(0, stream);
+		ctx->SetArgDWord(1, std::uint32_t(fromClientID));
+		if (ctx->Execute() == asEXECUTION_EXCEPTION) {
+			AS_LOG_EXCEPTION(ctx);
+		}
+		GetEngine()->ReturnContext(ctx);
+		OnAfterScriptCall();
+		stream->Release();
+	}
+
 	bool LevelScriptLoader::OnCheat(StringView cheat)
 	{
 		if (GetContextType() != ScriptContextType::Legacy) {
@@ -707,6 +773,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		std::int32_t currentTick = GetGameTick();
 		for (auto& store : _playerBackingStore) {
 			store.second->ApplyPendingSpeed(currentTick);
+			store.second->UpdateLaps(currentTick);
 		}
 		// Frames of JJ2+ are its ticks, scripts time what they draw by it (blinking, animations)
 		renderFrame = currentTick;
@@ -719,9 +786,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		if (_particles != nullptr || (snowing && OwnsWeather())) {
 			UpdateParticles(currentTick);
 		}
+		// A slow frame runs a few ticks of the objects at once, the age in ticks says nothing then
 		if (!_loopedSamples.empty()) {
-			StopUnusedLoopedSamples();
+			StopUnusedLoopedSamples(_loopCheckTick);
 		}
+		_loopCheckTick = currentTick;
 		UpdateViewSize();
 		UpdateGameMode();
 		RefreshSceneryObjects();
@@ -747,6 +816,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 					_onLevelUpdateLastFrame = currentTick + 1;
 					if (newTick && _animTables != nullptr) {
 						_animTables->Flush();
+					}
+					if (newTick) {
+						for (auto& store : _playerBackingStore) {
+							store.second->DrawInSpriteMode();
+						}
 					}
 					break;
 				}
@@ -824,7 +898,11 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 							// The sign is the side the player faces, as in JJ2+ (scripts set 1 for "direction")
 							draw.xScale = (player->IsFacingLeft() ? -1.0f : 1.0f);
 							draw.yScale = 1.0f;
+							draw.lightType = std::int32_t(p->get_lightType());
+							draw.light = p->get_light();
 							draw._player = p;
+							std::int32_t shield = p->get_shieldType();
+							draw._shields = (shield > 0 && shield < 32 ? (1u << shield) : 0u);
 							const Legacy::jjPLAYERDRAW original = draw;
 
 							ctx->Prepare(onPlayerDraw);
@@ -836,6 +914,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 							// Another frame, offset, scale, angle or mode the script gave the player is drawn here in place of the
 							// player until the next tick (trapezes and burgers), the player isn't drawn without a sprite
+							p->ApplyPlayerDraw(draw, original);
 							bool replaced = (draw.curFrame != original.curFrame || draw.xOffset != original.xOffset ||
 								draw.yOffset != original.yOffset || draw.xScale != original.xScale || draw.yScale != original.yScale ||
 								draw.angle != original.angle || draw.spriteMode != original.spriteMode || draw.spriteParam != original.spriteParam ||
@@ -847,7 +926,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 									// In the colors of the fur of the player, as it draws itself
 									std::uint32_t mode = std::uint32_t(draw.spriteMode);
 									std::int32_t paletteOffset = (mode == Legacy::spriteType_NORMAL
-										? GetSpritePaletteOffset(Legacy::spriteType_PLAYER, std::uint8_t(player->GetPlayerIndex()))
+										? GetSpritePaletteOffset(Legacy::spriteType_PLAYER, std::uint8_t(GetScriptPlayerID(player)))
 										: GetSpritePaletteOffset(mode, draw.spriteParam));
 									Legacy::ScriptWorldCanvas::SpriteDraw sprite = { graphics, cell, draw.xOffset, draw.yOffset, 1, draw.xScale, draw.yScale,
 										draw.angle, mode, draw.spriteParam, GetLayerDrawZ(std::int8_t(draw.layer)), paletteOffset, player };
@@ -861,6 +940,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 
 				GetEngine()->ReturnContext(ctx);
 				OnAfterScriptCall();
+				// A sprite mode a player can't draw itself in, once for the ticks of this frame (the canvas was cleared)
+				for (auto& store : _playerBackingStore) {
+					store.second->DrawInSpriteMode();
+				}
 				break;
 			}
 			case ScriptContextType::Standard: {
@@ -1529,31 +1612,51 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		return result->second.get();
 	}
 
-	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerIndex)
+	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerID)
 	{
-		std::uint8_t playerIndex8 = (std::uint8_t)playerIndex;
-		auto it = _playerBackingStore.find(playerIndex8);
-		if (it != _playerBackingStore.end()) {
-			it->second->SyncPropertiesToBackingStore();
-			return it->second.get();
+		if (Actors::Player* player = GetPlayerByScriptID(playerID)) {
+			return GetPlayerBackingStore(player);
 		}
 
-		auto& players = _levelHandler->_players;
-		auto** pp = std::find_if(players.begin(), players.end(), [playerIndex8](Actors::Player* p) {
-			return (p->GetPlayerIndex() == playerIndex8);
-		});
-		if (pp == players.end()) {
-			// Scripts go through all the players in `jjPlayers` and check `isActive`, so a missing one can't be null
-			if (_absentPlayer == nullptr) {
-				_absentPlayer = std::make_unique<jjPLAYER>(this, nullptr);
+		// Scripts go through all the players in `jjPlayers` and check `isActive`, so a missing one can't be null
+		if (_absentPlayer == nullptr) {
+			_absentPlayer = std::make_unique<jjPLAYER>(this, nullptr);
+		}
+		return _absentPlayer.get();
+	}
+
+	jjPLAYER* LevelScriptLoader::GetLocalPlayerBackingStore(std::int32_t localIndex)
+	{
+		for (Actors::Player* player : _levelHandler->_players) {
+			if (IsLocalPlayer(player) && localIndex-- == 0) {
+				return GetPlayerBackingStore(player);
 			}
-			return _absentPlayer.get();
 		}
+		return GetPlayerBackingStore(-1);
+	}
 
-		auto [result, success] = _playerBackingStore.emplace(playerIndex8, std::make_unique<jjPLAYER>(this, *pp));
-		DEATH_DEBUG_ASSERT(success);
-		result->second->SyncPropertiesToBackingStore();
-		return result->second.get();
+	std::int32_t LevelScriptLoader::GetLocalPlayerCount() const
+	{
+		std::int32_t count = 0;
+		for (Actors::Player* player : _levelHandler->_players) {
+			if (IsLocalPlayer(player)) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	Actors::Player* LevelScriptLoader::GetPlayerByScriptID(std::int32_t playerID) const
+	{
+		if (playerID < 0) {
+			return nullptr;
+		}
+		for (Actors::Player* player : _levelHandler->_players) {
+			if (GetScriptPlayerID(player) == playerID) {
+				return player;
+			}
+		}
+		return nullptr;
 	}
 
 	Actors::ActorBase* LevelScriptLoader::CreateActorInstance(StringView typeName)

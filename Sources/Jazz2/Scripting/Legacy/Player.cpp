@@ -4,6 +4,7 @@
 #include "AnimationTables.h"
 #include "Internal.h"
 #include "ObjectHost.h"
+#include "WorldCanvas.h"
 
 #include "../../Actors/ActorBase.h"
 #include "../../Actors/Player.h"
@@ -68,6 +69,15 @@ namespace Jazz2::Scripting
 #endif
 			return info;
 		}
+
+#if defined(WITH_MULTIPLAYER)
+		// The peer of a player of a multiplayer game, nullptr for a player of a game without one
+		std::shared_ptr<Multiplayer::PeerDescriptor> GetPlayerPeer(Actors::Player* player)
+		{
+			auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player);
+			return (mpPlayer != nullptr ? mpPlayer->GetPeerDescriptor() : nullptr);
+		}
+#endif
 	}
 
 	namespace Legacy
@@ -108,9 +118,19 @@ namespace Jazz2::Scripting
 			}
 		}
 
+		// LIGHT::PLAYER, the light a player has by default
+		static constexpr std::uint32_t LightTypePlayer = 10;
+
+		// The vertical speeds of a player under reversed gravity point along it, scripts see them in the world
+		static float GravitySign(const Actors::Player* player) {
+			return (player->IsGravityFlipped() ? -1.0f : 1.0f);
+		}
+
 		jjPLAYER::jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player)
-			: _levelScriptLoader(levelScripts), _player(player), _timerCallback(nullptr),
-				_timerState(0), _timerLeft(0.0f), _timerPersists(false) {
+			: jumpStrength(-10.0f), _levelScriptLoader(levelScripts), _player(player), _timerCallback(nullptr), _override(nullptr),
+				_timerState(0), _timerLeft(0.0f), _syncedJumpStrength(-10.0f), _lightType(LightTypePlayer), _tickLightType(0),
+				_lapsSeen(0), _lapStartTick(-1), _lapTimes{}, _lapTimeBest(0), _light(0), _tickLight(0), _tickLightSet(false),
+				_timerPersists(false), _drawnInMode(false) {
 			// Without a player, it stands for the players that aren't in the game, see LevelScriptLoader::GetPlayerBackingStore()
 			isLocal = (player != nullptr);
 			isActive = (player != nullptr);
@@ -219,14 +239,14 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->_externalForce.Y;
+			return _player->_externalForce.Y * GravitySign(_player);
 		}
 		float jjPLAYER::set_yAcc(float value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->_externalForce.Y = value;
-			return _player->_externalForce.Y;
+			_player->_externalForce.Y = value * GravitySign(_player);
+			return value;
 		}
 		float jjPLAYER::get_xOrg() const {
 			if (_player == nullptr) {
@@ -279,7 +299,8 @@ namespace Jazz2::Scripting
 			if (_hasPendingYSpeed) {
 				return _pendingYSpeed;
 			}
-			return _player->_speed.Y * PlayerSpeedToTicks;
+			// Plus 0 so a stop under reversed gravity doesn't read as -0
+			return _player->_speed.Y * PlayerSpeedToTicks * GravitySign(_player) + 0.0f;
 		}
 		float jjPLAYER::set_ySpeed(float value) {
 			if (_player == nullptr) {
@@ -302,8 +323,8 @@ namespace Jazz2::Scripting
 				// A buttstomp sets the speed itself in every tick, as measured in JJ2+ (a pole holding the player, a jump off it)
 				return;
 			}
-			_player->_speed.Y = value / PlayerSpeedToTicks;
-			if (value < 0.0f) {
+			_player->_speed.Y = value * GravitySign(_player) / PlayerSpeedToTicks;
+			if (value * GravitySign(_player) < 0.0f) {
 				// An assigned rise slows by the live Jump key, as a float-up column's (a sword stabbing up)
 				_player->_riseFromFloatUp = true;
 			}
@@ -426,14 +447,11 @@ namespace Jazz2::Scripting
 			return (std::int32_t)(_player->_invulnerableTime * 70.0f / FrameTimer::FramesPerSecond);
 		}
 		std::uint32_t jjPLAYER::get_lightType() const {
-			// LIGHT::NONE and LIGHT::PLAYER of JJ2+
-			return (_player != nullptr && _player->_lightHiddenByScript ? 0 : 10);
+			return _lightType;
 		}
 		std::uint32_t jjPLAYER::set_lightType(std::uint32_t value) {
-			// Only whether the player has its light, the light of the game is the light of a player of any type
-			if (_player != nullptr) {
-				_player->_lightHiddenByScript = (value == 0);
-			}
+			_lightType = value;
+			UpdateDrawOverride();
 			return value;
 		}
 		std::int32_t jjPLAYER::set_invincibility(std::int32_t value) {
@@ -707,13 +725,23 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			return (std::int8_t)_player->_playerIndex;
+			return (std::int8_t)_levelScriptLoader->GetScriptPlayerID(_player);
 		}
 		std::int32_t jjPLAYER::get_localPlayerID() const {
 			if (_player == nullptr) {
 				return {};
 			}
-			return _player->_playerIndex;
+			// The index of jjLocalPlayers, the players of this machine in their order
+			std::int32_t index = 0;
+			for (Actors::Player* player : _levelScriptLoader->GetPlayers()) {
+				if (player == _player) {
+					break;
+				}
+				if (_levelScriptLoader->IsLocalPlayer(player)) {
+					index++;
+				}
+			}
+			return index;
 		}
 
 		std::int32_t jjPLAYER::get_team() const {
@@ -839,47 +867,78 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYER::get_isConnecting() const {
-			noop();
-			// TODO Whether the player is a client who has not finished joining the current online server yet.
+			// A client that hasn't finished joining the level of the server yet
+#if defined(WITH_MULTIPLAYER)
+			if (auto peer = GetPlayerPeer(_player)) {
+				using Multiplayer::PeerLevelState;
+				return (peer->RemotePeer && peer->LevelState != PeerLevelState::Spectating &&
+					peer->LevelState != PeerLevelState::PlayerReady && peer->LevelState != PeerLevelState::PlayerSpawned);
+			}
+#endif
 			return false;
 		}
 		bool jjPLAYER::get_isIdle() const {
-			noop();
-			// TODO: Whether the player is idle and does not appear in the level or player list. Currently this can only ever be true of the server.
+			// Only a server of JJ2+ that has no player in the level is idle, a server of this game has no player then
 			return false;
 		}
 		bool jjPLAYER::get_isOut() const {
 			return GetPlayerModeInfo(_player).Out;
 		}
 		bool jjPLAYER::get_isSpectating() const {
-			noop();
-			// TODO: Equals true if the player is spectating normally, i.e. not forced into spectating by being out or an idle server.
+			// By choice, not forced by the server (out of the game)
+#if defined(WITH_MULTIPLAYER)
+			if (auto peer = GetPlayerPeer(_player)) {
+				return ((peer->IsSpectating & Multiplayer::SpectateMode::Mask) == Multiplayer::SpectateMode::Requested);
+			}
+#endif
 			return false;
 		}
 		bool jjPLAYER::get_isInGame() const {
-			// TODO: Equals true if isActive is true but isConnecting, isIdle, isOut, and isSpectating are all false.
-			return (_player != nullptr);
+			return (_player != nullptr && !get_isConnecting() && !get_isIdle() && !get_isOut() && !get_isSpectating());
 		}
 
 		String jjPLAYER::get_name() const {
-			noop();
-			return {};
+#if defined(WITH_MULTIPLAYER)
+			if (auto peer = GetPlayerPeer(_player)) {
+				return peer->PlayerName;
+			}
+#endif
+			if (_player == nullptr) {
+				return {};
+			}
+			return (!_nameOverride.empty() ? _nameOverride : PreferencesCache::GetEffectivePlayerName());
 		}
 		String jjPLAYER::get_nameUnformatted() const {
-			noop();
-			return {};
+			// Without the color codes of JJ2 (`|` steps to the next color)
+			String name = get_name();
+			std::size_t length = 0;
+			for (std::size_t i = 0; i < name.size(); i++) {
+				if (name[i] != '|') {
+					name[length++] = name[i];
+				}
+			}
+			return String(name.prefix(length));
 		}
 		bool jjPLAYER::setName(const String& name) {
-			noop();
-			return false;
+			// Only a player of a game without a server, the name of a player in multiplayer is the one it joined with
+#if defined(WITH_MULTIPLAYER)
+			if (GetPlayerPeer(_player) != nullptr) {
+				return false;
+			}
+#endif
+			if (_player == nullptr || name.empty()) {
+				return false;
+			}
+			_nameOverride = name;
+			return true;
 		}
 		std::int8_t jjPLAYER::get_light() const {
-			noop();
-			return 0;
+			return _light;
 		}
 		std::int8_t jjPLAYER::set_light(std::int8_t value) {
-			noop();
-			return 0;
+			_light = value;
+			UpdateDrawOverride();
+			return value;
 		}
 		std::uint32_t jjPLAYER::get_fur() const {
 			if (_player == nullptr) {
@@ -931,13 +990,13 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			return !_player->GetState(Actors::ActorState::ApplyGravitation);
+			return _player->IsGravityFlipped();
 		}
 		bool jjPLAYER::set_antiGrav(bool value) {
 			if (_player == nullptr) {
 				return {};
 			}
-			_player->SetState(Actors::ActorState::ApplyGravitation, !value);
+			_player->SetGravityFlipped(value);
 			return value;
 		}
 		void jjPLAYER::SetMaxHealth(std::int32_t value) {
@@ -1185,6 +1244,7 @@ namespace Jazz2::Scripting
 			auto events = _levelScriptLoader->_levelHandler->EventMap();
 			Vector2f c = events->GetWarpTarget(warpID);
 			if (c.X >= 0.0f && c.Y >= 0.0f) {
+				_player->_warpingTo = std::int32_t(warpID) + 1;
 				_player->WarpToPosition(c, fast ? WarpFlags::Fast : WarpFlags::Default);
 				return true;
 			}
@@ -1558,28 +1618,70 @@ namespace Jazz2::Scripting
 			return GetPlayerModeInfo(_player).Kills;
 		}
 		std::int32_t jjPLAYER::get_laps() const {
-			noop();
+#if defined(WITH_MULTIPLAYER)
+			if (auto peer = GetPlayerPeer(_player)) {
+				return std::int32_t(peer->Laps);
+			}
+#endif
 			return 0;
 		}
 		std::int32_t jjPLAYER::get_lapTimeCurrent() const {
-			noop();
-			return 0;
+			return (_lapStartTick >= 0 ? _levelScriptLoader->GetGameTick() - _lapStartTick : 0);
 		}
 		std::int32_t jjPLAYER::get_lapTimes(std::uint32_t index) const {
-			noop();
-			return 0;
+			return (index < std::uint32_t((sizeof(_lapTimes) / sizeof(_lapTimes[0]))) ? _lapTimes[index] : 0);
 		}
 		std::int32_t jjPLAYER::get_lapTimeBest() const {
-			noop();
-			return 0;
+			return _lapTimeBest;
+		}
+		void jjPLAYER::UpdateLaps(std::int32_t currentTick) {
+			// The times of the laps are taken in the ticks a lap was finished in, as the game counts the laps
+#if defined(WITH_MULTIPLAYER)
+			auto peer = GetPlayerPeer(_player);
+			if (peer == nullptr) {
+				return;
+			}
+			std::int32_t laps = std::int32_t(peer->Laps);
+			if (_lapStartTick < 0 || laps < _lapsSeen) {
+				// The first lap or a new round
+				_lapStartTick = currentTick;
+				_lapsSeen = laps;
+				if (laps == 0) {
+					std::fill(std::begin(_lapTimes), std::end(_lapTimes), 0);
+					_lapTimeBest = 0;
+				}
+				return;
+			}
+			if (laps > _lapsSeen) {
+				std::int32_t lapTime = currentTick - _lapStartTick;
+				for (std::size_t i = (sizeof(_lapTimes) / sizeof(_lapTimes[0])) - 1; i > 0; i--) {
+					_lapTimes[i] = _lapTimes[i - 1];
+				}
+				_lapTimes[0] = lapTime;
+				if (_lapTimeBest == 0 || lapTime < _lapTimeBest) {
+					_lapTimeBest = lapTime;
+				}
+				_lapStartTick = currentTick;
+				_lapsSeen = laps;
+			}
+#endif
 		}
 		bool jjPLAYER::get_isAdmin() const {
-			noop();
+			// The host of a server is one, a client once the server made it one
+#if defined(WITH_MULTIPLAYER)
+			if (auto peer = GetPlayerPeer(_player)) {
+				if (peer->IsAdmin) {
+					return true;
+				}
+				auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+				return (!peer->RemotePeer && mpHandler != nullptr && mpHandler->IsServer());
+			}
+#endif
 			return false;
 		}
 		bool jjPLAYER::hasPrivilege(const String& privilege, std::uint32_t moduleID) const {
-			noop();
-			return false;
+			// The game has no privileges of their own, an administrator has all of them
+			return get_isAdmin();
 		}
 
 		bool jjPLAYER::doesCollide(const jjOBJ* object, bool always) const {
@@ -1614,26 +1716,54 @@ namespace Jazz2::Scripting
 			return result;
 		}
 		bool jjPLAYER::objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling) {
-			// The player collides with the target as the game would have it, even where they aren't, the script sees the
-			// energy the target has then
+			// The player collides with the target as with an object of `playerHandling`, even where they aren't, the script sees
+			// the energy the target has then - an object of the game with another handling collides as the game has it
+			constexpr std::uint32_t HandlingEnemy = 0;
+			constexpr std::uint32_t HandlingEnemyBullet = 2;
+			constexpr std::uint32_t HandlingPickup = 5;
+			constexpr std::uint32_t HandlingDelayedPickup = 6;
+			constexpr std::uint32_t HandlingHurt = 7;
+			constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
+			constexpr std::uint32_t HandlingExplosion = 4;
 			std::shared_ptr<Actors::ActorBase> victim = (target != nullptr ? target->_actor.lock() : nullptr);
 			bool result = false;
-			if (_player != nullptr && victim != nullptr) {
-				if (target->_scriptedCollisions) {
-					// The behavior decides, as in JJ2+ - the game doesn't collect a pickup then
-					result = ScriptObjectHost::CallObjectHit(_levelScriptLoader, *target, nullptr, this, force);
-				} else {
-					result = (_player->OnHandleCollision(victim.get()) || victim->OnHandleCollision(_player));
-					target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
-					target->_synced.Energy = target->energy;
-					if ((victim->GetHealth() <= 0 || victim->GetState(Actors::ActorState::IsDestroyed)) && runtime_cast<Actors::Collectibles::CollectibleBase>(victim.get()) != nullptr) {
-						// A collected pickup is a sparkle at once, as measured in JJ2+ - scripts tell the ones that are gone by their
-						// behavior (series of gems keep drawing theirs otherwise)
-						constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
-						constexpr std::uint32_t HandlingExplosion = 4;
-						target->behavior = BehaviorExplosion2;
-						target->_playerHandling = HandlingExplosion;
-					}
+			if (_player != nullptr && target != nullptr && target->_scriptedCollisions) {
+				// The behavior decides, as in JJ2+ - the game doesn't collect a pickup then
+				result = ScriptObjectHost::CallObjectHit(_levelScriptLoader, *target, nullptr, this, force);
+			} else if (_player != nullptr && target != nullptr && (playerHandling == HandlingHurt || playerHandling == HandlingEnemyBullet ||
+				(playerHandling == HandlingEnemy && force == 0))) {
+				// It hurts the player, a bullet of an enemy explodes on it
+				if (!_player->IsInvulnerable() && _player->GetHealth() > 0) {
+					_player->TakeDamage(1, 4.0f * (_player->GetPos().X > target->xPos ? 1.0f : -1.0f));
+					result = true;
+				}
+				if (playerHandling == HandlingEnemyBullet) {
+					target->state = sEXPLODE;
+				}
+			} else if (_player != nullptr && target != nullptr && playerHandling == HandlingEnemy && victim == nullptr) {
+				// An attacking player hurts an enemy that exists only for the script, as one a script made of another object
+				target->energy = std::int8_t(std::max(target->energy - 4, 0));
+				if (target->energy <= 0) {
+					target->state = sKILL;
+				}
+				result = true;
+			} else if (_player != nullptr && target != nullptr && victim == nullptr &&
+				(playerHandling == HandlingPickup || playerHandling == HandlingDelayedPickup)) {
+				// A pickup that exists only for the script is collected as the pickup of the game of its event
+				if (GiveOriginalPickup(_levelScriptLoader, target->eventID, *_player)) {
+					target->behavior = BehaviorExplosion2;
+					target->_playerHandling = HandlingExplosion;
+					result = true;
+				}
+			} else if (_player != nullptr && victim != nullptr) {
+				result = (_player->OnHandleCollision(victim.get()) || victim->OnHandleCollision(_player));
+				target->energy = std::int8_t(std::clamp<std::int32_t>(victim->GetHealth(), INT8_MIN, INT8_MAX));
+				target->_synced.Energy = target->energy;
+				if ((victim->GetHealth() <= 0 || victim->GetState(Actors::ActorState::IsDestroyed)) && runtime_cast<Actors::Collectibles::CollectibleBase>(victim.get()) != nullptr) {
+					// A collected pickup is a sparkle at once, as measured in JJ2+ - scripts tell the ones that are gone by their
+					// behavior (series of gems keep drawing theirs otherwise)
+					target->behavior = BehaviorExplosion2;
+					target->_playerHandling = HandlingExplosion;
 				}
 			}
 			if (target != nullptr) {
@@ -1660,26 +1790,121 @@ namespace Jazz2::Scripting
 		std::uint32_t jjPLAYER::get_spriteMode() const {
 			return _spriteMode;
 		}
-		class jjPLAYER::InvisibleOverride : public Actors::IActorUpdateOverride
+		class jjPLAYER::PlayerOverride : public Actors::IActorUpdateOverride
 		{
 		public:
+			PlayerOverride()
+				: Hidden(false), HasLight(false), LightType(0), Light(0) {
+			}
+
 			void OnUpdate(Actors::ActorBase* actor, float timeMult) override {
 				RunPlayerUpdate(static_cast<Actors::Player*>(actor), timeMult);
 			}
 			bool IsDrawn() const override {
-				return false;
+				return !Hidden;
 			}
+			void OnEmitLights(Actors::ActorBase* actor, SmallVectorImpl<LightEmitter>& lights) override {
+				if (HasLight) {
+					EmitPlayerLight(static_cast<Actors::Player*>(actor), LightType, Light, lights);
+				}
+			}
+
+			// The state is copied here, the player may outlive the script
+			bool Hidden;
+			bool HasLight;
+			std::uint32_t LightType;
+			std::int8_t Light;
 		};
 
 		void jjPLAYER::UpdateDrawOverride() {
 			if (_player == nullptr) {
 				return;
 			}
-			bool hidden = (_spriteMode == spriteType_INVISIBLE || _invisible || _drawnByScript);
+			bool hidden = (_spriteMode == spriteType_INVISIBLE || _invisible || _drawnByScript || _drawnInMode);
+			// The light of the game unless a script gave the player another one, LIGHT::PLAYER with no size keeps it
+			std::uint32_t lightType = (_tickLightSet ? _tickLightType : _lightType);
+			std::int8_t light = (_tickLightSet ? _tickLight : _light);
+			bool customLight = (lightType != LightTypePlayer || light != 0);
+			_player->_lightHiddenByScript = customLight;
+
 			// Nothing else hands over the update of a player
-			bool overridden = (_player->GetUpdateOverride() != nullptr);
-			if (hidden != overridden) {
-				_player->SetUpdateOverride(hidden ? std::make_unique<InvisibleOverride>() : nullptr);
+			if (!hidden && !customLight) {
+				if (_override != nullptr) {
+					_override = nullptr;
+					_player->SetUpdateOverride(nullptr);
+				}
+				return;
+			}
+			if (_override == nullptr) {
+				auto newOverride = std::make_unique<PlayerOverride>();
+				_override = newOverride.get();
+				_player->SetUpdateOverride(Death::move(newOverride));
+			}
+			_override->Hidden = hidden;
+			_override->HasLight = (customLight && lightType != 0);
+			_override->LightType = lightType;
+			_override->Light = light;
+		}
+		void jjPLAYER::EmitPlayerLight(Actors::Player* player, std::uint32_t lightType, std::int8_t light, SmallVectorImpl<LightEmitter>& lights) {
+			// In ticks of JJ2+, only flickering and swirling lights change by it
+			std::int32_t gameTick = std::int32_t(player->_levelHandler->GetElapsedFrames() * 70.0f / FrameTimer::FramesPerSecond);
+			EmitScriptLight(lightType, light, std::uint32_t(player->GetPlayerIndex()), player->IsFacingLeft() ? -1 : 1,
+				player->_pos, gameTick, lights);
+		}
+		bool jjPLAYER::IsSpriteModeDrawnByGame() const {
+			// The fur of the player itself is how it draws itself, translucent with SPRITE::INVISIBLE hides it anyway
+			return (_spriteMode == spriteType_NORMAL || _spriteMode == spriteType_INVISIBLE ||
+				(_spriteMode == spriteType_PLAYER && _player != nullptr && _spriteParam == _levelScriptLoader->GetScriptPlayerID(_player)));
+		}
+		void jjPLAYER::DrawInSpriteMode() {
+			if (_player == nullptr) {
+				return;
+			}
+			// A player in another sprite mode is drawn by the level canvas in that mode, it follows the player between ticks
+			bool drawn = false;
+			if (!_drawnByScript && !IsSpriteModeDrawnByGame() && !_invisible && _player->_renderer.IsDrawEnabled() &&
+				!ContentResolver::Get().IsHeadless()) {
+				std::uint32_t frame = get_curFrame();
+				std::int32_t cell = 0;
+				if (auto* graphics = (frame != 0 ? _levelScriptLoader->GetAnimationTables().ResolveFrame(frame, cell) : nullptr)) {
+					ScriptWorldCanvas::SpriteDraw sprite = { graphics, cell, 0.0f, 0.0f, 1, _player->IsFacingLeft() ? -1.0f : 1.0f,
+						_player->IsGravityFlipped() ? -1.0f : 1.0f, 0, _spriteMode, _spriteParam, _levelScriptLoader->GetLayerDrawZ(4),
+						_levelScriptLoader->GetSpritePaletteOffset(_spriteMode, _spriteParam), _player };
+					_levelScriptLoader->GetWorldCanvas().AddSprite(sprite);
+					drawn = true;
+				}
+			}
+			if (_drawnInMode != drawn) {
+				_drawnInMode = drawn;
+				UpdateDrawOverride();
+			}
+		}
+		void jjPLAYER::ApplyPlayerDraw(const jjPLAYERDRAW& draw, const jjPLAYERDRAW& original) {
+			if (_player == nullptr) {
+				return;
+			}
+			// For this tick only, the next call of onPlayerDraw() starts over
+			_player->_scriptHidesFlare = !draw.gunFlash;
+			_player->_scriptHidesTrail = !draw.trail;
+			_player->_scriptHidesSugarRush = !draw.sugarRush;
+			bool shieldChanged = (draw._shields != original._shields);
+			_player->_scriptHidesShield = shieldChanged;
+			_player->_scriptShield = ShieldType::None;
+			if (shieldChanged) {
+				// The lowest shield the script left drawn, a player shows one at a time
+				for (std::int32_t i = 1; i < std::int32_t(ShieldType::Count); i++) {
+					if ((draw._shields & (1u << i)) != 0) {
+						_player->_scriptShield = ShieldType(i);
+						break;
+					}
+				}
+			}
+			bool lightChanged = (draw.lightType != original.lightType || draw.light != original.light);
+			if (lightChanged || _tickLightSet) {
+				_tickLightSet = lightChanged;
+				_tickLightType = std::uint32_t(draw.lightType);
+				_tickLight = draw.light;
+				UpdateDrawOverride();
 			}
 		}
 		void jjPLAYER::SetDrawnByScript(bool value) {
@@ -1694,7 +1919,7 @@ namespace Jazz2::Scripting
 		}
 
 		std::uint32_t jjPLAYER::set_spriteMode(std::uint32_t value) {
-			// Only SPRITE::INVISIBLE is taken, the player decides how it's drawn every frame itself (blinking)
+			// INVISIBLE hides the player, the modes it can't draw itself in are drawn by DrawInSpriteMode()
 			_spriteMode = value;
 			UpdateDrawOverride();
 			return value;
@@ -1773,6 +1998,53 @@ namespace Jazz2::Scripting
 			if (platform == 0 && _pushedTick >= _levelScriptLoader->GetGameTick() - 1) {
 				platform = _pushedObject;
 			}
+			// In pixels per tick, up is negative; a change of the script not handed over yet stays
+			if (jumpStrength == _syncedJumpStrength) {
+				// Exactly -10 by default, without the rounding of the frames
+				jumpStrength = (_player->_jumpStrength == Actors::Player::LegacyJumpSpeed ? -10.0f
+					: -_player->_jumpStrength / Actors::Player::LegacyFrameRateScale);
+				_syncedJumpStrength = jumpStrength;
+			}
+			warpID = GetWarpID();
+#if defined(WITH_MULTIPLAYER)
+			// A player of the server's machine is of client 0, one of another machine of the number the server gave it
+			if (auto peer = GetPlayerPeer(_player)) {
+				isLocal = !peer->RemotePeer;
+				if (peer->RemotePeer) {
+					clientID = std::int32_t(peer->ClientID);
+				} else {
+					auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+					clientID = (mpHandler != nullptr && !mpHandler->IsServer() ? std::int32_t(mpHandler->GetLocalClientID()) : 0);
+				}
+			}
+#endif
+		}
+		std::int32_t jjPLAYER::GetWarpID() const {
+			const auto* transition = _player->_currentTransition;
+			if (transition == nullptr) {
+				return 0;
+			}
+			AnimState state = transition->State;
+			if (state != AnimState::TransitionWarpIn && state != AnimState::TransitionWarpOut &&
+				state != AnimState::TransitionWarpInFreefall && state != AnimState::TransitionWarpOutFreefall) {
+				return 0;
+			}
+			return (_player->_warpingTo != 0 ? _player->_warpingTo : 1);
+		}
+		void jjPLAYER::ApplyScriptFields() {
+			if (_player == nullptr) {
+				return;
+			}
+			if (jumpStrength != _syncedJumpStrength) {
+				_player->_jumpStrength = -jumpStrength * Actors::Player::LegacyFrameRateScale;
+				_syncedJumpStrength = jumpStrength;
+			}
+		}
+		void jjPLAYER::SetPushingSolidObject() {
+			// The object keeps the player out by its side, the player never runs into it, so it's held as by a rolling rock
+			if (_player != nullptr) {
+				_player->_pushObjectHoldTime = std::max(_player->_pushObjectHoldTime, 1.0f);
+			}
 		}
 		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType, float aimAngle, Actors::ActorBase** lastShot) {
 			// The bullet of the weapon must have a behavior of the script, the behavior moves the bullets then
@@ -1837,16 +2109,45 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjPLAYERDRAW::get_shield(std::int32_t shield) const {
-			noop();
-			return false;
+			return (shield > 0 && shield < 32 && (_shields & (1u << shield)) != 0);
 		}
 		bool jjPLAYERDRAW::set_shield(std::int32_t shield, bool enable) {
-			noop();
-			return false;
+			if (shield > 0 && shield < std::int32_t(ShieldType::Count)) {
+				if (enable) {
+					_shields |= (1u << shield);
+				} else {
+					_shields &= ~(1u << shield);
+				}
+			}
+			return enable;
 		}
 		jjPLAYER* jjPLAYERDRAW::get_player() const {
 			return _player;
 		}
+	}
+
+	std::int32_t LevelScriptLoader::GetScriptPlayerID(const Actors::Player* player) const
+	{
+#if defined(WITH_MULTIPLAYER)
+		// A client numbers its own player 0, the server and the scripts of the other machines by the index the server gave it
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler)) {
+			std::uint32_t index = mpHandler->GetLocalPlayerIndex();
+			if (!mpHandler->IsServer() && index < UINT8_MAX && IsLocalPlayer(player)) {
+				return std::int32_t(index);
+			}
+		}
+#endif
+		return player->GetPlayerIndex();
+	}
+
+	bool LevelScriptLoader::IsLocalPlayer(const Actors::Player* player) const
+	{
+#if defined(WITH_MULTIPLAYER)
+		if (auto peer = GetPlayerPeer(const_cast<Actors::Player*>(player))) {
+			return !peer->RemotePeer;
+		}
+#endif
+		return true;
 	}
 
 	std::int32_t get_jjPlayerCount() {
@@ -1855,23 +2156,20 @@ namespace Jazz2::Scripting
 	}
 	std::int32_t get_jjLocalPlayerCount() {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetPlayers().size();
+		return owner->GetLocalPlayerCount();
 	}
 
 	jjPLAYER* get_jjP() {
-
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetPlayerBackingStore(0);
+		return owner->GetLocalPlayerBackingStore(0);
 	}
 	jjPLAYER* get_jjPlayers(std::uint8_t index) {
-
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetPlayerBackingStore(index);
+		return owner->GetPlayerBackingStore(std::int32_t(index));
 	}
 	jjPLAYER* get_jjLocalPlayers(std::uint8_t index) {
-
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		return owner->GetPlayerBackingStore(index);
+		return owner->GetLocalPlayerBackingStore(std::int32_t(index));
 	}
 
 	bool LevelScriptLoader::FirePlayerWeapon(Actors::Player* player, WeaponType weaponType)
@@ -2265,7 +2563,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Kind of a chat message
 		 *
-		 * @partialsupport Currently not used, chat hooks aren't called.
+		 * @partialsupport @ref onLocalChat() always gets @ref NORMAL, `onChat()` isn't called.
 		 */
 		engine->RegisterEnum("Type");
 		engine->RegisterEnumValue("Type", "NORMAL", 0);	///< Message to everyone
@@ -2309,9 +2607,8 @@ namespace Jazz2::Scripting
 		 * Small text is added to the messages at the bottom of the screen, other sizes are shown in big letters the
 		 * way a Text event shows text.
 		 * @param text Text of the message
-		 * @param sendToAll Currently ignored
+		 * @param sendToAll Whether a multiplayer server shows it to every player, itself included
 		 * @param size @ref STRING::Size of the text
-		 * @partialsupport The `sendToAll` parameter is currently ignored.
 		 */
 		engine->RegisterGlobalFunction("void jjAlert(const ::string &in text, bool sendToAll = false, STRING::Size size = STRING::SMALL)", asFUNCTION(jjAlert), asCALL_CDECL);
 		/**
@@ -2337,10 +2634,10 @@ namespace Jazz2::Scripting
 		 * The text is added to the messages at the bottom of the screen. Of the commands, text starting with `/`,
 		 * `/smhealth` sets the maximum health of the players, `/maxresolution` sets what @ref jjResolutionMaxWidth
 		 * and @ref jjResolutionMaxHeight report and `/difficulty` sets @ref jjDifficulty, the other ones are ignored.
+		 * In multiplayer the local player says it to the others, as typed in the chat (without telling @ref onLocalChat()).
 		 * @param text Text of the message
 		 * @param teamchat Currently ignored
-		 * @partialsupport The message isn't sent to other players, `teamchat` is ignored and commands of a multiplayer
-		 * server aren't run.
+		 * @partialsupport `teamchat` is ignored and commands of a multiplayer server aren't run.
 		 */
 		engine->RegisterGlobalFunction("void jjChat(const ::string &in text, bool teamchat = false)", asFUNCTION(jjChat), asCALL_CDECL);
 		/**
@@ -2348,8 +2645,7 @@ namespace Jazz2::Scripting
 		 *
 		 * The text is added to the messages at the bottom of the screen as an important message, and to the log.
 		 * @param text Text of the message
-		 * @param sendToAll Currently ignored
-		 * @partialsupport The `sendToAll` parameter is currently ignored.
+		 * @param sendToAll Whether a multiplayer server writes it to every player, itself included
 		 */
 		engine->RegisterGlobalFunction("void jjConsole(const ::string &in text, bool sendToAll = false)", asFUNCTION(jjConsole), asCALL_CDECL);
 		/**

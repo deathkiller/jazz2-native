@@ -2,6 +2,9 @@
 
 #include "Common.h"
 #include "Internal.h"
+#include "Player.h"
+
+#include "../../LevelHandler.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Base/Algorithms.h"
@@ -216,7 +219,13 @@ namespace Jazz2::Scripting
 	}
 
 	bool isAdmin() {
-		noop(); return false;
+		// The machine of a server is one, a client as its first player is
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		auto* levelHandler = owner->GetLevelHandler();
+		if (!levelHandler->IsLocalSession() && levelHandler->IsServer()) {
+			return true;
+		}
+		return owner->GetLocalPlayerBackingStore(0)->get_isAdmin();
 	}
 }
 

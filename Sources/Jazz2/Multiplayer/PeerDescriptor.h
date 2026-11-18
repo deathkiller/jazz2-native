@@ -136,7 +136,7 @@ namespace Jazz2::Multiplayer
 		bool IsAuthenticated;
 		/** @brief Time when the peer connected, a peer that doesn't authenticate in time is kicked */
 		TimeStamp ConnectedSince;
-		/** @brief Whether the peer has admin privileges */
+		/** @brief Whether the peer has admin privileges, a client learns its own with @ref PeerPropertyType::ClientID */
 		bool IsAdmin;
 		/** @brief Whether ledge climbing is enabled by client */
 		bool EnableLedgeClimb;
@@ -150,6 +150,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t FurColor;
 		/** @brief Earned points in the current session (championship) */
 		std::uint32_t Points;
+		/** @brief Number the server gave the peer when it connected, 0 for the server's own players (`clientID` of level scripts) */
+		std::uint32_t ClientID;
 		/** @brief State of the player in the current level */
 		PeerLevelState LevelState;
 		/** @brief Spawned player in the current level */

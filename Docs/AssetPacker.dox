@@ -543,7 +543,7 @@ PSP, Wii           | `psp`, `wii`             | Could convert an installation in
 PlayStation 2      | `ps2`                    | <b>Required</b>. Cinematics re-encoded at 320×240, LZ4 images. A `console` tree plays, but slower. Baked into an ISO (@ref consoles-ps2-content), or run from an SD card in an MX4SIO adapter (@ref consoles-ps2-storage)
 Nintendo 64        | `n64`                    | See @ref asset-packer-n64. A `console` tree boots without music. Baked into the ROM (@ref consoles-n64-content)
 PlayStation 3      | `console`                | Could convert, but slowly
-PS Vita, Switch    | none                     | Convert on first run. The tool only skips the wait
+PS Vita, Switch, Wii U | none                 | Convert on first run. The tool only skips the wait
 Web                | `emscripten`             | Typically with `--shareware-only` for the public demo
 
 Packed `.font` files are loaded on all platforms, but consoles gain the most (one index per pixel and less

@@ -265,9 +265,31 @@ namespace Death { namespace IO {
 		WCHAR FileName[1];
 	} FILE_FULL_DIR_INFORMATION, *PFILE_FULL_DIR_INFORMATION;
 
+	// Same layout as FILE_FULL_DIR_INFORMATION up to EaSize
+	typedef struct _FILE_ID_FULL_DIR_INFORMATION {
+		ULONG NextEntryOffset;
+		ULONG FileIndex;
+		LARGE_INTEGER CreationTime;
+		LARGE_INTEGER LastAccessTime;
+		LARGE_INTEGER LastWriteTime;
+		LARGE_INTEGER ChangeTime;
+		LARGE_INTEGER EndOfFile;
+		LARGE_INTEGER AllocationSize;
+		ULONG FileAttributes;
+		ULONG FileNameLength;
+		ULONG EaSize;
+		LARGE_INTEGER FileId;
+		WCHAR FileName[1];
+	} FILE_ID_FULL_DIR_INFORMATION, *PFILE_ID_FULL_DIR_INFORMATION;
+
 	typedef enum _FILE_INFORMATION_CLASS {
-		FileFullDirectoryInformation = 2
+		FileInformationClassUnset = 0,
+		FileFullDirectoryInformation = 2,
+		FileIdFullDirectoryInformation = 38
 	} FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
+
+	constexpr NTSTATUS StatusNoMoreFiles = NTSTATUS(0x80000006);
+	constexpr NTSTATUS StatusNoSuchFile = NTSTATUS(0xC000000F);
 
 	typedef NTSTATUS (WINAPI *_NtQueryDirectoryFile)(HANDLE FileHandle, HANDLE Event, PVOID ApcRoutine, PVOID ApcContext,
 		PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation, ULONG Length, FILE_INFORMATION_CLASS FileInformationClass,
@@ -802,9 +824,9 @@ namespace Death { namespace IO {
 
 	public:
 		Impl(StringView path, EnumerationOptions options)
-			: _fileNamePart(nullptr)
+			: _fileNamePart(nullptr), _hasError(false)
 #if defined(DEATH_TARGET_WINDOWS)
-				, _hDirectory(INVALID_HANDLE_VALUE), _currentEntry(nullptr)
+				, _hDirectory(INVALID_HANDLE_VALUE), _currentEntry(nullptr), _infoClass(FileInformationClassUnset)
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 				, _assetDir(nullptr)
@@ -829,6 +851,7 @@ namespace Death { namespace IO {
 
 			_options = options;
 			_path[0] = '\0';
+			_hasError = true;
 #if defined(DEATH_TARGET_WINDOWS)
 			if (!path.empty()) {
 				if DEATH_UNLIKELY(NtQueryDirectoryFile == nullptr) {
@@ -864,10 +887,15 @@ namespace Death { namespace IO {
 #	endif
 
 					if (_hDirectory != INVALID_HANDLE_VALUE) {
+						_hasError = false;
+						_currentEntry = nullptr;
+						_infoClass = FileInformationClassUnset;
 						Increment();
 						return true;
 					}
 				}
+				// The directory path was already prepared, it must not be returned as an entry
+				_path[0] = '\0';
 			}
 			return false;
 #else
@@ -883,6 +911,7 @@ namespace Death { namespace IO {
 								Close();
 								return false;
 							}
+							_hasError = false;
 							Increment();
 							return true;
 						}
@@ -902,6 +931,7 @@ namespace Death { namespace IO {
 						Close();
 						return false;
 					}
+					_hasError = false;
 					Increment();
 					return true;
 				}
@@ -952,11 +982,28 @@ namespace Death { namespace IO {
 
 			// If no current entry, query more from directory
 			if (_currentEntry == nullptr) {
+				// The information class is unset until the first query has shown whether file IDs are supported
+				bool isFirstQuery = (_infoClass == FileInformationClassUnset);
+				if (isFirstQuery) {
+					_infoClass = FileIdFullDirectoryInformation;
+				}
+
 				IO_STATUS_BLOCK ioStatus;
 				NTSTATUS status = NtQueryDirectoryFile(_hDirectory, nullptr, nullptr, nullptr, &ioStatus,
-					_buffer, sizeof(_buffer), FileFullDirectoryInformation, FALSE, nullptr, FALSE);
+					_buffer, sizeof(_buffer), _infoClass, FALSE, nullptr, FALSE);
+
+				if (status < 0 && isFirstQuery && status != StatusNoMoreFiles && status != StatusNoSuchFile) {
+					// Some file systems (network redirectors, FUSE-style drivers, VM shared folders) don't provide
+					// file IDs, and the status they reject the class with varies, so any failure retries without them
+					_infoClass = FileFullDirectoryInformation;
+					status = NtQueryDirectoryFile(_hDirectory, nullptr, nullptr, nullptr, &ioStatus,
+						_buffer, sizeof(_buffer), _infoClass, FALSE, nullptr, TRUE);
+				}
 
 				if (status < 0) {
+					if (status != StatusNoMoreFiles && status != StatusNoSuchFile) {
+						_hasError = true;
+					}
 					_path[0] = '\0';
 					return;
 				}
@@ -966,11 +1013,12 @@ namespace Death { namespace IO {
 
 			if DEATH_LIKELY(_currentEntry != nullptr) {
 				FILE_FULL_DIR_INFORMATION* entry = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(_currentEntry);
+				const wchar_t* fileName = GetCurrentFileName();
 				ULONG fileNameLengthInChars = entry->FileNameLength / sizeof(wchar_t);
-				
+
 				// Skip "." and ".." and apply filters
-				if ((fileNameLengthInChars == 1 && entry->FileName[0] == L'.') ||
-					(fileNameLengthInChars == 2 && entry->FileName[0] == L'.' && entry->FileName[1] == L'.')) {
+				if ((fileNameLengthInChars == 1 && fileName[0] == L'.') ||
+					(fileNameLengthInChars == 2 && fileName[0] == L'.' && fileName[1] == L'.')) {
 					goto Retry;
 				}
 
@@ -980,7 +1028,7 @@ namespace Death { namespace IO {
 					goto Retry;
 				}
 
-				Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), entry->FileName, fileNameLengthInChars);
+				Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), fileName, fileNameLengthInChars);
 				// Write terminating NULL in case the string was longer and did not fit into the array
 				_path[sizeof(_path) - 1] = '\0';
 			} else {
@@ -1013,7 +1061,11 @@ namespace Death { namespace IO {
 
 			struct dirent* entry;
 		Retry:
+			errno = 0;
 			entry = ::readdir(_dirStream);
+			if DEATH_UNLIKELY(entry == nullptr && errno != 0) {
+				_hasError = true;
+			}
 			if DEATH_LIKELY(entry != nullptr) {
 				if (entry->d_name[0] == L'.' && (entry->d_name[1] == L'\0' || (entry->d_name[1] == L'.' && entry->d_name[2] == L'\0'))) {
 					goto Retry;
@@ -1058,14 +1110,127 @@ namespace Death { namespace IO {
 #endif
 		}
 
+		bool TryGetEntryInfo(EntryInfo& info) const
+		{
+			if (_path[0] == '\0') {
+				return false;
+			}
+#if defined(DEATH_TARGET_WINDOWS)
+			if (_currentEntry == nullptr) {
+				return false;
+			}
+
+			const FILE_FULL_DIR_INFORMATION* entry = reinterpret_cast<const FILE_FULL_DIR_INFORMATION*>(_currentEntry);
+			info.Size = ((entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ? 0 : entry->EndOfFile.QuadPart);
+			info.CreationTime = FromNtTime(entry->CreationTime);
+			info.LastModificationTime = FromNtTime(entry->LastWriteTime);
+			info.FileId = (_infoClass == FileIdFullDirectoryInformation
+				? std::uint64_t(reinterpret_cast<const FILE_ID_FULL_DIR_INFORMATION*>(_currentEntry)->FileId.QuadPart)
+				: 0);
+			// EaSize holds the reparse tag for reparse points
+			info.ReparseTag = ((entry->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 ? entry->EaSize : 0);
+
+			EntryAttributes attributes = EntryAttributes::None;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) attributes |= EntryAttributes::Directory;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_READONLY) attributes |= EntryAttributes::ReadOnly;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_HIDDEN) attributes |= EntryAttributes::Hidden;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_SYSTEM) attributes |= EntryAttributes::System;
+			if (entry->FileAttributes & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)) {
+				attributes |= EntryAttributes::Placeholder;
+			}
+			if (entry->FileAttributes & FILE_ATTRIBUTE_DEVICE) attributes |= EntryAttributes::Special;
+			switch (info.ReparseTag) {
+				case IO_REPARSE_TAG_SYMLINK:
+				case IO_REPARSE_TAG_MOUNT_POINT:
+				case 0xA000001D /*IO_REPARSE_TAG_LX_SYMLINK*/:
+					attributes |= EntryAttributes::SymbolicLink;
+					break;
+				case 0x80000023 /*IO_REPARSE_TAG_AF_UNIX*/:
+				case 0x80000024 /*IO_REPARSE_TAG_LX_FIFO*/:
+				case 0x80000025 /*IO_REPARSE_TAG_LX_CHR*/:
+				case 0x80000026 /*IO_REPARSE_TAG_LX_BLK*/:
+					attributes |= EntryAttributes::Special;
+					break;
+			}
+			info.Attributes = attributes;
+			return true;
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_ANDROID)
+			if (_dirStream == nullptr) {
+				return false;
+			}
+
+			struct stat sb;
+			if (::fstatat(::dirfd(_dirStream), _fileNamePart, &sb, AT_SYMLINK_NOFOLLOW) != 0) {
+				return false;
+			}
+
+			info.Size = (S_ISREG(sb.st_mode) ? std::int64_t(sb.st_size) : 0);
+#	if defined(DEATH_TARGET_APPLE)
+			info.CreationTime = DateTime::FromUnixMilliseconds(std::int64_t(sb.st_birthtimespec.tv_sec) * 1000 + sb.st_birthtimespec.tv_nsec / 1000000);
+			info.LastModificationTime = DateTime::FromUnixMilliseconds(std::int64_t(sb.st_mtimespec.tv_sec) * 1000 + sb.st_mtimespec.tv_nsec / 1000000);
+#	else
+			info.CreationTime = DateTime();
+			info.LastModificationTime = DateTime::FromUnixMilliseconds(std::int64_t(sb.st_mtim.tv_sec) * 1000 + sb.st_mtim.tv_nsec / 1000000);
+#	endif
+			info.FileId = std::uint64_t(sb.st_ino);
+			info.ReparseTag = 0;
+
+			EntryAttributes attributes = EntryAttributes::None;
+			if (S_ISDIR(sb.st_mode)) {
+				attributes |= EntryAttributes::Directory;
+			} else if (S_ISLNK(sb.st_mode)) {
+				attributes |= EntryAttributes::SymbolicLink;
+				// A link to a directory is a directory too, the same as a junction or a directory symlink on Windows
+				struct stat targetSb;
+				if (::fstatat(::dirfd(_dirStream), _fileNamePart, &targetSb, 0) == 0 && S_ISDIR(targetSb.st_mode)) {
+					attributes |= EntryAttributes::Directory;
+				}
+			} else if (!S_ISREG(sb.st_mode)) {
+				attributes |= EntryAttributes::Special;
+			}
+			if ((sb.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
+				attributes |= EntryAttributes::ReadOnly;
+			}
+			if (_fileNamePart[0] == '.') {
+				attributes |= EntryAttributes::Hidden;
+			}
+			info.Attributes = attributes;
+			return true;
+#else
+			static_cast<void>(info);
+			return false;
+#endif
+		}
+
 	private:
 		EnumerationOptions _options;
 		char _path[MaxPathLength];
 		char* _fileNamePart;
+		bool _hasError;
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _hDirectory;
 		std::uint8_t _buffer[64 * 1024];
 		std::uint8_t* _currentEntry;
+		FILE_INFORMATION_CLASS _infoClass;
+
+		const wchar_t* GetCurrentFileName() const
+		{
+			return (_infoClass == FileIdFullDirectoryInformation
+				? reinterpret_cast<const FILE_ID_FULL_DIR_INFORMATION*>(_currentEntry)->FileName
+				: reinterpret_cast<const FILE_FULL_DIR_INFORMATION*>(_currentEntry)->FileName);
+		}
+
+		static DateTime FromNtTime(const LARGE_INTEGER& value)
+		{
+			// Zero means the file system doesn't keep the time
+			if (value.QuadPart <= 0) {
+				return {};
+			}
+			FILETIME fileTime;
+			fileTime.dwLowDateTime = value.LowPart;
+			fileTime.dwHighDateTime = DWORD(value.HighPart);
+			return DateTime(fileTime);
+		}
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		AAssetDir* _assetDir;
@@ -1173,6 +1338,17 @@ namespace Death { namespace IO {
 	bool FileSystem::Directory::operator!=(const Directory& other) const
 	{
 		return !(*this == other);
+	}
+
+	bool FileSystem::Directory::TryGetEntryInfo(EntryInfo& info) const
+	{
+		info = EntryInfo{};
+		return (_impl != nullptr && _impl->TryGetEntryInfo(info));
+	}
+
+	bool FileSystem::Directory::HasError() const noexcept
+	{
+		return (_impl != nullptr && _impl->_hasError);
 	}
 
 	FileSystem::Directory::Proxy::Proxy(StringView path)
@@ -1734,6 +1910,23 @@ namespace Death { namespace IO {
 #endif
 	}
 
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+	/** @brief Returns the path of a known folder, an empty string if it doesn't exist, failures are logged only with a name */
+	static String GetKnownFolderPath(REFKNOWNFOLDERID folderId, const char* folderName)
+	{
+		String result;
+		wchar_t* pathW = nullptr;
+		HRESULT hr = ::SHGetKnownFolderPath(folderId, KF_FLAG_DEFAULT, nullptr, &pathW);
+		if (SUCCEEDED(hr) && pathW != nullptr && pathW[0] != L'\0') {
+			result = Utf8::FromUtf16(pathW);
+		} else if (folderName != nullptr) {
+			LOGE("SHGetKnownFolderPath({}) failed with error 0x{:.8x}", folderName, std::uint32_t(hr));
+		}
+		::CoTaskMemFree(pathW);
+		return result;
+	}
+#endif
+
 	String FileSystem::GetConfigPath(StringView applicationName)
 	{
 #if defined(DEATH_TARGET_ANDROID)
@@ -1763,18 +1956,8 @@ namespace Death { namespace IO {
 		auto appData = winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path();
 		return Death::Utf8::FromUtf16(appData.data(), appData.size());
 #elif defined(DEATH_TARGET_WINDOWS)
-		String result;
-		wchar_t* pathW = nullptr;
-		if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &pathW)) && pathW != nullptr && pathW[0] != L'\0') {
-			std::int32_t pathLengthW = std::int32_t(wcslen(pathW));
-			SmallVector<char, MAX_PATH + 1> path(DefaultInit, pathLengthW * 4 + 1);
-			std::size_t pathLength = Utf8::FromUtf16(path.data(), std::int32_t(path.size()), pathW, pathLengthW);
-			result = CombinePath({ path.data(), pathLength }, applicationName);
-		} else {
-			LOGE("SHGetKnownFolderPath(FOLDERID_RoamingAppData) failed with error 0x{:.8x}", ::GetLastError());
-		}
-		::CoTaskMemFree(pathW);
-		return result;
+		String path = GetKnownFolderPath(FOLDERID_RoamingAppData, "FOLDERID_RoamingAppData");
+		return (path.empty() ? String{} : CombinePath(path, applicationName));
 #else
 		// Other platforms have no per-user configuration directory
 		return {};
@@ -1784,26 +1967,25 @@ namespace Death { namespace IO {
 	String FileSystem::GetSavePath(StringView applicationName)
 	{
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		// Prefer "Saved Games" directory for games on Windows if available
-		String result;
-		wchar_t* pathW = nullptr;
-		bool success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &pathW));
-		if (!success || pathW == nullptr || pathW[0] == L'\0') {
-			::CoTaskMemFree(pathW);
-			pathW = nullptr;
-			// Fallback to "%AppData%\Roaming" if "%UserProfile%\Saved Games" cannot be found
-			success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &pathW));
+		// Prefer "Saved Games" directory for games on Windows if available, fall back to "%AppData%\Roaming"
+		String path = GetKnownFolderPath(FOLDERID_SavedGames, nullptr);
+		if (path.empty()) {
+			path = GetKnownFolderPath(FOLDERID_RoamingAppData, "FOLDERID_RoamingAppData");
 		}
-		if (success && pathW != nullptr && pathW[0] != L'\0') {
-			std::int32_t pathLengthW = std::int32_t(wcslen(pathW));
-			SmallVector<char, MAX_PATH + 1> path(DefaultInit, pathLengthW * 4 + 1);
-			std::size_t pathLength = Utf8::FromUtf16(path.data(), std::int32_t(path.size()), pathW, pathLengthW);
-			result = CombinePath({ path.data(), pathLength }, applicationName);
-		} else {
-			LOGE("SHGetKnownFolderPath(FOLDERID_RoamingAppData) failed with error 0x{:.8x}", ::GetLastError());
-		}
-		::CoTaskMemFree(pathW);
-		return result;
+		return (path.empty() ? String{} : CombinePath(path, applicationName));
+#else
+		return GetConfigPath(applicationName);
+#endif
+	}
+
+	String FileSystem::GetLocalDataPath(StringView applicationName)
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		String path = GetKnownFolderPath(FOLDERID_LocalAppData, "FOLDERID_LocalAppData");
+		return (path.empty() ? String{} : CombinePath(path, applicationName));
+#elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_ANDROID)
+		String localStorage = GetLocalStorage();
+		return (localStorage.empty() ? String{} : CombinePath(localStorage, applicationName));
 #else
 		return GetConfigPath(applicationName);
 #endif
@@ -1865,15 +2047,7 @@ namespace Death { namespace IO {
 		// This method is not supported on WinRT
 		return {};
 #elif defined(DEATH_TARGET_WINDOWS)
-		String result;
-		wchar_t* path = nullptr;
-		if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Profile, KF_FLAG_DEFAULT, nullptr, &path))) {
-			result = Utf8::FromUtf16(path);
-		} else {
-			LOGE("SHGetKnownFolderPath(FOLDERID_Profile) failed with error 0x{:.8x}", ::GetLastError());
-		}
-		::CoTaskMemFree(path);
-		return result;
+		return GetKnownFolderPath(FOLDERID_Profile, "FOLDERID_Profile");
 #else
 		StringView home = ::getenv("HOME");
 		if (!home.empty()) {
@@ -2650,25 +2824,62 @@ namespace Death { namespace IO {
 			id pathString = ((id(*)(Class, SEL, const char*))objc_msgSend)(nsStringClass, sel_getUid("stringWithUTF8String:"), String::nullTerminatedView(path).data());
 			id pathUrl = ((id(*)(Class, SEL, id))objc_msgSend)(nsUrlClass, sel_getUid("fileURLWithPath:"), pathString);
 			id fileManagerInstance = ((id(*)(Class, SEL))objc_msgSend)(nsFileManager, sel_getUid("defaultManager"));
-			return ((bool(*)(id, SEL, id, SEL, id, SEL, id))objc_msgSend)(fileManagerInstance, sel_getUid("trashItemAtURL:"), pathUrl, sel_getUid("resultingItemURL:"), nullptr, sel_getUid("error:"), nullptr);
+			// -[NSFileManager trashItemAtURL:resultingItemURL:error:] is one selector, the arguments all follow it
+			return ((BOOL(*)(id, SEL, id, id*, id*))objc_msgSend)(fileManagerInstance, sel_getUid("trashItemAtURL:resultingItemURL:error:"), pathUrl, nullptr, nullptr);
 		}
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
-		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const StringView paths[] = { path };
+		return MoveToTrash(paths);
+#else
+		return false;
+#endif
+	}
+
+	bool FileSystem::MoveToTrash(ArrayView<const StringView> paths)
+	{
+		if (paths.empty()) return true;
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		// SHFileOperation() takes a list of null-terminated paths terminated by an additional null
+		std::size_t capacity = 1;
+		for (StringView path : paths) {
+			if (path.empty()) return false;
+			capacity += path.size() + 1;
+		}
+
+		SmallVector<wchar_t, MAX_PATH + 2> listW(DefaultInit, capacity);
+		std::size_t offset = 0;
+		for (StringView path : paths) {
+			std::int32_t length = Utf8::ToUtf16(listW.data() + offset, std::int32_t(capacity - offset), path.data(), std::int32_t(path.size()));
+			if (length <= 0) return false;
+			// The path is converted with native separators, the shell doesn't accept forward slashes
+			for (std::int32_t i = 0; i < length; i++) {
+				if (listW[offset + i] == L'/') listW[offset + i] = L'\\';
+			}
+			offset += std::size_t(length);
+			listW[offset++] = L'\0';
+		}
+		listW[offset] = L'\0';
 
 		SHFILEOPSTRUCTW sf;
 		sf.hwnd = NULL;
 		sf.wFunc = FO_DELETE;
-		sf.pFrom = pathW.data();
+		sf.pFrom = listW.data();
 		sf.pTo = nullptr;
 		sf.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
 		sf.fAnyOperationsAborted = FALSE;
 		sf.hNameMappings = nullptr;
 		sf.lpszProgressTitle = nullptr;
-		return ::SHFileOperationW(&sf) == 0;
+		return (::SHFileOperationW(&sf) == 0 && !sf.fAnyOperationsAborted);
 #else
-		return false;
+		bool success = true;
+		for (StringView path : paths) {
+			if (!MoveToTrash(path)) {
+				success = false;
+			}
+		}
+		return success;
 #endif
 	}
 
@@ -3012,6 +3223,43 @@ namespace Death { namespace IO {
 		}
 #endif
 		return date;
+	}
+
+	bool FileSystem::SetLastModificationTime(StringView path, DateTime time)
+	{
+		if (path.empty() || !time.IsValid()) return false;
+
+#if defined(DEATH_TARGET_WINDOWS)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+		HANDLE hFile = ::CreateFileFromAppW(pathW.data(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	else
+		HANDLE hFile = ::CreateFileW(pathW.data(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+#	endif
+		if (hFile == INVALID_HANDLE_VALUE) {
+			return false;
+		}
+		// 100-nanosecond intervals since January 1, 1601 (UTC)
+		std::uint64_t value = std::uint64_t(time.ToUnixMilliseconds() * 10000 + 116444736000000000LL);
+		FILETIME fileTime;
+		fileTime.dwLowDateTime = DWORD(value & 0xFFFFFFFFu);
+		fileTime.dwHighDateTime = DWORD(value >> 32);
+		bool success = ::SetFileTime(hFile, nullptr, nullptr, &fileTime);
+		::CloseHandle(hFile);
+		return success;
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_ANDROID)
+		auto nullTerminatedPath = String::nullTerminatedView(path);
+		std::int64_t ms = time.ToUnixMilliseconds();
+		struct timespec times[2];
+		times[0].tv_sec = 0;
+		times[0].tv_nsec = UTIME_OMIT;
+		times[1].tv_sec = time_t(ms >= 0 ? ms / 1000 : (ms - 999) / 1000);
+		times[1].tv_nsec = long((ms - std::int64_t(times[1].tv_sec) * 1000) * 1000000);
+		return ::utimensat(AT_FDCWD, nullTerminatedPath.data(), times, 0) == 0;
+#else
+		return false;
+#endif
 	}
 
 	FileSystem::Permission FileSystem::GetPermissions(StringView path)

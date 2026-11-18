@@ -33,7 +33,9 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns the state of the multiplayer game
 	 *
-	 * @partialsupport Always returns @ref GAME::STOPPED (0).
+	 * @ref GAME::STARTED without a multiplayer round. In multiplayer @ref GAME::PREGAME before the round starts,
+	 * @ref GAME::STARTED or @ref GAME::OVERTIME while it runs, @ref GAME::STOPPED after it.
+	 * @partialsupport @ref GAME::PAUSED isn't used.
 	 */
 	std::int32_t get_gameState();
 
@@ -70,8 +72,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns the current score of a team in team-based game modes
 	 *
-	 * Indexed by @ref TEAM::Color.
-	 * @partialsupport Always returns 0.
+	 * Indexed by @ref TEAM::Color, 0 outside of multiplayer. A client knows the score the server sent last.
 	 */
 	std::int32_t get_teamScore(std::int32_t color);
 	/**
@@ -90,8 +91,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Whether a team is enabled in the current game
 	 *
-	 * Indexed by @ref TEAM::Color.
-	 * @partialsupport Always returns `false`.
+	 * Indexed by @ref TEAM::Color, the teams of the team game mode in multiplayer, none otherwise.
 	 */
 	bool getEnabledTeam(std::uint8_t team);
 

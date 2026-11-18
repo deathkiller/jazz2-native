@@ -80,7 +80,8 @@ namespace Jazz2::Actors
 	Player::Player()
 		:
 		// 0 = original colors; remote players get theirs from the network
-		_furColor(PreferencesCache::PlayerFurColor), _tubeCurled(false), _lastSpring(nullptr), _pushObjectHoldTime(0.0f), _pushGapTicks(0.0f), _birdPose(0), _birdChargeDirY(0),
+		_furColor(PreferencesCache::PlayerFurColor), _tubeCurled(false), _scriptShield(ShieldType::None), _jumpStrength(LegacyJumpSpeed),
+		_warpingTo(0), _lastSpring(nullptr), _pushObjectHoldTime(0.0f), _pushGapTicks(0.0f), _birdPose(0), _birdChargeDirY(0),
 		_isActivelyPushing(false), _wasActivelyPushing(false), _wasOnAccBelt(false), _pushContactThisFrame(false),
 		_kickPushedThisFrame(false), _kickWasPushing(false), _controllable(true), _controllableExternal(true),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
@@ -91,7 +92,8 @@ namespace Jazz2::Actors
 		_stackCarrying(false), _beingStoodOn(false), _hPoleCarry(false), _springCarry(false), _revUpCarry(false),
 		_jumpReleased(false), _poleEnteredOnSpring(false), _riseFromFloatUp(false), _inFloatUpArea(false),
 		_crouchHeldBefore(false), _weaponAllowed(true), _birdPerched(false), _birdStanding(false), _birdCharging(false),
-		_levelExitSuppressed(false), _lightHiddenByScript(false)
+		_levelExitSuppressed(false), _lightHiddenByScript(false), _scriptHidesFlare(false), _scriptHidesShield(false),
+		_scriptHidesTrail(false), _scriptHidesSugarRush(false)
 	{
 	}
 
@@ -286,20 +288,20 @@ namespace Jazz2::Actors
 		if (!HasLegacyFloorBelow()) {
 			return false;
 		}
-		AABBf aabb = AABBInner;
+		AABBf aabb = ToGravitySpace(AABBInner);
 		aabb.T = aabb.B;
 		aabb.B += CollisionCheckStep;
 		TileCollisionParams passableParams = { TileDestructType::None, false };
-		return _levelHandler->IsPositionEmpty(this, aabb, passableParams);
+		return _levelHandler->IsPositionEmpty(this, ToGravitySpace(aabb), passableParams);
 	}
 
 	bool Player::HasLegacyFloorBelow()
 	{
-		AABBf aabb = AABBInner;
+		AABBf aabb = ToGravitySpace(AABBInner);
 		aabb.T = aabb.B;
 		aabb.B += CollisionCheckStep;
 		TileCollisionParams params = { TileDestructType::None, true };
-		return !_levelHandler->IsPositionEmpty(this, aabb, params);
+		return !_levelHandler->IsPositionEmpty(this, ToGravitySpace(aabb), params);
 	}
 
 	bool Player::IsRammingFrozen(const ActorBase* target) const
@@ -1015,7 +1017,9 @@ namespace Jazz2::Actors
 				_sugarRushStarsTime -= timeMult;
 				if (_sugarRushStarsTime <= 0.0f) {
 					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
-					SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.GetLayer());
+					if (!_scriptHidesSugarRush) {
+						SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.GetLayer());
+					}
 				}
 			} else {
 				_renderer.Initialize(ActorRendererType::Default);
@@ -2277,7 +2281,7 @@ namespace Jazz2::Actors
 			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump) &&
 				_pos.Y < _levelHandler->GetPlayerWaterLevel() + LegacyWaterJumpDepth) {
 				_inWater = false;
-				_speed.Y = -(LegacyJumpSpeed + LegacyWaterJumpBoost);
+				_speed.Y = -(_jumpStrength + LegacyWaterJumpBoost);
 				_jumpReleased = false;
 				_riseFromFloatUp = false;
 				_riseOwnedByJump = true;
@@ -2607,9 +2611,15 @@ namespace Jazz2::Actors
 			if (_playerType == PlayerType::Lori) {
 				_speed.Y *= 1.3f;
 			}
+			if (_jumpStrength != LegacyJumpSpeed) {
+				// A jump strength a script set scales this model's launch alike
+				float scale = _jumpStrength / LegacyJumpSpeed;
+				_speed.Y *= scale;
+				_internalForceY *= scale;
+			}
 		} else {
 			// Measured in the original: a flat launch plus a quarter of the horizontal speed, no threshold
-			_speed.Y = -(LegacyJumpSpeed + std::abs(_speed.X) * LegacySpeedJumpScale);
+			_speed.Y = -(_jumpStrength + std::abs(_speed.X) * LegacySpeedJumpScale);
 			// A jump out of a run-in-place clears a tile more than an ordinary running jump
 			if (_revUpCarry && _keepRunningTime > 0.0f) {
 				_speed.Y -= LegacyRevUpJumpBoost;
@@ -2991,7 +3001,7 @@ namespace Jazz2::Actors
 	{
 		// A pose without a gunspot has no muzzle to put the flare on, see GetGunspotOffset()
 		Vector2i gunspotOffset;
-		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && GetGunspotOffset(gunspotOffset)) {
+		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && !_scriptHidesFlare && GetGunspotOffset(gunspotOffset)) {
 			auto* res = _metadata->FindAnimation(WeaponFlare);
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				// A recolored player has indexed anims, so the flare needs the PaletteRemap shader too
@@ -3085,7 +3095,13 @@ namespace Jazz2::Actors
 			}
 		}
 
-		DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata, _levelHandler->GetElapsedFrames(), _pos, _renderer.GetLayer(), _shieldRenderCommands);
+		if (!_scriptHidesShield) {
+			DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata, _levelHandler->GetElapsedFrames(), _pos, _renderer.GetLayer(), _shieldRenderCommands);
+		} else if (_scriptShield != ShieldType::None) {
+			// Another shield a script draws with the player, as one far from running out
+			DrawShield(renderQueue, _scriptShield, _scriptShield == _activeShield ? _activeShieldTime : 1000.0f, _metadata,
+				_levelHandler->GetElapsedFrames(), _pos, _renderer.GetLayer(), _shieldRenderCommands);
+		}
 
 		return ActorBase::OnDraw(renderQueue);
 	}
@@ -3382,8 +3398,10 @@ namespace Jazz2::Actors
 			OnEmitRemotedLights(lights);
 		}
 
-		for (std::int32_t i = 0; i < (std::int32_t)_trail.size(); i++) {
-			lights.emplace_back(_trail[i]);
+		if (!_scriptHidesTrail) {
+			for (std::int32_t i = 0; i < (std::int32_t)_trail.size(); i++) {
+				lights.emplace_back(_trail[i]);
+			}
 		}
 	}
 
@@ -3456,6 +3474,10 @@ namespace Jazz2::Actors
 			AABBInner = AABBf(_pos.X - HitboxLeft, _pos.Y - 8.0f, _pos.X + HitboxRight, _pos.Y + 12.0f);
 		} else {
 			AABBInner = AABBf(_pos.X - HitboxLeft, _pos.Y + 8.0f - 16.0f, _pos.X + HitboxRight, _pos.Y + 8.0f + 12.0f);
+		}
+		if (_gravityFlipped) {
+			// Upside down around the hotspot, as it's drawn
+			AABBInner = AABBf(AABBInner.L, 2.0f * _pos.Y - AABBInner.B, AABBInner.R, 2.0f * _pos.Y - AABBInner.T);
 		}
 	}
 
@@ -4762,10 +4784,10 @@ namespace Jazz2::Actors
 				// Descending sideways, the ears drop the player straight onto a floor that is close, see LegacyCopterFloorSnap
 				if (!_levelHandler->IsReforged() && !cancelCopter && _speed.Y > 0.0f && _speed.X != 0.0f) {
 					TileCollisionParams params = { TileDestructType::None, true };
-					AABBf below = AABBf(AABBInner.L, AABBInner.T + LegacyCopterFloorSnap, AABBInner.R, AABBInner.B + LegacyCopterFloorSnap);
-					if (!_levelHandler->IsPositionEmpty(this, below, params)) {
+					AABBf below = ToGravitySpace(AABBInner) + Vector2f(0.0f, LegacyCopterFloorSnap);
+					if (!_levelHandler->IsPositionEmpty(this, ToGravitySpace(below), params)) {
 						for (float drop = LegacyCopterFloorSnap - 0.25f; drop > 0.0f; drop -= 0.25f) {
-							if (MoveInstantly(Vector2f(0.0f, drop), MoveType::Relative)) {
+							if (MoveInstantly(ToGravitySpace(Vector2f(0.0f, drop)), MoveType::Relative)) {
 								break;
 							}
 						}
@@ -5236,6 +5258,7 @@ namespace Jazz2::Actors
 							flags |= WarpFlags::IncrementLaps;
 						}
 
+						_warpingTo = std::int32_t(p[0]) + 1;
 						WarpToPosition(c, flags);
 						return true;
 					}
@@ -6922,6 +6945,7 @@ namespace Jazz2::Actors
 	void Player::WarpToPosition(Vector2f pos, WarpFlags flags)
 	{
 		if ((flags & WarpFlags::Fast) == WarpFlags::Fast) {
+			_warpingTo = 0;
 			Vector2f posPrev = _pos;
 			bool hideTrail = (posPrev - pos).Length() > 250.0f;
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
@@ -6975,6 +6999,7 @@ namespace Jazz2::Actors
 		_isFreefall |= CanFreefall();
 
 		SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
+			_warpingTo = 0;
 			SetState(ActorState::IsInvulnerable, false);
 			// Don't re-enable gravity if any modifier is active or a copter survived the warp
 			if (_activeModifier == Modifier::None && _copterFramesLeft <= 0.0f) {

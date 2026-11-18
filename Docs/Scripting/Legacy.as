@@ -140,6 +140,29 @@ void onRoast(jjPLAYER@ victim, jjPLAYER@ killer);
 bool onCheat(string &in cheat);
 
 /**
+	@brief Called when the local player says something in the chat
+
+	Called for the text typed into the chat (the console), except commands starting with `/`, before the game uses it
+	as a message or a cheat code. Not called for what the script says by @ref jjChat().
+	@param text     What the player typed
+	@param type     Kind of the message
+	@return `true` if the script took the text and it shouldn't be said, `false` to let the game use it
+	@callback
+	@partialsupport `type` is always @ref CHAT::NORMAL.
+*/
+bool onLocalChat(string &in text, CHAT::Type type);
+
+/**
+	@brief Called when the script of another machine sent data by @ref jjSendPacket()
+
+	A client gets what the server sends, the server what any client sends.
+	@param packet       The data, read it as it was written
+	@param fromClientID The client that sent it (see @ref jjPLAYER::clientID), 0 for the server
+	@callback
+*/
+void onReceive(jjSTREAM &in packet, int fromClientID);
+
+/**
 	@brief Called by a Script Callback event of the level, numbered from 0 to 255
 
 	The number in the name stands for the <em>Function</em> parameter of the event, so an event with number 7 calls
@@ -401,7 +424,8 @@ interface jjBEHAVIORINTERFACE {
 		object isn't solid for boxes.
 		@param obj      The object in question
 		@return Whether the object is solid for boxes
-		@partialsupport Never called by the game.
+		@partialsupport Only boxes of @ref BEHAVIOR::MONITOR rest on each other, and only when they fall; one isn't
+		kept from being pushed into another.
 	*/
 	bool onIsSolid(jjOBJ@ obj);
 

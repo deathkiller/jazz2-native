@@ -64,7 +64,7 @@ namespace Jazz2::Actors
 	ActorBase::ActorBase()
 		: _levelHandler(nullptr), _metadata(nullptr), _currentAnimation(nullptr), _currentTransition(nullptr),
 			_internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f), _unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1),
-			_spawnFrames(0.0f), _spawnPos(0, 0, 0), _spawnEventParams{}, _spawnEventType(EventType::Empty), _currentTransitionCancellable(false),
+			_spawnFrames(0.0f), _spawnPos(0, 0, 0), _spawnEventParams{}, _spawnEventType(EventType::Empty), _thawPending(false), _currentTransitionCancellable(false), _gravityFlipped(false),
 			_renderer(this), _collisionProxyID(Collisions::NullNode), _state(ActorState::None)
 	{
 	}
@@ -113,6 +113,46 @@ namespace Jazz2::Actors
 		if (res != nullptr) {
 			_renderer.UpdateAnchor();
 		}
+	}
+
+	bool ActorBase::IsGravityFlipped() const
+	{
+		return _gravityFlipped;
+	}
+
+	void ActorBase::SetGravityFlipped(bool value)
+	{
+		if (_gravityFlipped == value) {
+			return;
+		}
+
+		_gravityFlipped = value;
+		_speed.Y = -_speed.Y;
+		_externalForce.Y = -_externalForce.Y;
+		_internalForceY = -_internalForceY;
+		SetState(ActorState::CanJump, false);
+
+		_renderer.SetFlippedY(value);
+		if (_currentTransition != nullptr || _currentAnimation != nullptr) {
+			_renderer.UpdateAnchor();
+		}
+		OnUpdateHitbox();
+	}
+
+	AABBf ActorBase::ToGravitySpace(const AABBf& box) const
+	{
+		// Mirrored on the X axis, the conversion is its own inverse
+		return (_gravityFlipped ? AABBf(box.L, -box.B, box.R, -box.T) : box);
+	}
+
+	Vector2f ActorBase::ToGravitySpace(Vector2f move) const
+	{
+		return (_gravityFlipped ? Vector2f(move.X, -move.Y) : move);
+	}
+
+	bool ActorBase::MoveAlongGravity(Vector2f move, MoveType type, TileCollisionParams& params)
+	{
+		return MoveInstantly(ToGravitySpace(move), type, params);
 	}
 
 	void ActorBase::SetParent(SceneNode* parent)
@@ -520,7 +560,7 @@ namespace Jazz2::Actors
 				}
 				if (snapDiff >= 0.0f) {
 					if (snapDiff > 0.0f) {
-						MoveInstantly(Vector2f(0.0f, snapDiff), MoveType::Relative, params);
+						MoveAlongGravity(Vector2f(0.0f, snapDiff), MoveType::Relative, params);
 					}
 					// Measured in the original: this landing keeps its fall speed, so a fall faster than the
 					// step height loses the next tick's whole move
@@ -550,12 +590,12 @@ namespace Jazz2::Actors
 			TryUnstuck();
 			if (_speed.Y > 0.0f && (_state & ActorState::CollideWithTilesetLegacy) == ActorState::CollideWithTilesetLegacy) {
 				// A player held by the head in a ceiling creeps up into it, measured in JJ2+
-				AABBf head = AABBInner;
+				AABBf head = ToGravitySpace(AABBInner);
 				head.T = head.B - 23.0f;
 				head.B = head.T + 5.0f;
 				TileCollisionParams headParams = { TileDestructType::None, false };
-				if (auto* tiles = _levelHandler->TileMap(); tiles != nullptr && !tiles->IsTileEmpty(head, headParams)) {
-					MoveInstantly(Vector2f(0.0f, -_speed.Y * timeMult / 16.0f), MoveType::Relative | MoveType::Force);
+				if (auto* tiles = _levelHandler->TileMap(); tiles != nullptr && !tiles->IsTileEmpty(ToGravitySpace(head), headParams)) {
+					MoveInstantly(ToGravitySpace(Vector2f(0.0f, -_speed.Y * timeMult / 16.0f)), MoveType::Relative | MoveType::Force);
 				}
 			}
 		}
@@ -573,7 +613,7 @@ namespace Jazz2::Actors
 		if (currentGravity > 0.0f && (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
 			if (_speed.Y >= 0.0f) {
 				// Actor is going down
-				AABBf aabb = AABBInner;
+				AABBf aabb = ToGravitySpace(AABBInner);
 				aabb.B += CollisionCheckStep;
 				if ((_state & ActorState::CollideWithTilesetReduced) == ActorState::CollideWithTilesetReduced && aabb.B - aabb.T >= 20.0f) {
 					// Only the bottom of a reduced hitbox finds the floor, for a player just its feet (measured in JJ2+)
@@ -583,12 +623,12 @@ namespace Jazz2::Actors
 				// keeps it for one more tick (whatever the frame rate)
 				bool footingTickAgo = false;
 				if (_footingGrace && groundedBeforeMove && timeMult > 0.0f && _pos != posBefore) {
-					Vector2f tickTravel = (_pos - posBefore) / (timeMult * Player::LegacyFrameRateScale);
+					Vector2f tickTravel = ToGravitySpace(_pos - posBefore) / (timeMult * Player::LegacyFrameRateScale);
 					AABBf feet = aabb + Vector2f(-tickTravel.X, -tickTravel.Y);
 					TileCollisionParams probeParams = { TileDestructType::None, true };
-					footingTickAgo = !_levelHandler->IsPositionEmpty(this, feet, probeParams);
+					footingTickAgo = !_levelHandler->IsPositionEmpty(this, ToGravitySpace(feet), probeParams);
 				}
-				if (!footingTickAgo && _levelHandler->IsPositionEmpty(this, aabb, params)) {
+				if (!footingTickAgo && _levelHandler->IsPositionEmpty(this, ToGravitySpace(aabb), params)) {
 					// There is still some space below - only apply gravity
 					SetState(ActorState::CanJump, false);
 					_speed.Y += GetGravityModifier(currentGravity, /*isRising:*/false) * timeMult;
@@ -617,11 +657,11 @@ namespace Jazz2::Actors
 	bool ActorBase::IsSupportedAfterMove(float stepX, float stepY)
 	{
 		// Tells a downhill slope from a gap, with own params so the probe can't destroy tiles
-		AABBf aabb = AABBInner + Vector2f(stepX, stepY);
+		AABBf aabb = ToGravitySpace(AABBInner) + Vector2f(stepX, stepY);
 		aabb.T = aabb.B;
 		aabb.B += CollisionCheckStep;
 		TileCollisionParams probeParams = { TileDestructType::None, true };
-		return !_levelHandler->IsPositionEmpty(this, aabb, probeParams);
+		return !_levelHandler->IsPositionEmpty(this, ToGravitySpace(aabb), probeParams);
 	}
 
 	bool ActorBase::TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, TileCollisionParams& params, MovementResult& result)
@@ -636,7 +676,7 @@ namespace Jazz2::Actors
 				if (yDiff > stepY && !IsSupportedAfterMove(stepX, yDiff)) {
 					continue;
 				}
-				if (MoveInstantly(Vector2f(stepX, yDiff), MoveType::Relative, params)) {
+				if (MoveAlongGravity(Vector2f(stepX, yDiff), MoveType::Relative, params)) {
 					success = true;
 					break;
 				}
@@ -651,7 +691,7 @@ namespace Jazz2::Actors
 			if (xDiff > CollisionCheckStep) {
 				float sign = (stepX > 0.0f ? 1.0f : -1.0f);
 				for (; xDiff > CollisionCheckStep; xDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+					if (MoveAlongGravity(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
 						// Slid up against a wall, still counts as hitting it
 						success = true;
 						break;
@@ -670,14 +710,14 @@ namespace Jazz2::Actors
 
 		// Airborne movement is handled here
 		// First, attempt to move directly based on the current speed values
-		if (MoveInstantly(Vector2f(stepX, stepY), MoveType::Relative, params)) {
+		if (MoveAlongGravity(Vector2f(stepX, stepY), MoveType::Relative, params)) {
 			return true;
 		}
 
 		// First, attempt to move horizontally as much as possible
 		float xDiff = std::abs(stepX);
 		// Mostly-horizontal airborne movement climbs gentle upslopes instead of stopping at their foot
-		bool movedHorizontally = MoveInstantly(Vector2f(stepX, 0.0f), MoveType::Relative, params);
+		bool movedHorizontally = MoveAlongGravity(Vector2f(stepX, 0.0f), MoveType::Relative, params);
 		// `>=` so a jump into a 45 degree slope keeps its momentum, as in the original
 		if (!movedHorizontally && _climbsSlopesInAir && std::abs(stepX) >= std::abs(stepY)) {
 			float maxClimb = std::abs(stepX) + 2.5f;
@@ -687,7 +727,7 @@ namespace Jazz2::Actors
 				maxClimb = std::max(maxClimb, _landingTolerance);
 			}
 			for (float yUp = CollisionCheckStep; yUp <= maxClimb; yUp += CollisionCheckStep) {
-				if (MoveInstantly(Vector2f(stepX, -yUp), MoveType::Relative, params)) {
+				if (MoveAlongGravity(Vector2f(stepX, -yUp), MoveType::Relative, params)) {
 					movedHorizontally = true;
 					break;
 				}
@@ -695,7 +735,7 @@ namespace Jazz2::Actors
 		}
 		if (!movedHorizontally) {
 			for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-				if (MoveInstantly(Vector2f(std::copysign(xDiff, stepX), 0.0f), MoveType::Relative, params)) {
+				if (MoveAlongGravity(Vector2f(std::copysign(xDiff, stepX), 0.0f), MoveType::Relative, params)) {
 					break;
 				}
 			}
@@ -705,10 +745,10 @@ namespace Jazz2::Actors
 		float yDiff = std::abs(stepY);
 		for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
 			float yDiffSigned = std::copysign(yDiff, stepY);
-			if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
+			if (MoveAlongGravity(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
 				// Add horizontal tolerance
-				MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
-				MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
+				MoveAlongGravity(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
+				MoveAlongGravity(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
 				break;
 			}
 		}
@@ -746,11 +786,12 @@ namespace Jazz2::Actors
 		}
 
 		// Only the lower part of the hitbox decides, the upper part may overlap a low ceiling
-		AABBf aabb = AABBInner;
+		AABBf aabb = ToGravitySpace(AABBInner);
 		float t = aabb.B - 14.0f;
 		if (aabb.T < t) {
 			aabb.T = t;
 		}
+		aabb = ToGravitySpace(aabb);
 		TileCollisionParams paramsProbe = { TileDestructType::None, true };
 		if (_levelHandler->IsPositionEmpty(this, aabb, paramsProbe)) {
 			// Throttled, nearly every actor at rest isn't stuck
@@ -778,7 +819,7 @@ namespace Jazz2::Actors
 		for (float distance = 2.0f; distance <= MaxUnstuckDistance; distance += 2.0f) {
 			for (std::size_t i = 0; i < directionCount; i++) {
 				const Vector2f& direction = Directions[i];
-				if (MoveInstantly(direction * distance, MoveType::Relative, paramsEscape)) {
+				if (MoveAlongGravity(direction * distance, MoveType::Relative, paramsEscape)) {
 					// The escape is a relocation, not a travelled path
 					ResetPathTracking();
 					_unstuckCooldown = UnstuckCooldown;

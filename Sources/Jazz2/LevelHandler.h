@@ -228,6 +228,14 @@ namespace Jazz2
 		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, SfxFlags flags) override;
 		void StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
+		/**
+		 * @brief Sets how strongly the sounds the level plays echo, from 0 (no echo) to 1
+		 *
+		 * Each sound that isn't looping is repeated twice, a fifth of a second apart and quieter every time.
+		 */
+		void SetSfxEcho(float strength);
+		/** @brief Returns how strongly the sounds the level plays echo, see @ref SetSfxEcho() */
+		float GetSfxEcho() const;
 		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
 		bool IsPositionEmpty(Actors::ActorBase* self, const AABBf& aabb, Tiles::TileCollisionParams& params, Actors::ActorBase** collider) override;
 		void FindCollisionActorsByAABB(const Actors::ActorBase* self, const AABBf& aabb, Function<bool(Actors::ActorBase*)>&& callback) override;
@@ -506,8 +514,26 @@ namespace Jazz2
 		static constexpr std::int32_t MusicRestartDelay = 60;
 
 		std::int32_t _musicStartDelay;
+		// Strength of the echo of the sounds, 0 for none (see SetSfxEcho())
+		float _sfxEcho;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
+
+		// A quieter repeat of a sound, played later while the sounds echo (see SetSfxEcho())
+		struct SfxEcho {
+			AudioBuffer* Buffer;
+			Vector2f Pos;
+			float Gain;
+			float Pitch;
+			float FramesLeft;
+			bool SourceRelative;
+		};
+		SmallVector<SfxEcho, 0> _sfxEchoes;
+
+		// Queues the echoes of a sound that was just played
+		void QueueSfxEchoes(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch);
+		// Plays a sound without echoes
+		std::shared_ptr<AudioBufferPlayer> PlaySfxOnce(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, bool looping);
 #endif
 		Metadata* _commonResources;
 		std::unique_ptr<UI::HUD> _hud;

@@ -31,6 +31,7 @@ In addition, these libraries are recommended for an optimal experience:
 -   **OpenAL** library --- audio support
 -   **libopenmpt** library --- module music playback
 -   **libogg** / **libvorbis** library --- `.ogg` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
+-   **libmpg123** library --- `.mp3` file support @m_span{m-text m-dim} (not needed for the original assets) @m_endspan
 -   **libwebp** library --- `.webp` file support @m_span{m-text m-dim} (currently not supported, not needed for the original assets) @m_endspan
 -   **AngelScript** library --- [AngelScript](https://www.angelcode.com/angelscript/) scripting support
 -   **liblua** library --- [Lua](https://www.lua.org/) scripting support @m_span{m-text m-dim} (currently not supported) @m_endspan
@@ -220,7 +221,7 @@ address.
 
 @subsection building-consoles Building for consoles
 
-Ten consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
+Eleven consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
 The build is configured the same way as above, but every one of them also needs its toolchain
 installed, its own packaging step and, on most of them, a game content tree prepared in advance
 with @ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
@@ -230,6 +231,7 @@ Console | Toolchain | Details
 Nintendo 64 | libdragon | @ref consoles-n64
 Sega Dreamcast | KallistiOS | @ref consoles-dreamcast
 Nintendo Wii | devkitPPC + libogc | @ref consoles-wii
+Nintendo Wii U | devkitPPC + wut | @ref consoles-wiiu
 Nintendo GameCube | devkitPPC + libogc | @ref consoles-gamecube
 Nintendo 3DS | devkitARM + libctru + citro3d | @ref consoles-3ds
 Nintendo Switch | devkitA64 | @ref consoles-switch
@@ -375,7 +377,7 @@ The following parameters can be used to customize the build:
     -   The generated shader headers are committed to the repository, so turning it off never affects the game
 -   `NCINE_BUILD_LIBRETRO` (default @cpp OFF @ce) --- Build as a **libretro** core instead of an executable, see @ref consoles-libretro
     -   Only `Software` and `OpenGL` are valid values of `NCINE_PREFERRED_RHI` in this configuration
--   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita**, **Nintendo Switch** and **iOS**, where it is also the only choice) --- Preferred core backend
+-   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita**, **Nintendo Switch**, **Nintendo Wii U** and **iOS**, where it is also the only choice) --- Preferred core backend
     -   Possible values: `GLFW`, `SDL2`, `SDL3`
     -   Ignored on **Android**, **UWP** and the @ref consoles "consoles with a bespoke window backend"
 -   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce, @cpp "GXM" @ce on **PS Vita**, @cpp "GX2" @ce on **Wii U**, @cpp "Metal" @ce on **iOS**) --- Preferred rendering backend (RHI)
@@ -407,10 +409,11 @@ The following parameters can be used to customize the build:
     -   Only `LegacyGL` (the default) and `Software` are available on **MorphOS** and **AmigaOS 4.1**, while
         <b>AmigaOS 3.x</b> is pinned to `Software`, see @ref amiga
     -   Pinned to the console's only rendering backend on **Nintendo 64** (`RDP`), **Sega Dreamcast**
-        (`PVR`), **Nintendo Wii** and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`),
-        <b>PlayStation 2</b> (`GS`) and **PlayStation 3** (`RSX`), see @ref consoles
-    -   `RSX` is the only one of those pins that is a **shader** backend --- the RSX is a programmable
-        part, so the PlayStation 3 keeps the post-processing chain the fixed-function consoles lose
+        (`PVR`), **Nintendo Wii** and **Nintendo GameCube** (`GX`), **Nintendo Wii U** (`GX2`),
+        <b>PlayStation Portable</b> (`GU`), <b>PlayStation 2</b> (`GS`) and **PlayStation 3** (`RSX`), see @ref consoles
+    -   `RSX` and `GX2` are the only ones of those pins that are **shader** backends --- the RSX and Latte are
+        programmable parts, so the PlayStation 3 and the Wii U keep the post-processing chain the
+        fixed-function consoles lose
 -   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
     -   Possible values:
         - `Core` --- OpenGL 3.3 core profile (GLSL 330, uniform buffer objects, `gl_VertexID`)
@@ -459,13 +462,14 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop. The consoles use their own backends, see @ref consoles-common-audio
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Dreamcast**, the **Wii**, the **GameCube**, the **3DS** and the **PS Vita**) --- Enable module music audio file support, requires **libopenmpt** library
+-   `NCINE_WITH_MPG123` (default @cpp ON @ce) --- Enable `.mp3` audio file support, requires **libmpg123** library
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Dreamcast**, the **Wii**, the **GameCube**, the **Wii U**, the **3DS** and the **PS Vita**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has
     -   See @ref consoles-n64-limits, @ref consoles-psp-limits and @ref consoles-ps2-limits for why it's
         disabled on those --- the reasons are unrelated to each other. The **PlayStation 3** builds it
         from source in the library's single-threaded mode @m_span{m-text m-dim} (see @ref consoles-ps3)
         @m_endspan
--   `NCINE_WITH_XMP` (default @cpp ON @ce on the **Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PS Vita** and the **classic Amiga**, @cpp OFF @ce elsewhere) --- Play module music with **libxmp** *instead of* libopenmpt. Available on every platform: it is how a machine that cannot afford libopenmpt gets music at all, and a legitimate choice anywhere else that would rather spend the CPU elsewhere
+-   `NCINE_WITH_XMP` (default @cpp ON @ce on the **Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **Nintendo Wii U**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PS Vita** and the **classic Amiga**, @cpp OFF @ce elsewhere) --- Play module music with **libxmp** *instead of* libopenmpt. Available on every platform: it is how a machine that cannot afford libopenmpt gets music at all, and a legitimate choice anywhere else that would rather spend the CPU elsewhere
     -   The two are alternatives --- turning this on turns `NCINE_WITH_OPENMPT` off
     -   The library is downloaded and built from source by the configure step
         @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`, pinned by hash) @m_endspan, so nothing has to

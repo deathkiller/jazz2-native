@@ -650,8 +650,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 									tvA = cylinderC - (pA - 0.5 - 0.5 * viewH) * cylinderRate;
 									tvB = cylinderC - (pB - 0.5 - 0.5 * viewH) * cylinderRate;
 									uCenter = shift.x * 0.25;
-									fromA = (pA - 0.5 - horizonRow) / 141.0;
-									fromB = (pB - 0.5 - horizonRow) / 141.0;
+									// By the angle around the tube, as the shader
+									fromA = 3.14159265 * (pA - 0.5 - horizonRow) / viewH;
+									fromB = 3.14159265 * (pB - 0.5 - horizonRow) / viewH;
 								} else {
 									sA = (halfIndex == 0 ? pA + horizonRow - 7.5 : horizonRow + 8.5 - pA);
 									sB = (halfIndex == 0 ? pB + horizonRow - 7.5 : horizonRow + 8.5 - pB);

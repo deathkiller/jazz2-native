@@ -348,6 +348,7 @@ namespace Jazz2::Scripting::Legacy
 		constexpr std::uint8_t lightNORMAL = 3;
 		constexpr std::uint8_t lightFLICKER = 4;
 		constexpr std::uint8_t lightBRIGHT = 5;
+		constexpr std::uint8_t lightLASERBEAM = 6;
 		constexpr std::uint8_t lightLASER = 7;
 		constexpr std::uint8_t lightRING = 8;
 		constexpr std::uint8_t lightRING2 = 9;
@@ -438,10 +439,15 @@ namespace Jazz2::Scripting::Legacy
 
 	void EmitObjectLight(const jjOBJ& obj, Vector2f pos, std::int32_t gameTick, SmallVectorImpl<LightEmitter>& lights)
 	{
-		// As measured in JJ2+ - the ones not listed (LASERBEAM, a line) aren't emulated, a light of no size has none
-		std::int32_t size = obj.light;
+		EmitScriptLight(obj.lightType, obj.light, std::uint32_t(obj.objectID), obj.direction, pos, gameTick, lights);
+	}
+
+	void EmitScriptLight(std::uint32_t lightType, std::int32_t size, std::uint32_t seed, std::int32_t direction, Vector2f pos,
+		std::int32_t gameTick, SmallVectorImpl<LightEmitter>& lights)
+	{
+		// As measured in JJ2+ (except LASERBEAM), a light of no size has none
 		float radiusNear, radiusFar, intensity;
-		switch (obj.lightType) {
+		switch (lightType) {
 			case lightNORMAL:
 				if (size > 0) {
 					GetRoundLight(size, radiusNear, radiusFar, intensity);
@@ -467,9 +473,20 @@ namespace Jazz2::Scripting::Legacy
 				// Dimmer than the round light, at random
 				if (size > 0) {
 					GetRoundLight(size, radiusNear, radiusFar, intensity);
-					AddLight(lights, pos, radiusNear, radiusFar, 0.1f + 0.35f * GetLightNoise(std::uint32_t(obj.objectID), gameTick / 5.0f));
+					AddLight(lights, pos, radiusNear, radiusFar, 0.1f + 0.35f * GetLightNoise(seed, gameTick / 5.0f));
 				}
 				break;
+			case lightLASERBEAM: {
+				// Not measured: a line of soft light the way the object faces, 16 px per size, ending in a brighter spot
+				constexpr float Spacing = 8.0f;
+				float length = 16.0f * std::max(size, 1);
+				float dir = (direction < 0 ? -1.0f : 1.0f);
+				for (float d = 0.0f; d < length; d += Spacing) {
+					AddLight(lights, Vector2f(pos.X + d * dir, pos.Y), 0.0f, 14.0f, 0.5f, 0.15f);
+				}
+				AddLight(lights, Vector2f(pos.X + length * dir, pos.Y), 4.0f, 20.0f, 0.7f, 0.3f);
+				break;
+			}
 			case lightLASER: {
 				// What JJ2+ illuminates an object with (an event's "illuminate" bit), whatever the size is: the same swarm of soft
 				// spots as of the pickups of the game (see Actors::Collectibles::CollectibleBase::IlluminateLights)
@@ -723,9 +740,9 @@ namespace Jazz2::Scripting::Legacy
 	}
 
 	ScriptObjectHost::ScriptObjectHost(LevelScriptLoader* levelScripts, jjOBJ* obj, Actors::ActorBase* actor)
-		: _levelScripts(levelScripts), _obj(obj), _actor(actor), _timeMult(1.0f), _nextTick(-1), _drawn(true), _drawFrame(false),
-			_ranOwnBehavior(false), _isRunningOwnBehavior(false), _hasFrameHitbox(false), _heldInPlace(false), _breaking(false),
-			_ownsLights(actor->GetState(Actors::ActorState::Illuminated)), _boundsFrame(0)
+		: _levelScripts(levelScripts), _obj(obj), _actor(actor), _timeMult(1.0f), _nextTick(-1), _boundsFrame(0), _drawn(true),
+			_drawFrame(false), _ranOwnBehavior(false), _isRunningOwnBehavior(false), _hasFrameHitbox(false), _heldInPlace(false),
+			_breaking(false), _ownsLights(actor->GetState(Actors::ActorState::Illuminated))
 	{
 		_obj->AddRef();
 		_obj->_host = this;
@@ -1509,38 +1526,52 @@ namespace Jazz2::Scripting::Legacy
 		if (_platformTick == NoPlatform || _levelScripts->GetGameTick() - _platformTick > 1 || !UpdateFrameBounds()) {
 			return false;
 		}
-		// As wide as its frame, the top where the feet of a player stand: 24 pixels above the object as on a platform of the
-		// game (measured in JJ2+, whatever the frame is)
-		constexpr float StandingTop = 5.0f;
+		// As wide as its frame, the top where the feet of a player stand (see GetPlatformTop())
 		float width = float(_platformWidth > 0 ? _platformWidth : _frameRect.W);
 		float left = _obj->xPos + PositionOffset + (_platformWidth > 0 ? -width * 0.5f
 			: (_obj->direction < 0 ? float(-_frameRect.X - _frameRect.W) : float(_frameRect.X)));
-		float top = _obj->yPos + PositionOffset - StandingTop;
+		float top = GetPlatformTop(*_obj, _platformHeight) + PositionOffset;
 		box = AABBf(left, top, left + width, top + 8.0f);
 		return true;
 	}
 
-	void ScriptObjectHost::BePlatform(float xOld, float yOld, std::int32_t width)
+	float ScriptObjectHost::GetPlatformTop(const jjOBJ& obj, std::int32_t height)
+	{
+		// 24 pixels above the object stands a player on a platform of the game (measured in JJ2+, whatever the frame is), the
+		// top is half of a `height` above it then - so 8, which JJ2+ takes for no height, gives the same
+		constexpr float StandingTop = 5.0f;
+		return obj.yPos - (height > 0 ? float(height) * 0.5f + 1.0f : StandingTop);
+	}
+
+	void ScriptObjectHost::BePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height)
 	{
 		if (_platformTick == NoPlatform) {
 			_solidBeforePlatform = _actor->GetState(Actors::ActorState::IsSolidObject);
 		}
 		_platformTick = _levelScripts->GetGameTick();
 		_platformWidth = std::int16_t(std::clamp<std::int32_t>(width, 0, INT16_MAX));
+		_platformHeight = std::int16_t(std::clamp<std::int32_t>(height, 0, INT16_MAX));
 		AABBf box;
 		if (!GetPlatformBox(box)) {
 			return;
 		}
 
-		// A player standing on it goes along with it, one falling onto it from above stands on it then - it's solid while it
-		// carries someone, or its own frame would be under the player
-		Vector2f delta(_obj->xPos - xOld, _obj->yPos - yOld);
+		// It's solid while it carries someone, or its own frame would be under the player
+		bool carrying = CarryPlayers(_levelScripts, _actor, *_obj, box, Vector2f(_obj->xPos - xOld, _obj->yPos - yOld));
+		_actor->SetState(Actors::ActorState::IsSolidObject, carrying || _solidTick != INT32_MIN);
+		_actor->AABBInner = box;
+	}
+
+	bool ScriptObjectHost::CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, const jjOBJ& obj, const AABBf& box, Vector2f delta)
+	{
+		// A player standing on it goes along with it, one falling onto it from above stands on it then
 		bool carrying = false;
-		for (Actors::Player* player : _actor->_levelHandler->GetPlayers()) {
+		auto* levelHandler = levelScripts->GetLevelHandler();
+		for (Actors::Player* player : levelScripts->GetPlayers()) {
 			Vector2f pos = player->GetPos();
 			float feet = player->AABBInner.B;
 			bool over = (pos.X + delta.X >= box.L && pos.X + delta.X <= box.R);
-			bool standing = (player->GetCarryingObject() == _actor);
+			bool standing = (player->GetCarryingObject() == platform);
 			if (!standing) {
 				if (player->GetCarryingObject() != nullptr || player->GetSpeed().Y < 0.0f || !over ||
 					feet < box.T - 3.0f || feet > box.T + std::max(player->GetSpeed().Y * 2.0f, 6.0f)) {
@@ -1554,9 +1585,9 @@ namespace Jazz2::Scripting::Legacy
 			Vector2f target(pos.X + (standing ? delta.X : 0.0f), box.T - (feet - pos.Y));
 			if (standing && player->GetSpeed().X == 0.0f) {
 				// Whole pixels off the object while standing still, as on a platform of the game (see MovingPlatform::OnUpdate())
-				target.X = _obj->xPos + std::round(target.X - _obj->xPos);
+				target.X = obj.xPos + std::round(target.X - obj.xPos);
 			}
-			if (auto* tiles = _actor->_levelHandler->TileMap()) {
+			if (auto* tiles = levelHandler->TileMap()) {
 				Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, false };
 				if (!tiles->IsTileEmpty(player->AABBInner + (target - pos), params)) {
 					target.X = pos.X;
@@ -1567,11 +1598,10 @@ namespace Jazz2::Scripting::Legacy
 				}
 			}
 			player->MoveInstantly(target, Actors::MoveType::Absolute | Actors::MoveType::Force);
-			player->UpdateCarryingObject(_actor);
+			player->UpdateCarryingObject(platform);
 			carrying = true;
 		}
-		_actor->SetState(Actors::ActorState::IsSolidObject, carrying || _solidTick != INT32_MIN);
-		_actor->AABBInner = box;
+		return carrying;
 	}
 
 	void ScriptObjectHost::ClearPlatform()
@@ -1667,7 +1697,47 @@ namespace Jazz2::Scripting::Legacy
 		Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, true };
 		float x = std::floor(actor._pos.X - PositionOffset);
 		float y = std::floor(actor._pos.Y - PositionOffset) + float(_frameRect.Y + _frameRect.H);
-		return !tileMap->IsTileEmpty(AABBf(x, y, x, y), params);
+		float boxTop;
+		return (!tileMap->IsTileEmpty(AABBf(x, y, x, y), params) || FindBoxBelow(actor, x, y, boxTop));
+	}
+
+	bool ScriptObjectHost::IsSolidForBoxes()
+	{
+		// A class of a behavior tells it by `onIsSolid()`, one without it isn't, any other box is
+		if (!_isBox || _actor->GetState(Actors::ActorState::IsDestroyed)) {
+			return false;
+		}
+		if (_obj->behavior.object != nullptr) {
+			return CallIsSolid(_levelScripts, *_obj);
+		}
+		return true;
+	}
+
+	bool ScriptObjectHost::FindBoxBelow(const Actors::ActorBase& actor, float x, float y, float& top)
+	{
+		// Another box with the pixel in its frame, the box rests on its top then (gifts stacked on each other)
+		bool found = false;
+		AABBf probe(x - 1.0f, y - 1.0f, x + 1.0f, y + 1.0f);
+		actor._levelHandler->FindCollisionActorsByAABB(const_cast<Actors::ActorBase*>(&actor), probe, [&](Actors::ActorBase* other) {
+			if (other == &actor) {
+				return true;
+			}
+			jjOBJ* view = _levelScripts->GetObjectView(other);
+			ScriptObjectHost* host = (view != nullptr ? view->_host : nullptr);
+			if (host == nullptr || host == this || !host->UpdateFrameBounds()) {
+				return true;
+			}
+			const Recti& rect = host->_frameRect;
+			float left = view->xPos + (view->direction < 0 ? float(-rect.X - rect.W) : float(rect.X));
+			float otherTop = view->yPos + float(rect.Y);
+			if (x >= left && x < left + float(rect.W) && y >= otherTop && y < otherTop + float(rect.H) && host->IsSolidForBoxes()) {
+				top = otherTop;
+				found = true;
+				return false;
+			}
+			return true;
+		});
+		return found;
 	}
 
 	bool ScriptObjectHost::UpdateFrameBounds()
@@ -1702,6 +1772,13 @@ namespace Jazz2::Scripting::Legacy
 			// The edges of the rectangle are pixels of it, so it's a single pixel
 			return !tileMap->IsTileEmpty(AABBf(x, y, x, y), params);
 		};
+
+		float boxTop;
+		if (FindBoxBelow(actor, x, bottom, boxTop)) {
+			// On another box it rests right on its top
+			offset = (boxTop - 1.0f) - bottom;
+			return true;
+		}
 
 		std::int32_t steps = 0;
 		if (isMasked(0)) {
@@ -2009,6 +2086,7 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::RunMonitor(bool draw)
 	{
+		_isBox = true;
 		RunOwnBehavior(draw);
 		if (_obj->state == sKILL || _obj->state == sFREEZE) {
 			return;
@@ -2400,6 +2478,14 @@ namespace Jazz2::Scripting::Legacy
 	{
 		obj.xPos = actor._pos.X - PositionOffset;
 		obj.yPos = GetRestingY(actor) - PositionOffset;
+		if (obj._delayedOrigin) {
+			// Its origin is where it is until it first stands on the ground
+			obj.xOrg = obj.xPos;
+			obj.yOrg = obj.yPos;
+			if (actor.GetState(Actors::ActorState::CanJump)) {
+				obj._delayedOrigin = false;
+			}
+		}
 		if (!obj._movedByBehavior) {
 			obj.xSpeed = actor._speed.X;
 			obj.ySpeed = actor._speed.Y;
@@ -2443,7 +2529,7 @@ namespace Jazz2::Scripting::Legacy
 						float distance = (player->GetPos() - actor._pos).SqrLength();
 						if (distance < nearest) {
 							nearest = distance;
-							playerIndex = player->GetPlayerIndex();
+							playerIndex = levelScripts->GetScriptPlayerID(player);
 						}
 					}
 					obj.set_var(0, playerIndex);
@@ -2675,6 +2761,9 @@ namespace Jazz2::Scripting::Legacy
 			if (auto* spring = runtime_cast<Actors::Environment::Spring>(&actor)) {
 				// The speeds of a spring are what it launches by, it doesn't move
 				spring->SetLegacyLaunchSpeed(Vector2f(obj.xSpeed, obj.ySpeed));
+			} else if (runtime_cast<Actors::Solid::GenericContainer>(&actor) != nullptr) {
+				// A crate or a barrel moves sideways only when pushed, the original sets its horizontal speed in every tick
+				actor._speed.Y = obj.ySpeed;
 			} else {
 				actor._speed = Vector2f(obj.xSpeed, obj.ySpeed);
 			}
@@ -2897,6 +2986,36 @@ namespace Jazz2::Scripting::Legacy
 		return true;
 	}
 
+	bool ScriptObjectHost::CallIsSolid(LevelScriptLoader* levelScripts, jjOBJ& obj)
+	{
+		// `onIsSolid()` of the class of the behavior decides, an object without one is solid
+		asIScriptObject* instance = obj.behavior.object;
+		if (instance == nullptr) {
+			return true;
+		}
+		asIScriptFunction* onIsSolid = levelScripts->GetBehaviorMethods(instance->GetObjectType()).OnIsSolid;
+		if (onIsSolid == nullptr) {
+			return true;
+		}
+		asIScriptEngine* engine = levelScripts->GetEngine();
+		asIScriptContext* ctx = engine->RequestContext();
+		bool solid = true;
+		instance->AddRef();
+		if (PrepareBehavior(ctx, onIsSolid)) {
+			ctx->SetObject(instance);
+			ctx->SetArgObject(0, &obj);
+			std::int32_t r = ctx->Execute();
+			if (r == asEXECUTION_FINISHED) {
+				solid = (ctx->GetReturnByte() != 0);
+			} else if (r == asEXECUTION_EXCEPTION) {
+				LogBehaviorException(ctx);
+			}
+		}
+		instance->Release();
+		engine->ReturnContext(ctx);
+		return solid;
+	}
+
 	bool ScriptObjectHost::CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force)
 	{
 		asIScriptEngine* engine = levelScripts->GetEngine();
@@ -3029,7 +3148,7 @@ namespace Jazz2::Scripting
 			}
 			eventId = std::uint8_t(bullet + (shot->IsUpgraded() ? Legacy::aPLAYERBULLETP1 - Legacy::aPLAYERBULLET1 : 0));
 			if (Actors::Player* owner = shot->GetOwner()) {
-				creatorId = owner->GetPlayerIndex();
+				creatorId = GetScriptPlayerID(owner);
 			}
 		} else if (runtime_cast<Actors::Weapons::TNT>(actor.get()) != nullptr) {
 			eventId = Legacy::aTNT;
@@ -3206,6 +3325,7 @@ namespace Jazz2::Scripting
 			methods.OnBehave = type->GetMethodByDecl("void onBehave(jjOBJ@ obj)");
 			methods.OnDraw = type->GetMethodByDecl("void onDraw(jjOBJ@ obj)");
 			methods.OnObjectHit = type->GetMethodByDecl("bool onObjectHit(jjOBJ@, jjOBJ@, jjPLAYER@, int)");
+			methods.OnIsSolid = type->GetMethodByDecl("bool onIsSolid(jjOBJ@)");
 			it = _behaviorMethods.emplace(type, methods).first;
 		}
 		return it->second;
@@ -3508,6 +3628,8 @@ namespace Jazz2::Scripting
 		Vector2f spawnPos = Legacy::ScriptObjectHost::GetSpawnPos(*actor);
 		obj->xOrg = spawnPos.X;
 		obj->yOrg = spawnPos.Y;
+		obj->_delayedOrigin = (delayGeneratedCrateOrigins && actor->GetState(Actors::ActorState::IsFromGenerator) &&
+			runtime_cast<Actors::Solid::GenericContainer>(actor.get()) != nullptr);
 		Legacy::ScriptObjectHost::PullFromActor(this, *obj, *actor);
 		if (runtime_cast<Actors::Weapons::ShotBase>(actor.get()) != nullptr) {
 			// A shot freezes as its weapon does until a script changes `freeze` of it or its template (see PushToActor())

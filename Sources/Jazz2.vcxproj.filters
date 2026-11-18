@@ -684,10 +684,16 @@
     <ClInclude Include="nCine\Audio\Backends\AL\ALDebug.h">
       <Filter>Header Files\nCine\Audio\Backends\AL</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioLoaderMp3.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Audio\AudioLoaderOgg.h">
       <Filter>Header Files\nCine\Audio</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Audio\AudioLoaderWav.h">
+      <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\AudioReaderMp3.h">
       <Filter>Header Files\nCine\Audio</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Audio\AudioReaderOgg.h">
@@ -2975,10 +2981,16 @@
     <ClCompile Include="nCine\Audio\AudioBufferPlayer.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioLoaderMp3.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
     <ClCompile Include="nCine\Audio\AudioLoaderOgg.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Audio\AudioLoaderWav.cpp">
+      <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\AudioReaderMp3.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Audio\AudioReaderOgg.cpp">

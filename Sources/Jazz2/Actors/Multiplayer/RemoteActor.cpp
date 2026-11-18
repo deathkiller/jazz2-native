@@ -313,7 +313,14 @@ namespace Jazz2::Actors::Multiplayer
 		_renderer.SetDrawEnabled((flags & 0x04) != 0);
 		_renderer.AnimPaused = (flags & 0x08) != 0;
 		SetFacingLeft((flags & 0x10) != 0);
-		_renderer.SetFlippedY((flags & 0x20) != 0);
+		bool flippedY = (flags & 0x20) != 0;
+		if (_renderer.IsFlippedY() != flippedY) {
+			_renderer.SetFlippedY(flippedY);
+			// The anchor follows the flip, as of SetFacingLeft()
+			if (_currentTransition != nullptr || _currentAnimation != nullptr) {
+				_renderer.UpdateAnchor();
+			}
+		}
 
 		bool justWarped = (flags & 0x40) != 0;
 		if (justWarped) {

@@ -1332,8 +1332,8 @@ namespace nCine::RHI::PICA
 												tvA = cylinderC - (pA - 0.5f - 0.5f * viewH) * cylinderRate;
 												tvB = cylinderC - (pB - 0.5f - 0.5f * viewH) * cylinderRate;
 												uCenter = shift.x * 0.25f;
-												fromA = (pA - 0.5f - horizonRow) / 141.0f;
-												fromB = (pB - 0.5f - horizonRow) / 141.0f;
+												fromA = 3.14159265f * (pA - 0.5f - horizonRow) / viewH;
+												fromB = 3.14159265f * (pB - 0.5f - horizonRow) / viewH;
 											} else {
 												sA = halfIndex == 0 ? pA + horizonRow - 7.5f : horizonRow + 8.5f - pA;
 												sB = halfIndex == 0 ? pB + horizonRow - 7.5f : horizonRow + 8.5f - pB;

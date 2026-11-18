@@ -102,7 +102,22 @@ namespace Jazz2::Scripting
 	}
 
 	std::int32_t get_gameState() {
-		noop(); return 0;
+		// A game without a multiplayer round always runs (GAME::STARTED), as in single player of JJ2+
+#if defined(WITH_MULTIPLAYER)
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(owner->GetLevelHandler())) {
+			using LevelState = Multiplayer::MpLevelHandler::LevelState;
+			switch (mpHandler->GetLevelState()) {
+				case LevelState::Running: return (mpHandler->IsOvertime() ? gameOVERTIME : gameSTARTED);
+				case LevelState::Ending:
+				case LevelState::Ended:
+				case LevelState::Unknown:
+				case LevelState::InitialUpdatePending: return gameSTOPPED;
+				default: return gamePREGAME;
+			}
+		}
+#endif
+		return gameSTARTED;
 	}
 
 	Legacy::jjCONTROLPOINT* LevelScriptLoader::GetControlPoint(std::int32_t index)
@@ -115,12 +130,17 @@ namespace Jazz2::Scripting
 	{
 		gameMode = GM_SP;
 		customMode = 0;
+		isServer = false;
+		partyMode = gameLOCAL;
 #if defined(WITH_MULTIPLAYER)
 		// The base mode and the custom mode of JJ2+ (GAME::Custom values) the mode is built on
 		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler);
 		if (mpHandler == nullptr) {
 			return;
 		}
+		// A session that others can join is an online one, the game doesn't tell a LAN apart
+		isServer = mpHandler->IsServer();
+		partyMode = (mpHandler->IsLocalSession() ? gameLOCAL : gameINTERNET);
 
 		// Control points of Domination, synchronized to clients as objects of the game mode
 		std::int32_t pointCount = 0;
@@ -176,6 +196,18 @@ namespace Jazz2::Scripting
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		String recodedText = Compatibility::JJ2Strings::RecodeScriptString(text, true);
 		constexpr std::uint32_t SizeSmall = 1;	// STRING::SMALL
+#if defined(WITH_MULTIPLAYER)
+		// A server shows it to all players, itself included
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_this->_levelHandler);
+		if (sendToAll && mpHandler != nullptr && mpHandler->IsServer()) {
+			if (size == SizeSmall) {
+				mpHandler->SendMessageToAll(recodedText);
+			} else {
+				mpHandler->ShowAlertToAllPlayers(StringView(recodedText));
+			}
+			return;
+		}
+#endif
 		if (size == SizeSmall) {
 			_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, recodedText);
 		} else {
@@ -195,6 +227,15 @@ namespace Jazz2::Scripting
 			return;
 		}
 
+#if defined(WITH_MULTIPLAYER)
+		// Said by the local player in multiplayer, as typed in the chat - without telling the script of it (see OnLocalChat())
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_this->_levelHandler)) {
+			_this->_sendingScriptChat = true;
+			mpHandler->OnConsoleCommand(Compatibility::JJ2Strings::RecodeScriptString(text, true));
+			_this->_sendingScriptChat = false;
+			return;
+		}
+#endif
 		// There's nobody to send it to, it's shown as a message of the player
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, Compatibility::JJ2Strings::RecodeScriptString(text, true));
 	}
@@ -243,12 +284,18 @@ namespace Jazz2::Scripting
 		}
 	}
 	void LevelScriptLoader::jjConsole(const String& text, bool sendToAll) {
-		noop();
-		LOGW("{}", text);
-
-		// TODO: sendToAll
+		LOGI("{}", text);
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Important, Compatibility::JJ2Strings::RecodeScriptString(text, true));
+		String recodedText = Compatibility::JJ2Strings::RecodeScriptString(text, true);
+#if defined(WITH_MULTIPLAYER)
+		// A server writes it to the consoles of all players, itself included
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_this->_levelHandler);
+		if (sendToAll && mpHandler != nullptr && mpHandler->IsServer()) {
+			mpHandler->SendMessageToAll(recodedText);
+			return;
+		}
+#endif
+		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Important, recodedText);
 	}
 	void LevelScriptLoader::jjSpy(const String& text) {
 		LOGD("{}", text);
@@ -332,7 +379,13 @@ namespace Jazz2::Scripting
 	}
 
 	bool getEnabledTeam(std::uint8_t team) {
-		noop();
+		// The teams of a team game mode, TEAM::BLUE (0) to TEAM::YELLOW (3)
+#if defined(WITH_MULTIPLAYER)
+		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(owner->GetLevelHandler())) {
+			return (team < static_cast<Multiplayer::GameModes::IGameModeContext*>(mpHandler)->GetTeamCount());
+		}
+#endif
 		return false;
 	}
 
@@ -560,14 +613,10 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Whether the local player is logged in as an administrator of the server
 		 *
-		 * @partialsupport Always `false`, also in multiplayer.
+		 * The host of a server always is, a client is once the server made it one.
 		 */
 		engine->RegisterGlobalFunction("bool get_jjIsAdmin()", asFUNCTION(isAdmin), asCALL_CDECL);
-		/**
-		 * @brief Whether this instance of the game hosts a multiplayer server
-		 *
-		 * @partialsupport Always `false`, also when the script runs on a multiplayer server.
-		 */
+		/** @brief Whether this instance of the game hosts a multiplayer server */
 		engine->RegisterGlobalProperty("const bool jjIsServer", &isServer);
 		/**
 		 * @brief Current difficulty
@@ -667,7 +716,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Whether players from other computers can join, and over which network
 		 *
-		 * @partialsupport Always @ref GAME::LOCAL, also in online multiplayer.
+		 * @partialsupport An online session is always @ref GAME::ONLINE, the game doesn't tell a local network apart.
 		 */
 		engine->RegisterGlobalProperty("const GAME::Connection jjGameConnection", &partyMode);
 	}

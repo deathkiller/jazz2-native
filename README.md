@@ -120,6 +120,15 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-wii) to skip the conversion
 * Run *Jazz² Resurrection* from the **Homebrew Channel**
 
+### Nintendo Wii U
+* Download the game
+* Copy `jazz2.wuhb` to `sd:/wiiu/apps/` on SD card (the **Aroma** environment is needed)
+  * For *Cemu*, copy it into the emulator's SD card directory instead
+* Copy contents of original *Jazz Jackrabbit 2* directory to `sd:/wiiu/apps/Jazz2/Source/`
+* Run *Jazz² Resurrection* from the **Wii U Menu**
+
+*Cache is recreated on the first startup, so it may take a while. The game is shown on the TV and on the GamePad, and local multiplayer works with any mix of the GamePad, Pro Controllers and Wii Remotes.*
+
 ### Nintendo GameCube
 * The console can't convert the game data itself, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed
   * Use [Content Swapper](https://de4th.dev/jazz2/swap/) to create your customized disc, otherwise disc is empty and unplayable
@@ -280,7 +289,7 @@ cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED
 ```
 
 ### Other consoles
-The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
+The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo Wii U**, **Nintendo GameCube**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware (the Wii U, PS3 and Vita have native shader backends instead), and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, Wii U, PSP, PS3 and Vita, can also convert the original game data directly on the device).
 
 Please refer to [the console documentation](https://de4th.dev/jazz2/docs/consoles.html) for the toolchain, build, packaging, deployment and logging steps of each console.
 

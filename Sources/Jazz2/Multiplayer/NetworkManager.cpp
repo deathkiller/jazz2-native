@@ -42,7 +42,7 @@ namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
 		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), PreferredPlayerType(PlayerType::None),
-			FurColor(0), Points(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
+			FurColor(0), Points(0), ClientID(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), IdleElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
 			CarryOver{}, HasCarryOver(false)
 	{
@@ -50,6 +50,7 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::NetworkManager()
+		: _lastClientID(0)
 	{
 	}
 
@@ -1348,6 +1349,11 @@ namespace Jazz2::Multiplayer
 			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
 			peerDesc->second->RemotePeer = peer;
 			peerDesc->second->ConnectedSince = TimeStamp::Now();
+			if (inserted) {
+				// Never 0, that's the server
+				_lastClientID = (_lastClientID == UINT32_MAX ? 1 : _lastClientID + 1);
+				peerDesc->second->ClientID = _lastClientID;
+			}
 		}
 
 		return result;

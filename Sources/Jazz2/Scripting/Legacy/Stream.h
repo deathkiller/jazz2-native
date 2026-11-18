@@ -32,6 +32,11 @@ namespace Jazz2::Scripting
 			 */
 			static jjSTREAM* CreateFromFile(const String& filename);
 
+			/** @brief Returns the bytes not read yet */
+			ArrayView<const std::uint8_t> GetUnreadData() const;
+			/** @brief Appends bytes at the end */
+			void AppendData(ArrayView<const std::uint8_t> data);
+
 			/** @brief Increments the reference count */
 			void AddRef();
 			/** @brief Decrements the reference count */

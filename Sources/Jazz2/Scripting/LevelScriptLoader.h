@@ -304,6 +304,7 @@ namespace Jazz2::Scripting
 			asIScriptFunction* OnBehave;
 			asIScriptFunction* OnDraw;
 			asIScriptFunction* OnObjectHit;
+			asIScriptFunction* OnIsSolid;
 		};
 		/** @brief Returns the methods of a class of a script that implements `jjBEHAVIORINTERFACE`, looked up once per class */
 		BehaviorMethods GetBehaviorMethods(asITypeInfo* type);
@@ -487,8 +488,18 @@ namespace Jazz2::Scripting
 
 		/** @brief Returns script backing store for specified player */
 		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
-		/** @overload */
-		jjPLAYER* GetPlayerBackingStore(std::int32_t playerIndex);
+		/** @brief Returns script backing store for the player scripts know by the number (see @ref GetScriptPlayerID()) */
+		jjPLAYER* GetPlayerBackingStore(std::int32_t playerID);
+		/** @brief Returns script backing store for the local player of the index, the one for absent players if there is none */
+		jjPLAYER* GetLocalPlayerBackingStore(std::int32_t localIndex);
+		/** @brief Returns the number scripts know the player by, the same on every machine of a multiplayer game */
+		std::int32_t GetScriptPlayerID(const Actors::Player* player) const;
+		/** @brief Returns the player scripts know by the number, `nullptr` if it isn't in the level on this machine */
+		Actors::Player* GetPlayerByScriptID(std::int32_t playerID) const;
+		/** @brief Returns whether the player is played on this machine */
+		bool IsLocalPlayer(const Actors::Player* player) const;
+		/** @brief Returns count of players played on this machine */
+		std::int32_t GetLocalPlayerCount() const;
 
 		/** @brief Called when a level is loaded */
 		void OnLevelLoad();
@@ -498,6 +509,10 @@ namespace Jazz2::Scripting
 		void OnLevelReload();
 		/** @brief Called when a player enters a cheat code (`onCheat()`), returns `true` if the script handled it, the game doesn't apply it then */
 		bool OnCheat(StringView cheat);
+		/** @brief Called when the local player says something in the chat (`onLocalChat()`), returns `true` if the script took it, it isn't said then */
+		bool OnLocalChat(StringView text);
+		/** @brief Called when the script of another machine sent data (`onReceive()`), the server is client 0 */
+		void OnReceivePacket(std::int32_t fromClientID, ArrayView<const std::uint8_t> data);
 		/**
 		 * @brief Called when another handler is about to be made in place of the level, see @ref IStateHandler::OnReplacing()
 		 *
@@ -620,8 +635,10 @@ namespace Jazz2::Scripting
 		};
 		HashMap<std::int32_t, LoopedSample> _loopedSamples;
 		std::int32_t _lastLoopChannel = 0;
-		// Stops the looped samples no script played in the last tick
-		void StopUnusedLoopedSamples();
+		// Tick of the last level update, a looped sample no script played since then is stopped
+		std::int32_t _loopCheckTick = INT32_MIN;
+		// Stops the looped samples no script played since the update of the tick
+		void StopUnusedLoopedSamples(std::int32_t sinceTick);
 
 		// The animation tables, made once a script uses an animation (see GetAnimationTables()), they're destroyed first as
 		// they give the graphics of the game back as they were
@@ -737,6 +754,8 @@ namespace Jazz2::Scripting
 		Actors::ActorBase* _swappingActor = nullptr;
 		// A player activated the boss of the level, which is one of the script, see OnBossAreaActivated()
 		bool _bossAreaActivated = false;
+		// jjChat() says something as the local player, the script isn't told of it (see OnLocalChat())
+		bool _sendingScriptChat = false;
 	public:
 		// `jjVerticalSplitscreen`, as a script set it
 		bool _verticalSplitscreen = false;

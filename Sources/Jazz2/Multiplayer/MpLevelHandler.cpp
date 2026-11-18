@@ -212,7 +212,7 @@ namespace Jazz2::Multiplayer
 			_lastUpdated(0), _seqNumWarped(0), _lastSentPressedActions(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
-			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _lastGameModeObjectId(0), _overtimeScoreCap(0), _teamTriggerId(-1), _serverTriggerId(-1), _teamTriggerOnForBlue(false), _specialTriggersResolved(false), _killingPlayer(false), _silentKill(false), _modeOvertime(false), _scoreboardSyncTime(0.0f),
+			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _lastGameModeObjectId(0), _overtimeScoreCap(0), _localClientID(0), _teamTriggerId(-1), _serverTriggerId(-1), _teamTriggerOnForBlue(false), _specialTriggersResolved(false), _killingPlayer(false), _silentKill(false), _modeOvertime(false), _scoreboardSyncTime(0.0f),
 			_activeBossHealth(-1), _activeBossMaxHealth(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
@@ -999,6 +999,9 @@ namespace Jazz2::Multiplayer
 					}
 					if (PreferencesCache::EnableContinuousJump) {
 						flags |= RemotePlayerOnServer::PlayerFlags::EnableContinuousJump;
+					}
+					if (player->IsGravityFlipped()) {
+						flags |= RemotePlayerOnServer::PlayerFlags::GravityFlipped;
 					}
 
 					if DEATH_UNLIKELY(_pauseMenu != nullptr) {
@@ -3724,6 +3727,41 @@ namespace Jazz2::Multiplayer
 		});
 	}
 
+	bool MpLevelHandler::SendScriptPacket(std::int32_t toClientID, ArrayView<const std::uint8_t> data)
+	{
+		if (_isLocalSession || data.size() > MaxScriptPacketSize) {
+			return false;
+		}
+
+		MemoryStream packet(9 + data.size());
+		if (!_isServer) {
+			packet.WriteVariableUint32((std::uint32_t)data.size());
+			packet.Write(data.data(), (std::uint32_t)data.size());
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ScriptPacket, packet);
+			return true;
+		}
+
+		// From the server, client 0
+		packet.WriteValue<std::int32_t>(0);
+		packet.WriteVariableUint32((std::uint32_t)data.size());
+		packet.Write(data.data(), (std::uint32_t)data.size());
+		bool targetFound = false;
+		_networkManager->SendTo([this, toClientID, &targetFound](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if (peerDesc == nullptr || !peerDesc->IsAuthenticated || peerDesc->LevelState == PeerLevelState::Unknown) {
+				return false;
+			}
+			std::int64_t clientID = peerDesc->ClientID;
+			if (toClientID > 0) {
+				targetFound |= (clientID == toClientID);
+				return (clientID == toClientID);
+			}
+			return (toClientID == 0 || clientID != -std::int64_t(toClientID));
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ScriptPacket, packet);
+		// A packet for one client fails when there's no such client
+		return (toClientID <= 0 || targetFound);
+	}
+
 	static constexpr std::uint32_t MaxServerMessageTextLength = 1024;
 
 	static void WriteServerMessage(MemoryStream& packet, ServerMessageDisplay display, UI::MessageLevel level, const ServerMessage& message)
@@ -4756,6 +4794,7 @@ namespace Jazz2::Multiplayer
 				case ClientPacketType::Auth: return HandleClientPacketAuth(peer, data);
 				case ClientPacketType::LevelReady: return HandleClientPacketLevelReady(peer, data);
 				case ClientPacketType::ChatMessage: return HandleClientPacketChatMessage(peer, data);
+				case ClientPacketType::ScriptPacket: return HandleClientPacketScriptPacket(peer, data);
 				case ClientPacketType::ValidateAssetsResponse: return HandleClientPacketValidateAssetsResponse(peer, data);
 				case ClientPacketType::PlayerReady: return HandleClientPacketPlayerReady(peer, data);
 				case ClientPacketType::ForceResyncActors: return HandleClientPacketForceResyncActors(peer, data);
@@ -4779,6 +4818,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::PlayCommonSfx: return HandleServerPacketPlayCommonSfx(peer, data);
 				case ServerPacketType::ServerMessage: return HandleServerPacketServerMessage(peer, data);
 				case ServerPacketType::ChatMessage: return HandleServerPacketChatMessage(peer, data);
+				case ServerPacketType::ScriptPacket: return HandleServerPacketScriptPacket(peer, data);
 				case ServerPacketType::SyncTileMap: return HandleServerPacketSyncTileMap(peer, data);
 				case ServerPacketType::SetTrigger: return HandleServerPacketSetTrigger(peer, data);
 				case ServerPacketType::AdvanceTileAnimation: return HandleServerPacketAdvanceTileAnimation(peer, data);
@@ -4903,6 +4943,14 @@ namespace Jazz2::Multiplayer
 					_activeBossHealth = -1;
 				});
 			}
+
+			// The peer learns its own number and whether it's an admin in every level, level scripts use both
+			MemoryStream packetId(15);
+			packetId.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::ClientID);
+			packetId.WriteVariableUint64(peer.GetId());
+			packetId.WriteVariableUint32(peerDesc->ClientID);
+			packetId.WriteValue<std::uint8_t>(peerDesc->IsAdmin ? 0x01 : 0x00);
+			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packetId);
 
 			if (peerDesc->PreferredPlayerType == PlayerType::None) {
 				auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -5697,6 +5745,18 @@ namespace Jazz2::Multiplayer
 				});
 				break;
 			}
+			case PeerPropertyType::ClientID: {
+				std::uint32_t clientID = packet.ReadVariableUint32();
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				LOGD("[MP] ServerPacketType::PeerSetProperty - type: {}, clientID: {}, flags: 0x{:.2x}", type, clientID, flags);
+				InvokeAsync([this, clientID, flags]() {
+					_localClientID = clientID;
+					if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+						peerDesc->IsAdmin = ((flags & 0x01) != 0);
+					}
+				});
+				break;
+			}
 		}
 		return false;
 	}
@@ -6135,6 +6195,55 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+
+	bool MpLevelHandler::HandleClientPacketScriptPacket(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		MemoryStream packet(data);
+		std::uint32_t size = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(size > MaxScriptPacketSize || std::int64_t(size) > packet.GetSize() - packet.GetPosition()) {
+			LOGD("[MP] ClientPacketType::ScriptPacket [{}] - Length out of bounds ({})", peer, size);
+			return true;
+		}
+		// Also from a client still in the lobby, as JJ2+ has it (a script asks the server for its state when the level loads)
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if DEATH_UNLIKELY(peerDesc == nullptr || !peerDesc->IsAuthenticated) {
+			return true;
+		}
+
+		String bytes{NoInit, size};
+		packet.Read(bytes.data(), size);
+		std::int32_t fromClientID = std::int32_t(peerDesc->ClientID);
+		InvokeAsync([this, fromClientID, bytes = Death::move(bytes)]() {
+			if (_scripts != nullptr) {
+				_scripts->OnReceivePacket(fromClientID, arrayView(reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size()));
+			}
+		});
+#endif
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketScriptPacket(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		MemoryStream packet(data);
+		std::int32_t fromClientID = packet.ReadValue<std::int32_t>();
+		std::uint32_t size = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(size > MaxScriptPacketSize || std::int64_t(size) > packet.GetSize() - packet.GetPosition()) {
+			LOGD("[MP] ServerPacketType::ScriptPacket - Length out of bounds ({})", size);
+			return true;
+		}
+
+		String bytes{NoInit, size};
+		packet.Read(bytes.data(), size);
+		InvokeAsync([this, fromClientID, bytes = Death::move(bytes)]() {
+			if (_scripts != nullptr) {
+				_scripts->OnReceivePacket(fromClientID, arrayView(reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size()));
+			}
+		});
+#endif
+		return true;
+	}
 
 	bool MpLevelHandler::HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
@@ -7237,6 +7346,18 @@ namespace Jazz2::Multiplayer
 				InvokeAsync([this, active]() {
 					if (!_players.empty()) {
 						_players[0]->EnableFlyCheat(active);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::GravityFlipped: {
+				bool flipped = (packet.ReadValue<std::uint8_t>() != 0);
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::GravityFlipped - flipped: {}", flipped);
+
+				InvokeAsync([this, flipped]() {
+					if (!_players.empty()) {
+						_players[0]->SetGravityFlipped(flipped);
 					}
 				});
 				break;
@@ -8470,6 +8591,22 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::FlyCheat);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>(active ? 1 : 0);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetGravityFlipped(Actors::Player* player, bool flipped)
+	{
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::GravityFlipped);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(flipped ? 1 : 0);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}

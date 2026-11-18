@@ -6,6 +6,7 @@
 
 #include "Stream.h"
 #include "FileAccess.h"
+#include "../Containers/DateTime.h"
 #include "../Containers/String.h"
 
 #include <memory>
@@ -94,6 +95,39 @@ namespace Death { namespace IO {
 
 		DEATH_PRIVATE_ENUM_FLAGS(EnumerationOptions);
 
+		/** @brief Attributes of a directory entry, supports a bitwise combination of its member values */
+		enum class EntryAttributes
+		{
+			None = 0,				/**< None */
+
+			Directory = 0x01,		/**< Directory, or a link to one together with @ref EntryAttributes::SymbolicLink --- recursive walks should skip links to avoid cycles */
+			ReadOnly = 0x02,		/**< Read-only */
+			Hidden = 0x04,			/**< Hidden */
+			System = 0x08,			/**< System file */
+			SymbolicLink = 0x10,	/**< Symbolic link, junction or mount point */
+			Placeholder = 0x20,		/**< Cloud file placeholder whose content is not stored locally */
+			Special = 0x40			/**< Device, pipe, socket or other entry that is neither a file nor a directory */
+		};
+
+		DEATH_PRIVATE_ENUM_FLAGS(EntryAttributes);
+
+		/** @brief Properties of a directory entry, see @ref Directory::TryGetEntryInfo() */
+		struct EntryInfo
+		{
+			/** @brief Size in bytes, 0 for directories */
+			std::int64_t Size = 0;
+			/** @brief Creation time (if available) */
+			Containers::DateTime CreationTime;
+			/** @brief Last modification time */
+			Containers::DateTime LastModificationTime;
+			/** @brief File system identifier of the entry (file index or inode), 0 if unknown */
+			std::uint64_t FileId = 0;
+			/** @brief Reparse tag of the entry on Windows, 0 otherwise */
+			std::uint32_t ReparseTag = 0;
+			/** @brief Attributes */
+			EntryAttributes Attributes = EntryAttributes::None;
+		};
+
 		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory
 		{
@@ -131,6 +165,24 @@ namespace Death { namespace IO {
 			Directory end() noexcept {
 				return Directory();
 			}
+
+			/**
+			 * @brief Retrieves properties of the current entry
+			 *
+			 * On Windows, the properties come with the enumeration itself, so no additional file system access is
+			 * needed. On other platforms, the entry is queried without following symbolic links, a link is followed
+			 * only to tell whether it points to a directory. Returns @cpp false @ce and leaves @p info at its defaults
+			 * if there is no current entry or the properties are not available on the platform.
+			 */
+			bool TryGetEntryInfo(EntryInfo& info) const;
+
+			/**
+			 * @brief Returns @cpp true @ce if the directory could not be opened or the enumeration failed
+			 *
+			 * The enumeration stops in both cases, the same way as at the end of the directory, so this distinguishes
+			 * a failure from an empty or fully enumerated directory. All copies of the iterator share the state.
+			 */
+			bool HasError() const noexcept;
 
 		private:
 			class Impl;
@@ -235,6 +287,17 @@ namespace Death { namespace IO {
 		 * the application doesn't have access to the user directories.
 		 */
 		static Containers::String GetSavePath(Containers::StringView applicationName);
+		/**
+		 * @brief Returns the path to the application-specific writable directory for local data
+		 *
+		 * The directory is meant for data that stays on the machine, such as caches and state. On Windows, it's
+		 * usually equivalent to @cb{.bat} %LOCALAPPDATA% @ce, which points to
+		 * @cpp "C:\\Users\\<user>\\AppData\\Local\\<name>\\" @ce. On macOS, it's usually equivalent to
+		 * @cpp "~/Library/Application Support/<name>/" @ce. On other Unix systems, it usually points to
+		 * @cb{.sh} "${XDG_DATA_HOME}/<name>/" @ce or @cpp "~/.local/share/<name>/" @ce. On other platforms, it's
+		 * the same as @ref GetConfigPath().
+		 */
+		static Containers::String GetLocalDataPath(Containers::StringView applicationName);
 		/** @brief Returns the path of the current working directory */
 		static Containers::String GetWorkingDirectory();
 		/** @brief Sets the current working directory, the starting point for interpreting relative paths */
@@ -324,6 +387,13 @@ namespace Death { namespace IO {
 		static bool Move(Containers::StringView oldPath, Containers::StringView newPath);
 		/** @brief Moves a file or a directory to trash */
 		static bool MoveToTrash(Containers::StringView path);
+		/**
+		 * @brief Moves multiple files or directories to trash
+		 *
+		 * On Windows, all paths are passed to the shell in a single operation, which is much faster than moving them
+		 * one by one. Paths must be absolute. Returns @cpp false @ce if any of them could not be moved.
+		 */
+		static bool MoveToTrash(Containers::ArrayView<const Containers::StringView> paths);
 		/** @brief Copies a file */
 		static bool Copy(Containers::StringView oldPath, Containers::StringView newPath, bool overwrite = true);
 
@@ -335,6 +405,8 @@ namespace Death { namespace IO {
 		static Containers::DateTime GetLastModificationTime(Containers::StringView path);
 		/** @brief Returns the last time the file or directory was accessed */
 		static Containers::DateTime GetLastAccessTime(Containers::StringView path);
+		/** @brief Sets the last modification time of the file or directory */
+		static bool SetLastModificationTime(Containers::StringView path, Containers::DateTime time);
 
 		/** @brief Returns permissions of a given file or directory */
 		static Permission GetPermissions(Containers::StringView path);

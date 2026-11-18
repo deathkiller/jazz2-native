@@ -9,7 +9,7 @@ namespace Jazz2::Actors::Multiplayer
 {
 	RemotePlayerOnServer::RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc)
 		: Flags(PlayerFlags::None), PressedKeys(0),
-			PressedKeysLast(0), UpdatedFrame(0)
+			PressedKeysLast(0), UpdatedFrame(0), _gravityFlipRequested(false)
 	{
 		_peerDesc = Death::move(peerDesc);
 		_peerDesc->Player = this;
@@ -51,6 +51,19 @@ namespace Jazz2::Actors::Multiplayer
 			_beingStoodOnLastSent = _beingStoodOn;
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetBeingStoodOn(this, _beingStoodOn);
 		}
+	}
+
+	void RemotePlayerOnServer::SetGravityFlipped(bool value)
+	{
+		if (IsGravityFlipped() == value) {
+			return;
+		}
+
+		PlayerOnServer::SetGravityFlipped(value);
+
+		// The owning client simulates its own movement, so it has to flip as well
+		_gravityFlipRequested = true;
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetGravityFlipped(this, value);
 	}
 
 	bool RemotePlayerOnServer::IsContinuousJumpAllowed() const
@@ -99,6 +112,14 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		Flags = flags;
+
+		// Not the virtual one, the client's own change isn't sent back to it
+		bool gravityFlipped = (flags & PlayerFlags::GravityFlipped) == PlayerFlags::GravityFlipped;
+		if (_gravityFlipRequested) {
+			_gravityFlipRequested = (gravityFlipped != IsGravityFlipped());
+		} else {
+			PlayerOnServer::SetGravityFlipped(gravityFlipped);
+		}
 
 		bool wasVisible = _renderer.IsDrawEnabled();
 		// Visibility is not synced from the client, because it should be already almost in sync on the server

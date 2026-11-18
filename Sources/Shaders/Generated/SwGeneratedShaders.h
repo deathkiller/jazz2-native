@@ -2732,8 +2732,8 @@ void TexturedBackgroundCylinder_Fragment(const nCine::RHI::Software::FragmentSha
 	float rowCos = cos(3.14159265359f * row / unis->uViewSize.y);
 	float halfSize = step(0.5f, unis->uCylinder.w);
 	vec2 texel = vec2(unis->uShift.x * 0.25f + (pixel.x - unis->uCylinder.x * unis->uViewSize.x) * mix(128.0f * (2.0f + rowCos), 256.0f * (1.0f + 2.0f * rowCos), halfSize) / unis->uViewSize.x, unis->uShift.y + 128.0f + 128.0f * halfSize + (pixel.y - 0.5f * unis->uViewSize.y) * (256.0f + 256.0f * halfSize) / unis->uViewSize.y);
-	float rows = row / 141.0f;
-	float fade = clamp(1.0f - rows * rows, 0.0f, 1.0f) * 0.65f;
+	float angle = 3.14159265359f * row / unis->uViewSize.y;
+	float fade = clamp(1.0f - angle * angle, 0.0f, 1.0f) * 0.65f;
 	vec2 texturePos = vec2(texel.x / 256.0f, 1.0f - texel.y / 256.0f);
 	vec4 texColor = swTexture(in, 0, texturePos);
 	COLOR = mix(texColor, vec4(unis->uHorizonColor.xyz(), 1.0f), fade * unis->uCylinder.z);
@@ -2765,8 +2765,8 @@ void TexturedBackgroundCylinder_DITHER_Fragment(const nCine::RHI::Software::Frag
 	float rowCos = cos(3.14159265359f * row / unis->uViewSize.y);
 	float halfSize = step(0.5f, unis->uCylinder.w);
 	vec2 texel = vec2(unis->uShift.x * 0.25f + (pixel.x - unis->uCylinder.x * unis->uViewSize.x) * mix(128.0f * (2.0f + rowCos), 256.0f * (1.0f + 2.0f * rowCos), halfSize) / unis->uViewSize.x, unis->uShift.y + 128.0f + 128.0f * halfSize + (pixel.y - 0.5f * unis->uViewSize.y) * (256.0f + 256.0f * halfSize) / unis->uViewSize.y);
-	float rows = row / 141.0f;
-	float fade = clamp(1.0f - rows * rows, 0.0f, 1.0f) * 0.65f;
+	float angle = 3.14159265359f * row / unis->uViewSize.y;
+	float fade = clamp(1.0f - angle * angle, 0.0f, 1.0f) * 0.65f;
 	vec2 texturePos = vec2(texel.x / 256.0f, 1.0f - texel.y / 256.0f);
 	vec4 texColor = swTexture(in, 0, texturePos);
 	COLOR = mix(texColor, vec4(unis->uHorizonColor.xyz(), 1.0f), fade * unis->uCylinder.z);
@@ -2811,8 +2811,8 @@ void TexturedBackgroundCylinder_KEYED_Fragment(const nCine::RHI::Software::Fragm
 	float rowCos = cos(3.14159265359f * row / unis->uViewSize.y);
 	float halfSize = step(0.5f, unis->uCylinder.w);
 	vec2 texel = vec2(unis->uShift.x * 0.25f + (pixel.x - unis->uCylinder.x * unis->uViewSize.x) * mix(128.0f * (2.0f + rowCos), 256.0f * (1.0f + 2.0f * rowCos), halfSize) / unis->uViewSize.x, unis->uShift.y + 128.0f + 128.0f * halfSize + (pixel.y - 0.5f * unis->uViewSize.y) * (256.0f + 256.0f * halfSize) / unis->uViewSize.y);
-	float rows = row / 141.0f;
-	float fade = clamp(1.0f - rows * rows, 0.0f, 1.0f) * 0.65f;
+	float angle = 3.14159265359f * row / unis->uViewSize.y;
+	float fade = clamp(1.0f - angle * angle, 0.0f, 1.0f) * 0.65f;
 	vec2 texturePos = vec2(texel.x / 256.0f, 1.0f - texel.y / 256.0f);
 	vec4 texColor = swTexture(in, 0, texturePos);
 	COLOR = mix(texColor, vec4(unis->uHorizonColor.xyz(), 1.0f), fade * unis->uCylinder.z);

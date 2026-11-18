@@ -227,7 +227,7 @@ namespace Jazz2
 			_playerWaterLevelSet(false), _waterHidden(false), _waterLayer(Formats::LevelSettingsChunk::WaterInFront),
 			_waterInteraction(WaterInteraction::Swim), _waterLighting(Formats::LevelSettingsChunk::WaterLighting::None),
 #if defined(WITH_AUDIO)
-			_musicStartDelay(0),
+			_musicStartDelay(0), _sfxEcho(0.0f),
 #endif
 			_checkpointSnapshotPending(false), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
 			_overrideActions(0), _overrideMovement(0.0f, 0.0f)
@@ -1158,6 +1158,17 @@ namespace Jazz2
 			}
 			++it;
 		}
+
+		for (std::size_t i = 0; i < _sfxEchoes.size(); ) {
+			SfxEcho& echo = _sfxEchoes[i];
+			echo.FramesLeft -= timeMult;
+			if (echo.FramesLeft > 0.0f) {
+				i++;
+				continue;
+			}
+			PlaySfxOnce(echo.Buffer, Vector3f(echo.Pos.X, echo.Pos.Y, 0.0f), echo.SourceRelative, echo.Gain, echo.Pitch, false);
+			_sfxEchoes.erase(_sfxEchoes.begin() + i);
+		}
 #endif
 
 		bool levelTimeRuns = (!IsPausable() || _pauseMenu == nullptr);
@@ -1475,6 +1486,13 @@ namespace Jazz2
 			return true;
 		}
 
+#if defined(WITH_ANGELSCRIPT)
+		// A level script of JJ2+ is told of what the player says (not of commands) and may keep it from being said
+		if (_scripts != nullptr && !line.hasPrefix('/') && _scripts->OnLocalChat(line)) {
+			return true;
+		}
+#endif
+
 		return TryInvokeCheat(line);
 	}
 
@@ -1567,27 +1585,76 @@ namespace Jazz2
 		// Except for looping, the flags only matter to the remote peers - here the actor holds the instance it
 		// started, and replaces or stops it itself
 #if defined(WITH_AUDIO)
-		if (buffer != nullptr) {
-			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
-				? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
-				: std::make_shared<AudioBufferPlayer>(buffer));
-			player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-			player->SetSourceRelative(sourceRelative);
-			player->SetLooping((flags & SfxFlags::Looping) == SfxFlags::Looping);
+		bool looping = ((flags & SfxFlags::Looping) == SfxFlags::Looping);
+		auto player = PlaySfxOnce(buffer, pos, sourceRelative, gain, pitch, looping);
+		if (player != nullptr && !looping) {
+			QueueSfxEchoes(buffer, pos, sourceRelative, gain, pitch);
+		}
+		return player;
+#else
+		return nullptr;
+#endif
+	}
 
-			if (pos.Y >= _waterLevel) {
-				player->SetLowPass(0.05f);
-				player->SetPitch(pitch * 0.7f);
-			} else {
-				player->SetPitch(pitch);
-			}
+#if defined(WITH_AUDIO)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfxOnce(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, bool looping)
+	{
+		if (buffer == nullptr) {
+			return nullptr;
+		}
+		auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
+			? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
+			: std::make_shared<AudioBufferPlayer>(buffer));
+		player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
+		player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
+		player->SetSourceRelative(sourceRelative);
+		player->SetLooping(looping);
 
-			player->Play();
-			return player;
+		if (pos.Y >= _waterLevel) {
+			player->SetLowPass(0.05f);
+			player->SetPitch(pitch * 0.7f);
+		} else {
+			player->SetPitch(pitch);
+		}
+
+		player->Play();
+		return player;
+	}
+
+	void LevelHandler::QueueSfxEchoes(AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	{
+		// Two repeats a fifth of a second apart, each quieter, as a cave sounds
+		constexpr std::int32_t EchoCount = 2;
+		constexpr float EchoDelay = 0.2f * FrameTimer::FramesPerSecond;
+		constexpr std::size_t MaxPendingEchoes = 64;
+		if (_sfxEcho <= 0.0f || buffer == nullptr) {
+			return;
+		}
+		float echoGain = gain;
+		for (std::int32_t i = 1; i <= EchoCount && _sfxEchoes.size() < MaxPendingEchoes; i++) {
+			echoGain *= 0.4f * _sfxEcho;
+			_sfxEchoes.push_back({ buffer, Vector2f(pos.X, pos.Y), echoGain, pitch, EchoDelay * float(i), sourceRelative });
+		}
+	}
+#endif
+
+	void LevelHandler::SetSfxEcho(float strength)
+	{
+#if defined(WITH_AUDIO)
+		_sfxEcho = std::clamp(strength, 0.0f, 1.0f);
+		if (_sfxEcho <= 0.0f) {
+			_sfxEchoes.clear();
 		}
 #endif
-		return nullptr;
+	}
+
+	float LevelHandler::GetSfxEcho() const
+	{
+#if defined(WITH_AUDIO)
+		return _sfxEcho;
+#else
+		return 0.0f;
+#endif
 	}
 
 	void LevelHandler::StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player)
@@ -1606,22 +1673,10 @@ namespace Jazz2
 		if (it != _commonResources->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			auto* buffer = &it->second.Buffers[idx]->Buffer;
-			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
-				? std::make_shared<AudioBufferPlayerForSplitscreen>(buffer, _assignedViewports)
-				: std::make_shared<AudioBufferPlayer>(buffer));
-			player->SetPosition(Vector3f(pos.X, pos.Y, 100.0f));
-			player->SetGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-
-			if (pos.Y >= _waterLevel) {
-				player->SetLowPass(0.05f);
-				player->SetPitch(pitch * 0.7f);
-			} else {
-				player->SetPitch(pitch);
-			}
-
-			player->Play();
+			auto player = PlaySfxOnce(buffer, pos, false, gain, pitch, false);
+			QueueSfxEchoes(buffer, pos, false, gain, pitch);
 			return player;
-		}	
+		}
 #endif
 		return nullptr;
 	}

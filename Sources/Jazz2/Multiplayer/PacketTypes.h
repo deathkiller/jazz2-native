@@ -46,7 +46,9 @@ namespace Jazz2::Multiplayer
 		PlayerSpectateRequest,		/**< Requests to enable or disable spectate mode */
 		PlayerAckWarped,			/**< Acknowledges that the player has been warped */
 		PlayerChangeCharacter,		/**< Requests to change the player character */
-		PlayerChangeTeamRequest		/**< Requests to change the player team */
+		PlayerChangeTeamRequest,	/**< Requests to change the player team */
+
+		ScriptPacket = 50			/**< Data a level script sends to the server (`jjSendPacket()`) */
 	};
 
 	/**
@@ -84,6 +86,7 @@ namespace Jazz2::Multiplayer
 		CreateDebris,					/**< Creates particle or sprite debris */
 		StopSfx,						/**< Stops a sound effect attached to an actor, started with @ref SfxFlags::Exclusive */
 		ServerMessage,					/**< Alert or console line of the server, formatted by the client in its own language, see @ref ServerMessageType */
+		ScriptPacket,					/**< Data the level script of the server sends to the client (`jjSendPacket()`) */
 
 		CreateControllablePlayer = 110,	/**< Creates a player controllable by the client */
 		CreateRemoteActor,				/**< Creates a remote actor on the client */
@@ -126,6 +129,7 @@ namespace Jazz2::Multiplayer
 		Connected,		/**< Peer connected */
 		Disconnected,	/**< Peer disconnected */
 		Roasted,		/**< Peer was roasted (killed) */
+		ClientID,		/**< Number the server gave the receiving peer (see @ref PeerDescriptor::ClientID) and whether it's an admin */
 
 		Count			/**< Count of supported property types */
 	};
@@ -182,6 +186,7 @@ namespace Jazz2::Multiplayer
 		AmbientLight,		/**< Ambient light intensity to apply and/or to remember for the checkpoint */
 		FlyCheat,			/**< Whether fly-cheat behavior is active (unlimited copter flight) */
 		ModeState,			/**< Role, score, carried amount and lives defined by the game mode */
+		GravityFlipped,		/**< Whether gravity pulls the player up */
 
 		WeaponAmmo = 30,	/**< Ammo of a weapon */
 		WeaponUpgrades,		/**< Upgrades of a weapon */

@@ -1189,6 +1189,11 @@ namespace Jazz2::Actors
 		float _gravityFrameScale = 1.0f;
 		// CanJump() right before the previous move, what the non-Reforged jump rules read
 		bool _canJumpBeforeMove = false;
+		// Whether the tube the player is in is too low for its standing hitbox
+		bool _tubeCurled;
+		bool _stompLandedPending = false;
+		// Shield drawn in place of the player's own while `_scriptHidesShield` is set
+		ShieldType _scriptShield;
 		// Started when Jump is let go, the non-Reforged double jump is only accepted while it runs
 		float _doubleJumpWindowLeft = 0.0f;
 		// Re-armed by a pinball paddle every frame, keeps the tube ball pose; a timer since the paddle may update either side of the player
@@ -1199,8 +1204,10 @@ namespace Jazz2::Actors
 		float _tubeHeldSpeedY = 0.0f;
 		// Limit on holding that speed, so a ceiling can't keep the player for good
 		float _tubeHeldTimeLeft = 0.0f;
-		// Whether the tube the player is in is too low for its standing hitbox
-		bool _tubeCurled;
+		// Launch speed of a jump, LegacyJumpSpeed unless a script changed it (`jumpStrength`)
+		float _jumpStrength;
+		// ID + 1 of the warp event the player goes through, 0 for none or a warp without an ID
+		std::int32_t _warpingTo;
 		// The spring that launched the player last, only compared, never used
 		const ActorBase* _lastSpring;
 		// Pushing an object that isn't solid (a rolling rock), counted down in frames
@@ -1269,7 +1276,6 @@ namespace Jazz2::Actors
 		float _frogTongueLockLeft = 0.0f, _frogTongueCooldown = 0.0f;
 		/** @brief Ticks the player has been pressing into a wall or object, the push pose needs a moment of it */
 		float _pushPressTicks = 0.0f;
-		bool _stompLandedPending = false;
 		float _activeShieldTime = 0.0f;
 		float _weaponFlareTime = 0.0f;
 		float _weaponCooldown = 0.0f;
@@ -1396,8 +1402,13 @@ namespace Jazz2::Actors
 		bool _birdCharging : 1;
 		// Restored standing on the exit used, ignored until the player steps off it
 		bool _levelExitSuppressed : 1;
-		// A script turned the player's light off (`jjPLAYER.lightType` set to `LIGHT::NONE`)
+		// A script turned the player's light off (`jjPLAYER.lightType` set to `LIGHT::NONE`) or gave it another one
 		bool _lightHiddenByScript : 1;
+		// What `onPlayerDraw()` of a script left out of the drawing of the player in the current tick
+		bool _scriptHidesFlare : 1;
+		bool _scriptHidesShield : 1;
+		bool _scriptHidesTrail : 1;
+		bool _scriptHidesSugarRush : 1;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

@@ -424,6 +424,8 @@ namespace Jazz2::Actors
 
 		/** @brief Returns `true` if the object is currently facing left */
 		bool IsFacingLeft() const;
+		/** @brief Returns `true` if gravity pulls the object up, see @ref SetGravityFlipped() */
+		bool IsGravityFlipped() const;
 
 		/** @brief Called after the object is created */
 		Task<bool> OnActivated(const ActorActivationDetails& details);
@@ -721,8 +723,10 @@ namespace Jazz2::Actors
 		std::uint8_t _spawnEventParams[SpawnParamsSize];
 		/** @brief Event type the object was spawned from, or @ref EventType::Empty */
 		EventType _spawnEventType;
-		bool _thawPending = false;
-		bool _currentTransitionCancellable;
+		bool _thawPending : 1;
+		bool _currentTransitionCancellable : 1;
+		/** @brief Whether gravity pulls the actor up, its vertical speed and forces then point along that gravity */
+		bool _gravityFlipped : 1;
 
 		ActorRenderer _renderer;
 #endif
@@ -732,6 +736,19 @@ namespace Jazz2::Actors
 
 		/** @brief Sets whether the object is facing left */
 		void SetFacingLeft(bool value);
+		/**
+		 * @brief Sets whether gravity pulls the object up
+		 *
+		 * The object is drawn upside down and the standard movement treats the ceiling as its floor. Its vertical
+		 * speed and forces point along its gravity, so they're negated by the change and the motion is kept.
+		 */
+		virtual void SetGravityFlipped(bool value);
+		/** @brief Converts a box between the world and the space where down is along the object's gravity */
+		AABBf ToGravitySpace(const AABBf& box) const;
+		/** @brief Converts a move between the world and the space where down is along the object's gravity */
+		Vector2f ToGravitySpace(Vector2f move) const;
+		/** @brief Moves the object relatively in the space of its gravity, see @ref ToGravitySpace() */
+		bool MoveAlongGravity(Vector2f move, MoveType type, Tiles::TileCollisionParams& params);
 
 		/** @brief Called when the object is created and activated */
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);

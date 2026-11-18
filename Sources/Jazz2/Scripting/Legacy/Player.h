@@ -5,11 +5,14 @@
 #include "Canvas.h"
 #include "Objects.h"
 #include "../../WeaponDefinition.h"
+#include "../../LightEmitter.h"
 
 namespace Jazz2::Scripting
 {
 	namespace Legacy
 	{
+		struct jjPLAYERDRAW;
+
 		/**
 		 * @brief A player in the level
 		 *
@@ -124,9 +127,9 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Vertical speed the player gains by jumping
 			 *
-			 * @partialsupport Currently reads 0 and has no effect.
+			 * In pixels per tick, -10 by default. A running jump adds to it as it always does.
 			 */
-			float jumpStrength = 0.0f;
+			float jumpStrength;
 			/**
 			 * @brief Returns how many more ticks the player stays frozen
 			 *
@@ -167,7 +170,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Warp the player is currently going through
 			 *
-			 * @partialsupport Currently always 0.
+			 * 0 unless the player is in the animation of a warp: then the ID of the warp event plus one, or 1 for a warp
+			 * without an ID (a bonus warp, a script). Fast warps take no time, they read 0.
 			 */
 			std::int32_t warpID = 0;
 
@@ -206,8 +210,8 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the type of light the player emits
 			 *
-			 * Either @ref LIGHT::PLAYER, the default, or @ref LIGHT::NONE. Assigning @ref LIGHT::NONE turns the player's light off.
-			 * @partialsupport Any other type turns the default light back on, it reads back as @ref LIGHT::PLAYER.
+			 * @ref LIGHT::PLAYER by default. With it and @ref light 0 the player has the light of the game, any other
+			 * type or size gives it that light as an object of the type and size has it, @ref LIGHT::NONE none.
 			 */
 			std::uint32_t get_lightType() const;
 			/** @brief Sets the type of light the player emits */
@@ -333,24 +337,24 @@ namespace Jazz2::Scripting
 			 */
 			std::int32_t flag = 0;
 			/**
-			 * @brief ID of the game client controlling the player
+			 * @brief ID of the machine the player plays on
 			 *
-			 * @partialsupport Currently always 0.
+			 * 0 for the machine of the server and in a game without one. A client of an online server has the number the
+			 * server gave it when it connected (a client knows its own once its level is loaded), the one that
+			 * @ref jjSendPacket() takes.
 			 */
 			std::int32_t clientID = 0;
 
 			/**
 			 * @brief Returns the index of the player
 			 *
-			 * Currently the same as localPlayerID.
-			 * @partialsupport Every player counts as local, also in online multiplayer.
+			 * The index among all players of the game, also in online multiplayer.
 			 */
 			std::int8_t get_playerID() const;
 			/**
 			 * @brief Returns the index of the player among local players
 			 *
-			 * 0 to 3 in a splitscreen game.
-			 * @partialsupport Every player counts as local, also in online multiplayer.
+			 * 0 to 3 in a splitscreen game, the index of @ref jjLocalPlayers.
 			 */
 			std::int32_t get_localPlayerID() const;
 
@@ -469,10 +473,9 @@ namespace Jazz2::Scripting
 			void spring(float xSpeed, float ySpeed, bool keepZeroSpeeds, bool sample);
 
 			/**
-			 * @brief Whether the player is controlled on this machine
+			 * @brief Whether the player plays on this machine
 			 *
-			 * True for every player in the level, false for a handle that doesn't stand for a player.
-			 * @partialsupport Also true for players of other machines in online multiplayer.
+			 * False for a player of another machine in online multiplayer and for a handle that doesn't stand for a player.
 			 */
 			bool isLocal = true;
 			/**
@@ -483,27 +486,21 @@ namespace Jazz2::Scripting
 			bool isActive = true;
 
 			/**
-			 * @brief Returns whether the player is still joining an online server
-			 *
-			 * @partialsupport Currently always false.
+			 * @brief Returns whether the player is a client still joining the level of an online server
 			 */
 			bool get_isConnecting() const;
 			/**
 			 * @brief Returns whether the player is an idle server that isn't in the level
 			 *
-			 * @partialsupport Currently always false.
+			 * Always false, a server of this game without a player of its own has no such player.
 			 */
 			bool get_isIdle() const;
 			/**
 			 * @brief Returns whether the player is out of a last-rabbit-standing game
-			 *
-			 * @partialsupport Currently always false.
 			 */
 			bool get_isOut() const;
 			/**
-			 * @brief Returns whether the player is spectating by choice
-			 *
-			 * @partialsupport Currently always false.
+			 * @brief Returns whether the player is spectating by choice, not because the server made it
 			 */
 			bool get_isSpectating() const;
 			/**
@@ -516,25 +513,26 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the player's name, including color codes
 			 *
-			 * @partialsupport Currently always an empty string.
+			 * The name the player joined with in multiplayer, otherwise the name from the options of the game (or the one a
+			 * script gave by @ref setName()).
 			 */
 			String get_name() const;
 			/**
 			 * @brief Returns the player's name without color codes
-			 *
-			 * @partialsupport Currently always an empty string.
 			 */
 			String get_nameUnformatted() const;
 			/**
 			 * @brief Changes the player's name
 			 *
-			 * @partialsupport Currently has no effect and always returns false.
+			 * Only for a game without a server, returns false in multiplayer. The new name is the script's only, the options of
+			 * the game keep theirs.
 			 */
 			bool setName(const String& name);
 			/**
-			 * @brief Returns the intensity of the light the player emits
+			 * @brief Returns the size of the light the player emits
 			 *
-			 * @partialsupport Currently always 0, assigning it has no effect.
+			 * As @ref jjOBJ::light of an object with the player's @ref lightType. 0 by default, which with
+			 * @ref LIGHT::PLAYER keeps the light of the game.
 			 */
 			std::int8_t get_light() const;
 			/** @brief Sets the intensity of the light the player emits */
@@ -566,13 +564,16 @@ namespace Jazz2::Scripting
 			/** @brief Sets whether the player is prevented from firing */
 			bool set_noFire(bool value);
 			/**
-			 * @brief Returns whether gravity is turned off for the player
+			 * @brief Returns whether the player falls upwards
 			 *
-			 * While true, the player isn't pulled down by gravity.
-			 * @partialsupport It doesn't fall upwards and isn't drawn upside down.
+			 * The player stands on ceilings, jumps down and is drawn upside down. Its speeds stay as the world has them
+			 * (@ref ySpeed is still positive downwards), turning it on or off keeps how it moves. In online multiplayer,
+			 * it's synced from the machine that sets it to the server and to the other players.
+			 * @partialsupport Some special moves and vehicles of the game (vines, poles, tubes, the airboard) don't turn
+			 * with it.
 			 */
 			bool get_antiGrav() const;
-			/** @brief Sets whether gravity is turned off for the player */
+			/** @brief Sets whether the player falls upwards */
 			bool set_antiGrav(bool value);
 			/** @brief Returns whether the player is invisible, it isn't drawn then */
 			bool get_invisibility() const;
@@ -976,70 +977,55 @@ namespace Jazz2::Scripting
 			float get_cameraY() const;
 			/**
 			 * @brief Returns how many times the player died in a competitive game
-			 *
-			 * @partialsupport Currently always 0.
 			 */
 			std::int32_t get_deaths() const;
 
 			/**
 			 * @brief Returns whether the player is in jail in Jailbreak
-			 *
-			 * @partialsupport Currently always false.
 			 */
 			bool get_isJailed() const;
 			/**
 			 * @brief Returns whether the player is a zombie in Pestilence
-			 *
-			 * @partialsupport Currently always false.
 			 */
 			bool get_isZombie() const;
 			/**
-			 * @brief Returns the lives left in last-rabbit-standing game modes
-			 *
-			 * @partialsupport Currently always 0.
+			 * @brief Returns the lives left in last-rabbit-standing game modes, -1 in any other
 			 */
 			std::int32_t get_lrsLives() const;
 			/**
 			 * @brief Returns how many players this player roasted
-			 *
-			 * @partialsupport Currently always 0.
 			 */
 			std::int32_t get_roasts() const;
 			/**
 			 * @brief Returns how many laps the player finished in a race
-			 *
-			 * @partialsupport Currently always 0.
 			 */
 			std::int32_t get_laps() const;
 			/**
 			 * @brief Returns how many ticks the current lap has lasted
 			 *
-			 * @partialsupport Currently always 0.
+			 * Counted from the tick the previous lap was seen finished, the first lap from when the script first looked.
 			 */
 			std::int32_t get_lapTimeCurrent() const;
 			/**
-			 * @brief Returns the time of one of the last laps in ticks
+			 * @brief Returns the time of one of the last 5 laps in ticks
 			 *
-			 * Index 0 is the most recent lap.
-			 * @partialsupport Currently always 0.
+			 * Index 0 is the most recent lap, 0 for a lap not run yet.
 			 */
 			std::int32_t get_lapTimes(std::uint32_t index) const;
 			/**
-			 * @brief Returns the time of the player's fastest lap in ticks
-			 *
-			 * @partialsupport Currently always 0.
+			 * @brief Returns the time of the player's fastest lap in ticks, 0 before the first one
 			 */
 			std::int32_t get_lapTimeBest() const;
 			/**
-			 * @brief Returns whether the player is logged in as a server administrator
+			 * @brief Returns whether the player is an administrator of the server
 			 *
-			 * @partialsupport Currently always false.
+			 * The players of the server's own machine always are.
 			 */
 			bool get_isAdmin() const;
 			/**
 			 * @brief Returns whether the player has the given administrator privilege
 			 *
-			 * @partialsupport Currently always returns false.
+			 * The game has no privileges of their own, an administrator (@ref get_isAdmin()) has every one.
 			 */
 			bool hasPrivilege(const String& privilege, std::uint32_t moduleID) const;
 
@@ -1060,17 +1046,17 @@ namespace Jazz2::Scripting
 			 */
 			std::int32_t getObjectHitForce(const jjOBJ* target) const;
 			/**
-			 * @brief Makes the player collide with an object
+			 * @brief Makes the player collide with an object as with one of @p playerHandling
 			 *
-			 * The collision is handled as if the two touched, wherever they are. An object with scripted collisions gets
-			 * its @ref onObjectHit() called with this player, otherwise the game handles the collision itself, for example
-			 * by collecting a pickup.
+			 * Even where they aren't. With `scriptedCollisions` the object is told of it, @ref HANDLING::HURT,
+			 * @ref HANDLING::ENEMYBULLET and @ref HANDLING::ENEMY with @p force 0 hurt the player (the bullet explodes),
+			 * @ref HANDLING::ENEMY with an attack hurts an object that exists only for the script, @ref HANDLING::PICKUP
+			 * collects one as the pickup of the game of its event. An object of the game collides as the game has it otherwise.
 			 * @param target The object to collide with
-			 * @param force How hard the player hits, used only by scripted collisions: 0 for a plain touch, 1 for a
-			 *		buttstomp or sugar rush, -1 for a special move
-			 * @param playerHandling Currently ignored
+			 * @param force How hard the player hits: 0 for a plain touch, 1 for a buttstomp or sugar rush, -1 for a special move
+			 * @param playerHandling How the object is handled
 			 * @return Whether the object was affected
-			 * @partialsupport The `playerHandling` parameter is ignored, and so is `force` for collisions the game handles.
+			 * @partialsupport @p force matters to collisions the game handles only as far as the player really attacks.
 			 */
 			bool objectHit(jjOBJ* target, std::int32_t force, std::uint32_t playerHandling);
 			/**
@@ -1084,8 +1070,9 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the sprite mode the player is drawn with
 			 *
-			 * A @ref SPRITE::Mode value. Other modes are kept, but the player is drawn as usual.
-			 * @partialsupport Currently only @ref SPRITE::INVISIBLE has an effect, it hides the player.
+			 * A @ref SPRITE::Mode value, @ref SPRITE::NORMAL by default. @ref SPRITE::INVISIBLE hides the player.
+			 * @partialsupport The game draws the player itself only in its own colors, in any other mode the level
+			 * draws its frame in that mode once per tick (as `jjDrawSprite()` would), following the player between ticks.
 			 */
 			std::uint32_t get_spriteMode() const;
 			/** @brief Sets the sprite mode the player is drawn with */
@@ -1093,10 +1080,7 @@ namespace Jazz2::Scripting
 			/** @brief Hides the player while `onPlayerDraw()` of the script draws it in another frame */
 			void SetDrawnByScript(bool value);
 			/**
-			 * @brief Returns the parameter of the sprite mode
-			 *
-			 * @partialsupport Currently only kept, it doesn't change how the player is drawn.
-			 */
+			 * @brief Returns the parameter of the sprite mode, see @ref get_spriteMode() */
 			std::uint8_t get_spriteParam() const;
 			/** @brief Sets the parameter of the sprite mode */
 			std::uint8_t set_spriteParam(std::uint8_t value);
@@ -1128,10 +1112,28 @@ namespace Jazz2::Scripting
 			bool FireScriptedWeapon(WeaponType weaponType, float aimAngle = -1.0f, Actors::ActorBase** lastShot = nullptr);
 			/** @brief Moves the player by the `ySpeed` a behavior of an object set in an earlier tick, as JJ2+ moves the players before the objects */
 			void ApplyPendingSpeed(std::int32_t currentTick);
+			/** @brief Hands what the script changed of the plain properties over to the player, after each call of the script */
+			void ApplyScriptFields();
+			/** @brief Shows the player pushing an object a behavior made solid, see @ref jjOBJ::beSolid() */
+			void SetPushingSolidObject();
+			/** @brief Takes the times of the laps the player finished, once per tick, see @ref get_lapTimes() */
+			void UpdateLaps(std::int32_t currentTick);
+			/** @brief Draws the player in a sprite mode it can't draw itself in, once per tick, see @ref spriteMode */
+			void DrawInSpriteMode();
+			/** @brief Applies what `onPlayerDraw()` changed of the effects drawn with the player for the current tick */
+			void ApplyPlayerDraw(const jjPLAYERDRAW& draw, const jjPLAYERDRAW& original);
 
 		private:
+			// Hands the update of a hidden player back to the player and adds the light a script gave it
+			class PlayerOverride;
+
 			LevelScriptLoader* _levelScriptLoader;
 			Actors::Player* _player;
+			void* _timerCallback;
+			// The override installed on the player, owned by it
+			PlayerOverride* _override;
+			// The name a script gave the player of a game without a server (setName())
+			String _nameOverride;
 
 			// `ballTime` a script gave the player and the tick it did
 			std::int32_t _ballTime = 0;
@@ -1139,44 +1141,57 @@ namespace Jazz2::Scripting
 			// `ySpeed` a behavior of an object set and the tick it did, the player moves by it from the next tick
 			float _pendingYSpeed = 0.0f;
 			std::int32_t _pendingYSpeedTick = 0;
-
-			void ApplyYSpeed(float value);
-
-			void* _timerCallback;
 			std::uint32_t _timerState;
 			float _timerLeft;
+			// `jumpStrength` as it was given to the script last, a change of the script is handed to the player
+			float _syncedJumpStrength;
+			// The object the player pushed in that tick, `platform` names it (see jjOBJ::beSolid())
+			std::int32_t _pushedObject = 0;
+			std::int32_t _pushedTick = INT32_MIN;
+			// SPRITE::NORMAL and its parameter (`_spriteParam`)
+			std::uint32_t _spriteMode = 0;
+			// `lightType` and `light` (`_light`), LIGHT::PLAYER with no size is the light of the game
+			std::uint32_t _lightType;
+			// What `onPlayerDraw()` changed of the light in this tick (with `_tickLight`), used instead of the above while
+			// `_tickLightSet`
+			std::uint32_t _tickLightType;
+			// The laps counted already, the tick the current one started in (-1 before), the times of the last ones (newest
+			// first) and of the fastest one, see UpdateLaps()
+			std::int32_t _lapsSeen;
+			std::int32_t _lapStartTick;
+			std::int32_t _lapTimes[5];
+			std::int32_t _lapTimeBest;
+			// The ammo JJ2+ shows of each weapon of `jjWEAPON::infinite`, the player has unlimited ammo of it
+			std::uint16_t _infiniteAmmo[std::int32_t(WeaponType::Count)] = {};
+			std::uint8_t _spriteParam = 0;
+			std::int8_t _light;
+			std::int8_t _tickLight;
+			bool _tickLightSet;
 			bool _timerPersists;
-
 			// `bossActive` as it was given to the script last, a change of the script stays
 			bool _syncedBossActive = false;
 			bool _syncedOnce = false;
 			// `_pendingYSpeed` is set
 			bool _hasPendingYSpeed = false;
-			// The object the player pushed in that tick, `platform` names it (see jjOBJ::beSolid())
-			std::int32_t _pushedObject = 0;
-			std::int32_t _pushedTick = INT32_MIN;
+			// `onPlayerDraw()` of the script draws the player in this tick, the player doesn't draw itself (see SetDrawnByScript())
+			bool _drawnByScript = false;
+			// DrawInSpriteMode() draws the player in this tick, the player doesn't draw itself
+			bool _drawnInMode;
+			// `invisibility`, the player isn't drawn
+			bool _invisible = false;
 
+			void ApplyYSpeed(float value);
 			// Finds the animation of the original the player shows and the frame of it, false if it's none of them
 			bool FindShownFrame(std::uint32_t& anim, std::uint32_t& position, std::uint32_t& firstFrame) const;
 			// Returns the count of gems of a GEM::Color, `nullptr` if there's no such color or player
 			std::int32_t* GetGemCount(std::uint32_t type) const;
 
-			// SPRITE::NORMAL and its parameter
-			std::uint32_t _spriteMode = 0;
-			std::uint8_t _spriteParam = 0;
-			// `onPlayerDraw()` of the script draws the player in this tick, the player doesn't draw itself (see SetDrawnByScript())
-			bool _drawnByScript = false;
-			// `invisibility`, the player isn't drawn
-			bool _invisible = false;
-
-			// Hands the update of a player of SPRITE::INVISIBLE back to the player, which isn't drawn then
-			class InvisibleOverride;
 			static void RunPlayerUpdate(Actors::Player* player, float timeMult);
-			// Installs or removes the override, the player is hidden while it's invisible or drawn by the script
+			static void EmitPlayerLight(Actors::Player* player, std::uint32_t lightType, std::int8_t light, SmallVectorImpl<LightEmitter>& lights);
+			// Installs, updates or removes the override, the player is hidden while it's invisible or drawn by the script
 			void UpdateDrawOverride();
-
-			// The ammo JJ2+ shows of each weapon of `jjWEAPON::infinite`, the player has unlimited ammo of it
-			std::uint16_t _infiniteAmmo[std::int32_t(WeaponType::Count)] = {};
+			// Whether the player draws itself in its sprite mode, other modes are drawn by DrawInSpriteMode()
+			bool IsSpriteModeDrawnByGame() const;
 
 			// Fires one bullet of the spread, -1 angled up, 0 straight, 1 angled down
 			template<typename T>
@@ -1187,6 +1202,8 @@ namespace Jazz2::Scripting
 
 			// Gives the properties what the player is now, except `bossActive` if a script changed it
 			void SyncPropertiesToBackingStore();
+			// What `warpID` reads, see there
+			std::int32_t GetWarpID() const;
 
 		public:
 			// Sets the maximum health of the player (`/smhealth`), a player at full health stays at full health
@@ -1315,15 +1332,11 @@ namespace Jazz2::Scripting
 			/** @brief Whether the player's sprite is drawn */
 			bool sprite;
 			/**
-			 * @brief Whether the sugar rush effect is drawn
-			 *
-			 * @partialsupport Currently ignored.
+			 * @brief Whether the stars of a sugar rush are given off in this tick
 			 */
 			bool sugarRush;
 			/**
 			 * @brief Whether the muzzle flash is drawn
-			 *
-			 * @partialsupport Currently ignored.
 			 */
 			bool gunFlash;
 			/**
@@ -1333,9 +1346,7 @@ namespace Jazz2::Scripting
 			 */
 			bool invincibility;
 			/**
-			 * @brief Whether the trail behind a fast player is drawn
-			 *
-			 * @partialsupport Currently ignored.
+			 * @brief Whether the trail of light behind a fast player is drawn
 			 */
 			bool trail;
 			/**
@@ -1371,15 +1382,15 @@ namespace Jazz2::Scripting
 			 */
 			std::uint8_t spriteParam;
 			/**
-			 * @brief Type of light the player emits
+			 * @brief Type of light the player emits in this tick
 			 *
-			 * @partialsupport Currently ignored.
+			 * Defaults to @ref jjPLAYER::lightType.
 			 */
 			std::int32_t lightType;
 			/**
-			 * @brief Intensity of the light the player emits
+			 * @brief Size of the light the player emits in this tick
 			 *
-			 * @partialsupport Currently ignored.
+			 * Defaults to @ref jjPLAYER::light.
 			 */
 			std::int8_t light;
 			/**
@@ -1432,14 +1443,16 @@ namespace Jazz2::Scripting
 			 * @partialsupport Currently ignored.
 			 */
 			std::int32_t flag;
+			/** @brief Bits of the shields drawn around the player, by @ref SHIELD::Shield */
+			std::uint32_t _shields;
 			/** @brief The player this draw configuration belongs to */
 			jjPLAYER* _player;
 
 			/**
 			 * @brief Returns whether the given shield is drawn around the player
 			 *
-			 * Indexed by @ref SHIELD::Shield.
-			 * @partialsupport Currently always false, and assigning it has no effect.
+			 * Indexed by @ref SHIELD::Shield, true for the shield the player has. A player is drawn with one shield, of the
+			 * ones the script leaves on the lowest.
 			 */
 			bool get_shield(std::int32_t shield) const;
 			/** @brief Sets whether the given shield is drawn around the player */
@@ -1458,31 +1471,37 @@ namespace Jazz2::Scripting
 {
 	using namespace Legacy;
 
-	/** @brief Returns the number of players in the level */
+	/**
+	 * @brief Returns the number of players in the level
+	 *
+	 * @partialsupport A client of a multiplayer game counts only its own players, the players of the other machines
+	 *		aren't in its level.
+	 */
 	std::int32_t get_jjPlayerCount();
 	/**
 	 * @brief Returns the number of local players
 	 *
-	 * Currently the same as @ref jjPlayerCount, every player in the level is local.
+	 * The players of this machine, none on a server without a player of its own.
 	 */
 	std::int32_t get_jjLocalPlayerCount();
 
 	/**
 	 * @brief Returns the current player
 	 *
-	 * Always the first player. Prefer @ref jjLocalPlayers or @ref jjPlayers, which work with more than one player.
+	 * The first local player. Prefer @ref jjLocalPlayers or @ref jjPlayers, which work with more than one player.
 	 */
 	jjPLAYER* get_jjP();
 	/**
-	 * @brief Returns the player with the given index
+	 * @brief Returns the player with the given @ref jjPLAYER::playerID
 	 *
-	 * Never null, an index without a player returns a handle with @ref jjPLAYER::isActive set to false.
+	 * Never null, an index without a player returns a handle with @ref jjPLAYER::isActive set to false. In multiplayer,
+	 * the index is the one the server gave the player, the same on every machine.
 	 */
 	jjPLAYER* get_jjPlayers(std::uint8_t index);
 	/**
 	 * @brief Returns the local player with the given index
 	 *
-	 * Currently the same as @ref jjPlayers, every player in the level is local.
+	 * Counts only the players of this machine, from 0 to @ref jjLocalPlayerCount.
 	 */
 	jjPLAYER* get_jjLocalPlayers(std::uint8_t index);
 

@@ -80,25 +80,17 @@ namespace Jazz2
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = true;
-	// Forced off rather than merely defaulted off wherever its condition holds, because it is measurably
-	// unaffordable there and has no menu item left to turn it back on (see GraphicsOptionsSection). Load()
-	// puts it back to this.
 #if defined(RHI_LOW_POWER_GPU)
-	// Dithering is a dependent second texture sample over the whole background, which the shader compiles
-	// out on a low-power build anyway - leaving the value on would only pick the Dither variant of the
-	// background programs and compile a second copy of identical code (see TileMap and MainMenu)
+	// Forced off (no menu item), the shader compiles dithering out on low-power GPUs anyway
 	DitheringScope PreferencesCache::Dithering = DitheringScope::None;
 #else
 	DitheringScope PreferencesCache::Dithering = DitheringScope::Layers;
 #endif
 	bool PreferencesCache::BlurEffects = true;
 #if defined(DEATH_TARGET_VITA)
-	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
-	// it costs the SGX a quarter of that work for a difference the light falloff largely hides. Below full
-	// resolution the blur chain also runs one pass fewer (see PlayerViewport::Initialize()).
+	// Half-resolution lighting is a quarter of the cost and barely visible
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 50;
-	// Half the panel in both axes (480x272): 45% fewer fragments for every full-screen pass, and the present
-	// blit becomes a clean 2x point doubling instead of a fractional resample (see GxmDevice::ScreenWidth)
+	// 480x272, fewer fragments and a clean 2x upscale
 	std::uint8_t PreferencesCache::RenderingResolutionPercent = 50;
 #else
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
@@ -106,16 +98,12 @@ namespace Jazz2
 #endif
 #if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_N64)
-	// A particle is a blended sprite over whatever is already there, and a busy scene has no bound on how
-	// many - which is the fill rate these consoles have least of. Raisable in Options > Graphics. (The Wii
-	// shares the GameCube's port but not its constraints, so it keeps the default.)
+	// Particles are fill-rate heavy on these consoles, can be raised in Options > Graphics
 	static constexpr ParticleQuality DefaultParticleQuality = ParticleQuality::Low;
 #else
 	static constexpr ParticleQuality DefaultParticleQuality = ParticleQuality::High;
 #endif
-	// Named rather than written twice, because Load() has to fall back to the SAME value when the file
-	// carries something out of range - a hardcoded `High` there would quietly undo the console default
-	// above on exactly the machines it exists for, and survive every later Save()
+	// Load() falls back to the same constant for out-of-range values
 	ParticleQuality PreferencesCache::Particles = DefaultParticleQuality;
 	bool PreferencesCache::EnableReforgedGameplay = false;
 	bool PreferencesCache::EnableReforgedCamera = false;
@@ -130,7 +118,7 @@ namespace Jazz2
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 	bool PreferencesCache::ShowAllWeaponWheelSlots = false;
 	bool PreferencesCache::SwitchToNewWeapon = true;
-	// The web build has a backend but needs a local bridge running, so it stays off until asked for
+	// Off on the web, it needs a local bridge
 #if defined(NCINE_HAS_RGB_LIGHTS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::EnableRgbLights = true;
 #else
@@ -150,12 +138,10 @@ namespace Jazz2
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
 #if defined(DEATH_TARGET_3DS)
-	// The mixer's cost is linear in the rate, the game's samples are 11-22 kHz to begin with and the module
-	// decoder renders at this rate too, so half of 44100 Hz costs half as much; the DSP resamples the channel to
-	// its own 32728 Hz in hardware, so the mixing rate is a free choice here.
+	// Half the mixing cost, samples are 11-22 kHz anyway and the DSP resamples in hardware
 	std::int32_t PreferencesCache::AudioSampleRate = 22050;
 #elif defined(DEATH_TARGET_PSP)
-	// The hardware's own 44100 Hz, which the game holds 60 fps at on hardware (see PspAudioDevice)
+	// Native rate, still 60 fps on hardware
 	std::int32_t PreferencesCache::AudioSampleRate = 44100;
 #else
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
@@ -229,8 +215,7 @@ namespace Jazz2
 			return 0.0f;
 		}
 
-		// The left and right edges are a fraction of the width, the top and bottom ones of the height, so a
-		// configuration written on one display holds its proportions on another of a different aspect ratio
+		// Left/right are relative to the width, top/bottom to the height
 		float extent = (edge == SafeAreaEdge::Left || edge == SafeAreaEdge::Right ? (float)viewSize.X : (float)viewSize.Y);
 		return std::round(extent * (float)value * 0.001f);
 	}
@@ -248,9 +233,7 @@ namespace Jazz2
 
 		Rectf result = Rectf(bounds.X + left, bounds.Y + top, bounds.W - left - right, bounds.H - top - bottom);
 
-		// A rectangle that was already narrow (a split-screen viewport, or what a large touch layout left of
-		// the view) can be narrower than the insets want to take off it, and a negative size would send
-		// right-aligned elements off to the wrong side of the screen. Keep it degenerate but valid instead.
+		// Don't allow negative size on narrow rectangles
 		if (result.W < 0.0f) {
 			result.X = bounds.X + bounds.W * 0.5f;
 			result.W = 0.0f;
@@ -308,90 +291,43 @@ namespace
 	/**
 		@brief Writes the browser metadata the console's own save browser needs into @p saveDir
 
-		A PlayStation 2 save is a directory, and the browser identifies it by an `icon.sys` inside it - a
-		fixed 964-byte record carrying the title, the background and lighting, and the names of the three
-		icon models it draws (listed, being copied, being deleted). A directory WITHOUT one is not shown as
-		an unnamed save, it is shown as "Corrupted Data" and offered for deletion, which is what the game's
-		save looked like even though every byte of it was fine.
-
-		Written once, when the save directory is created; an existing `icon.sys` is left alone so a user who
-		replaced the icon keeps theirs. Nothing here can fail in a way worth reporting - the save itself works
-		regardless, only its appearance in the browser is at stake - so failures are quietly ignored.
+		Without `icon.sys` the browser shows the save as "Corrupted Data". Failures are ignored, the save
+		works either way.
 	*/
 	void WritePs2BrowserMetadata(StringView saveDir)
 	{
 		static constexpr StringView IconFileName = "Jazz2.icn"_s;
-		// How many slices the body is turned from, and how many rings its profile bends at. The root is
-		// one chain of rings from the point at the bottom to the pole at the top, so the shoulder is part
-		// of the same surface as the sides and rounds over into it instead of meeting it at a corner.
+		// Slices around the body, and rings from the tip to the top
 		static constexpr std::int32_t Segments = 20;
-		// The browser lights this per VERTEX and interpolates between them, so how smoothly the shading
-		// runs is set by how closely the rings are spaced, not by anything in the lighting. The shoulder
-		// gets nearly as many as the whole body below it despite being a fraction of its length: that is
-		// where the surface turns through ninety degrees, so it is where sparse rings show as facets.
-		static constexpr std::int32_t BodyRings = 8;		// The point up to the widest ring
-		static constexpr std::int32_t ShoulderRings = 5;	// That ring over to the top, not counting it
+		// Lit per vertex, so the shoulder needs dense rings to avoid visible facets
+		static constexpr std::int32_t BodyRings = 8;		// Tip up to the widest ring
+		static constexpr std::int32_t ShoulderRings = 5;	// Widest ring to the top
 		static constexpr std::int32_t Rings = BodyRings + ShoulderRings;
-		// Five leaves, each a blade of this many stations along its length
 		static constexpr std::int32_t Leaves = 5;
 		static constexpr std::int32_t BladeStations = 4;
-		// A fan of triangles at each pole, a band of quads between every other ring pair, and every blade
-		// drawn from both sides - a blade being a quad between each station pair but the last, which has
-		// tapered to a point and needs one triangle
+		// Fans at both poles, quads between rings, double-sided blades ending in a triangle
 		static constexpr std::int32_t IconVertexCount = (Segments * (2 * Rings - 4) +
 			Leaves * 2 * ((BladeStations - 2) * 2 + 1)) * 3;
-		// The texture is a fixed 128x128 at 16 bits per texel, but it is stored compressed, so a nearly
-		// flat one costs a few hundred bytes instead of 32 KB. Runs are kept well under the longest a
-		// real icon uses rather than emitting long stretches as one.
+		// 128x128 texture, 16 bits per texel, RLE compressed
 		static constexpr std::int32_t IconTextureRows = 128;
 		static constexpr std::int32_t IconTextureRunLength = 4096;
-		// The rows the root is mapped along, then a gap so filtering cannot bleed one mapping into the
-		// other, then the rows a leaf blade is mapped across
+		// Root rows, a gap against filtering bleed, then leaf rows
 		static constexpr std::int32_t IconTextureRootRows = 104;
 		static constexpr std::int32_t IconTextureLeafRow = 112;
-		// icon.sys is a fixed record: a 16-byte header, the four background corners, seven vectors of
-		// lighting, the 68-byte title, three 64-byte file names and 512 reserved bytes
+		// Header, background corners, lighting, title, 3 file names, reserved
 		static constexpr std::int64_t IconSysSize = 16 + 4 * 16 + 7 * 16 + 68 + 3 * 64 + 512;
-		// A 20-byte header, then a record per vertex - one position per animation shape (8), the normal (8),
-		// the texture coordinate (4) and the colour (4) - then the animation block (its own 20-byte header,
-		// one 8-byte frame and that frame's single 8-byte key). Everything but the texture, whose length
-		// depends on how well it compresses; this only has to be close, as the stream grows if it is short.
+		// Header, vertices (position, normal, UV, color), animation block; texture size varies
 		static constexpr std::int64_t IconSizeWithoutTexture = 20 + std::int64_t(IconVertexCount) * (8 + 8 + 4 + 4) +
 			20 + 8 + 8;
 
-		// Both files are built in memory so they can be compared against what the card already holds, and
-		// written only where the two differ. Comparing their SIZES would be cheaper and is not enough:
-		// two revisions of a model with the same vertex count are the same length, and icon.sys is a
-		// fixed size whatever is in it, so a card would keep files this build had already replaced. That
-		// matters more than a stale picture would suggest - an icon an earlier build wrote froze the
-		// browser while it opened the card, and a card that will not open is a card whose save cannot be
-		// deleted either, so the game replacing it is the only way back.
+		// Built in memory and written only if the content differs (same size doesn't mean same content)
 		MemoryStream iconData(IconSizeWithoutTexture + 1024);
 
-		// The icon model: a carrot, built from triangles carrying their own colours.
-		//
-		// The texture that follows the model is a flat white one, and it is NOT optional. The texture type
-		// field is a set of flags - 0x04 says a texture is present and 0x08 says it is RLE compressed - so
-		// the 0x07 every icon in the wild uses is a promise that an uncompressed 128x128 image follows.
-		// Writing 0x07 and then ending the file left the browser sampling whatever came after it, which is
-		// what rendered the carrot black; writing 0x0F with a plain image instead pointed the RLE decoder
-		// at data that was never compressed, which is what froze the browser as it opened the card. Keeping
-		// the flags honest costs 32 KB and makes the vertex colours mean what they say.
+		// The icon model, a carrot. The texture is required: type 0x07 without one renders black,
+		// 0x0F with uncompressed data freezes the browser.
 		{
-			// s16 fixed point throughout, 4096 being 1.0. Y grows DOWNWARD here - built the other way up,
-			// the carrot came out standing on its leaves.
-			//
-			// Sized against the icons shipped by Open PS2 Loader and HDLGameInstaller, which measure 5.0
-			// and 2.5 units across their longest side. Those two are widest HORIZONTALLY though, and this
-			// one is tallest, which the browser has less room for - 4.9 tall ran off the top of the view,
-			// so it stands 3.3 instead.
-			// The browser does not look at the origin, it looks well above it, so a model built around
-			// zero hangs at the bottom of the view. Both icons measured for the sizes above sit entirely
-			// in negative Y - Open PS2 Loader's between -12699 and -7833, HDLGameInstaller's between
-			// -10239 and 0 - and this one is hung from the same height rather than from the origin.
-			// One dial for how large the carrot is drawn, so its size is a single number rather than a
-			// sweep through every measurement below. It scales about the height it hangs at, which is a
-			// position rather than a size and so stays put - the icon grows without drifting off centre.
+			// s16 fixed point (4096 = 1.0), Y grows downward. Sized and positioned like the Open PS2 Loader
+			// and HDLGameInstaller icons; the browser looks above the origin, so the model hangs at `Hang`.
 			constexpr float Scale = 1.5f;
 			constexpr float Hang = -11000.0f;
 			constexpr float TipY = Hang + 6400.0f * Scale;	// The point of the carrot, at the bottom
@@ -400,23 +336,17 @@ namespace
 			constexpr float Radius = 2500.0f * Scale;		// At the rim, the widest the body gets
 			constexpr float Pi = 3.14159265f;
 
-			// Turned at runtime rather than tabulated: this runs once, beside a 45 KB write to a memory
-			// card, and a hand-written table of sixteen angles is a transcription error waiting to happen
 			float rim[Segments][2], mid[Segments][2];
 			for (std::int32_t i = 0; i < Segments; i++) {
 				const float step = 2.0f * Pi / float(Segments);
 				rim[i][0] = std::cos(step * float(i));
 				rim[i][1] = std::sin(step * float(i));
-				// Halfway between two rim directions, where a flat facet's normal would point
+				// Facet normal direction
 				mid[i][0] = std::cos(step * (float(i) + 0.5f));
 				mid[i][1] = std::sin(step * (float(i) + 0.5f));
 			}
 
-			// The root's profile, as a chain of rings from the point at the bottom to the pole at the top.
-			// The sides follow a power curve rather than a straight line - a carrot swells fast out of its
-			// tip and then runs nearly parallel, which is what makes it read as a root instead of a cone.
-			// The shoulder is a quarter turn from the widest ring over to the pole, flattened well below a
-			// hemisphere: the top wants rounding off, not doming.
+			// Root profile: power curve for the sides (not a cone), flattened quarter circle for the shoulder
 			constexpr float ShoulderHeight = 900.0f * Scale;
 			float ringR[Rings], ringY[Rings];
 			for (std::int32_t k = 0; k < BodyRings; k++) {
@@ -430,11 +360,7 @@ namespace
 				ringY[k] = RimY - ShoulderHeight * std::sin(a);
 			}
 
-			// The whole chain is smooth shaded, so a ring's normal is the average of the two bands meeting
-			// at it and no join shows up as a crease - including the one where the sides become the
-			// shoulder, which is the join that used to be a hard edge. A band's own outward normal is its
-			// slope turned a quarter: it leans towards the point while the root is still widening, and
-			// past the widest ring, where the surface starts closing again, it leans the other way.
+			// Smooth shading, a ring's normal is the average of the two adjacent bands
 			std::int16_t ringNr[Rings], ringNy[Rings];
 			for (std::int32_t k = 0; k < Rings; k++) {
 				const std::int32_t below = (k > 0 ? k - 1 : 0);
@@ -461,13 +387,10 @@ namespace
 				leaf[i][1] = std::sin(2.0f * Pi * float(i) / float(Leaves));
 			}
 
-			// A blade's centreline, as a chain of stations from where it leaves the root to its point, and
-			// how wide it is across at each. It climbs before it swings out, so the frond arcs rather than
-			// sticking out straight, and it is at its widest a little under halfway up.
+			// Blade centreline and width at each station, arcing upward and out
 			float bladeR[BladeStations], bladeY[BladeStations];
 			static const float BladeW[BladeStations] = { 520.0f * Scale, 900.0f * Scale, 620.0f * Scale, 0.0f };
-			// Started just inside the shoulder rather than level with its pole, so the blades come out of
-			// the root instead of hovering over it
+			// Start slightly inside the shoulder, so blades don't hover above it
 			const float bladeBase = ringY[Rings - 1] + 150.0f * Scale;
 			for (std::int32_t k = 0; k < BladeStations; k++) {
 				const float s = float(k) / float(BladeStations - 1);
@@ -475,18 +398,13 @@ namespace
 				bladeY[k] = bladeBase + (LeafY - bladeBase) * std::pow(s, 0.75f);
 			}
 
-			// Straight 0..0xFF RGBA, the range the format documents, kept low enough that the browser's
-			// lighting cannot drive any channel past 255 and clip it
+			// RGBA, kept low enough that lighting can't clip them
 			static const std::uint8_t OrangeDeep[4] = { 0x96, 0x4A, 0x0C, 0xFF };	// At the point
 			static const std::uint8_t OrangeLit[4] = { 0xC4, 0x6E, 0x12, 0xFF };	// At the widest ring
 			static const std::uint8_t Green[4]     = { 0x2D, 0x87, 0x2D, 0xFF };
 			static const std::uint8_t GreenDark[4] = { 0x1E, 0x5A, 0x1E, 0xFF };
 
-			// The root's colour is mixed per ring rather than picked from a few fixed ones. Handing whole
-			// stretches of rings the same colour left the entire change to happen across the one band
-			// between them, which is the seam that showed up across the lower half of the body; mixing it
-			// ring by ring spreads the gradient over the whole length instead. It climbs from the point
-			// to the widest ring and eases back a little over the shoulder, where the light is glancing.
+			// Per-ring gradient (avoids seams), brightest at the widest ring
 			std::uint8_t ringRgba[Rings][4];
 			for (std::int32_t k = 0; k < Rings; k++) {
 				const float up = float(k) / float(BodyRings - 1);
@@ -505,8 +423,7 @@ namespace
 			so->WriteValueAsLE<std::uint32_t>(0x3F800000);	// Reserved, 1.0f as the format writes it
 			so->WriteValueAsLE<std::uint32_t>(IconVertexCount);	// Vertices, always a multiple of three
 
-			// One position per animation shape, then the normal, the texture coordinate and the colour.
-			// Coordinates are the same fixed point as everything else, 4096 being the whole image.
+			// Position, normal, UV (4096 = whole image) and color
 			const auto vertex = [&so](float x, float y, float z,
 				std::int16_t nx, std::int16_t ny, std::int16_t nz, std::int16_t u, std::int16_t v,
 				const std::uint8_t* color) {
@@ -522,54 +439,48 @@ namespace
 				so->WriteValueAsLE<std::int16_t>(v);
 				so->Write(color, 4);
 			};
-			// The middle of texture texel @p at along an axis, in those coordinates - the half texel
-			// keeps the sample off the boundary between two of them, where filtering would mix them
+			// Center of texel @p at, so filtering doesn't mix neighbors
 			const auto texel = [](float at) {
 				return std::int16_t((at + 0.5f) * (4096.0f / float(IconTextureRows)));
 			};
 
-			// Where ring @p k lands in the texture: the root is mapped with V running along its length
-			// and U around it, so the image wraps around the root once. V is spaced by the ring's HEIGHT
-			// rather than its index, so the mapping does not stretch where the profile's rings bunch up.
+			// V along the root by height (not ring index), U around it
 			const auto ringV = [&](std::int32_t k) {
 				const float along = (TipY - ringY[k]) / (TipY - ringY[Rings - 1]);
 				return texel(along * float(IconTextureRootRows - 1));
 			};
-			// U for slice @p s, which is deliberately NOT wrapped: the slice after the last one is asked
-			// for as Segments rather than 0, so the seam gets the far edge of the image instead of
-			// running the whole of it backwards across that one slice
+			// Not wrapped, so the seam slice doesn't map the whole image backwards
 			const auto sliceU = [&](float s) {
 				return texel(s / float(Segments) * float(IconTextureRows - 1));
 			};
-			// A vertex on ring @p k at slice @p s, shaded from the ring's own normal and colour
+			// Vertex on ring @p k at slice @p s
 			const auto ringVertex = [&](std::int32_t k, std::int32_t s) {
 				const std::int32_t w = s % Segments;
 				vertex(rim[w][0] * ringR[k], ringY[k], rim[w][1] * ringR[k],
 					std::int16_t(rim[w][0] * ringNr[k]), ringNy[k], std::int16_t(rim[w][1] * ringNr[k]),
 					sliceU(float(s)), ringV(k), ringRgba[k]);
 			};
-			// A pole is a single vertex with no radial direction of its own, so it borrows the facet's -
-			// halfway between the two ring directions the triangle spans
+			// Pole vertex, uses the facet's normal direction
 			const auto poleVertex = [&](std::int32_t k, std::int32_t i) {
 				vertex(0.0f, ringY[k], 0.0f, std::int16_t(mid[i][0] * ringNr[k]), ringNy[k],
 					std::int16_t(mid[i][1] * ringNr[k]),
 					sliceU(float(i) + 0.5f), ringV(k), ringRgba[k]);
 			};
 
-			// The point, fanned out to the first ring
+			// Tip
 			for (std::int32_t i = 0; i < Segments; i++) {
 				poleVertex(0, i);
 				ringVertex(1, i);
 				ringVertex(1, i + 1);
 			}
-			// Everything between the two poles, a band of quads per ring pair
+			// Body
 			for (std::int32_t k = 1; k < Rings - 2; k++) {
 				for (std::int32_t i = 0; i < Segments; i++) {
 					ringVertex(k, i); ringVertex(k + 1, i); ringVertex(k + 1, i + 1);
 					ringVertex(k, i); ringVertex(k + 1, i + 1); ringVertex(k, i + 1);
 				}
 			}
-			// The top, fanned in to its pole - wound the other way round, since it faces the opposite way
+			// Top, opposite winding
 			for (std::int32_t i = 0; i < Segments; i++) {
 				poleVertex(Rings - 1, i);
 				ringVertex(Rings - 2, i + 1);
@@ -578,10 +489,7 @@ namespace
 			for (std::int32_t i = 0; i < Leaves; i++) {
 				const float dx = leaf[i][0], dz = leaf[i][1];
 
-				// The normal at each station, from the across direction crossed with the centreline's own
-				// direction there - negated, because Y grows downward here, so the right hand rule applied
-				// to an outward-wound triangle points INWARD. The body above is authored the same way
-				// round, and a blade whose lit side faced the other way to the root would shade against it.
+				// Normal per station, negated because Y grows downward (same as the body)
 				std::int16_t bladeNr[BladeStations], bladeNy[BladeStations];
 				for (std::int32_t k = 0; k < BladeStations; k++) {
 					const std::int32_t from = (k > 0 ? k - 1 : 0);
@@ -592,20 +500,16 @@ namespace
 					bladeNy[k] = std::int16_t(dR * scale);
 				}
 
-				// Emitted twice with opposite winding and normal - a single-sided blade would vanish for
-				// half of the browser's turn. Each copy is pushed a hair along its own normal rather than
-				// left where the other one is: two coplanar surfaces at matching depth is a tie for the
-				// depth test to settle, and it settles it differently per pixel.
+				// Both sides, slightly offset along the normal to avoid z-fighting
 				constexpr float Thickness = 16.0f * Scale / 4096.0f;
 				for (std::int32_t side = 0; side < 2; side++) {
 					const float f = (side == 0 ? 1.0f : -1.0f);
-					// One corner of station @p k, @p edge picking which side of the centreline
+					// Corner of station @p k, @p edge selects the side
 					const auto blade = [&](std::int32_t k, float edge) {
 						const float across = BladeW[k] * edge * f;
 						const float nx = dx * float(bladeNr[k]) * f, ny = float(bladeNy[k]) * f;
 						const float nz = dz * float(bladeNr[k]) * f;
-						// A blade takes the band of rows below the root's, with V across its width and
-						// U along its length, so it gets its own patch of the speckle
+						// Leaf rows of the texture, V across and U along the blade
 						const float row = float(IconTextureLeafRow) +
 							(edge + 1.0f) * 0.5f * float(IconTextureRows - 1 - IconTextureLeafRow);
 						const float along = float(k) / float(BladeStations - 1) * float(IconTextureRows - 1);
@@ -614,8 +518,7 @@ namespace
 							std::int16_t(nx), std::int16_t(ny), std::int16_t(nz),
 							texel(along), texel(row), (k == 0 ? GreenDark : Green));
 					};
-					// A quad between each pair of stations, keeping one winding all the way up, until the
-					// last - where the blade has tapered to a point and one triangle closes it
+					// Quads between stations, a triangle at the tip
 					for (std::int32_t k = 0; k < BladeStations - 2; k++) {
 						blade(k, 1.0f); blade(k, -1.0f); blade(k + 1, -1.0f);
 						blade(k, 1.0f); blade(k + 1, -1.0f); blade(k + 1, 1.0f);
@@ -626,7 +529,7 @@ namespace
 				}
 			}
 
-			// One frame holding one key, which is the format's way of spelling "does not animate"
+			// Single frame with a single key (no animation)
 			so->WriteValueAsLE<std::uint32_t>(1);			// Tag
 			so->WriteValueAsLE<std::uint32_t>(1);			// Frame length
 			so->WriteValueAsLE<std::uint32_t>(0x3F800000);	// Animation speed, 1.0f
@@ -637,30 +540,11 @@ namespace
 			so->WriteValueAsLE<std::uint32_t>(0);			// Key time, 0.0f
 			so->WriteValueAsLE<std::uint32_t>(0);			// Key value, 0.0f
 
-			// The texture: 128x128, five bits per channel in the PlayStation's order (blue high, red
-			// low). It is a DETAIL map, not the model's colour - it multiplies the vertex colours, so
-			// white leaves them exactly as they are and only what is drawn darker shows up. That keeps
-			// the length gradient where it belongs, on the vertices, and spends the texture solely on
-			// what the gradient cannot express: the bands ringing a real root, and a stripe down each
-			// blade. Both are finer than the mesh, which is the whole reason for having a texture -
-			// fourteen rings do not cost fourteen rows of geometry.
-			//
-			// Every row is a single colour. That is not a limitation here, because each mapping runs V
-			// along the direction the detail varies in, and it makes the image compress to almost
-			// nothing: one run per stretch of equal rows.
-			// Speckle rather than bands. A carrot is mottled, not striped, and dots have a second
-			// advantage here: the console maps textures affinely, without correcting for perspective,
-			// so anything with a straight edge comes out bent at the diagonal of every slice and those
-			// bends line up into lines down the model. Scattered dots have no edge long enough to show
-			// that, which bands - however softly they were shaded - always did.
-			//
-			// The base sits below full brightness so that dots can go both ways from it: this multiplies
-			// the vertex colours, and 31 is as bright as a channel gets, so the room for a lighter fleck
-			// has to be left rather than added.
+			// 128x128 BGR555 detail map multiplied with the vertex colors. Speckles instead of bands, because
+			// affine texture mapping bends straight edges. The base is below max, so specks can be lighter too.
 			constexpr std::uint16_t SpeckleBase = 29, SpeckleDark = 27, SpeckleLight = 31;
-			constexpr std::int32_t SpeckleSize = 4;			// How many texels across one fleck is
-			// A hash, not a random number generator: the same texel has to come out the same on every
-			// run, or the icon would differ from the card's every launch and be rewritten each time
+			constexpr std::int32_t SpeckleSize = 4;			// Texels per speck
+			// Deterministic hash, so the icon isn't rewritten on every launch
 			const auto speckle = [](std::int32_t x, std::int32_t y) {
 				std::uint32_t h = std::uint32_t(x) * 374761393u + std::uint32_t(y) * 668265263u;
 				h = (h ^ (h >> 13)) * 1274126177u;
@@ -676,11 +560,8 @@ namespace
 				}
 			}
 
-			// Stored RLE compressed, which the texture type's 0x08 bit declares. A code below 0x8000
-			// repeats the word after it that many times; at or above, it is a literal block of 0x10000
-			// minus the code. The published description of the format gives that second figure as 0xFFFF
-			// minus the code, which is off by one and makes a real icon decode into millions of texels -
-			// this was settled by decoding Open PS2 Loader's icon, which comes out at exactly 128x128.
+			// RLE: code < 0x8000 repeats the next word, otherwise a literal block of 0x10000 - code words
+			// (not 0xFFFF - code as documented, verified with the Open PS2 Loader icon)
 			MemoryStream texData(8192);
 			const std::int32_t TexelCount = IconTextureRows * IconTextureRows;
 			for (std::int32_t at = 0; at < TexelCount; ) {
@@ -694,9 +575,7 @@ namespace
 					at += run;
 					continue;
 				}
-				// Nothing worth a run here, so copy texels out as they are until one turns up. A run of
-				// two is left inside the literal block - breaking out for it would cost the four bytes it
-				// saves - and the block itself is capped at what its length field can count.
+				// Literal block until a run of 3+ (a run of 2 isn't worth breaking out)
 				const std::int32_t from = at;
 				std::int32_t count = 0;
 				while (at < TexelCount && count < 255) {
@@ -725,52 +604,35 @@ namespace
 			so->WriteValueAsLE<float>(z); so->WriteValueAsLE<float>(w);
 		};
 		const auto writeName = [&so](StringView name) {
-			// Every name field is a fixed 64 bytes, zero padded
+			// Fixed 64 bytes, zero padded
 			std::uint8_t field[64] = {};
 			std::memcpy(field, name.data(), (name.size() < sizeof(field) ? name.size() : sizeof(field) - 1));
 			so->Write(field, sizeof(field));
 		};
 
 		so->Write("PS2D", 4);
-		so->WriteValueAsLE<std::uint16_t>(0);			// Saved data, the type the browser labels as a game save
-		// The byte the title wraps at. It counts BYTES, and the title below is two per character, so this
-		// is twice the character position - 12 puts "Resurrection" on the second line.
+		so->WriteValueAsLE<std::uint16_t>(0);			// Saved data
+		// Line break offset in bytes (2 per character), puts "Resurrection" on the second line
 		so->WriteValueAsLE<std::uint16_t>(12);
 		so->WriteValueAsLE<std::uint32_t>(0);			// Unused
 		so->WriteValueAsLE<std::uint32_t>(0);			// Opaque background
 		for (std::int32_t corner = 0; corner < 4; corner++) {
-			// One colour per corner of the background quad; the same one throughout is a flat backdrop
+			// Same color in all corners
 			so->WriteValueAsLE<std::uint32_t>(0x10);
 			so->WriteValueAsLE<std::uint32_t>(0x20);
 			so->WriteValueAsLE<std::uint32_t>(0x50);
 			so->WriteValueAsLE<std::uint32_t>(0x80);
 		}
-		// The three directions are the set every icon seems to use, Open PS2 Loader's included, so they
-		// are left where they are. Their STRENGTH was the problem: full white against a 0.5 ambient put
-		// the lit side of the root at 1.5x its own colour, so its strongest channel came to 288 and
-		// clipped at 255 - which is what made the carrot read as bright rather than orange. These are
-		// scaled so that a facet reached by the ambient AND all three lights at once still lands under
-		// 255 against the strongest colour in the model, so nothing in it can blow out from any angle.
-		// They are tinted rather than white too, a warm key against a cool fill, as OPL's are.
+		// Usual light directions, colors scaled so ambient + all lights never clip
 		writeVector(0.5f, 0.5f, 0.5f, 0.0f);			// Three light directions...
 		writeVector(0.0f, -0.4f, -0.1f, 0.0f);
 		writeVector(-0.5f, -0.5f, 0.5f, 0.0f);
 		writeVector(0.45f, 0.41f, 0.31f, 1.0f);			// ...their colours, a warm key...
 		writeVector(0.26f, 0.25f, 0.21f, 1.0f);			// ...a softer fill...
 		writeVector(0.12f, 0.13f, 0.22f, 1.0f);			// ...and a cool one from behind...
-		// What a facet none of the three reaches falls back to, so the icon stays readable from every
-		// angle rather than going black wherever the lights do not
 		writeVector(0.45f, 0.45f, 0.48f, 1.0f);			// ...and the ambient term
 
-		// The title is Shift-JIS, and it has to be the FULL-WIDTH forms of the Latin letters rather than the
-		// half-width ones ASCII maps to. Half-width is legal Shift-JIS and encodes without complaint, and the
-		// browser then draws nothing at all for it - which is why the save showed up nameless. Real saves use
-		// the full-width block, and it is what the console's font is built around.
-		//
-		// The block is contiguous per character class, so the mapping is arithmetic rather than a table:
-		// U+FF10 '0' at 0x824F, U+FF21 'A' at 0x8260, U+FF41 'a' at 0x8281, ideographic space at 0x8140.
-		// Anything outside those becomes a space rather than a malformed code - a title is a name, and a
-		// name that loses a stray character still reads.
+		// Shift-JIS full-width characters (half-width ones aren't displayed), anything else becomes a space
 		const auto toFullWidth = [](char c) -> std::uint16_t {
 			if (c >= '0' && c <= '9') return std::uint16_t(0x824F + (c - '0'));
 			if (c >= 'A' && c <= 'Z') return std::uint16_t(0x8260 + (c - 'A'));
@@ -785,7 +647,7 @@ namespace
 				break;
 			}
 			const std::uint16_t wide = toFullWidth(c);
-			// Shift-JIS is big-endian: the lead byte comes first
+			// Big-endian
 			title[titleLength++] = std::uint8_t(wide >> 8);
 			title[titleLength++] = std::uint8_t(wide & 0xFF);
 		}
@@ -798,9 +660,7 @@ namespace
 		std::uint8_t reserved[512] = {};
 		so->Write(reserved, sizeof(reserved));
 
-		// Neither file is written unless it differs from the one already on the card. Both are checked,
-		// not just the model: the lighting and the title live in icon.sys alone, and a run that changed
-		// only those would otherwise find the model unchanged and leave the card as it was.
+		// Write each file only if it differs from the one on the card
 		const auto replaceIfDifferent = [&saveDir](StringView name, const MemoryStream& built) {
 			const std::int64_t size = built.GetSize();
 			String path = fs::CombinePath(saveDir, name);
@@ -828,36 +688,31 @@ namespace
 #if defined(DEATH_TARGET_N64)
 namespace
 {
-	// The path of the config file inside the EEPROM filesystem, which is also the WHOLE filesystem: eepromfs
-	// is a fixed table of files declared up front, and the config is the only thing there is to save
+	// The only file in the EEPROM filesystem
 	static constexpr char EepromConfigFile[] = "/JAZZ2CFG";
-	// How large that one file is - everything the filesystem leaves free - set once the EEPROM type has been
-	// probed in Initialize(), because a flashcart may answer with either the 4-kilobit or the 16-kilobit part
+	// All free space, set in Initialize() (the EEPROM can be 4 or 16 kbit)
 	static std::size_t EepromConfigFileSize = 0;
 
 	/**
 		@brief One open handle of the "eeprom:/" bridge below
 
-		eepromfs only reads and writes a file WHOLE (`eepfs_read`/`eepfs_write`), while the config code
-		streams through @ref Death::IO::FileStream, so a handle is a RAM copy of the file with a cursor:
-		reads serve from the copy, writes fill it, and closing a written handle is what commits it to the
-		EEPROM in one piece - the same shape KallistiOS gives a Dreamcast VMU file, just made by hand here.
+		eepromfs works only with whole files, so a handle is a RAM copy with a cursor, committed on close.
 	*/
 	struct EepromOpenFile
 	{
 		std::unique_ptr<std::uint8_t[]> Buffer;
 		/** @brief Cursor, in bytes from the start of the file */
 		std::size_t Position;
-		/** @brief Extent of valid data: the fixed file size when read back, how far the writes got when writing */
+		/** @brief Size of valid data */
 		std::size_t Size;
 		bool Writable;
-		/** @brief Set once a write did not fit - the close then must NOT commit a truncated config over a good one */
+		/** @brief A write didn't fit, so the file must not be committed on close */
 		bool Overflowed;
 	};
 
 	void* EepromFsOpen(char* name, int flags)
 	{
-		// The prefix has already been stripped by the newlib glue, a leading slash may or may not remain
+		// The prefix is already stripped, a leading slash may remain
 		const char* fileName = (name[0] == '/' ? name + 1 : name);
 		if (std::strcmp(fileName, EepromConfigFile + 1) != 0) {
 			errno = ENOENT;
@@ -950,9 +805,7 @@ namespace
 		}
 		std::size_t capacity = (f->Position < EepromConfigFileSize ? EepromConfigFileSize - f->Position : 0);
 		if (std::size_t(len) > capacity) {
-			// The compressed config outgrew the EEPROM. Refusing the whole write (rather than taking what
-			// fits) is what keeps the flag honest: nothing partial ever lands in the buffer, so the close
-			// below has a clean "commit or don't" decision.
+			// Doesn't fit, refuse the whole write
 			f->Overflowed = true;
 			errno = ENOSPC;
 			return -1;
@@ -970,11 +823,7 @@ namespace
 		std::unique_ptr<EepromOpenFile> f(static_cast<EepromOpenFile*>(file));
 		int result = 0;
 		if (f->Writable) {
-			// Committing on close is what this bridge exists for, but it also means a writer that opened
-			// with O_TRUNC and closed after writing only part of the config commits that part (with a
-			// zeroed tail) over the previous good save. Overflow - the only write failure this bridge can
-			// produce - is guarded below; PreferencesCache::Save() itself has no early-out between its
-			// writes, so any OTHER partial write means a new caller that must arrange its own guard.
+			// Commit on close, but never after an overflow (a partial config would replace a good one)
 			if (f->Overflowed) {
 				LOGE("Cannot save settings, the configuration does not fit into the {}-byte EEPROM file", EepromConfigFileSize);
 				errno = ENOSPC;
@@ -983,9 +832,7 @@ namespace
 				errno = EIO;
 				result = -1;
 			}
-			// The commit is eventually consistent: eepfs_write() returns at once and the joybus flushes the
-			// blocks in the background (about 1.5 s for a full 16-kilobit part), which is fine here - the
-			// buffer just handed over is the master copy the flusher reads from
+			// eepfs_write() returns immediately, the data is flushed in the background (~1.5 s)
 		}
 		return result;
 	}
@@ -1043,12 +890,11 @@ namespace
 #	endif
 
 #	if defined(WITH_LIBRETRO)
-		// The frontend owns the save directory, so use it instead of the common path for current user,
-		// the portable config is skipped as well, the working directory belongs to the frontend
+		// Use the frontend's save directory instead of the user or portable path
 		if (!overrideConfigPath) {
 			StringView saveDir = Backends::theLibretroApplication().GetHostPaths().Save;
 			if (!saveDir.empty()) {
-				// Own subdirectory, the save directory is shared by all the cores of the frontend
+				// Own subdirectory, the directory is shared by all cores
 				_configPath = fs::CombinePath({saveDir, NCINE_APP, "Jazz2.config"_s});
 				fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 				overrideConfigPath = true;
@@ -1056,10 +902,7 @@ namespace
 		}
 #	endif
 
-		// A portable config next to the executable wins over the per-user path chosen below. The Dreamcast,
-		// the PlayStation 2 and the Nintendo 64 don't look for one: their whole tree is on the disc or ROM
-		// they booted from, so it could never be written back - and a miss there costs the drive a seek and
-		// a retry on every boot.
+		// A portable config wins, except on read-only disc/ROM platforms (a lookup there costs a seek)
 #	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2)
 		constexpr bool hasPortableConfig = false;
 #	else
@@ -1069,11 +912,7 @@ namespace
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !hasPortableConfig) {
 #	if defined(DEATH_TARGET_DREAMCAST)
-			// The game runs from a disc, so the only writable storage is a memory card. KallistiOS mounts
-			// each one as "/vmu/<port><unit>", buffers the whole file in RAM and commits it to the card when
-			// the handle closes, so it can be streamed like any other file. VMU names are limited to twelve
-			// characters. The first attached card wins, with none inserted there is nowhere to save and the
-			// path is left on the disc, where opening it for writing simply fails as before.
+			// First VMU found (names are max. 12 characters), otherwise the path stays on the disc and saving fails
 			if (maple_device_t* memoryCard = maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
 				char vmuPath[] = "/vmu/a1/Jazz2";
 				vmuPath[5] = char('a' + memoryCard->port);
@@ -1085,29 +924,14 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_PS2)
-			// Removable storage - a USB stick, or an SD card in an MX4SIO adapter - if the game was booted
-			// from one, is both larger and faster than any memory card and already holds the content, so it
-			// wins outright, and a console with no memory card in it at all can then still save. The
-			// directory needs no creating: it is the one the content was found under (see
-			// ContentResolver::GetWritablePath()).
-			//
-			// Otherwise the situation is the Dreamcast's: the game runs from a disc, so the only writable
-			// storage is a memory card. Once a slot has been probed, MCMAN serves it through the original
-			// `ioman` - the I/O manager the newlib port's POSIX calls reach - so a card is an ordinary
-			// "mc0:" / "mc1:" path and the config file needs no special-case I/O at all. The probe is not
-			// optional: before it, MCMAN answers for the slot as if it were empty and an mkdir on a good
-			// card returns ENOENT.
-			//
-			// The save lives in a directory of its own, as every PlayStation 2 save does. The first usable
-			// card wins, exactly as the Dreamcast takes the first attached VMU; with neither slot usable the
-			// path is left on the disc, where opening it for writing simply fails as before.
+			// Removable storage (USB, MX4SIO) the game booted from, otherwise the first usable memory card
+			// ("mc0:"/"mc1:", must be probed first), otherwise the path stays on the disc and saving fails
 			StringView writablePath = ContentResolver::Get().GetWritablePath();
 			if (!writablePath.empty()) {
 				_configPath = fs::CombinePath(writablePath, "Jazz2.config"_s);
 			} else {
 				bool memoryCardFound = false;
-				// Plain `int`: PS2SDK takes `int*` here and `std::int32_t` is `long` on the Emotion Engine,
-				// so the two are distinct types even though they are the same width
+				// Plain `int`, `std::int32_t` is `long` on the EE
 				for (int port = 0; port < 2 && !memoryCardFound; port++) {
 					int type = 0, freeClusters = 0, formatted = 0;
 					mcGetInfo(port, 0, &type, &freeClusters, &formatted);
@@ -1115,27 +939,19 @@ namespace
 					mcSync(MC_WAIT, nullptr, &probe);
 
 					if (type != MC_TYPE_PS2) {
-						continue;	// Empty slot, or a PlayStation 1 card this game cannot use
+						continue;	// Empty slot or a PS1 card
 					}
 
-					// Whether the card is usable is settled by TRYING, never by reading the probe. mcGetInfo
-					// reports what changed since the last call, and on the first call of a session that is
-					// always "a card has been inserted" - -1 for a formatted one, -2 for an unformatted one -
-					// with `formatted` left unfilled. Believing that flag therefore rejected every good card
-					// on the first look, which is the only look there is.
+					// Try to use the card, the probe result isn't reliable on the first call
 					char saveDir[] = "mc0:/Jazz2";
 					saveDir[2] = char('0' + port);
 					if (fs::CreateDirectories(saveDir)) {
 						_configPath = fs::CombinePath(StringView(saveDir, sizeof(saveDir) - 1), "Jazz2.config"_s);
 						memoryCardFound = true;
-						// Without this the console's browser calls the save "Corrupted Data" and offers to
-						// delete it, however healthy the save actually is
+						// Otherwise the browser shows "Corrupted Data"
 						WritePs2BrowserMetadata(StringView(saveDir, sizeof(saveDir) - 1));
 					} else if (probe == -2 || formatted != MC_FORMATTED) {
-						// Only reached once the card has actually refused, so the flag is explaining a
-						// failure rather than causing one. Worth separating from "no card": the fix is to
-						// format it in the console's own browser. Doing it here is not an option - mcFormat
-						// erases the WHOLE card, every game's saves, for the sake of one config file.
+						// Never format it here, that would erase all saves on the card
 						LOGW("The memory card in slot {} is not formatted, so nothing can be saved to it", port);
 					}
 				}
@@ -1146,27 +962,17 @@ namespace
 				}
 			}
 #	elif defined(DEATH_TARGET_N64)
-			// The game runs from a read-only ROM, so the only writable storage is the cartridge's own save
-			// EEPROM, which the ROM header requests as the 16-kilobit part (2048 bytes, a cheap flashcart
-			// that ignores the header answers with the 4-kilobit one, so the size is taken from the probe
-			// rather than assumed). eepromfs manages it as a fixed table of files - a single one here,
-			// spanning every block the filesystem leaves free - but only through its own whole-file calls,
-			// so the bridge above is attached as "eeprom:/" to let the config be streamed like any other
-			// file. With no EEPROM at all there is nowhere to save and the path is left on the ROM, where
-			// opening it for writing simply fails as before.
+			// Save EEPROM through the "eeprom:/" bridge above, otherwise the path stays on the ROM and saving fails
 			bool eepromFound = false;
 			if (eeprom_present() != EEPROM_NONE) {
-				// The first 8-byte block holds the filesystem's signature, the file gets all the rest
+				// The first block holds the signature
 				EepromConfigFileSize = (eeprom_total_blocks() - 1) * EEPROM_BLOCK_SIZE;
 				const eepfs_entry_t eepfsEntries[] = {
 					{ EepromConfigFile, EepromConfigFileSize, false, false }
 				};
 				if (eepfs_init(eepfsEntries, arraySize(eepfsEntries)) == EEPFS_ESUCCESS) {
 					if (!eepfs_verify_signature()) {
-						// The EEPROM was last written by another game, or never written at all - either way
-						// its contents are garbage to this filesystem, so erase everything and start over,
-						// as eepromfs asks. This blocks for a few seconds, but only on the very first boot
-						// (or after the cartridge hosted a different save), before anything is playing yet.
+						// Empty or used by another game, wipe it (takes a few seconds, only once)
 						LOGI("EEPROM signature mismatch, erasing the whole EEPROM");
 						eepfs_wipe();
 						eeprom_wait_idle();
@@ -1184,10 +990,7 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
-			// An SD card the content was found on is where everything is written, as on the Wii. A game read from
-			// the disc has nowhere to write but a memory card - the first usable one, slot A before slot B, the way
-			// the Dreamcast takes the first VMU. With neither the path is left on the disc, where opening it for
-			// writing simply fails, and the game runs with the default settings every time.
+			// SD card with the content, otherwise the first usable memory card, otherwise saving fails
 			auto& resolver = ContentResolver::Get();
 			StringView writablePath = resolver.GetWritablePath();
 			if (!writablePath.empty()) {
@@ -1205,8 +1008,7 @@ namespace
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WIIU) || \
 				defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS)
-			// Save config file next to `Source` directory (on the storage device the content is read from;
-			// on the Amiga that is the game's own directory, the conventional home of a program's settings)
+			// Save config file next to `Source` directory
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 #	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
@@ -1238,13 +1040,10 @@ namespace
 
 		auto configDir = fs::GetDirectoryName(_configPath);
 
-		// DEATH_TRACE_LOG_PATH overrides default log path, and on some platforms
-		// (Apple, Unix, Windows) it also forces tracing to the file even without
-		// using any command-line argument
+		// DEATH_TRACE_LOG_PATH overrides the log path, on Apple/Unix/Windows it also enables file logging
 #	if defined(DEATH_TRACE)
 #		if defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
-		// Only next to content on an SD card - a memory card has a few dozen 8 KB blocks for everything the console
-		// saves, which is no place for a log. The USB Gecko in slot B gets every message either way.
+		// Only on an SD card, a memory card is too small for logs
 		if (!ContentResolver::Get().GetWritablePath().empty()) {
 			fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
@@ -1262,11 +1061,7 @@ namespace
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
 #			endif
 #		elif defined(DEATH_TARGET_PS2)
-		// The only channel here by default is the EE's SIO register, which needs a serial cable to read, so a
-		// file is worth much more than on the consoles above. Conditional because the usual writable storage
-		// is a memory card, which is no place for a log - only removable storage (a USB stick, or a card in
-		// an MX4SIO adapter) gets one, which is exactly when `configDir` is on it. The SIO output stays on
-		// either way.
+		// Only on removable storage, a memory card is too small for logs
 		if (!ContentResolver::Get().GetWritablePath().empty()) {
 #			if defined(DEATH_TRACE_LOG_PATH)
 			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
@@ -1275,8 +1070,7 @@ namespace
 #			endif
 		}
 #		elif defined(DEATH_TARGET_IOS)
-		// No terminal and no command line on a phone, so the log always goes to a file - into "Documents", where
-		// the user can reach it through the Files app (next to "Source", see ContentResolver)
+		// Always log to "Documents", accessible through the Files app
 		{
 			auto& resolver = ContentResolver::Get();
 			String logDir = fs::GetDirectoryName(resolver.GetSourcePath());
@@ -1290,8 +1084,7 @@ namespace
 			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
 				fs::CreateDirectories(configDir);
 				if (arg.size() > "/log:file:"_s.size()) {
-					// A path the user named is the one file they asked for, so it is not archived into a
-					// "<name>.gz" beside it the way the default log is
+					// Custom log path, don't archive the previous one
 					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)), false);
 					logFileSpecified = true;
 				}
@@ -1320,8 +1113,7 @@ namespace
 
 		ControlScheme::Reset();
 
-		// Version of a config file written by an older release, so a copy of it can be kept before
-		// the next Save() rewrites it in the current format
+		// Version of an older config file, so a backup can be made before it's overwritten
 		DEATH_UNUSED std::uint8_t upgradedFromVersion = 0;
 
 		// Try to read config file
@@ -1391,8 +1183,7 @@ namespace
 					if (version >= 17) {
 						EnableReforgedCamera = ((boolOptions & BoolOptions::EnableReforgedCamera) == BoolOptions::EnableReforgedCamera);
 					} else {
-						// The camera used to follow the gameplay setting, so a configuration written before the
-						// split keeps doing that rather than silently changing how the view behaves
+						// The camera used to follow the gameplay setting
 						EnableReforgedCamera = EnableReforgedGameplay;
 					}
 
@@ -1591,7 +1382,7 @@ namespace
 #endif
 						std::uint8_t particles = uc.ReadValue<std::uint8_t>();
 						Particles = (particles <= (std::uint8_t)ParticleQuality::Ultra ? (ParticleQuality)particles : DefaultParticleQuality);
-						// `0` keeps the platform's default; anything outside what a mixer can sensibly run at is a corrupted value
+						// `0` means platform default, out-of-range values are ignored
 						std::int32_t sampleRate = uc.ReadValueAsLE<std::uint16_t>();
 						if (sampleRate == 0 || (sampleRate >= 8000 && sampleRate <= 48000)) {
 							AudioSampleRate = sampleRate;
@@ -1614,8 +1405,7 @@ namespace
 		}
 
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
-		// Done once the stream above is closed. Not overwritten, so the copy stays the one written by the last
-		// release of that version. Skipped on a memory card (or the EEPROM), which has room for a single file.
+		// Back up the old config (never overwritten), except on memory cards
 		if (upgradedFromVersion != 0) {
 			StringView configPath = _configPath;
 			bool isMemoryCard = configPath.hasPrefix("mc0:"_s) || configPath.hasPrefix("mc1:"_s) ||
@@ -1626,7 +1416,7 @@ namespace
 					LOGI("Config file upgraded from version {}, backup saved to \"{}\"", std::int32_t(upgradedFromVersion), backupPath);
 				}
 
-				// Only the two most recent backups are kept, ordered by the version that wrote them
+				// Keep only the two newest backups
 				constexpr std::size_t MaxConfigBackups = 2;
 				String backupPrefix = fs::GetFileName(configPath) + ".v"_s;
 				StringView backupDir = fs::GetDirectoryName(backupPath);
@@ -1679,8 +1469,7 @@ namespace
 			fs::CreateDirectories(configDir);
 
 #if defined(NCINE_HAS_WRITABLE_CACHE)
-			// Create "Source" directory on the first launch, so there is somewhere to put the original files.
-			// A platform that cannot convert them has no use for it, prepared content is all it ever loads.
+			// Create "Source" directory on the first launch for the original files
 			auto& resolver = ContentResolver::Get();
 			fs::CreateDirectories(resolver.GetSourcePath());
 #endif
@@ -1741,19 +1530,13 @@ namespace
 				char* end;
 				unsigned long paramValue = strtoul(arg.exceptPrefix("/max-fps:"_s).data(), &end, 10);
 				if (paramValue > 0) {
-					// Floored at the rate the time multiplier is still bounded for - below it `MaxTimeMult`
-					// stops keeping up and every trajectory silently runs in slow motion. Taken from
-					// FrameTimer rather than written out again, so raising that floor to tighten collision
-					// accuracy can't leave the command line accepting a rate it no longer covers.
+					// Below LowestFrameRate the game would run in slow motion
 					MaxFps = std::max<unsigned long>(paramValue, (unsigned long)FrameTimer::LowestFrameRate);
 				}
 			}
 #	if defined(WITH_PHYSICS_PROBE)
 			else if (arg == "/physics-probe"_s) {
-				// Takes over the first player and drives it through a fixed list of movement scenarios,
-				// logging one line per tick, so the result can be compared against the same run in the
-				// original game (see Tests/PhysicsProbe.h). Only useful together with /log:file: and a
-				// pinned /max-fps:.
+				// Runs movement scenarios and logs each tick (see Tests/PhysicsProbe.h), use with /log:file: and /max-fps:
 				PhysicsProbe = true;
 			}
 #	endif
@@ -1800,16 +1583,12 @@ namespace
 #if defined(DEATH_TARGET_DREAMCAST)
 	void PreferencesCache::DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription)
 	{
-		// Only a file on a memory card carries a header. With no card attached the path was left on the
-		// disc, where writing fails anyway, and a path named on the command line is not a save at all.
+		// Only files on a memory card have a header
 		if (!StringView(_configPath).hasPrefix("/vmu/"_s)) {
 			return;
 		}
 
-		// Both descriptions are copied into the header with strlen() and land in fields SMALLER than
-		// `vmu_pkg_t` declares them - sixteen and thirty-two bytes - so anything longer would be written
-		// past the end of one and over the next. The application ID is copied with strcpy(), so its
-		// terminator has to fit within its sixteen bytes as well.
+		// The real fields are smaller than `vmu_pkg_t` declares (16 and 32 bytes), so clamp them
 		const auto copyField = [](char* dst, std::size_t capacity, StringView src) {
 			std::size_t length = (src.size() < capacity ? src.size() : capacity);
 			std::memcpy(dst, src.data(), length);
@@ -1820,15 +1599,12 @@ namespace
 		copyField(pkg.desc_short, 16, shortDescription);
 		copyField(pkg.desc_long, 32, longDescription);
 		copyField(pkg.app_id, 15, "Jazz2"_s);
-		// A single frame, so there is no animation to time
 		pkg.icon_cnt = 1;
 		pkg.icon_anim_speed = 0;
-		// The optional 72x56 picture the file manager shows beside the description. Skipped: even its
-		// cheapest form costs four of the card's two hundred blocks - four times what the icon costs -
-		// for something nothing but the file manager ever displays.
+		// No eyecatch, it would cost 4 blocks
 		pkg.eyecatch_type = VMUPKG_EC_NONE;
 		std::memcpy(pkg.icon_pal, DreamcastIconPalette, sizeof(pkg.icon_pal));
-		// Copied out before this returns, so pointing at the static image is enough
+		// Copied before returning
 		pkg.icon_data = const_cast<std::uint8_t*>(DreamcastIconData);
 
 		if (fs_vmu_set_default_header(&pkg) != 0) {
@@ -1843,7 +1619,7 @@ namespace
 		FirstRun = false;
 
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
-		// A memory card's (or the EEPROM's) mount point always exists and has no subdirectories to create
+		// Not needed for memory cards or the EEPROM
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 #endif
 
@@ -1984,7 +1760,7 @@ namespace
 		co.WriteValue<std::uint8_t>((std::uint8_t)Particles);
 		co.WriteValueAsLE<std::uint16_t>((std::uint16_t)AudioSampleRate);
 
-		// Safe area insets (v19+), a word an edge because the range reaches past what a byte of tenths holds
+		// Safe area insets (v19+), 16 bits per edge
 		for (std::size_t i = 0; i < (std::size_t)SafeAreaEdge::Count; i++) {
 			co.WriteValueAsLE<std::uint16_t>(SafeArea[i]);
 		}
@@ -2000,13 +1776,7 @@ namespace
 	void PreferencesCache::ApplyRenderingResolution()
 	{
 #if defined(WITH_RHI_GXM)
-		// The Vita's native backend renders the whole frame into a surface smaller than the panel and stretches
-		// that onto the panel at present time (see GxmDevice::ScreenWidth), so the preference sizes that surface
-		// rather than the logical view: the drawable size follows it, and the view follows the drawable as on
-		// any other display (see UpscaleRenderPass::CalculateViewSize(), which therefore does not apply it a
-		// second time there). The panel is the display's video mode; the window is the panel too on this
-		// console, so it stands in if the mode cannot be queried. The vitaGL build has no surface of its own to
-		// resize (it renders straight into the panel's framebuffer), so it takes the generic path instead.
+		// The native Vita backend renders into a smaller surface and upscales it on present, so resize that surface
 		auto& gfxDevice = theApplication().GetGfxDevice();
 		const auto& videoMode = gfxDevice.GetCurrentVideoMode();
 		Vector2i panel((std::int32_t)videoMode.Width, (std::int32_t)videoMode.Height);
@@ -2019,8 +1789,7 @@ namespace
 
 	void PreferencesCache::ApplyPerformanceMetrics()
 	{
-		// The frame rate of the basic level comes from the frame timer, which runs anyway; everything else the
-		// detailed level shows costs a few timer reads per frame, so it is collected only while it is on screen
+		// Only the detailed level needs per-phase timings
 		FrameStatistics::SetEnabled(PerformanceMetrics == PerformanceMetricsLevel::Detailed);
 	}
 
@@ -2079,8 +1848,7 @@ namespace
 
 		String hostName = Application::GetDeviceHostname();
 #if defined(WITH_LIBRETRO)
-		// The core has no system of its own, it runs inside whatever frontend loaded it - which is noted at the
-		// end of the system name below, the same way as Wine or Atmosphère
+		// Appended to the system name, like Wine or Atmosphère
 		StringView systemSuffix = " (Libretro)"_s;
 #else
 		StringView systemSuffix = {};
@@ -2160,10 +1928,10 @@ namespace
 		bool isAtmosphere = Environment::HasSwitchAtmosphere();
 		String deviceDesc = format("{}|Nintendo Switch {}.{}.{}{}{}||9|{}", hostName,
 			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, systemSuffix, arch);
-#elif defined(DEATH_TARGET_WIIU)
-		String deviceDesc = format("{}|Nintendo Wii U{}||14|{}", hostName, systemSuffix, arch);
 #elif defined(DEATH_TARGET_WII)
 		String deviceDesc = format("{}|Nintendo Wii{}||14|{}", hostName, systemSuffix, arch);
+#elif defined(DEATH_TARGET_WIIU)
+		String deviceDesc = format("{}|Nintendo Wii U{}||20|{}", hostName, systemSuffix, arch);
 #elif defined(DEATH_TARGET_GAMECUBE)
 		String deviceDesc = format("{}|Nintendo GameCube{}||15|{}", hostName, systemSuffix, arch);
 #elif defined(DEATH_TARGET_3DS)
@@ -2249,10 +2017,7 @@ namespace
 	{
 		auto it = _episodeEnd.find(String::nullTerminatedView(episodeName));
 		if (it == _episodeEnd.end()) {
-			// An episode is keyed by its name, which is an identifier rather than a path - and the same episode
-			// can be spelled in two cases, because one caller has it from a file name and another from inside a
-			// ".j2e" file (see EpisodeSelectSection). The exact lookup above is the fast path; entries are one
-			// per episode, so the fallback that ignores case can simply walk them.
+			// Case-insensitive fallback, the name can come from a file name or from inside a ".j2e" file
 			for (auto& pair : _episodeEnd) {
 				if (StringUtils::equalsIgnoreCase(pair.first, episodeName)) {
 					return &pair.second;

@@ -475,6 +475,10 @@ namespace Jazz2::Editor
 			} else if (extension == "ogg"_s) {
 				format = "Ogg Vorbis"_s;
 				return hasAt(0, "OggS");
+			} else if (extension == "mp3"_s) {
+				// An ID3 tag or the sync bits of an MPEG audio frame
+				format = "MP3"_s;
+				return (hasAt(0, "ID3") || (length >= 2 && data[0] == 0xFF && (data[1] & 0xE0) == 0xE0));
 			} else if (extension == "wav"_s) {
 				format = "WAVE"_s;
 				return (hasAt(0, "RIFF") && hasAt(8, "WAVE"));
@@ -734,7 +738,7 @@ namespace Jazz2::Editor
 			rootPaths.push_back(roots[i].Path);
 			i++;
 		}
-		FileDialog* dialog = FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".j2b;.it;.mo3;.mod;.s3m;.xm;.ogg;.wav"_s, directory, fileName,
+		FileDialog* dialog = FileDialog::Show(*surface, title, FileDialogMode::Open, Death::move(roots), ".j2b;.it;.mo3;.mod;.s3m;.xm;.ogg;.mp3;.wav"_s, directory, fileName,
 			[rootPaths = Death::move(rootPaths), onPicked = Death::move(onPicked)](StringView path) mutable {
 				String value = fs::GetFileName(path);
 				for (const String& rootPath : rootPaths) {

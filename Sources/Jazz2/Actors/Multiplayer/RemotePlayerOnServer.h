@@ -32,6 +32,7 @@ namespace Jazz2::Actors::Multiplayer
 			JustWarped = 0x100,			/**< Player has just warped */
 
 			EnableContinuousJump = 0x200,	/**< Continuous jump is enabled */
+			GravityFlipped = 0x400,		/**< Gravity pulls the player up */
 
 			InMenu = 0x1000,			/**< Player has a menu open */
 			InConsole = 0x2000			/**< Player has the console open */
@@ -91,10 +92,13 @@ namespace Jazz2::Actors::Multiplayer
 		Vector2f _displayPos;
 		/** @brief Last "being stood on" state sent to the owning client, to only resync on change */
 		bool _beingStoodOnLastSent = false;
+		// The server flipped the gravity, the flag of the client is ignored until it has flipped too
+		bool _gravityFlipRequested;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void SetGravityFlipped(bool value) override;
 
 		void OnPushSolidObject(float timeMult, float pushSpeedX) override;
 		void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;

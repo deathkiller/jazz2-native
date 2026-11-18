@@ -39,6 +39,8 @@ Drawing hooks are called every frame for the view of each local player and get a
 - @ref onPlayerTimerEnd() --- when the timer of a player started by @ref jjPLAYER::timerStart() runs out
 - @ref onRoast() --- when a player dies
 - @ref onCheat() --- when a player enters a cheat code
+- @ref onLocalChat() --- when the local player says something in the chat
+- @ref onReceive() --- when the script of another machine sends data in multiplayer, see @ref jjSendPacket()
 
 A class implementing @ref jjBEHAVIORINTERFACE becomes a behavior of an object, the game then calls its
 @ref jjBEHAVIORINTERFACE::onBehave() method every tick, and optionally its @ref jjBEHAVIORINTERFACE::onDraw() and
@@ -48,9 +50,9 @@ A class implementing @ref jjBEHAVIORINTERFACE becomes a behavior of an object, t
 
 The following hooks of other games are never called, a script may define them, but they have no effect:
 
-- `onChat()`, `onLocalChat()` --- chat messages
+- `onChat()` --- chat messages of other players
 - `onGameStart()`, `onGameStop()` --- starting and stopping of a multiplayer game
-- `onReceive()`, `onGetPublicInterface()` --- communication between scripts and over the network
+- `onGetPublicInterface()` --- communication between scripts
 - `onHelp()` --- help pages
 - `onDrawGameModeHUD()` --- the game never draws this part of the HUD through a script
 

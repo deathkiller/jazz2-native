@@ -5,6 +5,9 @@
 #	if defined(WITH_VORBIS)
 #		include "AudioLoaderOgg.h"
 #	endif
+#	if defined(WITH_MPG123)
+#		include "AudioLoaderMp3.h"
+#	endif
 #	if defined(WITH_OPENMPT)
 #		include "AudioLoaderMpt.h"
 #	elif defined(WITH_XMP)
@@ -53,6 +56,11 @@ namespace nCine
 #	if defined(WITH_VORBIS)
 		if (extension == "ogg"_s) {
 			return std::make_unique<AudioLoaderOgg>(Death::move(fileHandle));
+		}
+#	endif
+#	if defined(WITH_MPG123)
+		if (extension == "mp3"_s) {
+			return std::make_unique<AudioLoaderMp3>(Death::move(fileHandle));
 		}
 #	endif
 #	if defined(WITH_OPENMPT)

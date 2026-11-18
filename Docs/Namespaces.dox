@@ -37,6 +37,7 @@ matches the current implementation.
   see @ref consoles-switch
 - **Nintendo Wii** and **Nintendo GameCube** using fixed-function GX rendering backend,
   see @ref consoles-wii and @ref consoles-gamecube
+- **Nintendo Wii U** using native **GX2** rendering backend, see @ref consoles-wiiu
 - **Nintendo 3DS** using fixed-function PICA200 rendering backend, see @ref consoles-3ds
 - **Nintendo 64** using fixed-function RDP rendering backend, see @ref consoles-n64
 - **Sega Dreamcast** using fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
@@ -60,8 +61,8 @@ platform. The platforms above are where that stops being a free choice: seven of
 programmable shaders at all and are driven by one of six rendering backends written for their
 fixed-function graphics hardware @m_span{m-text m-dim} (the Wii and the GameCube share one)
 @m_endspan, a seventh such backend drives the fixed-function OpenGL 1.x of the two PowerPC Amigas, while
-the PlayStation Vita and the PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm** ---
-directly. The classic Amiga has no usable graphics hardware at all, so there the software rasterizer
+the PlayStation Vita, the PlayStation 3 and the Wii U have real shaders and drive their native APIs ---
+**sceGxm**, **libgcm** and **GX2** --- directly. The classic Amiga has no usable graphics hardware at all, so there the software rasterizer
 is the renderer rather than a fallback. See also @ref consoles-common-features "the list of features each console supports",
 which is where the platform differences are the largest.
 	
@@ -319,6 +320,22 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace nCine::RHI::RSX::RsxVram
 	@brief Suballocator for the two address windows the RSX reads --- local GDDR3 and mapped main memory
+*/
+/** @dir nCine/Graphics/RHI/GX2
+	@brief Namespace @ref nCine::RHI::GX2
+*/
+/** @namespace nCine::RHI::GX2
+	@brief Nintendo Wii U backend driving the Latte GPU through GX2 natively, selected by `WITH_RHI_GX2`
+
+	The third console backend with real shaders, and a full-pipeline one like @ref nCine::RHI::RSX:
+	Latte is an R700-class part, so the whole post-processing chain runs and no
+	@ref nCine::RHI::FixedFunctionPass is ever consumed. Its shaders are the GLSL of the OpenGL targets,
+	compiled offline by CafeGLSL. Textures and buffers live in MEM2, while the few render targets that
+	ask for it @m_span{m-text m-dim} (@ref nCine::Texture::SetPreferFastMemory()) @m_endspan go to MEM1
+	as long as it has room.
+*/
+/** @namespace nCine::RHI::GX2::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
 
 /** @dir Jazz2

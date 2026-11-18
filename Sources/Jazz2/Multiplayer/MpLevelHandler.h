@@ -332,6 +332,23 @@ namespace Jazz2::Multiplayer
 		void SendMessage(const Peer& peer, UI::MessageLevel level, const ServerMessage& message);
 		/** @brief Sends the message to all authenticated peers */
 		void SendMessageToAll(StringView message, bool asChatFromServer = false);
+		/**
+		 * @brief Sends data of a level script (`jjSendPacket()`), `false` if there's nobody to send it to
+		 *
+		 * A client sends it to the server. The server sends it to the client @p toClientID, to all of them for 0, or to all
+		 * but `-toClientID` for a negative one - see @ref PeerDescriptor::ClientID, 0 is the server.
+		 */
+		bool SendScriptPacket(std::int32_t toClientID, ArrayView<const std::uint8_t> data);
+		/** @brief Returns the number the server gave this client (see @ref PeerDescriptor::ClientID), 0 on the server or before it's known */
+		std::uint32_t GetLocalClientID() const {
+			return _localClientID;
+		}
+		/** @brief Returns the index the server gave the player of this client, @ref UINT8_MAX or more before it has one */
+		std::uint32_t GetLocalPlayerIndex() const {
+			return _lastSpawnedActorId;
+		}
+		/** @brief Largest data a level script can send at once, see @ref SendScriptPacket() */
+		static constexpr std::size_t MaxScriptPacketSize = 32768;
 		/** @brief Shows the text as it is to all players, use the @ref ServerMessage overload for texts of the game */
 		void ShowAlertToAllPlayers(StringView text);
 
@@ -423,6 +440,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
 		/** @brief Called when fly-cheat behavior is enabled or disabled on a player, to sync it to the owning client */
 		void HandlePlayerSetFlyCheat(Actors::Player* player, bool active);
+		/** @brief Called when the server flipped the gravity of a player, to sync it to the owning client */
+		void HandlePlayerSetGravityFlipped(Actors::Player* player, bool flipped);
 		/** @brief Called when a player freezes */
 		void HandlePlayerFreeze(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player sets invulnerability */
@@ -679,6 +698,7 @@ namespace Jazz2::Multiplayer
 		SmallVector<std::uint8_t, 0> _clientOffTriggers;
 		std::uint32_t _lastGameModeObjectId;
 		std::uint32_t _overtimeScoreCap;			// Server + Client: score that wins the overtime, 0 if not capped
+		std::uint32_t _localClientID;				// Client: number the server gave it, see GetLocalClientID()
 		std::int16_t _teamTriggerId;				// -1 if none
 		std::int16_t _serverTriggerId;				// -1 if none
 		bool _teamTriggerOnForBlue;
@@ -926,6 +946,7 @@ namespace Jazz2::Multiplayer
 		bool HandleClientPacketAuth(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketLevelReady(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketScriptPacket(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketValidateAssetsResponse(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketPlayerReady(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketForceResyncActors(const Peer& peer, ArrayView<const std::uint8_t> data);
@@ -956,6 +977,7 @@ namespace Jazz2::Multiplayer
 		void UpdateTrackedSfx();
 		bool HandleServerPacketServerMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketScriptPacket(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTileMap(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSetTrigger(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketAdvanceTileAnimation(const Peer& peer, ArrayView<const std::uint8_t> data);

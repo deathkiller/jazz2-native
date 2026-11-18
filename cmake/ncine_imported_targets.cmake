@@ -244,6 +244,14 @@ if(EMSCRIPTEN)
 				INTERFACE_LINK_OPTIONS "SHELL:-s USE_VORBIS=1")
 			set(VORBIS_FOUND 1)
 		endif()
+
+		if(NCINE_WITH_MPG123)
+			add_library(Mpg123::Mpg123 INTERFACE IMPORTED)
+			set_target_properties(Mpg123::Mpg123 PROPERTIES
+				INTERFACE_COMPILE_OPTIONS "SHELL:-s USE_MPG123=1"
+				INTERFACE_LINK_OPTIONS "SHELL:-s USE_MPG123=1")
+			set(MPG123_FOUND 1)
+		endif()
 		
 		if(NCINE_WITH_OPENMPT)
 			find_package(libopenmpt)
@@ -522,6 +530,17 @@ elseif(WIN32)
 				set(VORBIS_FOUND 1)
 			endif()
 		endif()
+
+		if(NCINE_WITH_MPG123)
+			if(NCINE_WITH_OPENMPT AND EXISTS "${MSVC_BINDIR}/openmpt-mpg123.dll")
+				# libopenmpt ships libmpg123, it's loaded at runtime
+				set(MPG123_FOUND 1)
+				set(MPG123_DYNAMIC_LINK 1)
+			elseif(EXISTS "${MSVC_BINDIR}/libmpg123-0.dll")
+				set(MPG123_FOUND 1)
+				set(MPG123_DYNAMIC_LINK 1)
+			endif()
+		endif()
 		
 		if(NCINE_WITH_OPENMPT AND EXISTS "${MSVC_LIBDIR}/libopenmpt.lib" AND EXISTS "${MSVC_BINDIR}/libopenmpt.dll")
 			add_library(libopenmpt::libopenmpt SHARED IMPORTED)
@@ -728,6 +747,9 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 
 		if(NCINE_WITH_VORBIS AND NOT TARGET Vorbis::Vorbisfile)
 			find_package(Vorbis)
+		endif()
+		if(NCINE_WITH_MPG123 AND NOT TARGET Mpg123::Mpg123)
+			find_package(Mpg123)
 		endif()
 		if(NCINE_WITH_OPENMPT)
 			find_package(libopenmpt)

@@ -18,8 +18,8 @@ uniform vec4 uCylinder;
 #include "Include/TexturedBackgroundDither.inc"
 
 // The texture spans the view height once (twice at half size), rows span half a turn from the horizon, and a pixel
-// is 1/128 of the view width times 2 + cos (2 * (1 + 2 cos) at half size); it fades like the sky, but only to 65 %
-#define FADE_ROWS 141.0
+// is 1/128 of the view width times 2 + cos (2 * (1 + 2 cos) at half size); it fades by the angle around the tube,
+// 1 - angle^2 in radians, to 65 % at most - measured in JJ2+, the height of the layer sets it with SURFACE::INNERLAYER
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -37,8 +37,8 @@ void fragment() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 #if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU

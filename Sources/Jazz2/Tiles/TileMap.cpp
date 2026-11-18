@@ -2552,7 +2552,8 @@ namespace Jazz2::Tiles
 			}
 			shift = Vector2f(cullingRect.X - originX, cullingRect.Y - originY);
 		} else if (isInner) {
-			shift = innerShift;
+			// From the view itself, without the hardcoded offset of the tiles - measured in JJ2+
+			shift = innerShift + layer.Description.TextureInnerSpeed * float(HardcodedOffset);
 		} else if (layer.Description.HasPlusPerspective()) {
 			// SURFACE::FULLSCREEN of JJ2+, the texture is where the layer would be as an ordinary one - by its speeds, auto
 			// speeds and offsets, the vertical one less by the inherent offset where it applies (limitVisibleRegion of JJ2+),

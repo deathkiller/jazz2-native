@@ -91,6 +91,20 @@ namespace Jazz2::Scripting::Legacy
 		@p gameTick drives the ones that change over time.
 	*/
 	void EmitObjectLight(const jjOBJ& obj, Vector2f pos, std::int32_t gameTick, SmallVectorImpl<LightEmitter>& lights);
+	/**
+		@brief Adds a light of a `LIGHT::Type` and a size (`light`) at a position of the level, see @ref EmitObjectLight()
+
+		@p seed keeps a flickering light the same from tick to tick, @p direction is the way a beam goes.
+	*/
+	void EmitScriptLight(std::uint32_t lightType, std::int32_t size, std::uint32_t seed, std::int32_t direction, Vector2f pos,
+		std::int32_t gameTick, SmallVectorImpl<LightEmitter>& lights);
+
+	/**
+		@brief Gives a player what the pickup of an original event (`OBJECT::Object`) gives, `false` if it's no pickup
+
+		A pickup of the game of the event is collected by the player, as a pickup of the script is collected in JJ2+.
+	*/
+	bool GiveOriginalPickup(LevelScriptLoader* levelScripts, std::uint8_t eventId, Actors::Player& player);
 
 	/**
 		@brief Returns `true` if the pixels of the frame a `jjOBJ` shows overlap a rectangle of the level
@@ -198,7 +212,15 @@ namespace Jazz2::Scripting::Legacy
 		 * As measured in JJ2+, a player stands 24 pixels above the object over the width of its frame (or @p width) and goes
 		 * along with it by how far it moved since @p xOld and @p yOld, it's one only while the behavior makes it one.
 		 */
-		void BePlatform(float xOld, float yOld, std::int32_t width);
+		void BePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height = 0);
+		/**
+		 * @brief Has the players on a platform's box (where their feet are) go along with it by @p delta, `true` if it carries any
+		 *
+		 * A player falling onto the box from above stands on it, one that jumps off or leaves it to the side doesn't.
+		 */
+		static bool CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, const jjOBJ& obj, const AABBf& box, Vector2f delta);
+		/** @brief Returns the top of a platform where the feet of its players are, @p height of 0 as the platforms of the game */
+		static float GetPlatformTop(const jjOBJ& obj, std::int32_t height);
 		/** @brief Lets go of the players standing on the object, as `jjOBJ::clearPlatform()` */
 		void ClearPlatform();
 		/**
@@ -325,6 +347,8 @@ namespace Jazz2::Scripting::Legacy
 		 * Returns `true` if the method of the behavior returned `true` or a global one was called.
 		 */
 		static bool CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force);
+		/** @brief Returns what `onIsSolid()` of the class of the behavior of a `jjOBJ` says, `true` without one */
+		static bool CallIsSolid(LevelScriptLoader* levelScripts, jjOBJ& obj);
 		/** @brief Draws the current frame of a `jjOBJ` where it is in the level (@p offsetY lower), as `jjOBJ::draw()`, translucent if @p translucent */
 		static void DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY = 0.0f, bool translucent = false);
 		/** @brief Returns `true` if an object of a `direction` (`SPRITE::Direction`) is drawn upside down */
@@ -363,9 +387,30 @@ namespace Jazz2::Scripting::Legacy
 		LevelScriptLoader* _levelScripts;
 		jjOBJ* _obj;
 		Actors::ActorBase* _actor;
+		// The tiles of scenery a bullet going through them broke already (see HitScenery())
+		SmallVector<std::int32_t, 2> _hitSceneryTiles;
 		float _timeMult;
 		// The next tick of the scripts the behavior runs in, -1 before the first one
 		std::int32_t _nextTick;
+		// The frame _frameRect and _pixelBounds are of (from its hotspot), both empty if it has no pixels
+		std::uint32_t _boundsFrame;
+		Recti _frameRect;
+		Recti _pixelBounds;
+		// How far the behavior moved the origin in the last tick, and the time of it the platform moved on by since (see OnUpdate())
+		Vector2f _originStep;
+		float _originStepTime = 0.0f;
+		// The tick a player touching a special object last told its behavior of it in (see OnCollision())
+		std::int32_t _playerHitTick = INT32_MIN;
+		// The tick the behavior made the object a platform in, and how wide and high (0 as its frame), see BePlatform()
+		static constexpr std::int32_t NoPlatform = INT32_MIN;
+		std::int32_t _platformTick = NoPlatform;
+		// The tick the behavior made the object solid in (see BeSolid()), and its hitbox at the end of the last tick it was
+		// (valid in `_liftValid`)
+		std::int32_t _solidTick = INT32_MIN;
+		AABBf _liftBox;
+		float _liftY = 0.0f;
+		std::int16_t _platformWidth = 0;
+		std::int16_t _platformHeight = 0;
 		// The object of the game draws itself in this frame, or its frame is drawn by the script (see Draw())
 		bool _drawn;
 		bool _drawFrame;
@@ -381,33 +426,16 @@ namespace Jazz2::Scripting::Legacy
 		bool _ownsLights;
 		// The object of the game is to be the object of another event (see RunGameBehavior())
 		bool _swapRequested = false;
-		// How far the behavior moved the origin in the last tick, and the time of it the platform moved on by since (see OnUpdate())
-		Vector2f _originStep;
-		float _originStepTime = 0.0f;
 		// The behavior hung the platform where the platform it was made by is in the last tick (see GetCreatorPlatform())
 		bool _hangsFromCreator = false;
-		// The tick a player touching a special object last told its behavior of it in (see OnCollision())
-		std::int32_t _playerHitTick = INT32_MIN;
 		// The bullet hits what its frame collides with right now, the collision isn't swallowed then (see CollideByFrame())
 		bool _collidingByFrame = false;
-		// The tiles of scenery a bullet going through them broke already (see HitScenery())
-		SmallVector<std::int32_t, 2> _hitSceneryTiles;
-		// The tick the behavior made the object a platform in, and how wide (0 as its frame), see BePlatform()
-		static constexpr std::int32_t NoPlatform = INT32_MIN;
-		std::int32_t _platformTick = NoPlatform;
-		std::int16_t _platformWidth = 0;
 		// Solid by itself, and as it was when the behavior made it a platform (see ClearPlatform())
 		bool _nativeSolid = false;
 		bool _solidBeforePlatform = false;
-		// The tick the behavior made the object solid in (see BeSolid()), and its hitbox at the end of the last tick it was
-		std::int32_t _solidTick = INT32_MIN;
-		AABBf _liftBox;
-		float _liftY = 0.0f;
 		bool _liftValid = false;
-		// The frame _frameRect and _pixelBounds are of (from its hotspot), both empty if it has no pixels
-		std::uint32_t _boundsFrame;
-		Recti _frameRect;
-		Recti _pixelBounds;
+		// The object runs BEHAVIOR::MONITOR, it's a box (see FindBoxBelow())
+		bool _isBox = false;
 
 		// Runs the behavior for one tick of the scripts, returns `false` if the object is gone - the one it's made in isn't
 		// told to deactivate (see RunFirstTick())
@@ -420,6 +448,10 @@ namespace Jazz2::Scripting::Legacy
 		bool FindFrameGround(const Actors::ActorBase& actor, float& offset);
 		// Returns `true` if the pixel right below the frame of the object is in the ground, in the column of its hotspot
 		bool IsFrameOnGround(const Actors::ActorBase& actor);
+		// Returns `true` if another box has the pixel in its frame and is solid for boxes, with the top of its frame
+		bool FindBoxBelow(const Actors::ActorBase& actor, float x, float y, float& top);
+		// Returns `true` if boxes rest on the object, see `onIsSolid()`
+		bool IsSolidForBoxes();
 		// Makes the hitbox of the object the one of its frame, puts the object on the ground by its frame the first time
 		void UpdateFrameHitbox(Actors::ActorBase& actor);
 		// Returns where the feet of the players standing on the object are, while the behavior makes it a platform

@@ -401,8 +401,8 @@ namespace Jazz2::Scripting
 		 * 1 by default, 0 is in front of all layers as well. Any value outside 0 to 8 hides the water. This only affects
 		 * drawing, players still swim in hidden water.
 		 *
-		 * @partialsupport Visible water is always drawn in front of all layers, the exact layer number currently
-		 * doesn't matter.
+		 * Water in front of a layer that isn't the frontmost visible one is drawn between the layers, the layers in front
+		 * of it cover it.
 		 */
 		engine->RegisterGlobalFunction("int get_jjWaterLayer()", asFUNCTION(get_waterLayer), asCALL_CDECL);
 		/** @brief Sets the layer the water is drawn in front of */
@@ -475,7 +475,8 @@ namespace Jazz2::Scripting
 		 * @brief Whether crates made by a generator take their parameters from the tile where they land
 		 *
 		 * Instead of the tile of the generator.
-		 * @partialsupport Currently has no effect.
+		 * @partialsupport A crate of the game has what its generator gives it, only its @ref jjOBJ::xOrg and
+		 * @ref jjOBJ::yOrg follow it until it first stands on the ground.
 		 */
 		engine->RegisterGlobalProperty("bool jjDelayGeneratedCrateOrigins", &delayGeneratedCrateOrigins);
 		/**

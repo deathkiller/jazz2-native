@@ -12,7 +12,7 @@ namespace Jazz2::Scripting
 	 * @brief Plays a sound sample at a position in the level
 	 *
 	 * The position is in level pixels and makes the sound louder or quieter depending on the distance to the
-	 * players. `volume` is on a scale where 64 is full volume, and 0 or less is silent. `frequency` is the playback
+	 * players. `volume` is on a scale where 63 is full volume, 0 is the default of full volume. `frequency` is the playback
 	 * rate in Hz, 0 plays the sample at its own rate.
 	 */
 	void playSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency);

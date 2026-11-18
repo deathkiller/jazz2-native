@@ -3,6 +3,10 @@
 #include "Stream.h"
 #include "Internal.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "../../Multiplayer/MpLevelHandler.h"
+#endif
+
 #include "../../../nCine/Base/Algorithms.h"
 
 #include <algorithm>
@@ -29,6 +33,12 @@ namespace Jazz2::Scripting
 		jjSTREAM* jjSTREAM::Create() {
 			void* mem = asAllocMem(sizeof(jjSTREAM));
 			return new(mem) jjSTREAM();
+		}
+		ArrayView<const std::uint8_t> jjSTREAM::GetUnreadData() const {
+			return arrayView(_data.data() + _readPos, _data.size() - _readPos);
+		}
+		void jjSTREAM::AppendData(ArrayView<const std::uint8_t> data) {
+			_data.append(data.begin(), data.end());
 		}
 		jjSTREAM* jjSTREAM::CreateFromFile(const String& filename) {
 			void* mem = asAllocMem(sizeof(jjSTREAM));
@@ -427,7 +437,14 @@ namespace Jazz2::Scripting
 
 
 	bool LevelScriptLoader::jjSendPacket(const jjSTREAM& packet, std::int32_t toClientID, std::uint32_t toScriptModuleID) {
-		noop(); return true;
+		// The level has one module of scripts, it gets what any module sends
+#if defined(WITH_MULTIPLAYER)
+		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_this->_levelHandler)) {
+			return mpHandler->SendScriptPacket(toClientID, packet.GetUnreadData());
+		}
+#endif
+		return false;
 	}
 
 	void LevelScriptLoader::RegisterLegacyStream(asIScriptEngine* engine)
@@ -481,7 +498,11 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Sends a stream of data between the server and clients in multiplayer
 		 *
-		 * @partialsupport Currently has no effect and always returns `true`.
+		 * A client sends it to the server, whatever @p toClientID is. The server sends it to the client of that ID (see
+		 * @ref jjPLAYER::clientID), to every client for 0, or to every client but `-toClientID`. The other side gets it in
+		 * `onReceive(jjSTREAM &in packet, int fromClientID)`. Returns `false` outside of online multiplayer or for more than
+		 * 32 kB.
+		 * @partialsupport The level has one module of scripts, @p toScriptModuleID is ignored.
 		 */
 		engine->RegisterGlobalFunction("bool jjSendPacket(const jjSTREAM &in packet, int toClientID = 0, uint toScriptModuleID = ::jjScriptModuleID)", asFUNCTION(jjSendPacket), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool jjZlibCompress(const jjSTREAM &in input, jjSTREAM &out output)", asFUNCTION(jjSTREAM::ZlibCompress), asCALL_CDECL);

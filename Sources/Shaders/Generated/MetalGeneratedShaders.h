@@ -7213,8 +7213,8 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
 	float halfSize = step(0.5, _globals.uCylinder.w);
 	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
-	float rows = row / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row / _globals.uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
@@ -7320,8 +7320,8 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
 	float halfSize = step(0.5, _globals.uCylinder.w);
 	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
-	float rows = row / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row / _globals.uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = textureTexel(texturePos, uTexture, uTexture_smplr);
 	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);
@@ -7562,8 +7562,8 @@ fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buff
 	float rowCos = cos(3.14159265359 * row / _globals.uViewSize.y);
 	float halfSize = step(0.5, _globals.uCylinder.w);
 	float2 texel = float2(_globals.uShift.x * 0.25 + (pixel.x - _globals.uCylinder.x * _globals.uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / _globals.uViewSize.x, _globals.uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * _globals.uViewSize.y) * (256.0 + 256.0 * halfSize) / _globals.uViewSize.y);
-	float rows = row / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row / _globals.uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = uTexture.sample(uTexture_smplr, texturePos);
 	COLOR = mix(texColor, float4(_globals.uHorizonColor.xyz, 1.0), fade * _globals.uCylinder.z);

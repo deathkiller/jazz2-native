@@ -154,6 +154,7 @@ Console | Content directory | Source, cache and config directory | Notes
 Nintendo Switch | @cpp "romfs:/" @ce @m_span{m-text m-dim} (inside the @cpp ".nro" @ce) @m_endspan | @cpp "sdmc:/Games/Jazz2/" @ce | User @cpp "Content/" @ce in @cpp "sdmc:/Games/Jazz2/Content/" @ce
 Nintendo 3DS | @cpp "sdmc:/3ds/Jazz2/Content/" @ce | @cpp "sdmc:/3ds/Jazz2/" @ce | ---
 Nintendo Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/" @ce | ---
+Nintendo Wii U | @cpp "fs:/vol/content/" @ce @m_span{m-text m-dim} (inside the @cpp ".wuhb" @ce) @m_endspan | @cpp "fs:/vol/external01/wiiu/apps/Jazz2/" @ce @m_span{m-text m-dim} (@cpp "sd:/wiiu/apps/Jazz2/" @ce) @m_endspan | ---
 Nintendo GameCube | @cpp "Jazz2/Content/" @ce on an SD card, or @cpp "dvd:/Content/" @ce | Next to @cpp "Content/" @ce | From the disc, @cpp "Jazz2.config" @ce and @cpp "Jazz2.resume" @ce go to a memory card @m_span{m-text m-dim} (@cpp "mca:/" @ce, or @cpp "mcb:/" @ce) @m_endspan and no log is written
 Nintendo 64 | @cpp "rom:/Content/" @ce | @cpp "rom:/Cache/" @ce, read-only | Settings go to the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan, no resume file and no log
 PlayStation Vita | @cpp "app0:/Content/" @ce @m_span{m-text m-dim} (inside the VPK) @m_endspan | @cpp "ux0:/data/jazz2/" @ce | User @cpp "Content/" @ce in @cpp "ux0:/data/jazz2/Content/" @ce

@@ -125,27 +125,28 @@ namespace Jazz2::Scripting
 			bool get_isActive() const;
 
 			/**
-			 * @brief Makes this object hit another one as a bullet
+			 * @brief Makes this object hit another one as an object of @p playerHandling
 			 *
-			 * The game resolves the collision between the two objects as if they really touched, wherever they are,
-			 * and the target's @ref jjOBJ::energy is updated afterward.
+			 * Wherever they are. A target with @ref scriptedCollisions is told of it (by the `animSpeed` of this object) when
+			 * @p playerHandling is a bullet or @ref HANDLING::SPECIAL; two objects of the game collide as the game has them;
+			 * otherwise a bullet hurts the target by its `animSpeed` unless its @ref bulletHandling says otherwise. The
+			 * target's @ref jjOBJ::energy is updated afterward.
 			 *
 			 * @param target          Object being hit
-			 * @param playerHandling  Currently ignored
+			 * @param playerHandling  How this object hits, as one of this handling
 			 * @return The target object
-			 * @partialsupport The `playerHandling` parameter is ignored. The target's @ref scriptedCollisions and @ref bulletHandling
-			 * aren't taken into account, and nothing happens if either object exists only for the script.
 			 */
 			jjOBJ* objectHit(jjOBJ* target, std::uint32_t playerHandling);
 			/**
 			 * @brief Hurts and pushes away players near the object, like an explosion
 			 *
 			 * Every vulnerable player whose squared distance from the object in pixels is less than `maxDistance` loses
-			 * one point of health and is knocked away from the object.
+			 * one point of health and is knocked away from the object. With @p blastObjects the enemies there that are
+			 * @ref isBlastable are hurt too, by 1 to 9 the nearer they are, as by TNT of the game.
 			 *
 			 * @param maxDistance   Squared radius in pixels
-			 * @param blastObjects  Currently ignored, other objects are not affected
-			 * @partialsupport The `blastObjects` parameter is currently ignored.
+			 * @param blastObjects  Whether enemies are hurt too
+			 * @partialsupport Only enemies are hurt by @p blastObjects, crates and other objects aren't broken.
 			 */
 			void blast(std::int32_t maxDistance, bool blastObjects);
 
@@ -165,8 +166,9 @@ namespace Jazz2::Scripting
 			 * Doesn't change @ref jjOBJ::behavior. With @ref BEHAVIOR::DEFAULT, the object's own behavior runs instead. Typically
 			 * called from a custom behavior to reuse a built-in one.
 			 * @partialsupport An object a script made runs only the bullet behaviors, `CRATE`, `EXPLOSION`, `SHARD`,
-			 * `WALKINGENEMY` and `INACTIVE`, any other only moves it by its speeds. An object of the game runs its own
-			 * update for most behaviors. Seeker bullets don't home and RF bullets fly straight.
+			 * `WALKINGENEMY`, `BOUNCEONCE`, `FLICKERGEM`, `PICKUP`, `BUBBLE`, `UTERUSSPIKEBALL` and `INACTIVE` (the five before
+			 * `INACTIVE` aren't measured in JJ2+), any other only moves it by its speeds. An object of the game runs its own update
+			 * for most behaviors. Seeker bullets don't home and RF bullets fly straight.
 			 *
 			 * @param behavior  Behavior to run
 			 * @param draw      Whether the object should be drawn
@@ -366,7 +368,9 @@ namespace Jazz2::Scripting
 			 * - @ref HANDLING::IGNOREBULLET --- neither the object nor the bullet is affected
 			 * - @ref HANDLING::DESTROYBULLET --- the bullet is destroyed, the object is unaffected
 			 * - @ref HANDLING::DETECTBULLET --- the object is unaffected, the bullet is usually destroyed
-			 * @partialsupport Bullets of the game go through objects that exist only for the script.
+			 *
+			 * Bullets of the game hit an object that exists only for the script by its frame if it has a handling set, is an
+			 * enemy (@ref HANDLING::ENEMY) or has @ref scriptedCollisions, and go through it otherwise.
 			 */
 			std::uint32_t get_bulletHandling();
 			/** @brief Sets how the object reacts when a bullet touches it */
@@ -383,7 +387,6 @@ namespace Jazz2::Scripting
 			 * @brief Returns whether ice bullets freeze the object
 			 *
 			 * When false, ice bullets hit the object like any other bullet.
-			 * @partialsupport Objects that exist only for the script aren't frozen by bullets of the game.
 			 */
 			bool get_freezable();
 			/** @brief Sets whether ice bullets freeze the object */
@@ -391,7 +394,7 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns whether explosions affect the object
 			 *
-			 * @partialsupport The value is stored, but the game currently doesn't act on it.
+			 * An object that isn't is left alone by @ref blast().
 			 */
 			bool get_blastable();
 			/** @brief Sets whether explosions affect the object */
@@ -457,8 +460,7 @@ namespace Jazz2::Scripting
 			 *
 			 * When true and @ref jjOBJ::playerHandling is @ref HANDLING::PICKUP or @ref HANDLING::SPECIAL, collisions with players
 			 * and bullets call @ref onObjectHit() of the object's behavior class, or the global @ref onObjectHit() function,
-			 * instead of the game's own handling.
-			 * @partialsupport Bullets of the game go through objects that exist only for the script, they aren't told of them.
+			 * instead of the game's own handling. Bullets of the game hit an object that exists only for the script by its frame.
 			 */
 			bool get_scriptedCollisions();
 			/** @brief Sets whether the script decides what happens when the object is hit */
@@ -556,15 +558,13 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Lets players stand on top of the object
 			 *
-			 * Call it every tick while the object should carry players. Only affects objects of the game driven by a
-			 * script behavior.
+			 * Call it every tick while the object should carry players, they go along with it by how far it moved.
 			 *
 			 * @param xOld    Horizontal position of the object in the previous tick
 			 * @param yOld    Vertical position of the object in the previous tick
 			 * @param width   Width of the platform in pixels, 0 to derive it from the current frame
-			 * @param height  Currently ignored
-			 * @partialsupport The `height` parameter is ignored, and it has no effect on objects that exist only for the
-			 * script.
+			 * @param height  Height of the platform in pixels, its top is half of it above the object; 0 as the platforms of the
+			 *                game, whose top is 4 pixels above it (the same as a height of 8)
 			 */
 			void bePlatform(float xOld, float yOld, std::int32_t width, std::int32_t height);
 			/**
@@ -709,6 +709,8 @@ namespace Jazz2::Scripting
 			bool _playerHandlingSet = false;
 			// A behavior moves the object itself, the speeds are its (see ScriptObjectHost::FollowScriptMovement())
 			bool _movedByBehavior = false;
+			// A crate of a generator whose origin is where it first lands (`jjDelayGeneratedCrateOrigins`), it follows it until then
+			bool _delayedOrigin = false;
 			// Made in STATE::START, shown floating as a pickup of the game until a behavior of the script runs it (see
 			// ScriptObjectHost::CallScriptBehavior())
 			bool _startPending = false;
@@ -1016,7 +1018,9 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Breaks a tile into falling pieces, like destroyed scenery
 	 *
-	 * @partialsupport Currently has no effect.
+	 * The four quarters of the tile fly apart, or drop with a little drift when @p collapseSceneryStyle is set, and fall
+	 * out of the view.
+	 * @partialsupport The pieces and their speeds aren't measured in JJ2+.
 	 */
 	void jjAddParticleTileExplosion(std::uint16_t xTile, std::uint16_t yTile, std::uint16_t tile, bool collapseSceneryStyle);
 	/**

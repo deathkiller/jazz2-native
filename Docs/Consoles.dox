@@ -8,7 +8,7 @@ namespace Death {
 
 @m_class{m-noindent}
 
-The game runs on ten consoles. Each is cross-compiled with its own SDK, most use a bespoke
+The game runs on eleven consoles. Each is cross-compiled with its own SDK, most use a bespoke
 window/input backend instead of **SDL2** or **GLFW**, and seven have no programmable shaders, so they
 use one of six fixed-function rendering backends @m_span{m-text m-dim} (the Wii and the GameCube share
 one) @m_endspan. This page covers installing the toolchain, configuring, packaging, deploying and
@@ -45,7 +45,7 @@ shader platforms. For them mostly the deployment parts apply.
     PlayStation 2 and GameCube have no first-run conversion compiled in
     @m_span{m-text m-dim} (`NCINE_HAS_WRITABLE_CACHE` in @cpp "Sources/Main.h" @ce) @m_endspan and
     don't verify their content, so a build without a prepared tree reaches the main menu with no
-    episode to play. The Wii, 3DS, PSP, PS3, Vita and Switch can convert on the device, but skip it when
+    episode to play. The Wii, Wii U, 3DS, PSP, PS3, Vita and Switch can convert on the device, but skip it when
     they find a prepared tree.
 -   <b>Seven of them have no shaders.</b> `RDP`, `PVR`, `GX`, `GU`, `GS` and `PICA` implement each
     effect as fixed-function passes transpiled by ShaderCompiler from the same `.shader` files ---
@@ -154,6 +154,7 @@ Console | Content directory | Cache / save data
 Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce, read-only, preferences on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
 Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan | @cpp "/cd/Cache/" @ce, read-only, preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "/vmu/<port><unit>/Jazz2" @ce and @cpp "Jazz2.resume" @ce) @m_endspan
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
+Wii U | @cpp "fs:/vol/content/" @ce @m_span{m-text m-dim} (inside the `.wuhb`) @m_endspan | @cpp "sd:/wiiu/apps/Jazz2/Cache/" @ce @m_span{m-text m-dim} (@cpp "fs:/vol/external01/…" @ce) @m_endspan
 GameCube | @cpp "dvd:/Content/" @ce @m_span{m-text m-dim} (disc image) @m_endspan, or @cpp "Jazz2/Content/" @ce on an SD card @m_span{m-text m-dim} (`sd:`, `carda:` or `cardb:`, see @ref consoles-gamecube-disc) @m_endspan | Disc: read-only, preferences and resumable state on a memory card @m_span{m-text m-dim} (@cpp "mca:/Jazz2.config" @ce and @cpp "Jazz2.resume" @ce) @m_endspan. SD card: @cpp "Jazz2/Cache/" @ce, writable
 Nintendo 3DS | @cpp "sdmc:/3ds/Jazz2/Content/" @ce | @cpp "sdmc:/3ds/Jazz2/Cache/" @ce
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
@@ -170,7 +171,7 @@ staged package directory, which is how RPCS3 boots it. The `Source`, configurati
 of every platform are in @ref paths "File locations".
 
 @cpp "Prebaked.pak" @ce marks a tree as prepared: a platform that could convert
-@m_span{m-text m-dim} (Wii, 3DS, PSP, PS3, Vita, Switch) @m_endspan then skips the conversion, leaves
+@m_span{m-text m-dim} (Wii, Wii U, 3DS, PSP, PS3, Vita, Switch) @m_endspan then skips the conversion, leaves
 `Cache` alone and never looks for the original game files. To convert on the device instead, leave the prepared tree out and put an original
 installation into the console's `Source` directory.
 
@@ -235,6 +236,7 @@ Backend | `WITH_*` | What it drives
 @ref nCine::NdspAudioDevice "NDSP" | `WITH_NDSP` | Same mixer into one libctru NDSP channel on a higher-priority thread. The DSP resamples, so any mixing rate is valid. Needs the DSP firmware, see @ref consoles-3ds-limits
 @ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's RSP mixer into the AI ring. Effects stream from `.wav64` files the asset packer writes, music is libdragon's `.xm64` player, cinematic soundtracks play through libdragon's video player @m_span{m-text m-dim} (`NCINE_HAS_NATIVE_AUDIO`) @m_endspan
 @ref nCine::Ps2AudioDevice "PS2" | `WITH_PS2AUDIO` | Software mixer into the `audsrv` IRX stream, topped up per frame @m_span{m-text m-dim} (no threads) @m_endspan. The SPU2 resamples in hardware
+@ref nCine::SdlAudioDevice "SDL" | `WITH_SDLAUDIO` | Software mixer into SDL2's audio stream. On the Wii U, wiiu-sdl2 plays it through AX voices @m_span{m-text m-dim} (devkitPro ships no OpenAL there) @m_endspan
 none | --- | Silent fallback when no backend is available or audio is turned off
 
 Each console's SDK provides what its backend needs, so nothing has to be installed by hand.
@@ -284,6 +286,7 @@ Console | Where the trace goes
 Nintendo 64 | `stderr` via libdragon's debug sinks: the <b>ISViewer</b> window @m_span{m-text m-dim} (**ares** prints it to its terminal) @m_endspan and the <b>USB log</b> of an EverDrive/SC64, both probed at startup. The boot console shows startup messages until the renderer takes over
 Dreamcast | `dbgio`: the <b>framebuffer console</b> during startup, then the <b>SCIF serial port</b>. Emulators print it to their log, `dc-tool` to its console
 Wii / GameCube | A <b>USB Gecko</b> on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed at startup. Without one nothing is written. <b>Dolphin</b> serves it on TCP port 55020 @m_span{m-text m-dim} (or the next free one) @m_endspan with slot B set to "USB Gecko". `Jazz2.log` is written beside the content on an SD card, never to a GameCube memory card
+Wii U | `OSReport()`: <b>Cemu</b> shows it with coreinit logging on, on a console any logging module of the Aroma environment that listens to it. `Jazz2.log` is written to @cpp "sd:/wiiu/apps/Jazz2/" @ce too
 Nintendo 3DS | `svcOutputDebugString`: <b>Azahar</b> logs it under `Debug.Emulated` @m_span{m-text m-dim} (hidden by its default filter, see @ref consoles-3ds-deploy) @m_endspan, or an attached debugger. The <b>bottom-screen console</b> shows every line until the renderer starts, then warnings and errors. `Jazz2.log` is written next to the `.3dsx`
 PlayStation Portable | `stdout` via `sceIoWrite` on fd 1: <b>PPSSPP</b> log, `psplink` console, plus the <b>debug screen</b> until the GU takes over
 PlayStation 2 | The EE <b>SIO transmit register</b> @m_span{m-text m-dim} (`0x1000F180`) @m_endspan: <b>PCSX2</b> shows it as EE console output with `EnableEEConsole` on, a serial cable on hardware. Plus the <b>boot console</b> @m_span{m-text m-dim} (libdebug) @m_endspan until the renderer starts --- after the disc wait, IOP module loads and content/memory-card probes --- so a stalled boot leaves its last line on screen

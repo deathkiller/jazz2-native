@@ -67,7 +67,7 @@ fixed-function backends.
 
 The desktop CMake build adds the tool as a utility target in the `Utilities` folder. It is skipped when
 cross-compiling @m_span{m-text m-dim} (Emscripten, Nintendo Switch, Vita, UWP, Wii, GameCube,
-Dreamcast) @m_endspan, since it runs on the build machine. Standalone build:
+Wii U, Dreamcast) @m_endspan, since it runs on the build machine. Standalone build:
 
 @code{.sh}
 cmake -S Sources/Utilities/ShaderCompiler -B build-shadercompiler
@@ -758,6 +758,8 @@ See @ref consoles-ps3-shaders for the invocation.
     `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU` / `WITH_RHI_GS` / `WITH_RHI_RDP`.
 -   <b>PS Vita</b> (`WITH_RHI_GXM`) compiles Cg source on the console, while <b>PlayStation 3</b>
     (`WITH_RHI_RSX`) loads precompiled microcode, see @ref shader-compiler-cg "above".
+-   <b>Wii U</b> (`WITH_RHI_GX2`) loads R700 shaders compiled offline from the OpenGL GLSL by CafeGLSL
+    (`--emit-gx2`), so the console build needs no shader compiler, see @ref consoles-wiiu.
 
 @m_class{m-noindent}
 

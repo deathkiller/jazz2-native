@@ -697,6 +697,23 @@ if(NOT DEDICATED_SERVER)
 				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderOgg.cpp
 				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderOgg.cpp)
 		endif()
+
+		if(MPG123_FOUND)
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_MPG123")
+			if(MPG123_DYNAMIC_LINK)
+				target_compile_definitions(${NCINE_APP} PRIVATE "WITH_MPG123_DYNAMIC")
+			else()
+				target_link_libraries(${NCINE_APP} PRIVATE Mpg123::Mpg123)
+			endif()
+
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMp3.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMp3.h)
+
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMp3.cpp
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMp3.cpp)
+		endif()
 		
 		if(OPENMPT_FOUND)
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENMPT")

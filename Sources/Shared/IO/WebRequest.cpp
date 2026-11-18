@@ -1836,7 +1836,8 @@ namespace Death { namespace IO {
 
 					SmallVector<wchar_t, 1000> resBuf(bufferLen / sizeof(wchar_t));
 					if (WinHTTP::WinHttpQueryHeaders(hRequest, dwInfoLevel, pwszName, resBuf.data(), &bufferLen, &nextIndex)) {
-						arrayAppend(result, Utf8::FromUtf16(resBuf.data(), bufferLen));
+						// Length is returned in bytes without the terminating null
+						arrayAppend(result, Utf8::FromUtf16(resBuf.data(), std::int32_t(bufferLen / sizeof(wchar_t))));
 					}
 				}
 
@@ -1866,7 +1867,8 @@ namespace Death { namespace IO {
 
 				SmallVector<wchar_t, 1000> buffer(bufferLength / sizeof(wchar_t));
 				if (WinHTTP::WinHttpQueryOption(hInternet, dwOption, buffer.data(), &bufferLength)) {
-					result = Utf8::FromUtf16(buffer.data(), bufferLength);
+					// Returned length isn't reliably in characters, so measure up to the null
+					result = Utf8::FromUtf16(buffer.data(), std::int32_t(::wcsnlen(buffer.data(), buffer.size())));
 				}
 			}
 

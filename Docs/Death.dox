@@ -199,6 +199,16 @@ namespace Death {
 #undef DEATH_TARGET_WII
 
 /**
+	@brief Nintendo Wii U target
+
+	Defined if the library is built for Nintendo Wii U (devkitPPC and wut). Espresso is a PowerPC core,
+	so @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined. This is a separate target from @ref DEATH_TARGET_WII, the two are never defined together.
+*/
+#define DEATH_TARGET_WIIU
+#undef DEATH_TARGET_WIIU
+
+/**
 	@brief Nintendo 3DS target
 
 	Defined if the library is built for Nintendo 3DS (devkitARM and libctru). Its ARM11 MPCore is a 32-bit
@@ -441,7 +451,7 @@ namespace Death {
 	@brief Whether the platform has little memory and small thread stacks
 
 	Defined for the game consoles (@ref DEATH_TARGET_SWITCH, @ref DEATH_TARGET_PSP, @ref DEATH_TARGET_VITA,
-	@ref DEATH_TARGET_N64, @ref DEATH_TARGET_WII, @ref DEATH_TARGET_GAMECUBE, @ref DEATH_TARGET_3DS, @ref DEATH_TARGET_DREAMCAST,
+	@ref DEATH_TARGET_N64, @ref DEATH_TARGET_WII, @ref DEATH_TARGET_WIIU, @ref DEATH_TARGET_GAMECUBE, @ref DEATH_TARGET_3DS, @ref DEATH_TARGET_DREAMCAST,
 	@ref DEATH_TARGET_PS2, @ref DEATH_TARGET_PS3), for the classic @ref DEATH_TARGET_AMIGAOS and for
 	@ref DEATH_TARGET_EMSCRIPTEN, where both the heap and the stack of a thread are scarce (a thread has 64 KB
 	of stack on the PSP). Code that embeds a large buffer in an object --- which then often lives on the stack

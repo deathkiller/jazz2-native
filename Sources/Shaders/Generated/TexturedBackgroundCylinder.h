@@ -98,7 +98,6 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uCylinder;
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -116,8 +115,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
@@ -150,7 +149,6 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uCylinder;
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -168,8 +166,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture2D(uTexture, texturePos);
@@ -312,7 +310,6 @@ vec4 textureTexel(vec2 texturePos) {
 	return texture(uTexture, vec2(texturePos.x, (floor(texturePos.y * DITHER_TEXTURE_SIZE) + 0.5) / DITHER_TEXTURE_SIZE));
 }
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -330,8 +327,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = textureTexel(texturePos);
@@ -365,7 +362,6 @@ uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 uniform vec4 uCylinder;
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -383,8 +379,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture2D(uTexture, texturePos);
@@ -621,7 +617,6 @@ vec4 keyedColor(vec3 color) {
 	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -639,8 +634,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture(uTexture, texturePos);
@@ -788,7 +783,6 @@ vec4 keyedColor(vec3 color) {
 	return vec4(color, uOpacity * max(step(max(max(difference.r, difference.g), difference.b), uKeyColor.a), step(uKeyColor.a, -0.5)));
 }
 
-#define FADE_ROWS 141.0
 #define FADE_STRENGTH 0.65
 #define PI 3.14159265359
 
@@ -806,8 +800,8 @@ void main() {
 		uShift.x * 0.25 + (pixel.x - uCylinder.x * uViewSize.x) * mix(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x,
 		uShift.y + 128.0 + 128.0 * halfSize + (pixel.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y
 	);
-	float rows = row / FADE_ROWS;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * FADE_STRENGTH;
+	float angle = PI * row / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * FADE_STRENGTH;
 
 	vec2 texturePos = vec2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	vec4 texColor = texture2D(uTexture, texturePos);

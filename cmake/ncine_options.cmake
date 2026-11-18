@@ -358,6 +358,7 @@ cmake_dependent_option(NCINE_WITH_LZ4 "Enable LZ4 compression support" ON "PLATF
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
+cmake_dependent_option(NCINE_WITH_MPG123 "Enable MP3 audio file support (libmpg123)" ON "NCINE_WITH_AUDIO" OFF)
 # Music is tracker modules, played by either libopenmpt (accurate, heavy float mixer) or libxmp (integer mixer,
 # 0.5-4 MB per module vs 4.6-12.5 MB, but no MO3 - 4 of 56 tracks are silent). libxmp is the default on:
 #  - Wii, GameCube, Dreamcast: memory

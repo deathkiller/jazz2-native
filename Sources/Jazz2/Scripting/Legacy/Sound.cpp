@@ -110,8 +110,8 @@ namespace Jazz2::Scripting
 			return nullptr;
 		}
 
-		// JJ2 volume is roughly 0-64 (0x40 = full); frequency 0 means the sample's natural rate
-		float gain = (volume <= 0 ? 0.0f : volume / 64.0f);
+		// JJ2 volume is roughly 1-64 (0x40 = full) and 0 is the default of full volume; frequency 0 means the sample's natural rate
+		float gain = (volume <= 0 ? 63.0f : (float)std::min(volume, 64)) / 64.0f;
 		float pitch = (frequency <= 0 || buffer->GetFrequency() <= 0 ? 1.0f : (float)frequency / (float)buffer->GetFrequency());
 
 		return _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch, SfxFlags::None);
@@ -148,11 +148,10 @@ namespace Jazz2::Scripting
 #endif
 	}
 
-	void LevelScriptLoader::StopUnusedLoopedSamples()
+	void LevelScriptLoader::StopUnusedLoopedSamples(std::int32_t sinceTick)
 	{
-		std::int32_t currentTick = GetGameTick();
 		for (auto it = _loopedSamples.begin(); it != _loopedSamples.end(); ) {
-			if (currentTick - it->second.Tick > 1) {
+			if (it->second.Tick < sinceTick) {
 				if (it->second.Player != nullptr) {
 					it->second.Player->Stop();
 				}
@@ -369,7 +368,9 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief Strength of the echo effect, as set by the Echo event
 		 *
-		 * @partialsupport Currently starts at 0 and changing it has no effect.
+		 * Any value above 0 makes the sounds of the level echo, each repeated twice and quieter, 0 turns it off.
+		 * @partialsupport Starts at 0, the Echo event isn't converted. The echo isn't measured in JJ2+ and doesn't get
+		 * stronger with larger values.
 		 */
 		engine->RegisterGlobalProperty("int jjEcho", &levelEcho);
 

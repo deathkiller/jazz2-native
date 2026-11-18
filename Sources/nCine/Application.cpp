@@ -90,6 +90,9 @@ extern "C"
 #elif defined(DEATH_TARGET_WII)
 #	include <ogc/conf.h>
 #	include <ogc/es.h>
+#elif defined(DEATH_TARGET_WIIU)
+#	include <coreinit/mcp.h>
+#	include <unistd.h>
 #elif defined(DEATH_TARGET_3DS)
 #	include <3ds.h>
 #	include "Backends/Ctr/CtrPlatform.h"
@@ -222,26 +225,20 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #	include <emscripten/emscripten.h>
 #else
 #	include <IO/FileStream.h>
-// The owner belongs to whoever attaches or detaches the target, the pointer is the only thing the sink follows -
-// with DEATH_TRACE_ASYNC those are two different threads. Published once the header and the startup history are
-// already in the file, which keeps them at the very beginning of it.
+// The owner is used by the attaching thread, the sink only reads the pointer (separate threads with DEATH_TRACE_ASYNC).
+// Published after the header and startup history are written, so they stay at the start of the file.
 static std::unique_ptr<Death::IO::Stream> __logFileOwner;
 static std::atomic<Death::IO::Stream*> __logFile{nullptr};
 
 // When the session started, for the log file header.
 static std::int64_t __startupTimestampMs = 0;
 
-// Entries formatted before the log file existed, so they still reach it once it opens - otherwise the file would
-// begin where its own path became known rather than where the session did, missing the platform bring-up that
-// explains a startup gone wrong. Bounded, keeping the oldest entries.
-//
-// The buffer belongs to the sink - the only one appending to it, so also the one that frees it, once it notices
-// that the history was closed. Closing happens on the thread that attaches the target, which cannot know whether
-// an append is in progress at that moment.
+// Entries logged before the log file opened, written to it once it does, so startup isn't missing. Bounded,
+// keeps the oldest entries. Only the sink appends to and frees the buffer; the attaching thread only closes it.
 enum class LogHistoryState : std::uint8_t {
-	// Entries with nowhere else to go are appended to the buffer
+	// Entries are appended to the buffer
 	Open,
-	// A target took the entries over, or none is coming - the buffer is not written to anymore
+	// A target took the entries over, or none is coming
 	Closed,
 	// The buffer itself is gone
 	Released
@@ -254,9 +251,7 @@ static std::atomic<LogHistoryState> __logHistoryState{LogHistoryState::Open};
 
 static void AppendLogHistory(const char* entry, std::uint32_t length)
 {
-	// A length one past the capacity is what says entries were lost, so the overflow needs no flag of its own.
-	// Only the branch below can set it, and it fills the buffer to exactly the capacity on the way - which is
-	// what keeps the held byte count equal to the length clamped to the capacity, with no gap of its own.
+	// Length of capacity + 1 means entries were lost (the buffer itself is then exactly full)
 	const std::uint32_t historyLength = __logHistoryLength.load(std::memory_order_relaxed);
 	if (historyLength > MaxLogHistoryLength) {
 		return;
@@ -267,19 +262,18 @@ static void AppendLogHistory(const char* entry, std::uint32_t length)
 
 	const std::uint32_t remaining = MaxLogHistoryLength - historyLength;
 	if (length > remaining) {
-		// As much of the entry that no longer fits as there is room for, so the buffer ends exactly at its
-		// capacity; the note written after it in AttachTraceTarget() explains the cut
+		// Fill the rest, AttachTraceTarget() appends a note about the cut
 		std::memcpy(__logHistory.data() + historyLength, entry, remaining);
 		__logHistoryLength.store(MaxLogHistoryLength + 1, std::memory_order_release);
 		return;
 	}
 
 	std::memcpy(__logHistory.data() + historyLength, entry, length);
-	// Releasing store, so that the bytes written above are there for whoever picks the new length up
+	// Release, so the bytes above are visible to whoever reads the new length
 	__logHistoryLength.store(historyLength + length, std::memory_order_release);
 }
 
-// Both callers are on the thread that attaches trace targets, so the state can only move forwards from here
+// Called only on the thread that attaches trace targets
 static void DiscardLogHistory()
 {
 	LogHistoryState expected = LogHistoryState::Open;
@@ -293,50 +287,37 @@ static void DiscardLogHistory()
 #	include <IO/Compression/DeflateStream.h>
 #	define NCINE_HAS_LOG_ARCHIVE
 
-// What the previous session left in the log file is kept next to it as "<log file>.gz", a plain gzip file
-// holding one member per session, oldest first. Concatenated members are what the format is specified to
-// allow (RFC 1952) and what every gzip tool already understands, so the whole history still comes out of a
-// single `gunzip` with the sessions in order - and a report about something that went wrong two sessions ago
-// is still there to be looked at, which it was not while each run simply overwrote the file.
+// Previous sessions' logs are kept in "<log file>.gz", one gzip member per session, oldest first. Concatenated
+// members are valid gzip (RFC 1952), so a single `gunzip` returns the whole history in order.
 //
-// Every member records the size of the member itself in a gzip extra field, which is what lets the oldest of
-// them be dropped without inflating anything: the archive is walked header to header and copied through byte
-// for byte, minus the members that no longer fit. Readers that don't know the field ignore it, as the format
-// requires them to.
+// Each member stores its own size in a gzip extra field, so old members can be dropped without inflating
+// anything. Other readers ignore the field.
 namespace
 {
-	// gzip magic, the only compression method it has, and the header flags used here
+	// gzip magic, compression method and header flags
 	constexpr std::uint8_t GzipMagic0 = 0x1F, GzipMagic1 = 0x8B, GzipDeflate = 0x08;
 	constexpr std::uint8_t GzipFlagExtra = 0x04, GzipFlagName = 0x08;
-	// Identifies the subfield holding the member size, an extra field can hold subfields of other writers too
+	// ID of the subfield holding the member size
 	constexpr std::uint8_t MemberSizeFieldId0 = 'D', MemberSizeFieldId1 = 'z';
 	constexpr std::uint8_t MemberSizeFieldLength = sizeof(std::uint32_t);
 	constexpr std::uint16_t ExtraFieldLength = 2 + 2 + MemberSizeFieldLength;
-	// Where that subfield sits in a member written here: fixed header, extra field length, subfield header
+	// Fixed header + extra field length + subfield header
 	constexpr std::int64_t MemberSizeFieldOffset = 10 + 2 + 4;
 
-	// How large the archive may get and how many sessions it holds at the very most. A text log deflates to
-	// something like a tenth of its size, so the limit on the count is what usually decides.
+	// Archive limits, logs compress ~10x so the count usually decides
 	constexpr std::int64_t MaxLogArchiveSize = 4 * 1024 * 1024;
 	constexpr std::uint32_t MaxLogArchiveParts = 32;
-	// What a trim cuts back to, rather than to just inside the limits. Trimming means rewriting the whole
-	// archive, and cutting back only as far as necessary makes that the cost of EVERY launch once the
-	// archive is full - several megabytes read and written on the boot path of a console, for one session
-	// dropped. Overshooting pays it once per this many sessions instead.
+	// Trim well below the limit, so the archive isn't rewritten on every launch once full
 	constexpr std::uint32_t TrimLogArchiveToParts = MaxLogArchiveParts / 2;
 
-	// Deflate level the archive is written at. This runs before the first frame (see AttachTraceTarget()),
-	// so on the consoles - where it is also the only place a log can go - the CPU is what is scarce, not the
-	// card. For line-oriented text the ratio between the fastest and the slowest setting is a few percent,
-	// against several times the time to produce it.
+	// Runs before the first frame, so favor speed on consoles; higher levels gain only a few percent on text
 #if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
 	constexpr std::int32_t LogArchiveCompressionLevel = 1;
 #else
 	constexpr std::int32_t LogArchiveCompressionLevel = 6;
 #endif
 
-	// Transfer buffer, on the stack of whoever attaches the trace target - the same sizes the deflate
-	// streams themselves use (see Compression::DeflateWriter)
+	// Stack buffer, same sizes as Compression::DeflateWriter uses
 #if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
 	constexpr std::int32_t LogArchiveBufferSize = 8 * 1024;
 #else
@@ -348,8 +329,7 @@ namespace
 		std::int64_t Size;
 	};
 
-	// Returns the size the member at the given offset recorded for itself, or zero if there is no member
-	// written by this there
+	// Returns the stored size of the member at the offset, or 0 if it's not a member written by us
 	std::int64_t ReadLogArchivePartSize(Stream& s, std::int64_t offset, std::int64_t fileSize)
 	{
 		if (offset + MemberSizeFieldOffset + MemberSizeFieldLength > fileSize ||
@@ -364,7 +344,7 @@ namespace
 			return 0;
 		}
 
-		// The subfield is written first, so it is the only one that has to be looked at
+		// Our subfield is always first
 		const std::uint16_t extraLength = s.ReadValueAsLE<std::uint16_t>();
 		std::uint8_t subfield[4];
 		if (extraLength < ExtraFieldLength || s.Read(subfield, sizeof(subfield)) != sizeof(subfield) ||
@@ -374,8 +354,7 @@ namespace
 		}
 
 		const std::int64_t memberSize = s.ReadValueAsLE<std::uint32_t>();
-		// A member reaching past the end of the file is a file that was cut short, which makes it and
-		// everything that would follow it unusable
+		// Reaching past the end means the file was truncated
 		if (memberSize <= MemberSizeFieldOffset || offset + memberSize > fileSize) {
 			return 0;
 		}
@@ -391,10 +370,9 @@ namespace
 			GzipMagic0, GzipMagic1, GzipDeflate, std::uint8_t(GzipFlagExtra | GzipFlagName)
 		};
 		output.Write(header, sizeof(header));
-		// Modification time in seconds since the Unix epoch, or zero when it is not known - which is what
-		// the format says to write then
+		// Modification time (Unix seconds), 0 if unknown
 		output.WriteValueAsLE<std::uint32_t>(std::uint32_t(__startupTimestampMs > 0 ? __startupTimestampMs / 1000 : 0));
-		// The XFL byte the level above corresponds to
+		// XFL byte matching the compression level
 		output.WriteValue<std::uint8_t>(LogArchiveCompressionLevel >= 9 ? 0x02 : (LogArchiveCompressionLevel <= 1 ? 0x04 : 0x00));
 		output.WriteValue<std::uint8_t>(0xFF);	// Unknown operating system
 
@@ -403,14 +381,14 @@ namespace
 		output.Write(subfield, sizeof(subfield));
 		output.WriteValueAsLE<std::uint32_t>(0);	// Size of the member, filled in at the end
 
-		// The original name, so the archive still says what it is an archive of
+		// Original file name
 		output.Write(originalName.data(), originalName.size());
 		output.WriteValue<std::uint8_t>(0);
 
 		std::uint32_t crc = std::uint32_t(crc32(0, nullptr, 0));
 		std::uint64_t uncompressedSize = 0;
 		{
-			// Raw deflate - the gzip container is the header above and the trailer below
+			// Raw deflate, the gzip header and trailer are written here
 			Compression::DeflateWriter deflater(output, LogArchiveCompressionLevel, true);
 			if (!deflater.IsValid()) {
 				return false;
@@ -428,15 +406,14 @@ namespace
 					return false;
 				}
 			}
-			// Ends the deflate stream, so the trailer below lands right after it
+			// Finish the stream before writing the trailer
 			deflater.Dispose();
 		}
 
 		output.WriteValueAsLE<std::uint32_t>(crc);
 		output.WriteValueAsLE<std::uint32_t>(std::uint32_t(uncompressedSize));
 
-		// Only now is the size of the member known, and it is what lets the next session skip over this
-		// member without inflating it
+		// Fill in the member size, so it can be skipped without inflating
 		const std::int64_t endOffset = output.GetPosition();
 		if (output.Seek(startOffset + MemberSizeFieldOffset, SeekOrigin::Begin) < 0) {
 			return false;
@@ -464,14 +441,13 @@ namespace
 		return true;
 	}
 
-	// Moves what the previous session left in the log file into the archive next to it. Called before the
-	// file is opened for writing, which is what would otherwise discard it.
+	// Moves the previous session's log into the archive, must be called before the log is opened for writing
 	void ArchivePreviousLogFile(Containers::StringView targetPath)
 	{
 		String archivePath = targetPath + ".gz"_s;
 		String stagingPath = targetPath + ".gz.tmp"_s;
 
-		// Asked before opening it, so the first run of all doesn't report a missing file it only guessed at
+		// Checked first, so the very first run doesn't report a missing file
 		if (fs::GetFileSize(targetPath) <= 0) {
 			return;
 		}
@@ -484,12 +460,9 @@ namespace
 				return;
 			}
 
-			// Next to an archive it is compressed on its own first, because how much of the archive has to
-			// go depends on how large this turns out to be - and because a session that dies in the middle
-			// of it then loses the staging file and nothing else. Without one there is nothing to fit it next
-			// to and nothing to lose, so it goes straight into place: a member cut short there never had its
-			// size filled in, so the next launch doesn't recognize it and replaces it whole, and the log it
-			// was made from is still there to be archived again.
+			// With an existing archive, compress to a staging file first (its size decides what to trim, and a crash
+			// loses only the staging file). Without one, write the archive directly - an unfinished member is
+			// rejected next launch and the log is archived again.
 			StringView partPath = (hasArchive ? stagingPath : archivePath);
 			auto part = fs::Open(partPath, FileAccess::Write);
 			if (!part->IsValid() || !WriteLogArchivePart(*part, *previousLog, fs::GetFileName(targetPath))) {
@@ -509,7 +482,7 @@ namespace
 			return;
 		}
 
-		// Walk the members already in the archive and see which of them still fit next to the new one
+		// Collect the existing members
 		SmallVector<LogArchivePart, 16> parts;
 		auto archive = fs::Open(archivePath, FileAccess::Read);
 		const std::int64_t archiveSize = (archive->IsValid() ? archive->GetSize() : 0);
@@ -517,8 +490,7 @@ namespace
 		for (std::int64_t offset = 0; offset < archiveSize; ) {
 			const std::int64_t partSize = ReadLogArchivePartSize(*archive, offset, archiveSize);
 			if (partSize <= 0) {
-				// Not something written here, or the file ends in the middle of a member - either way
-				// nothing beyond this point can be skipped over safely, so none of it is kept
+				// Unknown or truncated member, nothing after it is kept
 				break;
 			}
 			parts.push_back(LogArchivePart{offset, partSize});
@@ -527,21 +499,16 @@ namespace
 			totalPartSize += partSize;
 		}
 
-		// A session killed in the middle of a write - the reset switch, a debugger detaching - leaves the
-		// archive ending in a short member, which the walk above stops at. Appending past it would bury
-		// every later session behind bytes no decompressor reads, and the size accounting would be wrong
-		// from then on, so the archive never comes back inside its limits. Rewriting is what drops it.
+		// A write interrupted by a crash leaves a broken member at the end, the archive must be rewritten to drop it
 		const bool endsInGarbage = (parsedSize != archiveSize);
 
-		// While everything still fits, nothing is rewritten at all - the new member is appended and the
-		// archive is read but not copied. Only once it does not fit is it trimmed, and then well past the
-		// point where it would fit again (see TrimLogArchiveToParts).
+		// If everything fits, just append; otherwise trim down to TrimLogArchiveToParts
 		const bool fitsAsIs = (!endsInGarbage && !parts.empty() &&
 			totalPartSize + newPartSize <= MaxLogArchiveSize && parts.size() + 1 <= MaxLogArchiveParts);
 		const std::int64_t sizeLimit = (fitsAsIs ? MaxLogArchiveSize : MaxLogArchiveSize / 2);
 		const std::uint32_t partsLimit = (fitsAsIs ? MaxLogArchiveParts : TrimLogArchiveToParts);
 
-		// Keeping the newest members that fit, so the oldest are the ones that go
+		// Keep the newest members that fit
 		std::size_t firstKept = parts.size();
 		std::int64_t keptSize = 0;
 		std::uint32_t keptCount = 0;
@@ -556,12 +523,11 @@ namespace
 		}
 
 		bool archived = false;
-		// Whether the archive was actually written to, which is what tells a failure apart from the case
-		// where there was simply nothing worth keeping next to the new member
+		// Tells a failed update apart from "nothing worth keeping"
 		bool updateAttempted = false;
 		if (fitsAsIs && firstKept == 0) {
 			updateAttempted = true;
-			// Everything that was there stays, so the new member only has to be appended
+			// Everything stays, just append
 			archive->Dispose();
 			auto appendTo = fs::Open(archivePath, FileAccess::ReadWrite);
 			auto staging = fs::Open(stagingPath, FileAccess::Read | FileAccess::Sequential);
@@ -570,7 +536,7 @@ namespace
 		} else if (firstKept < parts.size()) {
 			updateAttempted = true;
 
-			// Some of the oldest members have to go, which means writing the archive anew
+			// Drop the oldest members by rewriting the archive
 			String rebuiltPath = targetPath + ".gz.new"_s;
 
 			{
@@ -583,9 +549,7 @@ namespace
 			archive->Dispose();
 			if (archived) {
 				fs::RemoveFile(archivePath);
-				// If the move fails the old archive is already gone, and what was rebuilt is the only copy
-				// of everything that was to be kept - so it is left where it is rather than deleted. A
-				// ".gz.new" next to the log can be renamed by hand, and the next launch rebuilds it anyway.
+				// If the move fails, ".gz.new" is the only copy left, so it's kept rather than deleted
 				archived = fs::Move(rebuiltPath, archivePath);
 			} else {
 				fs::RemoveFile(rebuiltPath);
@@ -595,20 +559,14 @@ namespace
 		if (archived) {
 			fs::RemoveFile(stagingPath);
 		} else if (!updateAttempted) {
-			// There was nothing worth keeping - an archive that holds nothing this recognizes, or a new
-			// member so large that none of the old ones fit beside it - and the new member is a valid
-			// archive on its own, so it simply becomes the archive
+			// Nothing worth keeping, the new member becomes the archive
 			archive->Dispose();
 			fs::RemoveFile(archivePath);
 			if (!fs::Move(stagingPath, archivePath)) {
 				fs::RemoveFile(stagingPath);
 			}
 		} else {
-			// The archive holds sessions this DOES recognize and updating it did not work - a full card, a
-			// file something else still holds open. Replacing it here would trade up to MaxLogArchiveParts
-			// sessions of history for the one that just ended, which is the wrong way round: the previous
-			// log has already been copied out of harm's way, so losing only the newest member costs the
-			// least. It is written again at the next launch that succeeds.
+			// Update failed (full card, file locked), keep the existing history and drop only the new member
 			archive->Dispose();
 			LOGW("Cannot add the previous session to \"{}\", the archive is left as it is", archivePath);
 			fs::RemoveFile(stagingPath);
@@ -627,8 +585,7 @@ enum class ConsoleType {
 };
 
 static ConsoleType __consoleType = ConsoleType::None;
-// Whether the trace sink is already attached, so Application::InitializeTrace() can be called as early as
-// an entry point is able to and still be called again by PreInitCommon() without attaching twice
+// Prevents attaching the trace sink twice (entry point and PreInitCommon())
 static bool __traceInitialized = false;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 static bool __consoleDarkMode = true;
@@ -878,8 +835,7 @@ static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t times
 	auto p = dt.Partitioned();
 
 	if (lastDay != nullptr) {
-		// Prepend the full date to the first entry of each day, so the target keeps absolute time across midnight
-		// and multi-day gaps. exchange() lets exactly one thread write the date on a day change.
+		// Prepend the full date to the first entry of each day, exchange() lets only one thread write it
 		std::int32_t day = (p.Year * 12 + p.Month) * 31 + p.Day;
 		if (lastDay->exchange(day, std::memory_order_relaxed) != day) {
 			length += (std::int32_t)formatInto({ dest + length, (std::size_t)(MaxLogEntryLength - length - 1) },
@@ -919,24 +875,21 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 }
 
 #if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
-// Appends a part of a function name, rewriting the compiler-specific spelling of an anonymous namespace to the
-// "{anonymous}" notation of GCC, so a log entry reads the same on every platform. Every compiler emits only its own
-// spelling, so only that one is ever searched for - and GCC, which already uses the target notation, does no work at
-// all. The order of the checks follows __DEATH_CURRENT_FUNCTION in Asserts.h: Clang-CL defines both compiler macros
-// and reports __PRETTY_FUNCTION__, so it belongs to the Clang case.
+// Appends a part of a function name, rewriting anonymous namespaces to GCC's "{anonymous}" on every compiler.
+// Clang is checked first, because Clang-CL defines both macros and reports __PRETTY_FUNCTION__.
 static void AppendFunctionNamePart(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 {
 #	if defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
 	static constexpr StringView AnonymousNamespace = "{anonymous}"_s;
 #		if defined(DEATH_TARGET_CLANG)
-	// Appears in the middle of __PRETTY_FUNCTION__, e.g. "void nCine::(anonymous namespace)::Function()"
+	// e.g. "void nCine::(anonymous namespace)::Function()"
 	static constexpr StringView AnonymousNamespaceForeign = "(anonymous namespace)"_s;
 #		elif defined(DEATH_TARGET_MSVC)
-	// Appears in the middle of __FUNCTION__ and is spelled with a hyphen, e.g. "nCine::`anonymous-namespace'::Function"
+	// e.g. "nCine::`anonymous-namespace'::Function"
 	static constexpr StringView AnonymousNamespaceForeign = "`anonymous-namespace'"_s;
 #		endif
 
-	// A name can carry more than one such segment, because on some compilers it includes the return type as well
+	// There can be more than one (e.g. in the return type)
 	StringView remaining = StringView(functionName, functionNameLength);
 	while (auto found = remaining.find(AnonymousNamespaceForeign)) {
 		AppendPart(dest, length, remaining.data(), (std::int32_t)(found.begin() - remaining.data()));
@@ -946,7 +899,7 @@ static void AppendFunctionNamePart(char* dest, std::int32_t& length, const char*
 
 	AppendPart(dest, length, remaining.data(), (std::int32_t)remaining.size());
 #	else
-	// GCC already uses the target notation, and the remaining compilers report only the bare function name
+	// GCC already uses "{anonymous}"
 	AppendPart(dest, length, functionName, functionNameLength);
 #	endif
 }
@@ -958,19 +911,10 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	static constexpr StringView LambdaSuffix = "::<lambda()>"_s;
 	static constexpr StringView OperatorPrefix = "operator"_s;
 
-	// How the enclosing function is separated from the lambda's own call operator. Each compiler emits only
-	// its own spelling, so only that one is compiled in - the same reasoning as in AppendFunctionNamePart()
-	// above, including the order of the checks: Clang defines __GNUC__ as well and therefore also
-	// DEATH_TARGET_GCC, so it has to be tested first.
-	//  - GCC writes the closure inline, e.g. "Class::Method(bool)::<lambda(int)>"
-	//  - Clang appends the call operator of the closure type, e.g.
-	//    "auto Class::Method(bool)::(lambda)::operator()() const", and renamed that type from
-	//    "(anonymous class)" to "(lambda)" in LLVM 22 - the spelling every release up to 21 emits
-	// The marker deliberately stops at the opening parenthesis of the call operator and never covers the
-	// argument list behind it: a lambda that takes parameters ends with "operator()(int)" rather than
-	// "operator()()", and matching the arguments too would silently skip every such lambda. The same holds
-	// for GCC's "<lambda(int)>". The parenthesis scan below walks from the marker back to the enclosing
-	// function either way, so the arguments need no handling here.
+	// Separates the enclosing function from the lambda (Clang first, it also defines DEATH_TARGET_GCC):
+	//  - GCC: "Class::Method(bool)::<lambda(int)>"
+	//  - Clang: "auto Class::Method(bool)::(lambda)::operator()() const", "(anonymous class)" before LLVM 22
+	// The marker ends before the lambda's arguments, so lambdas with parameters match too
 #		if defined(DEATH_TARGET_CLANG)
 #			if __clang_major__ >= 22
 	static constexpr StringView LambdaMarker = "::(lambda)::operator("_s;
@@ -983,8 +927,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 
 	StringView functionNameView = StringView(functionName, functionNameLength);
 	std::int32_t i = functionNameLength - 1; bool isLambda = false;
-	// The first occurrence is the outermost closure, which is the enclosing function a nested lambda should
-	// be reported against as well
+	// The first occurrence is the outermost lambda, nested ones are reported against the same function
 	if (auto lambdaMarker = functionNameView.find(LambdaMarker)) {
 		i = std::int32_t(lambdaMarker.begin() - functionName);
 		isLambda = true;
@@ -1014,15 +957,12 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	if (i > 0) {
 		std::int32_t end = i;
 
-		// Everything from the "operator" keyword on belongs to the name, so the scan has to start in front of the
-		// keyword instead of stopping at the first space behind it: the brackets of "operator<<" and "operator>>" would
-		// otherwise be counted as template parameters and leave the return type in the name, and "operator new" or
-		// "operator delete" carry a space in the middle of the name
+		// Start before "operator", its brackets ("operator<<") and spaces ("operator new") belong to the name
 		if (auto operatorKeyword = functionNameView.prefix(end).find(OperatorPrefix)) {
 			i = std::int32_t(operatorKeyword.begin() - functionName);
 		}
 
-		// Go backwards until we find the first space, which is what separates the name from the return type
+		// Go backwards until the space before the name (after the return type)
 		for (i--; i >= 0; i--) {
 			if (functionName[i] == ')') {
 				parethesisCount++;
@@ -1038,7 +978,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		}
 		i++;
 
-		// If the return type is a pointer or a reference, the asterisk or ampersand is right before the function name
+		// Skip '*' or '&' of the return type
 		while (i < end && (functionName[i] == '*' || functionName[i] == '&')) {
 			i++;
 		}
@@ -1052,15 +992,8 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		AppendFunctionNamePart(dest, length, functionName, functionNameLength);
 	}
 #	else
-	// MSVC reports a bare qualified name with no return type and no arguments, and the trailing "()" is already part
-	// of __DEATH_CURRENT_FUNCTION, so the only thing left to shorten is a lambda. Its closure type is spelled
-	// "<lambda_1>" (a hash in older releases) and everything from there on is noise, e.g.
-	// "Class::Method::<lambda_1>::operator ()()" or "Class::Method::<lambda_5>::()::<lambda_1>::operator ()()" for a
-	// nested one, so cutting at the first occurrence always yields the enclosing function. It also always cuts,
-	// unlike a check anchored at the end of the name, which would leave the raw closure type in the log for a lambda
-	// that hosts a local class ("...::<lambda_1>::operator ()::S::F"). That's what makes "<lambda_" impossible in a
-	// written entry, which the reader relies on - the "()::<lambda()>" spelling is the same one GCC/Clang produce
-	// above and the only one anything downstream has to know.
+	// MSVC gives a bare name, so only lambdas need shortening. Cut at the first "<lambda_" (e.g.
+	// "Class::Method::<lambda_1>::operator ()()") and write "()::<lambda()>" like GCC/Clang do.
 	static constexpr StringView LambdaPrefixMsvc = "<lambda_"_s;
 	static constexpr StringView ScopeSeparator = "::"_s;
 
@@ -1071,7 +1004,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 			enclosingFunction = enclosingFunction.exceptSuffix(ScopeSeparator);
 		}
 
-		// A lambda in a namespace-scope initializer has no enclosing function to report it against
+		// A lambda at namespace scope has no enclosing function
 		if (!enclosingFunction.empty()) {
 			AppendFunctionNamePart(dest, length, enclosingFunction.data(), (std::int32_t)enclosingFunction.size());
 			AppendPart(dest, length, "()::<lambda()>");
@@ -1168,10 +1101,7 @@ static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel leve
 }
 #endif
 
-// Turning a shutdown request into a clean exit has nothing to do with tracing, so unlike the console
-// detection above these handlers are compiled and installed even when `DEATH_TRACE` is disabled ---
-// a dedicated server has to disconnect its peers and delist itself from the online server list on
-// the way out no matter how the build was configured
+// Shutdown handlers are needed even without `DEATH_TRACE`, e.g. for a dedicated server to exit cleanly
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 
 static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
@@ -1192,8 +1122,7 @@ static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
 
 static void InstallShutdownHandlers()
 {
-	// The handler is called only for events of a console the process is attached to, so registering
-	// it is harmless even when there is none
+	// Harmless without an attached console
 	::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
 }
 
@@ -1217,18 +1146,14 @@ static void OnHandleTerminationSignal(int sig)
 		return;
 	}
 
-	// The shutdown is already in progress, so a second signal restores the default action
-	// (which terminates the process) and delivers it again --- otherwise a hung shutdown
-	// couldn't be aborted anymore
+	// Second signal during shutdown terminates the process, so a hung shutdown can still be aborted
 	::signal(sig, SIG_DFL);
 	::raise(sig);
 }
 
 static void InstallShutdownHandlers()
 {
-	// Both signals that conventionally ask a process to stop are turned into a clean shutdown:
-	// SIGINT for Ctrl+C in a terminal, SIGTERM for `kill`, service managers and container
-	// runtimes --- a dedicated server usually receives the latter one
+	// SIGINT for Ctrl+C, SIGTERM for `kill`, service managers and containers
 	::signal(SIGINT, OnHandleTerminationSignal);
 	::signal(SIGTERM, OnHandleTerminationSignal);
 }
@@ -1237,8 +1162,7 @@ static void InstallShutdownHandlers()
 
 static void InstallShutdownHandlers()
 {
-	// The remaining platforms deliver a shutdown request through their own callbacks instead
-	// (or don't have the concept at all), see the platform backends
+	// Handled by the platform backends, if at all
 }
 
 #endif
@@ -1305,8 +1229,7 @@ namespace nCine
 
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
-		// Installed before anything else, so even a shutdown request that arrives during the
-		// initialization is honored
+		// First, so shutdown requests during initialization are handled too
 		InstallShutdownHandlers();
 
 #if defined(DEATH_TRACE)
@@ -1318,9 +1241,7 @@ namespace nCine
 		LOGB("IAppEventHandler::OnPreInitialize() invoked");
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		// OnPreInitialize() is where a log file gets attached if this session is going to have one at all -
-		// PreferencesCache resolves the config directory and calls AttachTraceTarget() from there - so the
-		// startup history has either been written into it by now or is never going to be needed
+		// The log file is attached in OnPreInitialize() if at all, so the startup history is no longer needed
 		DiscardLogHistory();
 #endif
 	}
@@ -1330,39 +1251,27 @@ namespace nCine
 		/**
 			@brief Reports an allocation failure before the process dies
 
-			Every console target is built with `-fno-exceptions`, where the libstdc++ `operator new` ends a
-			failed allocation in `std::__throw_bad_alloc()` - which without exceptions is a bare `abort()`.
-			The process vanishes with nothing written anywhere, which on a console (no console output, no
-			debugger, a log file that is the only channel there is) looks exactly like a GPU hang or a
-			freeze, and costs a diagnosis session to tell apart. A handler cannot rescue the allocation,
-			but it can say what happened first, and `std::set_new_handler` is the only hook the standard
-			gives for it.
+			Consoles are built with `-fno-exceptions`, so a failed allocation is a silent `abort()` that looks
+			like a freeze. This at least logs what happened.
 		*/
 #if defined(DEATH_TARGET_N64)
-		/** @brief Size of the allocation that is failing, set by the `operator new` replacement below for the report */
+		/** @brief Size of the failed allocation, set by the `operator new` replacement below */
 		std::size_t FailedAllocationSize = 0;
 #endif
 
 		void ReportFailedAllocation()
 		{
 #if defined(DEATH_TARGET_3DS)
-			// The handler is called in a loop until the allocation succeeds, so it must not return. The
-			// fatal line goes out first - it is the one that must survive even if reporting the numbers
-			// cannot allocate - and the heap status after it, because which of the two heaps ran out and
-			// how much of it the content had taken is not guessable from the failure itself
+			// Must not return (it's called in a loop), log the fatal line first in case the heap status can't allocate
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
 			Backends::CtrPlatform::LogMemoryStatus("allocation failed");
 #elif defined(DEATH_TARGET_DREAMCAST)
-			// Same reasoning as above: the heap window is the binding constraint of this console, and
-			// how much of it the content had taken is not guessable from the failure itself
+			// Same as above, include the heap status
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
 			Backends::DcPlatform::LogMemoryStatus("allocation failed");
 #elif defined(DEATH_TARGET_N64)
-			// 8 MB of RDRAM in total, and what failed is nearly always a contiguous block that the
-			// fragmented heap could not place rather than the heap being full - the two look identical
-			// without the numbers. The requested size comes from the `operator new` replacement below;
-			// the backtrace is logged as raw return addresses (no symbol table is embedded in the ROM),
-			// resolved offline with `mips64-elf-addr2line -f -C -e build/n64/jazz2.elf <pc>`.
+			// Usually fragmentation rather than a full heap, so log the size and heap stats. Resolve the raw
+			// backtrace with `mips64-elf-addr2line -f -C -e build/n64/jazz2.elf <pc>`.
 			heap_stats_t stats;
 			sys_get_heap_stats(&stats);
 			LOGF("Out of memory: an allocation of {} bytes failed and the process cannot continue ({} bytes used, {} free of {}, {} free in holes, fragmentation {})",
@@ -1373,7 +1282,7 @@ namespace nCine
 				LOGF("  #{} 0x{:x}", i, std::uintptr_t(frames[i]));
 			}
 #else
-			// The handler is called in a loop until the allocation succeeds, so it must not return
+			// Must not return, it's called in a loop
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
 #endif
 			std::abort();
@@ -1382,10 +1291,7 @@ namespace nCine
 }
 
 #if defined(DEATH_TARGET_N64)
-// The standard `operator new` calls the new-handler without telling it what size failed, and on this
-// console the size is the diagnosis (see ReportFailedAllocation). These replace the library ones with the
-// same malloc-backed behavior, remembering the size before reporting. `operator delete` stays the default,
-// which frees with `free()` - the same allocator, so the pairing holds.
+// Replaced only to remember the failed size for ReportFailedAllocation(), default `operator delete` still matches
 void* operator new(std::size_t size)
 {
 	void* p = std::malloc(size != 0 ? size : 1);
@@ -1406,11 +1312,7 @@ void* operator new[](std::size_t size)
 	return p;
 }
 
-// The nothrow forms are what the deferred resource loads use (a sprite sheet or a sound read in
-// mid-level, see ContentResolver::RequestGraphicsAura). The library's versions call the throwing
-// `operator new` and catch `bad_alloc`, which with the replacement above would abort instead of
-// returning null - so these go to the allocator directly and hand the failure back to the caller,
-// which has a recoverable answer (a missing sprite) where the process does not
+// Nothrow forms must return null (deferred loads can recover), the library ones would call the aborting version above
 void* operator new(std::size_t size, const std::nothrow_t&) noexcept
 {
 	return std::malloc(size != 0 ? size : 1);
@@ -1489,7 +1391,7 @@ namespace nCine
 				const auto& info = rhiCapabilities.GetInfoStrings();
 				const StringView vendor = info.vendor;
 				const StringView renderer = info.renderer;
-				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
+				// These GPUs render black with dynamic batch size
 				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s || renderer == "PowerVR Rogue GE9215"_s)) ||
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
 					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
@@ -1572,8 +1474,7 @@ namespace nCine
 	{
 		_frameTimer->AddFrame();
 
-		// The previous frame is complete only now that the timer knows how long it took from start to start,
-		// and its phases are still in `_timings`
+		// Report the previous frame now that its full duration is known
 		if (_frameMeasured) {
 			const float phaseTimes[] = {
 				_timings[(std::int32_t)Timings::BeginFrame], _timings[(std::int32_t)Timings::Update],
@@ -1586,8 +1487,7 @@ namespace nCine
 			FrameStatistics::EndFrame(phaseTimes, _frameTimer->GetLastFrameDuration());
 		}
 
-		// The phases are timed only while something reads the result - the in-game performance metrics through
-		// FrameStatistics, and the overlay or the log of a profiling build
+		// Time the phases only if performance metrics or profiling need them
 		_frameMeasured = FrameStatistics::IsEnabled();
 #if defined(NCINE_PROFILING)
 		const bool measure = true;
@@ -1595,7 +1495,7 @@ namespace nCine
 		const bool measure = _frameMeasured;
 #endif
 		if (measure) {
-			// A phase that does not run in this frame must not report what it took the last time it did
+			// Phases skipped in this frame must report zero
 			for (std::int32_t i = (std::int32_t)Timings::BeginFrame; i < (std::int32_t)Timings::Count; i++) {
 				_timings[i] = 0.0f;
 			}
@@ -1695,7 +1595,7 @@ namespace nCine
 					_screenViewport->SortAndCommitQueue();
 					_screenViewport->Draw();
 #if defined(NCINE_HAS_AUXILIARY_WINDOWS)
-					// Whatever auxiliary windows show is drawn with the frame, it's handed over to them now
+					// Auxiliary windows are drawn with the frame
 					_gfxDevice->PresentAuxiliaryWindows();
 #endif
 					if (measure) {
@@ -1750,8 +1650,7 @@ namespace nCine
 				_profileStartTime = TimeStamp::Now();
 			}
 			_gfxDevice->Update();
-			// The streaming ring section of the next frame is waited on only now, the swap has given the GPU time
-			// to finish with it, and the wait still comes before the next frame reads input
+			// Wait for the next ring section after the swap, so the GPU had time to finish with it
 			RenderResources::GetBuffersManager().WaitForCurrentSection();
 			if (measure) {
 				_timings[(std::int32_t)Timings::Present] = _profileStartTime.GetSecondsSince();
@@ -1761,9 +1660,7 @@ namespace nCine
 		}
 #if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
 		{
-			// Per-phase frame profile for a build without the overlay: the phases above, the present (which on a
-			// console includes the wait for the display), and the whole step, averaged and logged every 5 seconds.
-			// Configure with -DNCINE_PROFILING=ON and read the log; this is how the N64 frame was taken apart.
+			// Without the overlay, log per-phase averages every 5 seconds
 			for (std::int32_t i = 0; i < (std::int32_t)Timings::Count; i++) {
 				_timingsAccum[i] += _timings[i];
 			}
@@ -1836,9 +1733,7 @@ namespace nCine
 				clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &dueTime, nullptr);
 			}
 #else
-			// Generic fallback for platforms without a dedicated high-precision arm (console ports and other
-			// new targets): a coarse millisecond sleep covers the bulk of the wait so the spin below only tops
-			// up the last couple of milliseconds instead of burning a full core for the whole frame remainder
+			// Coarse sleep for most of the wait, the loop below spins only for the rest
 			const std::int64_t remainingTimeMs = (((std::int64_t)frameTimeDuration - (std::int64_t)_frameTimer->GetFrameDurationAsTicks())
 				* 1'000LL) / (std::int64_t)clock().GetFrequency() - 2; // 2 ms slack for coarse sleep granularity
 			if (remainingTimeMs > 0) {
@@ -1889,9 +1784,7 @@ namespace nCine
 		theServiceLocator().UnregisterAll();
 
 #if defined(DEATH_TARGET_PSP) && defined(WITH_CURL)
-		// Before the trace goes: taking the firmware's network stack down is a sequence of calls the PS Vita's
-		// PSP emulator has killed the process in before, and a teardown that runs after the log is closed
-		// cannot say which one it was
+		// Before the trace is shut down, so a crash here (seen on Vita's PSP emulator) is still logged
 		Backends::PspNetwork::Shutdown();
 #endif
 
@@ -1916,17 +1809,8 @@ namespace nCine
 		/**
 			@brief Serializes the trace sink when entries are emitted on the calling thread
 
-			With `DEATH_TRACE_ASYNC` a single background thread owns the sink and nothing here can race.
-			Without it - which is every console, the option is switched off for all of them - each thread
-			formats AND emits its own entry, and two threads doing that at once interleave inside one line
-			and, worse, race on the log file's own buffer and offset. That was visible as a spliced line
-			followed by a log that simply stopped while the game kept running, which is about the most
-			misleading thing a diagnostic channel can do: several crashes were localized to "wherever the
-			log ends" when the log had only stopped being written.
-
-			The lock covers the whole emit, so an entry reaches every destination whole and in one piece.
-			Nothing here blocks for long: the file write is buffered, and the flush the console targets do
-			for the important levels is the cost that was already being paid.
+			Without `DEATH_TRACE_ASYNC` (all consoles) each thread writes its own entries, which could
+			interleave lines and corrupt the log file. The lock covers the whole write.
 		*/
 		Mutex& TraceSinkLock()
 		{
@@ -1990,10 +1874,39 @@ namespace nCine
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_N64)
+		// fd 2 goes to the emulator log (Ares), flashcart USB log and the boot console. Unbuffered write()
+		// instead of `stderr`, so the last messages before a hang aren't lost and the stdio lock is avoided.
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		::write(STDERR_FILENO, logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+
+		// Boot console (no-op once OgcGfxDevice owns the video output)
+		::fwrite(logEntryWithColors, 1, length2, stdout);
+
+		// USB Gecko in slot B, Dolphin exposes it on TCP port 55020 ("SlotB = 7" in Dolphin.ini)
+		static const bool __geckoAlive = (usb_isgeckoalive(EXI_CHANNEL_1) != 0);
+		if (__geckoAlive) {
+			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
+		}
 #elif defined(DEATH_TARGET_WIIU)
-		// OSReport() reaches Cemu's log (with coreinit logging on) and, on a console, any logging module of the
-		// Aroma environment that listens to it. Cemu logs only the format string, so the entry is passed as
-		// the format itself, with every '%' doubled so the console's formatting leaves it as it is.
+		// OSReport() goes to Cemu's log and Aroma logging modules. Cemu logs only the format string, so the entry
+		// is passed as the format with '%' escaped.
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2009,53 +1922,9 @@ namespace nCine
 		reportEntry[reportLength++] = '\n';
 		reportEntry[reportLength] = '\0';
 		OSReport(reportEntry);
-#elif defined(DEATH_TARGET_N64)
-		// Write the message to fd 2, which libdragon routes to every log channel that answered during
-		// startup: the emulator log (ISViewer/emux, shown in the Ares log) and the flashcart's USB log.
-		// The early boot console also mirrors it on the screen until N64GfxDevice takes the display over.
-		//
-		// The write goes to the descriptor rather than through `stderr`, because libdragon makes that
-		// stream LINE-buffered (`setvbuf` in its debug init) - which is exactly wrong for the case these
-		// messages exist for. A hang or a hardware fault leaves whatever is still sitting in the FILE
-		// buffer unwritten, so the last messages before the failure - the interesting ones - never arrive.
-		// `write()` reaches the sinks with no buffer in between, and also cannot deadlock on the stdio
-		// lock when the trace comes from a thread that already holds it.
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-		::write(STDERR_FILENO, logEntryWithColors, length2);
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-
-		// Show the message on the early boot console (a no-op once OgcGfxDevice owns the video output)
-		::fwrite(logEntryWithColors, 1, length2, stdout);
-
-		// Also send it to a USB Gecko in memory card slot B - the Dolphin emulator exposes it as a raw
-		// TCP socket on port 55020 (0xd6ec, with "SlotB = 7" in Dolphin.ini) and it also works with
-		// the real adapter
-		static const bool __geckoAlive = (usb_isgeckoalive(EXI_CHANNEL_1) != 0);
-		if (__geckoAlive) {
-			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
-		}
 #elif defined(DEATH_TARGET_3DS)
-		// svcOutputDebugString is the kernel's debug channel: Azahar (and Citra before it) print it into their
-		// log under "Debug.Emulated" (which their default filter hides - see Docs/Consoles.dox), a debugger
-		// attached to the console shows it, and it costs nothing when nobody listens. Until the renderer owns
-		// the display the message also goes to the boot console on the bottom screen, so a startup failure is
-		// readable without any host tool; afterwards only warnings and errors are drawn there, because the
-		// console renders text with the CPU the game is using (see CtrPlatform::WriteBootConsole).
+		// Kernel debug channel, shown by Azahar/Citra under "Debug.Emulated" (hidden by default) or a debugger.
+		// Also on the bottom-screen boot console, after startup only warnings and errors (it's CPU-rendered).
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2068,8 +1937,7 @@ namespace nCine
 		logEntryWithColors[length2] = '\0';
 		Backends::CtrPlatform::WriteBootConsole(logEntryWithColors, length2, level >= TraceLevel::Warning);
 #elif defined(DEATH_TARGET_DREAMCAST)
-		// Write the message to dbgio (SCIF serial by default) - the Flycast/lxdream emulators show it
-		// in their logs and dc-tool/dcload shows it in the console
+		// dbgio (SCIF serial), shown by Flycast/lxdream and dc-tool/dcload
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2080,10 +1948,7 @@ namespace nCine
 		logEntryWithColors[length2++] = '\n';
 		dbgio_write_buffer_xlat(reinterpret_cast<const std::uint8_t*>(logEntryWithColors), length2);
 #elif defined(DEATH_TARGET_PS2)
-		// A bare ELF has no connected stdout - its file descriptor is only wired up when the program was
-		// launched through ps2client - so the message goes to the EE's SIO transmit register instead.
-		// PCSX2 captures that as EE console output (with "EnableEEConsole" turned on) and it reaches a
-		// serial cable on real hardware, which is the same trade the Dreamcast makes with dbgio above.
+		// stdout works only via ps2client, so write to the EE SIO register (PCSX2 "EnableEEConsole", or serial cable)
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2098,20 +1963,13 @@ namespace nCine
 				*sioTx = std::uint8_t(logEntryWithColors[i]);
 			}
 		}
-		// And on the boot console MainApplication::Run() opens, for as long as the renderer has not taken the
-		// Graphics Synthesizer over - the one place a trace can be read on hardware without a serial cable.
-		// Afterwards libdebug would program the GS underneath the frame being drawn, exactly the PSP's
-		// situation above, and there is a picture to look at by then anyway.
+		// Also on the boot console, until the renderer takes over the GS
 		if (!RHI::Device::HasDisplayOwnership()) {
 			logEntryWithColors[length2] = '\0';
 			scr_printf("%s", logEntryWithColors);
 		}
 #elif defined(DEATH_TARGET_PS3)
-		// PSL1GHT's newlib routes fd 1 and 2 straight to the lv2 `sysTtyWrite` syscall rather than to a
-		// file, so an ordinary write reaches the console TTY on hardware and RPCS3's log in the emulator -
-		// no serial cable or on-screen fallback is needed the way the PS2 and PSP arms above need one.
-		// The write is issued directly instead of through stdio so a trace still gets out when the message
-		// comes from a thread that already holds stdio's lock (a fatal inside a printf, for instance).
+		// TTY, shown by RPCS3 or on hardware. Direct syscall to avoid the stdio lock.
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2125,11 +1983,7 @@ namespace nCine
 			sysTtyWrite(STDOUT_FILENO, logEntryWithColors, std::uint32_t(length2), &written);
 		}
 #elif defined(DEATH_TARGET_PSP)
-		// Write the message to stdout, which PSPSDK routes to the host through sceIoWrite on fd 1: the
-		// PPSSPP emulator prints it into its log and psplink shows it in its console. On real hardware
-		// launched from the firmware there is nobody listening, but pspDebugScreenPrintf below still puts
-		// it on the screen for as long as the GU session has not taken the framebuffer over - which covers
-		// exactly the startup window where a failure would otherwise be invisible.
+		// stdout, shown by PPSSPP and psplink
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -2141,10 +1995,7 @@ namespace nCine
 		logEntryWithColors[length2] = '\0';
 		::fwrite(logEntryWithColors, 1, length2, stdout);
 		::fflush(stdout);
-		// Only while the GU session has not taken the framebuffer over. The comment above describes what
-		// this was meant to do all along, but the call used to be unconditional, so every trace line after
-		// startup - a level load, a warning, anything - was still being drawn straight into the framebuffer
-		// the game was presenting, printing debug text over the running game.
+		// Also on screen, until the renderer takes over the framebuffer
 		if (!RHI::Device::HasDisplayOwnership()) {
 			pspDebugScreenPrintf("%s", logEntryWithColors);
 		}
@@ -2165,10 +2016,7 @@ namespace nCine
 		}
 		logEntryWithColors[length2++] = '\n';
 
-		// Through the descriptor rather than stdio: neither Amiga system has a crash-time atexit flush,
-		// and the boot-test workflow reads the shell-redirected file after a guru - a buffered line
-		// would be exactly the one that named the crash. On MorphOS the shell redirects this to DEBUG:,
-		// which the emulator writes to its serial log.
+		// Unbuffered, so the last line before a crash isn't lost
 		::write(STDOUT_FILENO, logEntryWithColors, length2);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
@@ -2315,8 +2163,7 @@ namespace nCine
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// The startup history is closed by another thread, but freeing the buffer is left to this one, which is
-		// the only one that appends to it - whichever entry gets here first claims it
+		// The startup history is closed elsewhere, but only the sink frees it
 		LogHistoryState historyState = __logHistoryState.load(std::memory_order_acquire);
 		if DEATH_UNLIKELY(historyState == LogHistoryState::Closed) {
 			if (__logHistoryState.compare_exchange_strong(historyState, LogHistoryState::Released,
@@ -2327,11 +2174,8 @@ namespace nCine
 			}
 		}
 
-		// Allow attaching custom target using Application::AttachTraceTarget(). Until one is attached the
-		// entry is kept in the startup history instead, so it still reaches the file the moment it opens.
-		// AttachTraceTarget() publishes the file only once its header is in, so this can never write in
-		// front of the header - and the pointer is used instead of reloading it, so that the destination
-		// cannot change halfway through the entry either.
+		// Write to the target from AttachTraceTarget(), or to the startup history until there is one.
+		// Loaded once, so the destination can't change mid-entry.
 		Stream* logFile = __logFile.load(std::memory_order_acquire);
 		if (logFile != nullptr || historyState == LogHistoryState::Open) {
 			std::int32_t length3 = 0;
@@ -2347,19 +2191,9 @@ namespace nCine
 				logFile->Write(logEntryWithColors, length3);
 #	if defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
 		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
-				// This file is effectively the only debugging channel these consoles have, and a hard kill
-				// (the PS button, vitacompanion's "destroy", the PS2's reset switch) runs no shutdown code,
-				// so an unflushed buffer is exactly the log that would have said why. Flushing every entry
-				// guarantees that at 8-13 ms per line on a memory card (measured on a Vita), which the
-				// continuously logging asset conversion cannot afford - so Info or worse flushes at once and
-				// the rest at most once per FlushIntervalMs, costing a hard kill some Debug chatter but never
-				// the diagnosis. Info is on the immediate side because the one-off milestones are what
-				// localize a crash; leaving them buffered once made three runs all appear to die on the same
-				// Warning, which only meant "last thing flushed".
-				// The timestamp is held as 32 bits of milliseconds because a 64-bit atomic is not lock-free
-				// everywhere in this list: on PowerPC std::atomic<std::uint64_t> lowers to __atomic_*_8
-				// libcalls devkitPPC does not ship, and the Wii and GameCube fail to link. Only the
-				// difference is ever read, so truncating is harmless across the 49-day wrap.
+				// The log file is the main debugging channel here and a hard kill loses the buffer. Flushing is slow
+				// (8-13 ms on a Vita card), so flush Info and above immediately, Debug at most every FlushIntervalMs.
+				// 32-bit milliseconds, because devkitPPC has no 64-bit atomics.
 				constexpr std::uint32_t FlushIntervalMs = 250;
 				static std::atomic<std::uint32_t> lastFlushMs{0};
 				const std::uint32_t nowMs = (std::uint32_t)(timestamp / 1000000);
@@ -2368,7 +2202,7 @@ namespace nCine
 					logFile->Flush();
 				} else {
 					std::uint32_t lastFlush = lastFlushMs.load(std::memory_order_relaxed);
-					// An unsigned wrap here (a timestamp going backwards) only ever flushes early, never late
+					// A wrap only ever flushes early
 					if (nowMs - lastFlush >= FlushIntervalMs &&
 						lastFlushMs.compare_exchange_strong(lastFlush, nowMs, std::memory_order_relaxed)) {
 						logFile->Flush();
@@ -2464,10 +2298,7 @@ namespace nCine
 	}
 
 #if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3)
-	// Formats a binary identifier as uppercase hex, with `separator` (if any) between the bytes. All zeros or
-	// all ones is what unprogrammed storage reads back as - an emulator with a blank NVRAM, a console whose ID
-	// was never written - so that is reported as no identifier at all rather than as one every such device
-	// would share
+	// Formats bytes as uppercase hex with an optional separator, all zeros or all ones (blank storage) returns empty
 	static String FormatIdentifierBytes(const std::uint8_t* bytes, std::size_t count, char separator)
 	{
 		bool allZeros = true, allOnes = true;
@@ -2498,9 +2329,7 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_PS3)
-	// PSL1GHT wraps no `sys_ss_get_open_psid` (lv2 syscall 872), so it's issued directly the way the SDK's own
-	// inline wrappers are written - the macro leaves the result in a register variable `return_to_user_prog`
-	// reads, which is why it needs a function of its own
+	// PSL1GHT has no wrapper for `sys_ss_get_open_psid` (lv2 syscall 872), the macros need their own function
 	static s32 Ps3GetOpenPsId(std::uint8_t (&psid)[16])
 	{
 		lv2syscall1(872, (u64)(std::uintptr_t)psid);
@@ -2517,14 +2346,10 @@ namespace nCine
 		}
 		return {};
 #elif defined(DEATH_TARGET_ANDROID)
-		// A device has no host name a user would recognize; the Android ID (64 bits as hex, fixed per device,
-		// user and signing key) stands in for it
+		// No host name, use the Android ID instead
 		return Backends::AndroidJniWrap_Secure::GetAndroidId();
 #elif defined(DEATH_TARGET_SWITCH)
-		// The nickname the console was given in its settings is the nearest thing to a host name - what libnx's
-		// gethostname() answers is the current IP address, which is neither a name nor stable. A console with
-		// the nickname left empty is told apart by its serial number instead. set:sys is opened for the query
-		// only, libnx itself closes it right after reading the firmware version at startup.
+		// Console nickname, or serial number if empty (libnx gethostname() returns the IP address)
 		String result;
 		if (R_SUCCEEDED(setsysInitialize())) {
 			SetSysDeviceNickName nickname {};
@@ -2533,7 +2358,7 @@ namespace nCine
 				result = nickname.nickname;
 			}
 			if (result.empty()) {
-				// The field is not terminated when the number fills it entirely
+				// Not null-terminated if full
 				SetSysSerialNumber serialNumber {};
 				if (R_SUCCEEDED(setsysGetSerialNumber(&serialNumber))) {
 					std::size_t length = 0;
@@ -2546,12 +2371,11 @@ namespace nCine
 			setsysExit();
 		}
 		return result;
+#elif defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_N64)
+		// No readable identifier on these consoles
+		return {};
 #elif defined(DEATH_TARGET_WII)
-		// The nickname the console was given in its settings is the nearest thing to a host name. The console
-		// stores it as UTF-16 and libogc narrows each character to a byte, so anything outside printable ASCII
-		// is dropped here rather than passed on as a stray byte. A console with no usable nickname is told apart
-		// by the ES device ID instead, which is unique per console. CONF_Init() is idempotent, so it doesn't
-		// matter whether the startup code already did it.
+		// Console nickname (printable ASCII only), or ES device ID if empty
 		String result;
 		if (CONF_Init() >= 0) {
 			u8 nickname[32] {};
@@ -2572,25 +2396,34 @@ namespace nCine
 			}
 		}
 		return result;
+#elif defined(DEATH_TARGET_WIIU)
+		// No console nickname, use the serial number (e.g. "FW123456789")
+		String result;
+		std::int32_t mcpHandle = MCP_Open();
+		if (mcpHandle >= 0) {
+			// IPC buffer must be 64-byte aligned
+			alignas(0x40) MCPSysProdSettings settings {};
+			if (MCP_GetSysProdSettings(mcpHandle, &settings) >= 0) {
+				char serial[sizeof(settings.code_id) + sizeof(settings.serial_id)]; std::size_t length = 0;
+				auto appendField = [&serial, &length](const char* field, std::size_t size) {
+					for (std::size_t i = 0; i < size && field[i] != '\0'; i++) {
+						if (field[i] >= 0x20 && field[i] < 0x7F) {
+							serial[length++] = field[i];
+						}
+					}
+				};
+				appendField(settings.code_id, sizeof(settings.code_id));
+				appendField(settings.serial_id, sizeof(settings.serial_id));
+				result = StringView(serial, length).trimmed();
+			}
+			MCP_Close(mcpHandle);
+		}
+		return result;
 #elif defined(DEATH_TARGET_3DS)
-		// The user name the console was given in its settings is the nearest thing to a host name, the same
-		// choice the Wii and the Switch make. It is stored as UTF-16 in the config savegame block 0x000A0000
-		// (0x1C bytes: up to 10 characters and a terminator); anything outside printable ASCII is dropped
-		// rather than passed on as a stray byte. A console with no usable name is told apart by the console's
-		// unique ID, which every console has
+		// Console user name, or unique console ID if empty
 		return Backends::CtrPlatform::GetDeviceName();
-#elif defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_N64)
-		// Neither console has a host name nor any identifier a program could read: no serial number is stored
-		// anywhere software can reach, and the network adapters that would carry a MAC address are optional
-		// accessories
-		return {};
 #elif defined(DEATH_TARGET_DREAMCAST)
-		// No host name, the 64-bit identifier the BIOS keeps for the console stands in for it. The SYSINFO
-		// syscall behind it answers out of the area the firmware copies the flashrom into, which KOS prepares
-		// during its own initialization (syscall_sysinfo_init), so nothing has to be brought up here. The bytes
-		// are taken out of the value in the order they have in memory on this little-endian machine, which is
-		// the order they have in the flashrom. Not to be confused with the factory settings partition, which
-		// holds the region code and the default language and no identifier at all.
+		// 64-bit BIOS system ID (KOS already initialized SYSINFO), bytes in flashrom order
 		std::uint64_t systemId = syscall_sysinfo_id();
 		std::uint8_t id[8];
 		for (std::size_t i = 0; i < sizeof(id); i++) {
@@ -2598,45 +2431,36 @@ namespace nCine
 		}
 		return FormatIdentifierBytes(id, sizeof(id), '\0');
 #elif defined(DEATH_TARGET_PS2)
-		// No host name, the i.Link ID - the 8-byte identifier every console has, whether or not it has the
-		// physical port - stands in for it. It comes over the CDVD RPC, which MainApplication brings up long
-		// before a trace file or a device ID is asked for. The call answers 1 when it succeeded, the status
-		// it fills in describes what went wrong otherwise.
+		// i.Link ID (every console has one), sceCdRI() returns 1 on success
 		u8 id[8] {}; u32 status = 0;
 		if (sceCdRI(id, &status) == 1) {
 			return FormatIdentifierBytes(id, sizeof(id), '\0');
 		}
 		return {};
 #elif defined(DEATH_TARGET_PS3)
-		// No host name, the OpenPSID - the 16-byte console identifier the system hands out to applications -
-		// stands in for it
+		// OpenPSID
 		std::uint8_t psid[16] {};
 		if (Ps3GetOpenPsId(psid) == 0) {
 			return FormatIdentifierBytes(psid, sizeof(psid), '\0');
 		}
 		return {};
 #elif defined(DEATH_TARGET_PSP)
-		// No host name on this console, the WLAN's MAC address stands in for it. It's read from the console's
-		// flash rather than from a running stack, so it's available with the WLAN switch off as well and needs
-		// nothing of PspNetwork. The SDK documents the call as writing 6 bytes but asking for 8.
+		// WLAN MAC address from flash (works with WLAN off), the call needs an 8-byte buffer for 6 bytes
 		std::uint8_t mac[8] {};
 		if (sceWlanGetEtherAddr(mac) >= 0) {
 			return FormatIdentifierBytes(mac, 6, ':');
 		}
 		return {};
 #elif defined(DEATH_TARGET_VITA)
-		// No host name on this console, the OpenPSID - the 16-byte console identifier the system exposes to
-		// applications - stands in for it. The function is exported by SceLibKernel, which is linked anyway.
+		// OpenPSID
 		SceKernelOpenPsId psid {};
 		if (sceKernelGetOpenPsId(&psid) >= 0) {
-			// The SDK declares the identifier as `char`, but it's 16 arbitrary bytes rather than text
+			// Declared as `char`, but it's binary
 			return FormatIdentifierBytes(reinterpret_cast<const std::uint8_t*>(psid.id), sizeof(psid.id), '\0');
 		}
 		return {};
 #elif !defined(DEATH_TARGET_MORPHOS) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Not on MorphOS: gethostname() there lives in bsdsocket.library, and a reference to it makes the loader
-		// open that library before the program starts - so a machine with no TCP/IP stack running would refuse
-		// to start the game. Not on the web either, where the libc answers with a constant that tells nothing.
+		// Not on MorphOS (would require a TCP/IP stack to start) or the web (returns a constant)
 		char hostName[256] {};
 		if (::gethostname(hostName, sizeof(hostName)) == 0) {
 			hostName[sizeof(hostName) - 1] = '\0';
@@ -2735,8 +2559,7 @@ namespace nCine
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	if defined(NCINE_HAS_LOG_ARCHIVE)
-		// Opening the file for writing below discards what the previous session wrote, so this is the last
-		// moment at which it can be kept
+		// Must be done before the file is opened for writing
 		if (archivePrevious) {
 			ArchivePreviousLogFile(targetPath);
 		}
@@ -2744,13 +2567,10 @@ namespace nCine
 
 		auto logFile = fs::Open(targetPath, FileAccess::Write);
 		if (logFile->IsValid()) {
-			// Written into a file the sink cannot reach yet - it is handed over only at the end of this
-			// function, so an entry dispatched in the meantime cannot land in front of the header
+			// The sink gets the file only at the end, so nothing can be written before the header
 			AppendLogFileHeader(*logFile);
 
-			// Everything traced before the path was known goes in right after the header, so the file starts
-			// where the session started rather than where its own location was resolved. These entries are
-			// therefore older than the header's timestamp, which reads them as one session all the same.
+			// Entries logged before the file was opened go right after the header
 			if (__logHistoryState.load(std::memory_order_acquire) == LogHistoryState::Open) {
 				std::uint32_t historyWritten = 0, historyLength = 0;
 				for (;;) {
@@ -2759,30 +2579,24 @@ namespace nCine
 					if (available <= historyWritten) {
 						break;
 					}
-					// Entries are only appended, never rewritten, so the part that was already counted stays
-					// put - and repeating the check picks up whatever the sink added in the meantime. The
-					// buffer is bounded, so this cannot keep up with a producer indefinitely.
+					// Repeat to pick up entries appended in the meantime (the buffer is bounded)
 					logFile->Write(__logHistory.data() + historyWritten, available - historyWritten);
 					historyWritten = available;
 				}
 				if (historyLength > MaxLogHistoryLength) {
-					// The kept entries are the oldest ones, so whatever was dropped sits between here and the
-					// next line - saying so is better than leaving a silent gap in the middle of the startup.
-					// The leading newline terminates the entry the buffer was cut in the middle of.
+					// Mark the gap, the leading newline ends the truncated entry
 					static const char historyOverflowNote[] = "\n(some entries between here and the next line exceeded the startup buffer and were not recorded)\n";
 					logFile->Write(historyOverflowNote, sizeof(historyOverflowNote) - 1);
 				}
 			}
 
 			if (__logFileOwner != nullptr) {
-				// A second target is taking over from the first one - wait until the sink is through with
-				// everything it still has for the old file, which is about to be closed underneath it
+				// Replacing a previous target, let the sink finish with the old file first
 				__logFile.store(nullptr, std::memory_order_release);
 				Trace::Flush();
 			}
 
-			// The sink appends to the history up to this store and writes to the file from it on, with the
-			// history closed only afterwards - in that order, so that no entry falls in between the two
+			// Publish the file before closing the history, so no entry is lost in between
 			__logFileOwner = Death::move(logFile);
 			__logFile.store(__logFileOwner.get(), std::memory_order_release);
 			DiscardLogHistory();
@@ -2792,7 +2606,7 @@ namespace nCine
 			__eh.Destination = __logFileOwner.get();
 #	endif
 		} else {
-			// Another target may still be attached later, so the history is deliberately kept
+			// Keep the history, another target may be attached later
 			__logFile.store(nullptr, std::memory_order_release);
 			__logFileOwner = nullptr;
 #	if defined(WITH_BACKWARD)
@@ -2812,12 +2626,7 @@ namespace nCine
 #if defined(DEATH_TRACE)
 	void Application::InitializeTrace()
 	{
-		// Idempotent on purpose: an entry point that can do it earlier than PreInitCommon() should, so that
-		// everything it does afterwards - platform bring-up included - can report what it finds through the
-		// ordinary LOG* macros instead of writing to a stream of its own. MainApplication, AndroidApplication,
-		// UwpApplication and Qt5Widget all do; the libretro core cannot (there is no application object
-		// before its own Init(), which calls PreInitCommon() as its first statement), so this call stands
-		// for it, and for anything else that never gets there any earlier.
+		// Idempotent, entry points call it early so platform bring-up can log; PreInitCommon() calls it again
 		if (__traceInitialized) {
 			return;
 		}
@@ -2825,8 +2634,7 @@ namespace nCine
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (__startupTimestampMs == 0) {
-			// A millisecond back, so the header can never land after the first entry it belongs to - the entries
-			// are stamped from a clock of their own (rdtsc with DEATH_TRACE_ASYNC) and truncated to milliseconds
+			// 1 ms back, so the header is never later than the first entry (they use a different clock)
 			std::int64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 1;
 			__startupTimestampMs = (timestampMs > 0 ? timestampMs : 0);
 		}
@@ -2879,8 +2687,7 @@ namespace nCine
 				}
 			}
 		} else if (FORCE_COLOR) {
-			// Use colors if FORCE_COLOR is set, even if the console doesn't report support for it (e.g.,
-			// when piping to a file), this is useful when the output is later viewed in a compatible viewer
+			// FORCE_COLOR enables colors even when piped (e.g. to a file)
 			__consoleType = ConsoleType::EscapeCodes24bit;
 		}
 
@@ -2907,8 +2714,7 @@ namespace nCine
 
 					DWORD FORCE_COLOR = ::GetEnvironmentVariable(L"FORCE_COLOR", nullptr, 0);
 					if (FORCE_COLOR) {
-						// Use colors if FORCE_COLOR is set, even if the console doesn't report support for it (e.g.,
-						// when piping to a file), this is useful when the output is later viewed in a compatible viewer
+						// FORCE_COLOR enables colors even when piped (e.g. to a file)
 						__consoleType = ConsoleType::EscapeCodes24bit;
 					}
 					break;
@@ -2944,8 +2750,7 @@ namespace nCine
 		__traceInitialized = false;
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Detaching the sink joins the tracing worker thread, so from here on nothing can be inside a write
-		// to the file or an append to the startup history and both of them can finally be released
+		// The sink is detached (worker joined), so both can be released now
 		__logFileOwner = nullptr;
 		__logHistoryState.store(LogHistoryState::Released, std::memory_order_relaxed);
 		__logHistoryLength.store(0, std::memory_order_relaxed);
@@ -2960,8 +2765,7 @@ namespace nCine
 	}
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-	// Operating system reported in the TraceDigger metadata header, the values must match `MetadataPlatform`
-	// on the reader side - they are part of the wire format, so they must never be reassigned
+	// Platform in the TraceDigger metadata header, part of the format, never reassign values
 	enum class MetadataPlatform : std::uint32_t {
 		Unknown = 0,
 		Other = 1,
@@ -2979,6 +2783,7 @@ namespace nCine
 		Nintendo64 = 66,
 		GameCube = 67,
 		Wii = 68,
+		WiiU = 69,
 		Switch = 70,
 		Nintendo3DS = 77,
 		PlayStationPortable = 101,
@@ -2988,24 +2793,21 @@ namespace nCine
 		Amiga = 176
 	};
 
-	// How the application version is stored in the TraceDigger metadata header, the values are part
-	// of the wire format, so they must never be reassigned
+	// Version format in the metadata header, part of the format, never reassign values
 	enum class MetadataVersionForm : std::uint32_t {
-		// The version doesn't match any of the known patterns, it's stored as the last string instead
+		// Unknown pattern, stored as the last string
 		Raw = 0,
-		// `<major>.<minor>.<patch>` --- stored as 3 variable-length integers
+		// `<major>.<minor>.<patch>` as 3 varints
 		Numeric = 1,
-		// `<major>.<minor>.r<revision>-<hash>` --- stored as 3 variable-length integers, followed
-		// by the number of hexadecimal digits of the commit hash and the digits packed 2 per byte
+		// `<major>.<minor>.r<revision>-<hash>` as 3 varints, hash digit count and hash packed 2 digits per byte
 		GitRevision = 2
 	};
 
-	// How a single string is stored in the TraceDigger metadata header, the values are part of the wire
-	// format, so they must never be reassigned
+	// String encoding in the metadata header, part of the format, never reassign values
 	enum class MetadataStringEncoding : std::uint32_t {
-		// UTF-8 bytes as they are, used if the string contains any multi-byte sequence
+		// UTF-8 bytes as-is
 		Raw = 0,
-		// 7 bits per character, used if the string fits neither of the two alphabets below
+		// 7 bits per character
 		Ascii = 1,
 		// 6 bits per character according to `MetadataStringAlphabet`
 		LowercaseSet = 2,
@@ -3013,19 +2815,15 @@ namespace nCine
 		MixedCaseSet = 3
 	};
 
-	// Characters that fit into 6 bits - lowercase text with any of the usual symbols, which covers versions,
-	// paths and command-line arguments
+	// 6-bit alphabet for lowercase text, versions, paths and arguments
 	static constexpr char MetadataStringAlphabet[] = "abcdefghijklmnopqrstuvwxyz0123456789 .,-_:;/\\()[]{}=+*?!@#%&'\"<>";
 	static_assert(sizeof(MetadataStringAlphabet) == 64 + 1, "MetadataStringAlphabet must contain exactly 64 characters");
 
-	// Characters that fit into 6 bits when both letter cases are needed - all 52 letters leave room for the digits
-	// and 2 symbols only, which is still enough for file names and host names
+	// 6-bit alphabet with both cases, enough for file names and host names
 	static constexpr char MetadataStringMixedCaseAlphabet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-";
 	static_assert(sizeof(MetadataStringMixedCaseAlphabet) == 64 + 1, "MetadataStringMixedCaseAlphabet must contain exactly 64 characters");
 
-	// Minutes east of UTC that the entries are formatted in. `TimeZone::GetOffset()` leaves daylight saving out
-	// on purpose, but the entries go through `Partitioned()` and localtime(), which puts it in - so the offset is
-	// taken from what the two renderings of one instant differ by, and matches the entries on every platform
+	// Minutes east of UTC including DST (unlike `TimeZone::GetOffset()`), so it matches the log entries
 	static std::int32_t GetLocalTimeZoneOffsetMinutes(std::int64_t timestampMs)
 	{
 		DateTime dt = DateTime::FromUnixMilliseconds(timestampMs);
@@ -3035,7 +2833,7 @@ namespace nCine
 			return 0;
 		}
 
-		// The two never differ by more than a day, so a year boundary is a single day either way
+		// They differ by at most a day
 		std::int32_t days = (local.Year != utc.Year ? (local.Year > utc.Year ? 1 : -1) : local.DayOfYear - utc.DayOfYear);
 		return days * 1440 + (local.Hour * 60 + local.Minute) - (utc.Hour * 60 + utc.Minute);
 	}
@@ -3049,26 +2847,17 @@ namespace nCine
 		//   varint   Flags
 		//   u8       Platform - `MetadataPlatform`
 		//   varint   Timestamp - Unix time in milliseconds
-		//   varint   Timezone offset (only if `HasTimeZoneOffset` is set) - zig-zag quarter hours east of UTC
-		//            that the entries are formatted in, so the reader can put the timestamp above next to them
+		//   varint   Timezone offset (if `HasTimeZoneOffset`) - zig-zag quarter hours east of UTC
 		//   varint   Process ID
 		//   varint   Main thread ID as zig-zag delta from the process ID
 		//   ...      Application version according to `MetadataVersionForm`
-		//   ...      Strings in this order: executable name, host name, arguments, compatibility layer
-		//            (only if `HasAppCompatLayer` is set), application version (only if the form
-		//            is `MetadataVersionForm::Raw`); trailing empty strings are omitted, so any string
-		//            that is not there anymore is empty
+		//   ...      Strings: executable name, host name, arguments, compatibility layer (if `HasAppCompatLayer`),
+		//            application version (if `MetadataVersionForm::Raw`); trailing empty strings are omitted
 		//
-		// Each string begins with a variable-length integer - the number of characters shifted left by 2 bits
-		// with `MetadataStringEncoding` in the lower 2 bits - followed by the characters packed according
-		// to the encoding, the leftover bits of the last byte are always zero
-		//
-		// Everything that can be derived on the reader side is left out - the main thread ID usually differs
-		// from the process ID only slightly and the version is mostly digits, so both of them compress well
-		// into the layout above
+		// Each string starts with a varint `(length << 2) | MetadataStringEncoding`, followed by the packed
+		// characters, unused bits of the last byte are zero
 
-		// When the session started, not when the file was opened - the fallback is for a caller that somehow
-		// gets here without InitializeTrace() having run
+		// Session start, or now if InitializeTrace() wasn't called
 		std::int64_t timestampMs = __startupTimestampMs;
 		if (timestampMs <= 0) {
 			timestampMs = DateTime::UtcNow().ToUnixMilliseconds();
@@ -3090,8 +2879,7 @@ namespace nCine
 #		if defined(WITH_LIBRETRO)
 		flags |= 0x4000;	// IsHosted
 #		endif
-		// Always reported, even for UTC itself - the flag is what tells a header that knows its timezone from one
-		// written before there was a field for it, which the reader must not take for UTC
+		// Always set, even for UTC, to tell it apart from older headers without the field
 		flags |= 0x08;		// HasTimeZoneOffset
 
 #		if defined(DEATH_TARGET_WINDOWS_RT)
@@ -3108,6 +2896,8 @@ namespace nCine
 		constexpr MetadataPlatform platform = MetadataPlatform::GameCube;
 #		elif defined(DEATH_TARGET_WII)
 		constexpr MetadataPlatform platform = MetadataPlatform::Wii;
+#		elif defined(DEATH_TARGET_WIIU)
+		constexpr MetadataPlatform platform = MetadataPlatform::WiiU;
 #		elif defined(DEATH_TARGET_3DS)
 		constexpr MetadataPlatform platform = MetadataPlatform::Nintendo3DS;
 #		elif defined(DEATH_TARGET_DREAMCAST)
@@ -3239,12 +3029,11 @@ namespace nCine
 		ms.WriteVariableUint32(flags);
 		ms.WriteValue<std::uint8_t>((std::uint8_t)platform);
 		ms.WriteVariableUint64((std::uint64_t)timestampMs);
-		// In quarter hours, rounded to the nearest: every timezone in use is a multiple of 15 minutes, and the whole
-		// -12:00..+14:00 range then fits a single zig-zag byte, where minutes would take two from ±1:04 on
+		// Quarter hours, so all timezones fit in a single byte
 		std::int32_t timeZoneOffsetMinutes = GetLocalTimeZoneOffsetMinutes(timestampMs);
 		ms.WriteVariableInt32((timeZoneOffsetMinutes + (timeZoneOffsetMinutes >= 0 ? 7 : -7)) / 15);
 		ms.WriteVariableUint32(processId);
-		// Thread IDs are usually assigned close to the process ID, so the delta is much shorter than the ID itself
+		// Usually close to the process ID, so the delta is short
 		ms.WriteVariableInt64((std::int64_t)_mainThreadId - (std::int64_t)processId);
 
 		if (versionForm != MetadataVersionForm::Raw) {
@@ -3267,9 +3056,7 @@ namespace nCine
 			}
 		}
 
-		// Each string is stored with the tightest encoding its characters allow - the reader drops any string
-		// that doesn't fit in the header entirely, so clamp each one to the space that is left in the buffer
-		// instead of letting it be cut in half by the stream, `reserve` keeps room for the strings after it
+		// Writes a string in the tightest encoding, clamped to the remaining space minus `reserve` for the next ones
 		auto writeString = [&ms](StringView value, std::int64_t reserve) {
 			auto indexInAlphabet = [](const char* alphabet, char c) -> std::int32_t {
 				for (std::int32_t i = 0; i < 64; i++) {
@@ -3365,7 +3152,7 @@ namespace nCine
 			stringCount--;
 		}
 
-		// Room each of the strings that are still to be written needs at the end of the header
+		// Space reserved for each remaining string
 		constexpr std::int64_t ReservedPerString = 24;
 
 		for (std::int32_t i = 0; i < stringCount; i++) {

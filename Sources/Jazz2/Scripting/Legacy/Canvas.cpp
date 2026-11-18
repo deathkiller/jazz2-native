@@ -1210,7 +1210,7 @@ namespace Jazz2::Scripting
 			case Legacy::spriteType_TRANSLUCENTPLAYER: {
 				// In the colors of the fur of the player of the parameter
 				for (Actors::Player* player : _levelHandler->_players) {
-					if (player->GetPlayerIndex() == param) {
+					if (GetScriptPlayerID(player) == param) {
 						return std::max<std::int32_t>(player->GetPaletteOffset(), 0);
 					}
 				}
