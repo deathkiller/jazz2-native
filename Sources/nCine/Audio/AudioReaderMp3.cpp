@@ -157,7 +157,12 @@ namespace nCine
 #if defined(NCINE_MPG123_IO64)
 		error = MPG123_CALL(mpg123_reader64)(handle, FileRead, FileSeek, nullptr);
 		if (error == Mpg123Ok) {
+#	if defined(WITH_MPG123_DYNAMIC) || MPG123_API_VERSION >= 49
 			error = MPG123_CALL(mpg123_open_handle64)(handle, stream);
+#	else
+			// libmpg123 1.32 has mpg123_reader64() but not mpg123_open_handle64() yet
+			error = ::mpg123_open_handle(handle, stream);
+#	endif
 		}
 #else
 		error = ::mpg123_replace_reader_handle(handle, FileRead, FileSeek, nullptr);
@@ -232,6 +237,10 @@ namespace nCine
 		_mpg123_param = (mpg123_param_t*)::GetProcAddress(_mpgLib, "mpg123_param");
 		_mpg123_reader64 = (mpg123_reader64_t*)::GetProcAddress(_mpgLib, "mpg123_reader64");
 		_mpg123_open_handle64 = (mpg123_open_handle64_t*)::GetProcAddress(_mpgLib, "mpg123_open_handle64");
+		if (_mpg123_open_handle64 == nullptr) {
+			// libmpg123 1.32 opens the mpg123_reader64() handle through mpg123_open_handle()
+			_mpg123_open_handle64 = (mpg123_open_handle64_t*)::GetProcAddress(_mpgLib, "mpg123_open_handle");
+		}
 		_mpg123_getformat = (mpg123_getformat_t*)::GetProcAddress(_mpgLib, "mpg123_getformat");
 		_mpg123_format_none = (mpg123_format_none_t*)::GetProcAddress(_mpgLib, "mpg123_format_none");
 		_mpg123_format = (mpg123_format_t*)::GetProcAddress(_mpgLib, "mpg123_format");
