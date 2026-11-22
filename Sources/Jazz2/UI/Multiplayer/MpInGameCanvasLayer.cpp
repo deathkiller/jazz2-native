@@ -45,6 +45,8 @@ namespace Jazz2::UI::Multiplayer
 					// colors take precedence so they remain a clear at-a-glance cue
 					Colorf color = (teamMode ? GetTeamColor(peerDesc->Team) : Font::DefaultColor);
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
+						// Where the sprite is drawn, the reported position is ahead of it by the interpolation delay
+						pos = remotePlayerOnServer->GetDisplayPos();
 						// If player is in menu or console, show their name in red
 						// If player is idle for more than 60 seconds, show their name in blue
 						if ((remotePlayerOnServer->Flags & (RemotePlayerOnServer::PlayerFlags::InMenu | RemotePlayerOnServer::PlayerFlags::InConsole)) != RemotePlayerOnServer::PlayerFlags::None) {

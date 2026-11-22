@@ -51,8 +51,27 @@ namespace Jazz2::Scripting
 				LOGW("Script tried to read \"{}\", which is outside the game's data directory", filename);
 				return result;
 			}
+			// What the scripts saved first
+			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			String path = (owner != nullptr ? fs::FindPathCaseInsensitive(owner->GetStagingPath(fs::GetFileName(filename))) : String());
+			if (!fs::IsReadableFile(path)) {
+				// As in JJ2+, the files of the game itself and its logs can't be read
+				String name = StringUtils::lowercase(fs::GetFileName(filename));
+				if (name.hasPrefix("jazz2."_s) || name.hasPrefix("plus."_s) || name.hasPrefix("chatlog"_s) ||
+					name.hasPrefix("playlog"_s) || name.hasPrefix("iplog"_s)) {
+					LOGW("Script tried to read \"{}\", which is not allowed", filename);
+					return result;
+				}
+				// A file the server sent with the level, then the files of the original game - a script of a server reads
+				// only `.asdat` files of those there, as in JJ2+
+				bool ofServer = (owner != nullptr && owner->IsScriptOfServer());
+				path = (ofServer ? owner->FindServerFile(filename, true) : String());
+				if (!fs::IsReadableFile(path) && (!ofServer || fs::GetExtension(filename) == "asdat"_s)) {
+					path = fs::CombinePath(ContentResolver::Get().GetSourcePath(), filename);
+				}
+			}
 
-			auto s = fs::Open(fs::CombinePath(ContentResolver::Get().GetSourcePath(), filename), FileAccess::Read);
+			auto s = fs::Open(path, FileAccess::Read);
 			if (s->IsValid()) {
 				std::int64_t size = s->GetSize();
 				if (size > 0 && size < std::numeric_limits<std::int32_t>::max()) {
@@ -150,19 +169,25 @@ namespace Jazz2::Scripting
 		}
 
 		bool jjSTREAM::save(const String& filename) const {
-			// Written next to the game's other data, which is where the original puts it, so a script that
-			// saves and reloads its own file finds it again - but only there, see IsScriptFileNameSafe()
-			if (!IsScriptFileNameSafe(filename)) {
-				LOGW("Script tried to write \"{}\", which is outside the game's data directory", filename);
+			// Only the name of the file, as JJ2+ takes it, in a directory where no file of the game can be replaced
+			StringView name = fs::GetFileName(filename);
+			if (name.empty() || name.contains(':') || !IsScriptFileNameSafe(name)) {
+				LOGW("Script tried to write \"{}\", which isn't a valid file name", filename);
 				return false;
 			}
 			// The level editor runs the script only for what it shows (see LevelHandler::IsSandbox())
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-			if (owner != nullptr && owner->GetLevelHandler()->IsSandbox()) {
+			if (owner == nullptr || owner->GetLevelHandler()->IsSandbox()) {
+				return false;
+			}
+			String path = owner->GetStagingPath(name, true);
+			if (path.empty()) {
+				LOGW("Script of the server tried to write \"{}\", but it saved too many files already", filename);
 				return false;
 			}
 
-			auto s = fs::Open(fs::CombinePath(ContentResolver::Get().GetSourcePath(), filename), FileAccess::Write);
+			fs::CreateDirectories(fs::GetDirectoryName(path));
+			auto s = fs::Open(path, FileAccess::Write);
 			if (!s->IsValid()) {
 				return false;
 			}

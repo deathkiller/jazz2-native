@@ -140,6 +140,8 @@ namespace Jazz2::Multiplayer
 		bool IsAdmin;
 		/** @brief Whether ledge climbing is enabled by client */
 		bool EnableLedgeClimb;
+		/** @brief Whether the client doesn't run level scripts, it only spectates a level with a script then */
+		bool ScriptsDisabled;
 		/** @brief Whether the peer voted "yes" in the active poll */
 		bool VotedYes;
 		/** @brief Preferred player type selected by the peer */

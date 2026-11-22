@@ -19,7 +19,7 @@ writing the directive inside of a namespace doesn't put the included code into t
 have directives of its own, including more includes.
 
 The file is searched for next to the script that includes it first, then among the files of the original game. Letter
-case of the name doesn't matter.
+case of the name doesn't matter. A player of an online game uses the file the server sent.
 
 @note The game doesn't skip a file that was already included, so including the same file from two places compiles it
 twice and its declarations collide. Include each file only once.
@@ -55,9 +55,19 @@ nested. The following symbols are defined:
 
 Switches the script to the native API of the game. Without it, the script uses the JJ2+ API described in this reference.
 
-Other pragmas, such as `#pragma require`, `#pragma offer`, `#pragma name` and `#pragma description`, are accepted, so
-existing scripts still compile, but they have no effect. The files a level needs are found the same way as by
-`#include`.
+@code{.as}
+#pragma require "custom.j2a"
+#pragma offer "intro.it"
+@endcode
+
+Names a file the level needs, which the server of an online game sends to the players who don't have the same one, as
+JJ2+ does. With `require`, the server warns when it can't find the file, with `offer`, the level is played without it
+too. The script itself and the files it includes are always sent. A tile set (`.j2t`) and music are sent as those of the
+level, other files (animations, samples, palettes, images, levels to take layers of) are used by a player wherever the
+script names them.
+
+Other pragmas, such as `#pragma name` and `#pragma description`, are accepted, so existing scripts still compile, but
+they have no effect.
 
 @section preprocessor-shebang #!
 

@@ -209,7 +209,7 @@ namespace Jazz2::Multiplayer
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _spectateFollowActorId(SpectateFreeCamera), _waitingForPlayerCount(0),
-			_lastUpdated(0), _seqNumWarped(0), _lastSentPressedActions(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
+			_lastUpdated(0), _lastObjectDrawsUpdate(0), _seqNumWarped(0), _lastSentPressedActions(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
 			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _lastGameModeObjectId(0), _overtimeScoreCap(0), _localClientID(0), _teamTriggerId(-1), _serverTriggerId(-1), _teamTriggerOnForBlue(false), _specialTriggersResolved(false), _killingPlayer(false), _silentKill(false), _modeOvertime(false), _scoreboardSyncTime(0.0f),
@@ -273,6 +273,19 @@ namespace Jazz2::Multiplayer
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			_lastSpawnedActorId = UINT8_MAX;
 			_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
+
+#if defined(WITH_ANGELSCRIPT)
+			// The objects the level script made as the level loaded (puppets), the clients get them as the ones made later
+			if (!IsLocalSession() && _scripts != nullptr) {
+				constexpr Actors::ActorState OfLevel = Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator;
+				for (const auto& actor : _actors) {
+					if (_scripts->HasObjectId(actor.get()) && (actor->GetState() & OfLevel) == Actors::ActorState::None &&
+						runtime_cast<Actors::Player>(actor.get()) == nullptr && !_remotingActors.contains(actor.get())) {
+						StartRemoting(actor.get(), true);
+					}
+				}
+			}
+#endif
 
 			if (!IsLocalSession()) {
 				// Local splitscreen players are spawned directly in SpawnPlayers() and have no asset-validation
@@ -505,6 +518,10 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::OnEndFrame()
 	{
 		LevelHandler::OnEndFrame();
+
+		if (_isServer && !_pendingScriptPlayerChanges.empty()) {
+			FlushScriptPlayerChanges();
+		}
 
 		// The clock of the round, the countdowns and the polls go by the time of the level, which a play-test of the level
 		// editor may slow down or stop
@@ -1188,57 +1205,82 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::AddActor(actor);
 
-		// A local splitscreen session has no peers to remote the actor to, so neither the bookkeeping nor the
-		// announcement packet is built (every other consumer of _remotingActors is gated the same way)
-		if (!_suppressRemoting && _isServer && !_isLocalSession) {
-			Actors::ActorBase* actorPtr = actor.get();
-			bool isMirrored = ActorShouldBeMirrored(actorPtr);
+		// A local splitscreen session has no peers to remote the actor to
+		if (_suppressRemoting || !_isServer || _isLocalSession) {
+			return;
+		}
 
-			std::uint32_t actorId;
-			{
-				std::unique_lock lock(_lock);
-				actorId = FindFreeActorId();
-				_remotingActors[actorPtr] = { actorId, isMirrored };
-
-				// Store only used IDs on server-side
-				_remoteActors[actorId] = nullptr;
+		bool scriptOnly = false;
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			// Every machine fires the bullets of a script itself, see HandleScriptedFire()
+			if (_scripts->IsFiringScriptedBullet(actor.get())) {
+				return;
 			}
+			// Can't be made of the event map on the clients, see StartRemoting()
+			scriptOnly = (_scripts->IsScriptOnlyObject(actor.get()) || _scripts->IsAddingScriptObject());
+			// What a mirrored object makes, the clients make too (see LevelScriptLoader::MarkMirrored())
+			if (scriptOnly && _scripts->IsRunningMirroredObject()) {
+				return;
+			}
+		}
+#endif
+		StartRemoting(actor.get(), scriptOnly);
+	}
 
-			if (isMirrored) {
-				Vector2i originTile = actorPtr->_originTile;
-				const auto& eventTile = _eventMap->GetEventTile(originTile.X, originTile.Y);
-				if (eventTile.Event != EventType::Empty) {
-					MemoryStream packet(24 + Events::EventSpawner::SpawnParamsSize);
-					packet.WriteVariableUint32(actorId);
-					packet.WriteVariableUint32((std::uint32_t)eventTile.Event);
-					packet.Write(eventTile.EventParams, Events::EventSpawner::SpawnParamsSize);
-					packet.WriteVariableUint32((std::uint32_t)eventTile.EventFlags);
-					packet.WriteVariableInt32((std::int32_t)originTile.X);
-					packet.WriteVariableInt32((std::int32_t)originTile.Y);
-					packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.GetLayer());
+	void MpLevelHandler::StartRemoting(Actors::ActorBase* actorPtr, bool noMirroring)
+	{
+		bool isMirrored = (!noMirroring && ActorShouldBeMirrored(actorPtr));
 
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
+		std::uint32_t actorId;
+		{
+			std::unique_lock lock(_lock);
+			actorId = FindFreeActorId();
+			_remotingActors[actorPtr] = { actorId, isMirrored };
+
+			// Store only used IDs on server-side
+			_remoteActors[actorId] = nullptr;
+		}
+
+		if (isMirrored) {
+#if defined(WITH_ANGELSCRIPT)
+			if (_scripts != nullptr) {
+				_scripts->MarkMirrored(actorPtr);
+			}
+#endif
+			Vector2i originTile = actorPtr->_originTile;
+			const auto& eventTile = _eventMap->GetEventTile(originTile.X, originTile.Y);
+			if (eventTile.Event != EventType::Empty) {
+				MemoryStream packet(24 + Events::EventSpawner::SpawnParamsSize);
+				packet.WriteVariableUint32(actorId);
+				packet.WriteVariableUint32((std::uint32_t)eventTile.Event);
+				packet.Write(eventTile.EventParams, Events::EventSpawner::SpawnParamsSize);
+				packet.WriteVariableUint32((std::uint32_t)eventTile.EventFlags);
+				packet.WriteVariableInt32((std::int32_t)originTile.X);
+				packet.WriteVariableInt32((std::int32_t)originTile.Y);
+				packet.WriteVariableInt32((std::int32_t)actorPtr->_renderer.GetLayer());
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
+			}
+		} else {
+			MemoryStream packet;
+			InitializeCreateRemoteActorPacket(packet, actorId, actorPtr);
+
+			SmallVector<ReplicationPeer, 8> peers;
+			CollectReplicationPeers(peers);
+			for (const auto& rp : peers) {
+				// Created on the peer once it gets close, see SendActorUpdates()
+				if (!IsActorRelevantToPeer(rp, actorPtr->_pos, false)) {
+					auto& state = _peerReplication[rp.RemotePeer].Actors[actorId];
+					state = {};
+					state.IsKnown = false;
+					state.IsRelevant = false;
+					continue;
 				}
-			} else {
-				MemoryStream packet;
-				InitializeCreateRemoteActorPacket(packet, actorId, actorPtr);
-
-				SmallVector<ReplicationPeer, 8> peers;
-				CollectReplicationPeers(peers);
-				for (const auto& rp : peers) {
-					// Created on the peer once it gets close, see SendActorUpdates()
-					if (!IsActorRelevantToPeer(rp, actorPtr->_pos, false)) {
-						auto& state = _peerReplication[rp.RemotePeer].Actors[actorId];
-						state = {};
-						state.IsKnown = false;
-						state.IsRelevant = false;
-						continue;
-					}
-					_networkManager->SendTo(rp.RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
-				}
+				_networkManager->SendTo(rp.RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 			}
 		}
 	}
@@ -1559,8 +1601,11 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::HandlePlayerDied(Actors::Player* player)
 	{
+		// A boss of a script is fought as one of the game, before the death ends the fight for the player
+		bool inScriptBossFight = false;
 #if defined(WITH_ANGELSCRIPT)
 		if (_scripts != nullptr) {
+			inScriptBossFight = (_activeBoss == nullptr && _scripts->IsInBossFight(player));
 			Actors::ActorBase* killer = (_isServer ? GetWeaponOwner(static_cast<PlayerOnServer*>(player)->_lastAttacker.get()) : nullptr);
 			_scripts->OnPlayerDied(player, killer);
 		}
@@ -1591,7 +1636,7 @@ namespace Jazz2::Multiplayer
 				(_levelState != LevelState::Running || (!isEliminated && respawn.CanRespawn)));
 			bool shouldRollback = false;
 
-			if (canRespawn && _activeBoss != nullptr) {
+			if (canRespawn && (_activeBoss != nullptr || inScriptBossFight)) {
 				bool anyoneAlive = false;
 				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 					if (peerDesc->Player && peerDesc->Player->_health > 0) {
@@ -1604,7 +1649,7 @@ namespace Jazz2::Multiplayer
 					// If at least one player is alive, don't rollback yet
 					canRespawn = false;
 				} else {
-					if (_activeBoss->OnPlayerDied()) {
+					if (_activeBoss != nullptr && _activeBoss->OnPlayerDied()) {
 						_activeBoss = nullptr;
 					}
 
@@ -1640,6 +1685,12 @@ namespace Jazz2::Multiplayer
 
 					RollbackLevelState();
 					BeginPlayMusic(_musicDefaultPath);
+#if defined(WITH_ANGELSCRIPT)
+					// As a local game going back to a checkpoint, the clients go back on their own (see OnLocalLevelReload())
+					if (_scripts != nullptr) {
+						_scripts->OnLevelReload();
+					}
+#endif
 				}
 
 				if (_gameMode != nullptr) {
@@ -1696,19 +1747,12 @@ namespace Jazz2::Multiplayer
 			if (mpPlayer->RespawnPending) {
 				mpPlayer->RespawnPending = false;
 				player->_checkpointPos = mpPlayer->RespawnPos;
-
-				Clock& c = nCine::clock();
-				std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
-
-				MemoryStream packetAck(24);
-				packetAck.WriteVariableUint32(_lastSpawnedActorId);
-				packetAck.WriteVariableUint64(now);
-				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.X * 512.0f));
-				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_checkpointPos.Y * 512.0f));
-				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
-				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
-
+#if defined(WITH_ANGELSCRIPT)
+				if (_scripts != nullptr) {
+					_scripts->OnLocalLevelReload();
+				}
+#endif
+				SendPlayerAckWarped(player->_checkpointPos, player->_speed);
 				return true;
 			}
 
@@ -1792,18 +1836,23 @@ namespace Jazz2::Multiplayer
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
 			}
 		} else {
-			Clock& c = nCine::clock();
-			std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
-
-			MemoryStream packetAck(24);
-			packetAck.WriteVariableUint32(_lastSpawnedActorId);
-			packetAck.WriteVariableUint64(now);
-			packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
-			packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
-			packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
-			packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
+			SendPlayerAckWarped(player->_pos, player->_speed);
 		}
+	}
+
+	void MpLevelHandler::SendPlayerAckWarped(Vector2f pos, Vector2f speed)
+	{
+		Clock& c = nCine::clock();
+		std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
+
+		MemoryStream packetAck(24);
+		packetAck.WriteVariableUint32(_lastSpawnedActorId);
+		packetAck.WriteVariableUint64(now);
+		packetAck.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+		packetAck.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+		packetAck.WriteValue<std::int16_t>((std::int16_t)(speed.X * 512.0f));
+		packetAck.WriteValue<std::int16_t>((std::int16_t)(speed.Y * 512.0f));
+		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
 	}
 
 	void MpLevelHandler::HandlePlayerPushed(Actors::Player* player)
@@ -3946,6 +3995,12 @@ namespace Jazz2::Multiplayer
 			case ServerMessageType::IdleSpectateHelp:
 				// TRANSLATORS: Message in the console in multiplayer, shown to a player who was moved to spectate mode for inactivity
 				return _("You were idle for too long, so you are spectating now. Choose \"Join Game\" in the pause menu to play again.");
+			case ServerMessageType::ScriptsDisabledSpectate:
+				// TRANSLATORS: Alert in multiplayer, shown to a player who can only spectate because the level needs scripts, which are disabled in the options
+				return _("\n\nScripts are disabled, so you can only spectate");
+			case ServerMessageType::ScriptsDisabledHelp:
+				// TRANSLATORS: Message in the console in multiplayer, shown to a player who can only spectate because the level needs scripts
+				return _("This level requires scripting, which is disabled in your options. You can only spectate until a level without a script is played.");
 			case ServerMessageType::RaceAlreadyFinished:
 				return _("You have already finished the race, you can play again in the next round");
 			case ServerMessageType::CannotJoinNow:
@@ -4086,6 +4141,10 @@ namespace Jazz2::Multiplayer
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 		std::uint32_t playerIndex = mpPlayer->_playerIndex;
+		// A client that doesn't run the script of the level only watches it, by whatever way it would join
+		if ((mode & SpectateMode::Mask) == SpectateMode::None && IsScriptMissingFor(*peerDesc)) {
+			return;
+		}
 
 		// This replaces the player actor, so its progression (weapons, ammo, upgrades, lives, score, gems) would
 		// otherwise be lost - toggling spectate mode or changing character in co-op would reset the player back to a
@@ -4102,6 +4161,11 @@ namespace Jazz2::Multiplayer
 				break;
 			}
 		}
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->OnPlayerRemoved(player);
+		}
+#endif
 
 		// Destroy the previous player actor
 		Vector2f playerPos = player->_pos;
@@ -4537,8 +4601,21 @@ namespace Jazz2::Multiplayer
 			(_levelState != LevelState::Running || serverConfig.AllowJoinDuringRound));
 	}
 
+	bool MpLevelHandler::IsScriptMissingFor(const PeerDescriptor& peerDesc) const
+	{
+#if defined(WITH_ANGELSCRIPT)
+		return (peerDesc.ScriptsDisabled && _scripts != nullptr && !_scripts->IsScriptTextOverridden());
+#else
+		return false;
+#endif
+	}
+
 	bool MpLevelHandler::CanLeaveSpectateMode(const Peer& peer, const PeerDescriptor& peerDesc)
 	{
+		if (IsScriptMissingFor(peerDesc)) {
+			SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::ScriptsDisabledHelp));
+			return false;
+		}
 		if ((peerDesc.IsSpectating & SpectateMode::Mask) != SpectateMode::Forced) {
 			return true;
 		}
@@ -4639,6 +4716,11 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 					}
+#if defined(WITH_ANGELSCRIPT)
+					if (_scripts != nullptr) {
+						_scripts->OnPlayerRemoved(player);
+					}
+#endif
 
 					// Move the player out of the bounds to avoid triggering events
 					player->_pos = OutOfBounds;
@@ -4805,6 +4887,8 @@ namespace Jazz2::Multiplayer
 				case ClientPacketType::PlayerChangeCharacter: return HandleClientPacketPlayerChangeCharacter(peer, data);
 				case ClientPacketType::PlayerChangeTeamRequest: return HandleClientPacketPlayerChangeTeamRequest(peer, data);
 				case ClientPacketType::PlayerAckWarped: return HandleClientPacketPlayerAckWarped(peer, data);
+				case ClientPacketType::PlayerScriptedFire: return HandleClientPacketPlayerScriptedFire(peer, data);
+				case ClientPacketType::PlayerScriptedHit: return HandleClientPacketPlayerScriptedHit(peer, data);
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
@@ -4848,6 +4932,10 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::PlayerPush: return HandleServerPacketPlayerPush(peer, data);
 				case ServerPacketType::PlayerActivateSpring: return HandleServerPacketPlayerActivateSpring(peer, data);
 				case ServerPacketType::PlayerWarpIn: return HandleServerPacketPlayerWarpIn(peer, data);
+				case ServerPacketType::PlayerScriptedFire: return HandleServerPacketPlayerScriptedFire(peer, data);
+				case ServerPacketType::UpdateObjectDraws: return HandleServerPacketUpdateObjectDraws(peer, data);
+				case ServerPacketType::PlayerScriptChange: return HandleServerPacketPlayerScriptChange(peer, data);
+				case ServerPacketType::ScriptEffect: return HandleServerPacketScriptEffect(peer, data);
 			}
 		}
 
@@ -5113,6 +5201,16 @@ namespace Jazz2::Multiplayer
 
 		LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {} missing assets", peer, missingAssets.size());
 
+		// Whether the client runs level scripts, a client without them only spectates a level with a script
+		std::uint8_t clientFlags = (packet.GetPosition() < packet.GetSize() ? packet.ReadValue<std::uint8_t>() : 0);
+		peerDesc->ScriptsDisabled = ((clientFlags & 0x01) != 0);
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.KickPlayersWithoutScripts && IsScriptMissingFor(*peerDesc)) {
+			LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Level scripts are disabled", peer);
+			_networkManager->Kick(peer, Reason::ScriptsNotAllowed);
+			return true;
+		}
+
 		if (missingAssets.empty()) {
 			// All assets are already ready
 			MemoryStream packet;
@@ -5121,7 +5219,6 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		const auto& serverConfig = _networkManager->GetServerConfiguration();
 		if (!serverConfig.AllowAssetStreaming) {
 			// Server doesn't allow downloads, kick the client instead
 			_networkManager->Kick(peer, Reason::AssetStreamingNotAllowed);
@@ -6245,6 +6342,515 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	bool MpLevelHandler::IsScriptedWeapon(WeaponType weaponType) const
+	{
+#if defined(WITH_ANGELSCRIPT)
+		return (_scripts != nullptr && _scripts->IsScriptedWeapon(weaponType));
+#else
+		return false;
+#endif
+	}
+
+	Actors::ActorBase* MpLevelHandler::GetRemotePlayerActor(std::uint32_t playerIndex) const
+	{
+		if (_isServer) {
+			return nullptr;
+		}
+		auto nameIt = _playerNames.find(playerIndex);
+		if (nameIt == _playerNames.end() || nameIt->second.IsSpectating) {
+			return nullptr;
+		}
+		auto it = _remoteActors.find(playerIndex);
+		return (it != _remoteActors.end() ? it->second.get() : nullptr);
+	}
+
+	bool MpLevelHandler::GetRemotePlayerInfo(std::uint32_t playerIndex, StringView& name, std::uint8_t& team, std::uint32_t& furColor) const
+	{
+		auto it = _playerNames.find(playerIndex);
+		if (_isServer || it == _playerNames.end()) {
+			return false;
+		}
+		name = it->second.Name;
+		team = it->second.Team;
+		furColor = it->second.FurColor;
+		return true;
+	}
+
+#if defined(WITH_ANGELSCRIPT)
+	static void WriteScriptedFire(MemoryStream& packet, const Scripting::ScriptedFire& fire)
+	{
+		packet.WriteValue<std::uint8_t>((std::uint8_t)fire.Weapon);
+		packet.WriteValue<std::uint8_t>(fire.Upgrades);
+		packet.WriteValue<std::uint16_t>(fire.Sequence);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)fire.Flags);
+		packet.WriteValueAsLE<float>(fire.AimAngle);
+		packet.WriteValueAsLE<float>(fire.OwnerPos.X);
+		packet.WriteValueAsLE<float>(fire.OwnerPos.Y);
+		packet.WriteValueAsLE<float>(fire.OwnerSpeed.X);
+		packet.WriteValueAsLE<float>(fire.OwnerSpeed.Y);
+		packet.WriteVariableInt32(fire.InitialPos.X);
+		packet.WriteVariableInt32(fire.InitialPos.Y);
+		packet.WriteVariableInt32(fire.InitialPos.Z);
+		packet.WriteValueAsLE<float>(fire.GunspotPos.X);
+		packet.WriteValueAsLE<float>(fire.GunspotPos.Y);
+		packet.WriteValueAsLE<float>(fire.Angle);
+	}
+
+	static bool ReadScriptedFire(MemoryStream& packet, Scripting::ScriptedFire& fire)
+	{
+		fire.Weapon = (WeaponType)packet.ReadValue<std::uint8_t>();
+		fire.Upgrades = packet.ReadValue<std::uint8_t>();
+		fire.Sequence = packet.ReadValue<std::uint16_t>();
+		fire.Flags = (Scripting::ScriptedFire::FlagsType)packet.ReadValue<std::uint8_t>();
+		fire.AimAngle = packet.ReadValueAsLE<float>();
+		fire.OwnerPos.X = packet.ReadValueAsLE<float>();
+		fire.OwnerPos.Y = packet.ReadValueAsLE<float>();
+		fire.OwnerSpeed.X = packet.ReadValueAsLE<float>();
+		fire.OwnerSpeed.Y = packet.ReadValueAsLE<float>();
+		fire.InitialPos.X = packet.ReadVariableInt32();
+		fire.InitialPos.Y = packet.ReadVariableInt32();
+		fire.InitialPos.Z = packet.ReadVariableInt32();
+		fire.GunspotPos.X = packet.ReadValueAsLE<float>();
+		fire.GunspotPos.Y = packet.ReadValueAsLE<float>();
+		fire.Angle = packet.ReadValueAsLE<float>();
+		// Nothing a client made up may get through as a number that isn't one
+		return (fire.Weapon < WeaponType::Count && std::isfinite(fire.AimAngle) && std::isfinite(fire.OwnerPos.X) && std::isfinite(fire.OwnerPos.Y) &&
+			std::isfinite(fire.OwnerSpeed.X) && std::isfinite(fire.OwnerSpeed.Y) && std::isfinite(fire.GunspotPos.X) &&
+			std::isfinite(fire.GunspotPos.Y) && std::isfinite(fire.Angle) && packet.GetPosition() <= packet.GetSize());
+	}
+
+	void MpLevelHandler::HandleScriptedFire(Actors::Player* player, const Scripting::ScriptedFire& fire, bool fromBehavior)
+	{
+		if (_isLocalSession || player == nullptr) {
+			return;
+		}
+
+		if (!_isServer) {
+			// Only the player of this client, a behavior of an object runs on the server as well and fires there
+			if (!IsLocalPlayer(player) || fromBehavior) {
+				return;
+			}
+			MemoryStream packet(48);
+			WriteScriptedFire(packet, fire);
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerScriptedFire, packet);
+			return;
+		}
+
+		// The client of the player ran the same behavior and fired the bullets itself
+		const Peer* except = nullptr;
+		Peer ownerPeer;
+		if (fromBehavior && !IsLocalPlayer(player)) {
+			if (auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor()) {
+				ownerPeer = peerDesc->RemotePeer;
+				except = &ownerPeer;
+			}
+		}
+		BroadcastScriptedFire(player->GetPlayerIndex(), fire, except);
+	}
+
+	void MpLevelHandler::BroadcastScriptedFire(std::uint32_t playerIndex, const Scripting::ScriptedFire& fire, const Peer* except)
+	{
+		MemoryStream packet(52);
+		packet.WriteVariableUint32(playerIndex);
+		WriteScriptedFire(packet, fire);
+		_networkManager->SendTo([this, except](const Peer& peer) {
+			if (except != nullptr && peer == *except) {
+				return false;
+			}
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerScriptedFire, packet);
+	}
+#endif
+
+	bool MpLevelHandler::HandleClientPacketPlayerScriptedFire(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		MemoryStream packet(data);
+		Scripting::ScriptedFire fire = {};
+		if (!ReadScriptedFire(packet, fire)) {
+			LOGD("[MP] ClientPacketType::PlayerScriptedFire [{}] - Malformed packet", peer);
+			return true;
+		}
+
+		// Applied on the main thread, it makes actors and spends the ammo of the player
+		InvokeAsync([this, peer, fire]() mutable {
+			// How far from where the player is here it may have fired, the client is ahead by the delay of the network
+			constexpr float MaxOwnerDistance = 192.0f;
+			constexpr float MaxGunspotDistance = 64.0f;
+			constexpr float MaxOwnerSpeed = 32.0f;
+			// The bullets a client may fire at once and how many more each second, more than a script fires in a tick
+			constexpr float BudgetMax = 48.0f;
+			constexpr float BudgetPerSecond = 140.0f;
+
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if (_scripts == nullptr || peerDesc == nullptr || peerDesc->Player == nullptr) {
+				return;
+			}
+			MpPlayer* player = peerDesc->Player;
+			if (player->_health <= 0 || player->_playerType == PlayerType::Spectate || player->_frozenTimeLeft > 0.0f ||
+				(fire.OwnerPos - player->_pos).Length() > MaxOwnerDistance) {
+				LOGD("[MP] ClientPacketType::PlayerScriptedFire [{}] - Rejected for player {}", peer, player->GetPlayerIndex());
+				return;
+			}
+
+			auto [budgetIt, added] = _scriptedFireBudgets.try_emplace(player->GetPlayerIndex(), ScriptedFireBudget{BudgetMax, _elapsedFrames});
+			ScriptedFireBudget& budget = budgetIt->second;
+			budget.Tokens = std::min(BudgetMax, budget.Tokens + std::max(_elapsedFrames - budget.LastFrame, 0.0f) * BudgetPerSecond / FrameTimer::FramesPerSecond);
+			budget.LastFrame = _elapsedFrames;
+			if (budget.Tokens < 1.0f) {
+				LOGD("[MP] ClientPacketType::PlayerScriptedFire [{}] - Too many bullets of player {}", peer, player->GetPlayerIndex());
+				return;
+			}
+			budget.Tokens -= 1.0f;
+
+			std::int32_t weaponIndex = std::int32_t(fire.Weapon);
+			if (!GetWeaponDefinition(fire.Weapon).Options.Allowed) {
+				return;
+			}
+			bool fromScript = ((fire.Flags & Scripting::ScriptedFire::FlagsType::FromScript) == Scripting::ScriptedFire::FlagsType::FromScript);
+			bool depleteAmmo = (!fromScript || (fire.Flags & Scripting::ScriptedFire::FlagsType::DepleteAmmo) == Scripting::ScriptedFire::FlagsType::DepleteAmmo);
+			bool requireAmmo = (!fromScript || (fire.Flags & Scripting::ScriptedFire::FlagsType::RequireAmmo) == Scripting::ScriptedFire::FlagsType::RequireAmmo);
+			auto& ammo = player->_inventory.WeaponAmmo[weaponIndex];
+			bool infinite = (fire.Weapon == WeaponType::Blaster || ammo == UINT16_MAX);
+			if (requireAmmo && !infinite && ammo == 0) {
+				return;
+			}
+			// The upgrades as the server knows them
+			fire.Upgrades = player->_inventory.WeaponUpgrades[weaponIndex];
+
+			if ((fire.Flags & Scripting::ScriptedFire::FlagsType::Native) == Scripting::ScriptedFire::FlagsType::Native) {
+				// A weapon of the game `fireBullet()` fired there, the shots come to the client as the server's objects
+				if (fromScript) {
+					_scripts->FireNativeBulletOfClient(player, fire);
+				}
+				return;
+			}
+			if (!_scripts->IsScriptedWeapon(fire.Weapon)) {
+				return;
+			}
+			if ((fire.GunspotPos - fire.OwnerPos).Length() > MaxGunspotDistance) {
+				fire.GunspotPos = fire.OwnerPos;
+			}
+			if ((Vector2f(float(fire.InitialPos.X), float(fire.InitialPos.Y)) - fire.OwnerPos).Length() > MaxGunspotDistance) {
+				fire.InitialPos.X = std::int32_t(fire.OwnerPos.X);
+				fire.InitialPos.Y = std::int32_t(fire.OwnerPos.Y);
+			}
+			fire.OwnerSpeed.X = std::clamp(fire.OwnerSpeed.X, -MaxOwnerSpeed, MaxOwnerSpeed);
+			fire.OwnerSpeed.Y = std::clamp(fire.OwnerSpeed.Y, -MaxOwnerSpeed, MaxOwnerSpeed);
+
+			// The client spent the ammo already, the same is spent here (see Player::FireCurrentWeapon())
+			if (depleteAmmo && !infinite) {
+				ammo = std::uint16_t(ammo >= 256 ? ammo - 256 : 0);
+				if (ammo == 0) {
+					player->_inventory.WeaponUpgrades[weaponIndex] &= ~0x01;
+				}
+			}
+
+			// What they hit is what the client reports (see HandleClientPacketPlayerScriptedHit())
+			_scripts->FireScriptedBullets(player->shared_from_this(), _scripts->GetScriptPlayerID(player), fire, false, true);
+			BroadcastScriptedFire(player->GetPlayerIndex(), fire, &peer);
+		});
+#endif
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerScriptedFire(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		Scripting::ScriptedFire fire = {};
+		if (!ReadScriptedFire(packet, fire)) {
+			LOGD("[MP] ServerPacketType::PlayerScriptedFire - Malformed packet");
+			return true;
+		}
+
+		InvokeAsync([this, playerIndex, fire]() {
+			if (_scripts == nullptr) {
+				return;
+			}
+			// The bullets only show here, the server's ones hurt
+			std::shared_ptr<Actors::ActorBase> owner;
+			if (playerIndex == _lastSpawnedActorId) {
+				// A script of the server fired them for the player of this client
+				if (!_players.empty()) {
+					owner = _players[0]->shared_from_this();
+				}
+			} else if (Actors::ActorBase* actor = GetRemotePlayerActor(playerIndex)) {
+				owner = actor->shared_from_this();
+			}
+			if (owner != nullptr) {
+				_scripts->FireScriptedBullets(owner, std::int32_t(playerIndex), fire, true);
+			}
+		});
+#endif
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketUpdateObjectDraws(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		constexpr std::uint32_t MaxObjects = 4096;
+		constexpr std::uint32_t MaxDrawsSize = 65536;
+
+		struct Entry {
+			std::uint32_t ActorID;
+			String Data;
+		};
+
+		MemoryStream packetCompressed(data);
+		DeflateStream packet(packetCompressed);
+		std::uint32_t now = packet.ReadVariableUint32();
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > MaxObjects) {
+			LOGW("[MP] ServerPacketType::UpdateObjectDraws - Malformed packet");
+			return true;
+		}
+
+		SmallVector<Entry, 0> entries;
+		entries.reserve(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			std::uint32_t actorId = packet.ReadVariableUint32();
+			std::uint32_t size = packet.ReadVariableUint32();
+			if DEATH_UNLIKELY(size > MaxDrawsSize) {
+				LOGW("[MP] ServerPacketType::UpdateObjectDraws - Malformed packet");
+				return true;
+			}
+			String bytes{NoInit, size};
+			packet.Read(bytes.data(), size);
+			entries.push_back({ actorId, Death::move(bytes) });
+		}
+
+		InvokeAsync([this, now, entries = Death::move(entries)]() mutable {
+			// An older update arriving late would show what the object drew before
+			if (_scripts == nullptr || std::int32_t(now - _lastObjectDrawsUpdate) < 0) {
+				return;
+			}
+			_lastObjectDrawsUpdate = now;
+			SmallVector<std::shared_ptr<Actors::ActorBase>, 0> actors(entries.size());
+			{
+				std::unique_lock lock(_lock);
+				for (std::size_t i = 0; i < entries.size(); i++) {
+					auto it = _remoteActors.find(entries[i].ActorID);
+					if (it != _remoteActors.end()) {
+						actors[i] = it->second;
+					}
+				}
+			}
+			for (std::size_t i = 0; i < entries.size(); i++) {
+				if (actors[i] == nullptr) {
+					continue;
+				}
+				MemoryStream src(arrayView(reinterpret_cast<const std::uint8_t*>(entries[i].Data.data()), entries[i].Data.size()));
+				if (_scripts->SetRemoteObjectDraws(entries[i].ActorID, actors[i], src)) {
+					// Its sprite may be hidden, what's drawn by it moves smoothly anyway
+					if (auto* remoteActor = runtime_cast<RemoteActor>(actors[i].get())) {
+						remoteActor->SetAlwaysInterpolated(true);
+					}
+				}
+			}
+		});
+#endif
+		return true;
+	}
+
+	void MpLevelHandler::SendScriptEffect(Vector2f pos, ArrayView<const std::uint8_t> data)
+	{
+		if (!_isServer || _isLocalSession) {
+			return;
+		}
+		MemoryStream packet(data.size());
+		packet.Write(data.data(), (std::uint32_t)data.size());
+		_networkManager->SendTo([this, pos](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if (peerDesc == nullptr || peerDesc->LevelState < PeerLevelState::LevelSynchronized) {
+				return false;
+			}
+			// Only the clients that see it, a spectator may look anywhere
+			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+			return (isSpectating || IsRelevantToPeer(*peerDesc, pos));
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ScriptEffect, packet);
+	}
+
+	void MpLevelHandler::QueueScriptPlayerChange(Actors::Player* player, ArrayView<const std::uint8_t> change)
+	{
+		if (!_isServer || _isLocalSession || player == nullptr) {
+			return;
+		}
+#if defined(WITH_ANGELSCRIPT)
+		// Actions (sucker tubes) beyond this many in a frame are dropped
+		constexpr std::size_t MaxChangesPerFrame = 64;
+
+		if (change.empty() || change.size() > sizeof(ScriptPlayerChangeData::Bytes)) {
+			return;
+		}
+		auto& pending = _pendingScriptPlayerChanges[player->GetPlayerIndex()];
+		auto kind = Scripting::ScriptPlayerChange(change[0]);
+		if (kind != Scripting::ScriptPlayerChange::SuckerTube) {
+			// Only the last value of a property counts
+			for (std::size_t i = 0; i < pending.Changes.size(); i++) {
+				if (pending.Changes[i].Bytes[0] == change[0]) {
+					pending.Changes.erase(pending.Changes.begin() + i);
+					break;
+				}
+			}
+		} else if (pending.Changes.size() >= MaxChangesPerFrame) {
+			return;
+		}
+		auto& added = pending.Changes.emplace_back();
+		added.Size = std::uint8_t(change.size());
+		std::memcpy(added.Bytes, change.data(), change.size());
+		if (kind == Scripting::ScriptPlayerChange::XPos || kind == Scripting::ScriptPlayerChange::YPos) {
+			pending.MovesPlayer = true;
+		}
+#endif
+	}
+
+	void MpLevelHandler::FlushScriptPlayerChanges()
+	{
+		for (auto& [playerIndex, pending] : _pendingScriptPlayerChanges) {
+			Actors::Player* player = nullptr;
+			for (auto* p : _players) {
+				if (std::uint32_t(p->GetPlayerIndex()) == playerIndex) {
+					player = p;
+					break;
+				}
+			}
+			auto* mpPlayer = runtime_cast<MpPlayer>(player);
+			auto peerDesc = (mpPlayer != nullptr ? mpPlayer->GetPeerDescriptor() : nullptr);
+			if (peerDesc == nullptr || !peerDesc->RemotePeer) {
+				continue;
+			}
+			if (pending.MovesPlayer && player->_health > 0) {
+				// The updates of the client in flight still carry where it was, they'd take the player back
+				peerDesc->LastUpdated = UINT64_MAX;
+				peerDesc->AntiCheat.ResetMovement(player->_pos);
+			}
+			MemoryStream packet(8 + pending.Changes.size() * sizeof(ScriptPlayerChangeData::Bytes));
+			packet.WriteVariableUint32(playerIndex);
+			packet.WriteVariableUint32((std::uint32_t)pending.Changes.size());
+			for (const auto& change : pending.Changes) {
+				packet.Write(change.Bytes, change.Size);
+			}
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerScriptChange, packet);
+		}
+		_pendingScriptPlayerChanges.clear();
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerScriptChange(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		constexpr std::size_t MaxSize = 4096;
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex || data.size() > MaxSize) {
+			return true;
+		}
+		std::size_t offset = std::size_t(packet.GetPosition());
+		String bytes{NoInit, data.size() - offset};
+		std::memcpy(bytes.data(), data.data() + offset, bytes.size());
+		InvokeAsync([this, bytes = Death::move(bytes)]() {
+			if (_scripts == nullptr || _players.empty()) {
+				return;
+			}
+			MemoryStream src(arrayView(reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size()));
+			if (!_scripts->ApplyRemotePlayerChanges(src)) {
+				return;
+			}
+			// The server waits for it as for a warp (see FlushScriptPlayerChanges())
+			SendPlayerAckWarped(_players[0]->_pos, _players[0]->_speed);
+		});
+#endif
+		return true;
+	}
+
+	bool MpLevelHandler::GetRemoteObjectId(Actors::ActorBase* actor, std::uint32_t& actorId) const
+	{
+		if (_isServer || actor == nullptr) {
+			return false;
+		}
+		for (const auto& [id, remoteActor] : _remoteActors) {
+			if (remoteActor.get() == actor) {
+				// The players are hit by their own machines
+				if (_playerNames.contains(id)) {
+					return false;
+				}
+				actorId = id;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void MpLevelHandler::SendScriptedHit(std::uint16_t sequence, std::int8_t slot, std::uint32_t actorId)
+	{
+		if (_isServer) {
+			return;
+		}
+		MemoryStream packet(12);
+		packet.WriteValue<std::uint16_t>(sequence);
+		packet.WriteValue<std::int8_t>(slot);
+		packet.WriteVariableUint32(actorId);
+		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerScriptedHit, packet);
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerScriptedHit(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		MemoryStream packet(data);
+		std::uint16_t sequence = packet.ReadValue<std::uint16_t>();
+		std::int8_t slot = packet.ReadValue<std::int8_t>();
+		std::uint32_t actorId = packet.ReadVariableUint32();
+
+		InvokeAsync([this, peer, sequence, slot, actorId]() {
+			// How far from the bullet here the object may be, the client saw it where it was a moment ago
+			constexpr float MaxHitDistance = 224.0f;
+
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if (_scripts == nullptr || peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_health <= 0) {
+				return;
+			}
+			Actors::ActorBase* target = nullptr;
+			{
+				std::unique_lock lock(_lock);
+				for (const auto& [actor, info] : _remotingActors) {
+					if (info.ActorID == actorId) {
+						target = actor;
+						break;
+					}
+				}
+			}
+			if (target == nullptr || runtime_cast<Actors::Player>(target) != nullptr) {
+				return;
+			}
+			if (!_scripts->ApplyClientHit(peerDesc->Player, sequence, slot, target, MaxHitDistance)) {
+				LOGD("[MP] ClientPacketType::PlayerScriptedHit [{}] - Rejected hit of actor {}", peer, actorId);
+			}
+		});
+#endif
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketScriptEffect(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		constexpr std::size_t MaxSize = 256;
+		if DEATH_UNLIKELY(data.size() > MaxSize) {
+			return true;
+		}
+		String bytes{NoInit, data.size()};
+		std::memcpy(bytes.data(), data.data(), data.size());
+		InvokeAsync([this, bytes = Death::move(bytes)]() {
+			if (_scripts != nullptr) {
+				MemoryStream src(arrayView(reinterpret_cast<const std::uint8_t*>(bytes.data()), bytes.size()));
+				_scripts->PlayRemoteEffect(src);
+			}
+		});
+#endif
+		return true;
+	}
+
 	bool MpLevelHandler::HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
 		MemoryStream packet(data);
@@ -6573,6 +7179,11 @@ namespace Jazz2::Multiplayer
 					_remoteActors[actorId] = actor;
 				}
 				AddActor(actor);
+#if defined(WITH_ANGELSCRIPT)
+				if (_scripts != nullptr) {
+					_scripts->MarkMirrored(actor.get());
+				}
+#endif
 			} else {
 				LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {} - Failed to create", actorId);
 			}
@@ -6593,6 +7204,11 @@ namespace Jazz2::Multiplayer
 				// Server requested to despawn controllable player
 				if (!_players.empty()) {
 					auto* player = _players[0];
+#if defined(WITH_ANGELSCRIPT)
+					if (_scripts != nullptr) {
+						_scripts->OnPlayerRemoved(player);
+					}
+#endif
 					player->SetState(Actors::ActorState::IsDestroyed, true);
 					_players.eraseUnordered(0);
 
@@ -6611,6 +7227,11 @@ namespace Jazz2::Multiplayer
 				it->second->SetState(Actors::ActorState::IsDestroyed, true);
 				_remoteActors.erase(it);
 				_playerNames.erase(actorId);
+#if defined(WITH_ANGELSCRIPT)
+				if (_scripts != nullptr) {
+					_scripts->RemoveRemoteObjectDraws(actorId);
+				}
+#endif
 			} else {
 				LOGW("[MP] ServerPacketType::DestroyRemoteActor - actorId: {} - Actor not found", actorId);
 			}
@@ -7634,18 +8255,12 @@ namespace Jazz2::Multiplayer
 				if (!player->Respawn(Vector2f(posX, posY))) {
 					return;
 				}
-
-				Clock& c = nCine::clock();
-				std::uint64_t now = c.Now() * 1000 / c.GetFrequency();
-
-				MemoryStream packetAck(24);
-				packetAck.WriteVariableUint32(_lastSpawnedActorId);
-				packetAck.WriteVariableUint64(now);
-				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
-				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
-				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
-				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
+#if defined(WITH_ANGELSCRIPT)
+				if (_scripts != nullptr) {
+					_scripts->OnLocalLevelReload();
+				}
+#endif
+				SendPlayerAckWarped(player->_pos, player->_speed);
 			}
 		});
 		return true;
@@ -7892,10 +8507,144 @@ namespace Jazz2::Multiplayer
 				}
 				return fullPath;
 			}
+			case AssetType::Script: {
+				return GetScriptAssetFullPath({}, path, remoteServerId, forWrite);
+			}
 			default: {
 				return {};
 			}
 		}
+	}
+
+	// A path the server names stays inside the directory of the downloads of the server
+	static bool IsSafeAssetPath(StringView path)
+	{
+		if (path.empty() || fs::IsAbsolutePath(path) || path.contains(':')) {
+			return false;
+		}
+		const char* segment = path.begin();
+		for (const char* it = path.begin(); it <= path.end(); it++) {
+			if (it == path.end() || *it == '/' || *it == '\\') {
+				if ((it - segment == 2 && segment[0] == '.' && segment[1] == '.') || it == segment) {
+					return false;
+				}
+				segment = it + 1;
+			}
+		}
+		return true;
+	}
+
+	static StringView GetLevelDirectory(StringView levelName)
+	{
+		StringView found = levelName.findLastAny("/\\"_s);
+		return (found != nullptr ? levelName.prefix(found.begin()) : StringView());
+	}
+
+	// Name of the directory of the files of a server, the same as the server's downloads have
+	static String GetServerDirectoryName(StaticArrayView<Uuid::Size, Uuid::Type> serverId)
+	{
+		char uuidStr[33];
+		std::size_t uuidStrLength = formatInto(uuidStr, "{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}",
+			serverId[0], serverId[1], serverId[2], serverId[3], serverId[4], serverId[5], serverId[6], serverId[7], serverId[8], serverId[9], serverId[10], serverId[11], serverId[12], serverId[13], serverId[14], serverId[15]);
+		return String(uuidStr, uuidStrLength);
+	}
+
+	String MpLevelHandler::GetScriptAssetPath(StringView levelName, StringView fileName)
+	{
+		String name = fileName;
+		for (char& c : name) {
+			if (c == '\\') {
+				c = '/';
+			}
+		}
+		StringView levelDir = GetLevelDirectory(levelName);
+		return (levelDir.empty() ? name : String(levelDir + "/"_s + name));
+	}
+
+	String MpLevelHandler::GetScriptAssetFullPath(StringView levelName, StringView assetPath, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId, bool forWrite, bool downloadedOnly)
+	{
+		if (!IsSafeAssetPath(assetPath)) {
+			return {};
+		}
+
+		const auto& resolver = ContentResolver::Get();
+		String fullPath;
+		if (remoteServerId) {
+			fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s, GetServerDirectoryName(remoteServerId), fs::ToNativeSeparators(assetPath) });
+			if (forWrite) {
+				return fullPath;
+			}
+			fullPath = fs::FindPathCaseInsensitive(fullPath);
+			if (fs::IsReadableFile(fullPath)) {
+				return fullPath;
+			}
+		}
+		if (forWrite || downloadedOnly) {
+			return {};
+		}
+
+		// Where the scripts of the level find it on this machine: next to the level, among the files of its pack, in the
+		// content, then among the files of the original game
+		fullPath = resolver.FindContentFile(fs::CombinePath("Episodes"_s, fs::ToNativeSeparators(assetPath)));
+		if (fs::IsReadableFile(fullPath)) {
+			return fullPath;
+		}
+		StringView levelDir = GetLevelDirectory(levelName);
+		StringView fileName = (!levelDir.empty() && assetPath.size() > levelDir.size() && assetPath.hasPrefix(levelDir) &&
+			(assetPath[levelDir.size()] == '/' || assetPath[levelDir.size()] == '\\') ? assetPath.exceptPrefix(levelDir.size() + 1) : assetPath);
+#if defined(WITH_LEVEL_PACKS)
+		if (!levelName.empty()) {
+			fullPath = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(levelName, fileName);
+			if (!fullPath.empty() && fs::IsReadableFile(fullPath)) {
+				return fullPath;
+			}
+		}
+#endif
+		fullPath = resolver.FindContentFile(fs::ToNativeSeparators(fileName));
+		if (fs::IsReadableFile(fullPath)) {
+			return fullPath;
+		}
+		fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), fs::ToNativeSeparators(fileName)));
+		return (fs::IsReadableFile(fullPath) ? fullPath : String());
+	}
+
+	String MpLevelHandler::GetScriptStagingDirectory() const
+	{
+		if (_isServer) {
+			return {};
+		}
+		return fs::CombinePath({ ContentResolver::Get().GetCachePath(), "Staging"_s, GetServerDirectoryName(_networkManager->GetServerConfiguration().UniqueServerID) });
+	}
+
+	String MpLevelHandler::FindScriptAsset(StringView fileName, bool downloadedOnly) const
+	{
+		if (_isServer) {
+			return {};
+		}
+		return GetScriptAssetFullPath(_levelName, GetScriptAssetPath(_levelName, fileName), _networkManager->GetServerConfiguration().UniqueServerID,
+			false, downloadedOnly);
+	}
+
+	void MpLevelHandler::LoadLevelScripts(StringView fullPath)
+	{
+#if defined(WITH_ANGELSCRIPT)
+		// Only the script the server offered, the downloaded one or the same one found here
+		if (!_isServer) {
+			if (!_networkManager->IsLevelScriptOffered()) {
+				return;
+			}
+			StringView levelName = _levelName;
+			StringView levelDir = GetLevelDirectory(levelName);
+			String scriptPath = FindScriptAsset(String((levelDir.empty() ? levelName : levelName.exceptPrefix(levelDir.size() + 1)) + ".j2as"_s));
+			if (scriptPath.empty()) {
+				LOGW("Script of level \"{}\" offered by the server was not found", _levelName);
+				return;
+			}
+			LevelHandler::LoadLevelScripts(scriptPath);
+			return;
+		}
+#endif
+		LevelHandler::LoadLevelScripts(fullPath);
 	}
 
 	LevelLoadOptions MpLevelHandler::GetLevelLoadOptions() const
@@ -7989,7 +8738,6 @@ namespace Jazz2::Multiplayer
 					case EventType::ModifierDeath:
 					case EventType::ModifierLimitCameraView:
 					case EventType::AreaEndOfLevel:
-					case EventType::AreaCallback:
 					case EventType::AreaActivateBoss:
 					case EventType::AreaFlyOff:
 					case EventType::AreaRevertMorph:
@@ -7997,7 +8745,7 @@ namespace Jazz2::Multiplayer
 					case EventType::AreaNoFire:
 					case EventType::TriggerZone:
 					case EventType::RollingRockTrigger:
-						// These events are handled on server-side only
+						// These events are handled on server-side only (AreaCallback runs here too, for the player of this client)
 						e.Event = EventType::Empty;
 						break;
 				}
@@ -8388,6 +9136,12 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
 	{
+#if defined(WITH_ANGELSCRIPT)
+		if (_scripts != nullptr) {
+			_scripts->ForgetObjectDraws(actor);
+			_scripts->ForgetBullet(actor);
+		}
+#endif
 		if (!_isServer || _isLocalSession) {
 			// Nothing is remoted in a local session, so there is nothing to unregister or announce
 			return;
@@ -9265,6 +10019,44 @@ namespace Jazz2::Multiplayer
 				_requiredAssets.emplace_back(AssetType::Music, _musicDefaultPath, musicFullPath, s->GetSize(), nCine::crc32(*s));
 			}
 		}
+
+#if defined(WITH_ANGELSCRIPT)
+		// The script of the level and what it includes or requires (`#pragma require`), the clients run the same one
+		if (_scripts != nullptr && !_scripts->IsScriptTextOverridden()) {
+			auto addAsset = [this](AssetType type, StringView path, StringView fullPath, bool optional) {
+				for (const auto& asset : _requiredAssets) {
+					if (asset.Type == type && asset.Path == path) {
+						return;
+					}
+				}
+				auto s = (!fullPath.empty() ? fs::Open(fullPath, FileAccess::Read) : nullptr);
+				if (s != nullptr && s->IsValid()) {
+					_requiredAssets.emplace_back(type, path, fullPath, s->GetSize(), nCine::crc32(*s));
+				} else if (!optional) {
+					LOGW("File \"{}\" required by the level script was not found", path);
+				}
+			};
+
+			addAsset(AssetType::Script, String(_levelName + ".j2as"_s), _scripts->GetScriptPath(), false);
+			// What `jjMusicLoad()` plays is offered as music
+			static constexpr StringView MusicExtensions[] = { "j2b"_s, "it"_s, "s3m"_s, "xm"_s, "mod"_s, "mo3"_s, "mptm"_s, "umx"_s, "mp3"_s, "ogg"_s };
+			for (const auto& file : _scripts->GetRequiredFiles()) {
+				String extension = fs::GetExtension(file.Name);
+				bool isMusic = false;
+				for (StringView musicExtension : MusicExtensions) {
+					isMusic |= (extension == musicExtension);
+				}
+				if (extension == "j2t"_s) {
+					String tileSetPath = StringUtils::lowercase(file.Name.exceptSuffix(extension.size() + 1));
+					addAsset(AssetType::TileSet, tileSetPath, GetAssetFullPath(AssetType::TileSet, tileSetPath), file.Optional);
+				} else if (isMusic) {
+					addAsset(AssetType::Music, file.Name, GetAssetFullPath(AssetType::Music, file.Name), file.Optional);
+				} else {
+					addAsset(AssetType::Script, GetScriptAssetPath(_levelName, file.Name), file.FullPath, file.Optional);
+				}
+			}
+		}
+#endif
 	}
 
 	void MpLevelHandler::SendActorUpdates(float timeMult)
@@ -9284,8 +10076,12 @@ namespace Jazz2::Multiplayer
 			bool IsPlayer;
 			bool JustWarped;
 			bool AlwaysShown;
+			bool HasDraws;
 			std::uint32_t LightsOffset;
 			std::uint32_t LightsSize;
+			std::uint32_t DrawsOffset;
+			std::uint32_t DrawsSize;
+			std::uint32_t DrawsHash;
 		};
 
 		SmallVector<ReplicationPeer, 8> peers;
@@ -9301,6 +10097,7 @@ namespace Jazz2::Multiplayer
 		// Everything is sampled once, only what each peer is sent differs
 		SmallVector<ActorSnapshot, 0> snapshots;
 		SmallVector<std::uint8_t, 0> lightBlocks;
+		MemoryStream drawBlocks;
 		SmallVector<LightEmitter, MaxRemotedLights> lights;
 		SmallVector<std::uint8_t, MaxRemotedLightsSize> lightBlock;
 
@@ -9328,7 +10125,7 @@ namespace Jazz2::Multiplayer
 			s.RendererType = (std::uint8_t)rendererType;
 
 			s.Flags = 0;
-			if (actor->_renderer.IsDrawEnabled()) {
+			if (isPlayer ? actor->_renderer.IsDrawEnabled() : IsActorShownToClients(actor)) {
 				s.Flags |= 0x04;
 			}
 			if (actor->_renderer.AnimPaused) {
@@ -9350,6 +10147,26 @@ namespace Jazz2::Multiplayer
 			s.LightsOffset = (std::uint32_t)lightBlocks.size();
 			s.LightsSize = (std::uint32_t)lightBlock.size();
 			lightBlocks.append(lightBlock.begin(), lightBlock.end());
+
+			// What the scripts drew for the object in its last tick, the clients draw it by their own copy of it
+			s.HasDraws = false;
+			s.DrawsOffset = s.DrawsSize = s.DrawsHash = 0;
+#if defined(WITH_ANGELSCRIPT)
+			if (!isPlayer && _scripts != nullptr && _scripts->HasObjectDraws(actor)) {
+				std::uint32_t offset = (std::uint32_t)drawBlocks.GetSize();
+				_scripts->WriteObjectDraws(actor, drawBlocks);
+				const std::uint8_t* bytes = drawBlocks.GetBuffer() + offset;
+				std::uint32_t size = (std::uint32_t)drawBlocks.GetSize() - offset;
+				std::uint32_t hash = 2166136261u;
+				for (std::uint32_t i = 0; i < size; i++) {
+					hash = (hash ^ bytes[i]) * 16777619u;
+				}
+				s.HasDraws = true;
+				s.DrawsOffset = offset;
+				s.DrawsSize = size;
+				s.DrawsHash = hash;
+			}
+#endif
 			return s;
 		};
 
@@ -9375,7 +10192,7 @@ namespace Jazz2::Multiplayer
 		{
 			std::unique_lock lock(_lock);
 			for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-				// A mirrored actor is recreated from its real class on the client, which doesn't apply any updates
+				// A mirrored actor is recreated from its real class on the client, which applies no updates and runs its script itself
 				if (!remotingActorInfo.IsMirrored) {
 					addSnapshot(remotingActor, remotingActorInfo.ActorID, false);
 				}
@@ -9398,6 +10215,21 @@ namespace Jazz2::Multiplayer
 
 			MemoryStream body(64 + snapshots.size() * 12);
 			std::uint32_t actorCount = 0;
+			MemoryStream drawsBody(drawBlocks.GetSize() == 0 ? 0 : 64 + drawBlocks.GetSize());
+			std::uint32_t drawsCount = 0;
+			auto appendDraws = [&](const ActorSnapshot& s, ReplicatedActorState& state) {
+				// Again now and then, an update may get lost
+				constexpr std::uint32_t DrawsRefreshInterval = 30;
+				bool refresh = (s.DrawsSize > 1 && ((_lastUpdated + s.ActorID) % DrawsRefreshInterval) == 0);
+				if (resync || !state.DrawsSent || state.LastDrawsHash != s.DrawsHash || refresh) {
+					drawsBody.WriteVariableUint32(s.ActorID);
+					drawsBody.WriteVariableUint32(s.DrawsSize);
+					drawsBody.Write(drawBlocks.GetBuffer() + s.DrawsOffset, s.DrawsSize);
+					drawsCount++;
+					state.DrawsSent = true;
+					state.LastDrawsHash = s.DrawsHash;
+				}
+			};
 
 			for (const auto& s : snapshots) {
 				// The own player is simulated by the client itself
@@ -9440,6 +10272,7 @@ namespace Jazz2::Multiplayer
 
 						state.IsRelevant = false;
 						state.HasState = false;
+						state.DrawsSent = false;
 					}
 					continue;
 				}
@@ -9447,6 +10280,10 @@ namespace Jazz2::Multiplayer
 				bool wasParked = !state.IsRelevant;
 				if (isFar && !resync && !wasParked && !s.JustWarped && state.HasState && ((_lastUpdated + s.ActorID) % FarPlayerUpdateInterval) != 0) {
 					continue;
+				}
+
+				if (s.HasDraws) {
+					appendDraws(s, state);
 				}
 
 				const std::uint8_t* lightsData = lightBlocks.data() + s.LightsOffset;
@@ -9523,6 +10360,24 @@ namespace Jazz2::Multiplayer
 
 			_networkManager->SendTo(rp.RemotePeer, resync ? NetworkChannel::Main : NetworkChannel::UnreliableUpdates,
 				(std::uint8_t)ServerPacketType::UpdateAllActors, packetCompressed);
+
+			if (drawsCount > 0) {
+				MemoryStream drawsHeader(12);
+				drawsHeader.WriteVariableUint32(_lastUpdated);
+				drawsHeader.WriteVariableUint32(drawsCount);
+
+				MemoryStream drawsCompressed(256);
+				{
+					DeflateWriter dw(drawsCompressed);
+					dw.Write(drawsHeader.GetBuffer(), drawsHeader.GetSize());
+					dw.Write(drawsBody.GetBuffer(), drawsBody.GetSize());
+				}
+				totalSize += drawsHeader.GetSize() + drawsBody.GetSize();
+				totalCompressedSize += drawsCompressed.GetSize();
+
+				_networkManager->SendTo(rp.RemotePeer, resync ? NetworkChannel::Main : NetworkChannel::UnreliableUpdates,
+					(std::uint8_t)ServerPacketType::UpdateObjectDraws, drawsCompressed);
+			}
 		}
 
 		if (_peerReplication.size() > peers.size()) {
@@ -9788,7 +10643,8 @@ namespace Jazz2::Multiplayer
 				// TODO: Does this need to be locked?
 				std::unique_lock lock(_lock);
 				for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
-					if DEATH_UNLIKELY(ActorShouldBeMirrored(remotingActor)) {
+					// Not by its class, a script may have made it, which can't be made of the event map (see StartRemoting())
+					if DEATH_UNLIKELY(remotingActorInfo.IsMirrored) {
 						Vector2i originTile = remotingActor->_originTile;
 						const auto& eventTile = _eventMap->GetEventTile(originTile.X, originTile.Y);
 						if (eventTile.Event != EventType::Empty) {
@@ -9803,15 +10659,10 @@ namespace Jazz2::Multiplayer
 
 							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateMirroredActor, packet);
 						}
-					} else if (!remotingActorInfo.IsMirrored) {
+					} else {
 						auto& state = replication.Actors[remotingActorInfo.ActorID];
 						state.IsKnown = false;
 						state.IsRelevant = false;
-					} else {
-						MemoryStream packet;
-						InitializeCreateRemoteActorPacket(packet, remotingActorInfo.ActorID, remotingActor);
-
-						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					}
 				}
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerReady) {
@@ -9822,7 +10673,9 @@ namespace Jazz2::Multiplayer
 				// the mode, see the reclaim in GameEventHandler), through the same spectator spawn below. So does a
 				// player who chose to spectate in the previous level; a mode forced there is cleared in Initialize().
 				const bool resumeAsSpectator = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
-				if (resumeAsSpectator) {
+				// A client that doesn't run the script of the level can only watch it
+				const bool scriptsMissing = IsScriptMissingFor(*peerDesc);
+				if (resumeAsSpectator || scriptsMissing) {
 					canSpawn = false;
 				}
 
@@ -10064,6 +10917,11 @@ namespace Jazz2::Multiplayer
 					}
 
 					BroadcastPlayerSpectateState(ptr);
+
+					if (scriptsMissing) {
+						SendServerMessage(peer, ServerMessageDisplay::Alert, UI::MessageLevel::Info, ServerMessage(ServerMessageType::ScriptsDisabledSpectate));
+						SendMessage(peer, UI::MessageLevel::Warning, ServerMessage(ServerMessageType::ScriptsDisabledHelp));
+					}
 				}
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerSpawned) {
 				if DEATH_UNLIKELY(peerDesc->Player && peerDesc->JoinCooldownFrames > 0.0f) {
@@ -13056,6 +13914,20 @@ namespace Jazz2::Multiplayer
 		_activePoll = VoteType::None;
 	}
 
+	bool MpLevelHandler::IsActorShownToClients(Actors::ActorBase* actor)
+	{
+		if (!actor->_renderer.IsDrawEnabled() || actor->_metadata == nullptr) {
+			return false;
+		}
+#if defined(WITH_ANGELSCRIPT)
+		// The clients draw what the script drew instead (see LevelScriptLoader::WriteObjectDraws())
+		if (Actors::IActorUpdateOverride* updateOverride = actor->GetUpdateOverride()) {
+			return updateOverride->IsDrawn();
+		}
+#endif
+		return true;
+	}
+
 	bool MpLevelHandler::ActorShouldBeMirrored(Actors::ActorBase* actor)
 	{
 		// If actor has no animation, it's probably some special object (usually lights and ambient sounds)
@@ -13159,10 +14031,11 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, Actors::ActorBase* actor)
 	{
-		String metadataPath = fs::FromNativeSeparators(actor->_metadata->Path);
+		// An object only a script has has no sprite of the game, the clients draw what the script drew for it
+		String metadataPath = (actor->_metadata != nullptr ? fs::FromNativeSeparators(actor->_metadata->Path) : String());
 
 		std::uint8_t flags = 0;
-		if (actor->_renderer.IsDrawEnabled()) {
+		if (runtime_cast<Actors::Player>(actor) != nullptr ? actor->_renderer.IsDrawEnabled() : IsActorShownToClients(actor)) {
 			flags |= 0x04;
 		}
 		if (actor->_renderer.AnimPaused) {
@@ -13182,7 +14055,14 @@ namespace Jazz2::Multiplayer
 		// emitting nothing on the server. The object answers for itself rather than being recognized by type
 		// here, so this stays out of the business of knowing which gameplay classes exist.
 		Actors::ActorState state = actor->_state;
-		if (!actor->IsIlluminatedStateRemoted()) {
+		bool lightsOfScript = false;
+#if defined(WITH_ANGELSCRIPT)
+		// The light of an object a level script drives is the script's, sent as its lights (gems of a series have none)
+		if (Actors::IActorUpdateOverride* updateOverride = actor->GetUpdateOverride()) {
+			lightsOfScript = updateOverride->OwnsLights();
+		}
+#endif
+		if (!actor->IsIlluminatedStateRemoted() || lightsOfScript) {
 			state &= ~Actors::ActorState::Illuminated;
 		}
 
@@ -13196,7 +14076,8 @@ namespace Jazz2::Multiplayer
 		packet.WriteVariableUint32((std::uint32_t)state);
 		packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
 		packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-		packet.WriteVariableUint32((std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State : actor->_currentAnimation->State));
+		packet.WriteVariableUint32((std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State
+			: (actor->_currentAnimation != nullptr ? actor->_currentAnimation->State : AnimState::Idle)));
 
 		float rotation = actor->_renderer.GetRotation();
 		if (rotation < 0.0f) rotation += fRadAngle360;

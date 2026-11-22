@@ -23,6 +23,11 @@ namespace Jazz2::Actors::Multiplayer
 	class RemotePlayerOnServer;
 }
 
+namespace Jazz2::Scripting
+{
+	struct ScriptedFire;
+}
+
 namespace Jazz2::UI::Multiplayer
 {
 	class MpInGameCanvasLayer;
@@ -347,6 +352,35 @@ namespace Jazz2::Multiplayer
 		std::uint32_t GetLocalPlayerIndex() const {
 			return _lastSpawnedActorId;
 		}
+		/**
+		 * @brief Returns `true` if a level script controls the bullets of the weapon
+		 *
+		 * The machine of the player fires them (see @ref HandleScriptedFire()), so the server doesn't fire them for the player of
+		 * a client by its keys.
+		 */
+		bool IsScriptedWeapon(WeaponType weaponType) const;
+#if defined(WITH_ANGELSCRIPT)
+		/**
+		 * @brief Called when a player of this machine fired the bullets of a script, they're fired on the other machines too
+		 *
+		 * A client tells the server, which fires the bullets that hurt and tells the other clients. The server tells all
+		 * clients of the bullets it fired itself. A behavior of an object that fires (@p fromBehavior) runs on every machine,
+		 * a client then doesn't tell the server and the server doesn't tell the client of the player.
+		 */
+		void HandleScriptedFire(Actors::Player* player, const Scripting::ScriptedFire& fire, bool fromBehavior);
+#endif
+		/** @brief On a client, returns the actor of a player of another machine by the index the server gave it, `nullptr` if it's not here */
+		Actors::ActorBase* GetRemotePlayerActor(std::uint32_t playerIndex) const;
+		/** @brief On a client, returns the name, team and fur of a player of another machine, `false` if it isn't known */
+		bool GetRemotePlayerInfo(std::uint32_t playerIndex, StringView& name, std::uint8_t& team, std::uint32_t& furColor) const;
+		/** @brief On the server, sends what a level script of an object played or burst to the clients near @p pos */
+		void SendScriptEffect(Vector2f pos, ArrayView<const std::uint8_t> data);
+		/** @brief On the server, queues a change a level script made to the player of a client, sent to it at the end of the frame */
+		void QueueScriptPlayerChange(Actors::Player* player, ArrayView<const std::uint8_t> change);
+		/** @brief On a client, returns the number the server gave an object that isn't a player, `false` if it's none of the server's */
+		bool GetRemoteObjectId(Actors::ActorBase* actor, std::uint32_t& actorId) const;
+		/** @brief On a client, tells the server what a bullet of a weapon of a level script hit, see @ref Scripting::LevelScriptLoader::ReportBulletHits() */
+		void SendScriptedHit(std::uint16_t sequence, std::int8_t slot, std::uint32_t actorId);
 		/** @brief Largest data a level script can send at once, see @ref SendScriptPacket() */
 		static constexpr std::size_t MaxScriptPacketSize = 32768;
 		/** @brief Shows the text as it is to all players, use the @ref ServerMessage overload for texts of the game */
@@ -404,10 +438,25 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns full path of the specified asset */
 		static String GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId = {}, bool forWrite = false);
+		/** @brief Returns the path of a file a level script needs as an asset, relative to the directory of the level */
+		static String GetScriptAssetPath(StringView levelName, StringView fileName);
+		/**
+		 * @brief Returns full path of a file a level script needs, see @ref GetScriptAssetPath()
+		 *
+		 * The downloaded file first, then where the scripts of the level find it on this machine.
+		 */
+		static String GetScriptAssetFullPath(StringView levelName, StringView assetPath, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId,
+			bool forWrite = false, bool downloadedOnly = false);
+		/** @brief On a client, returns full path of a file the level script names, as the server offered it, empty if it isn't found */
+		String FindScriptAsset(StringView fileName, bool downloadedOnly = false) const;
+		/** @brief On a client, returns the directory the level scripts of the server save their files to, empty on the server */
+		String GetScriptStagingDirectory() const;
 
 	protected:
 		LevelLoadOptions GetLevelLoadOptions() const override;
 		void AttachComponents(LevelDescriptor&& descriptor) override;
+		/** @brief Loads the scripts of the level, a client the script the server offered */
+		void LoadLevelScripts(StringView fullPath) override;
 		std::unique_ptr<UI::HUD> CreateHUD() override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 		std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index) override;
@@ -522,6 +571,8 @@ namespace Jazz2::Multiplayer
 			std::uint16_t LastScaleX = 0;
 			std::uint16_t LastScaleY = 0;
 			std::uint8_t LastRendererType = 0;
+			bool DrawsSent = false;		// What the scripts drew for the actor, see SendActorUpdates()
+			std::uint32_t LastDrawsHash = 0;
 			SmallVector<std::uint8_t, 0> LastLights;
 		};
 
@@ -685,6 +736,23 @@ namespace Jazz2::Multiplayer
 		HashMap<Peer, PeerReplication> _peerReplication;	// Server: per-peer relevance and the state last sent (main thread only)
 		SmallVector<Peer, 0> _forceResyncPeers;			// Server: peers that requested a full update (guarded by _lock)
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
+		// Server: bullets of a script each client may still fire, refilled over time (see HandleClientPacketPlayerScriptedFire())
+		struct ScriptedFireBudget {
+			float Tokens;
+			float LastFrame;
+		};
+		HashMap<std::uint32_t, ScriptedFireBudget> _scriptedFireBudgets;
+		// Server: changes the level scripts made to the players of clients in this frame, by player index (see QueueScriptPlayerChange())
+		struct ScriptPlayerChangeData {
+			std::uint8_t Size;
+			std::uint8_t Bytes[16];
+		};
+		struct PendingScriptPlayerChanges {
+			SmallVector<ScriptPlayerChangeData, 0> Changes;
+			// Updates of the client are parked until it acknowledges the move as a warp
+			bool MovesPlayer;
+		};
+		HashMap<std::uint32_t, PendingScriptPlayerChanges> _pendingScriptPlayerChanges;
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<std::uint32_t, 0> _teamScores;	// Server: computed each check; Client: mirrored for the HUD (index = team id)
 		SmallVector<std::int32_t, 0> _teamExtras;	// Server + Client: second number of each team the HUD shows, -1 for none
@@ -726,6 +794,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t _spectateFollowActorId;	// Local only: actor ID the local spectator follows, or SpectateFreeCamera
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
 		std::uint32_t _lastUpdated; // Server/Client: last update from the server
+		std::uint32_t _lastObjectDrawsUpdate;	// Client: newest update of the script draws, older ones are dropped
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
 		std::uint64_t _lastSentPressedActions; // Client: input state last sent in PlayerKeyPress
 		Threading::Spinlock _lock;
@@ -785,6 +854,8 @@ namespace Jazz2::Multiplayer
 		void BroadcastPlayerSpectateState(const Actors::Multiplayer::MpPlayer* player);
 		/** @brief Returns `true` if a player can be spawned right now (spawning enabled, no boss fight, joining allowed) */
 		bool CanSpawnPlayers() const;
+		/** @brief Returns `true` if the level has a script the client of the peer doesn't run, the player only spectates then */
+		bool IsScriptMissingFor(const PeerDescriptor& peerDesc) const;
 		/**
 		 * @brief Returns `true` if the player can leave spectate mode right now
 		 *
@@ -932,6 +1003,14 @@ namespace Jazz2::Multiplayer
 		bool IsPlausibleClientWarp(Vector2f from, Vector2f to, float reach, WarpFlags& flags);
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
+		// Server: remotes the actor to the clients, as any other object if @p noMirroring (see AddActor())
+		void StartRemoting(Actors::ActorBase* actorPtr, bool noMirroring);
+		// Whether the clients draw the sprite of the actor, not when a level script draws something in its place
+		static bool IsActorShownToClients(Actors::ActorBase* actor);
+		// Server: sends the changes the level scripts made to the players of clients in this frame, see QueueScriptPlayerChange()
+		void FlushScriptPlayerChanges();
+		// Client: tells the server where its player is after a warp the server waits for
+		void SendPlayerAckWarped(Vector2f pos, Vector2f speed);
 		static std::int32_t GetTreasureWeight(std::uint8_t gemType);
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
 		/** @brief Sets the health and the max health of a player at the start of a round or when it joins */
@@ -957,6 +1036,12 @@ namespace Jazz2::Multiplayer
 		bool HandleClientPacketPlayerChangeCharacter(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketPlayerChangeTeamRequest(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleClientPacketPlayerAckWarped(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerScriptedFire(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerScriptedHit(const Peer& peer, ArrayView<const std::uint8_t> data);
+#if defined(WITH_ANGELSCRIPT)
+		// Tells the clients but @p except of the bullets of a script the player fired, see HandleScriptedFire()
+		void BroadcastScriptedFire(std::uint32_t playerIndex, const Scripting::ScriptedFire& fire, const Peer* except);
+#endif
 		bool HandleServerPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPeerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketLoadLevel(const Peer& peer, ArrayView<const std::uint8_t> data);
@@ -1006,6 +1091,10 @@ namespace Jazz2::Multiplayer
 		bool HandleServerPacketPlayerPush(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerActivateSpring(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerWarpIn(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerScriptedFire(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketUpdateObjectDraws(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerScriptChange(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketScriptEffect(const Peer& peer, ArrayView<const std::uint8_t> data);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		static constexpr std::int32_t PlotValueCount = 512;

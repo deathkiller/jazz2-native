@@ -9,6 +9,8 @@
 
 namespace Jazz2::Scripting
 {
+	enum class ScriptPlayerChange : std::uint8_t;
+
 	namespace Legacy
 	{
 		struct jjPLAYERDRAW;
@@ -354,7 +356,7 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Returns the index of the player among local players
 			 *
-			 * 0 to 3 in a splitscreen game, the index of @ref jjLocalPlayers.
+			 * 0 to 3 in a splitscreen game, the index of @ref jjLocalPlayers. 0 for a player of another machine.
 			 */
 			std::int32_t get_localPlayerID() const;
 
@@ -1108,8 +1110,9 @@ namespace Jazz2::Scripting
 			 * @brief Fires the bullets of a weapon whose bullets a script controls, see @ref LevelScriptLoader::FirePlayerWeapon()
 			 *
 			 * With @p aimAngle (0 up, clockwise) one bullet at that angle, as `fireBullet()`, @p lastShot gets the last one.
+			 * @p fireFlags are @ref ScriptedFire::FlagsType the other machines of a multiplayer game get with the bullets.
 			 */
-			bool FireScriptedWeapon(WeaponType weaponType, float aimAngle = -1.0f, Actors::ActorBase** lastShot = nullptr);
+			bool FireScriptedWeapon(WeaponType weaponType, float aimAngle = -1.0f, Actors::ActorBase** lastShot = nullptr, std::uint8_t fireFlags = 0);
 			/** @brief Moves the player by the `ySpeed` a behavior of an object set in an earlier tick, as JJ2+ moves the players before the objects */
 			void ApplyPendingSpeed(std::int32_t currentTick);
 			/** @brief Hands what the script changed of the plain properties over to the player, after each call of the script */
@@ -1171,6 +1174,8 @@ namespace Jazz2::Scripting
 			// `bossActive` as it was given to the script last, a change of the script stays
 			bool _syncedBossActive = false;
 			bool _syncedOnce = false;
+			// The player died in a fight with a boss, `bossActive` is false until it activates one again (see LeaveBossFight())
+			bool _bossLostByDeath;
 			// `_pendingYSpeed` is set
 			bool _hasPendingYSpeed = false;
 			// `onPlayerDraw()` of the script draws the player in this tick, the player doesn't draw itself (see SetDrawnByScript())
@@ -1179,8 +1184,16 @@ namespace Jazz2::Scripting
 			bool _drawnInMode;
 			// `invisibility`, the player isn't drawn
 			bool _invisible = false;
+			// On a client, the number of a player of another machine it stands for, -1 for none (see GetRemoteActor())
+			std::int32_t _remotePlayerID;
 
 			void ApplyYSpeed(float value);
+			// Returns the actor of the player of another machine it stands for, `nullptr` if it's none or not here
+			Actors::ActorBase* GetRemoteActor() const;
+			// On the server, tells the client of the player of a change a script made to it
+			void ForwardChange(ScriptPlayerChange change, float value);
+			void ForwardChange(ScriptPlayerChange change, std::int32_t value);
+			void ForwardSuckerTube(std::int32_t xSpeed, std::int32_t ySpeed, std::int32_t flags);
 			// Finds the animation of the original the player shows and the frame of it, false if it's none of them
 			bool FindShownFrame(std::uint32_t& anim, std::uint32_t& position, std::uint32_t& firstFrame) const;
 			// Returns the count of gems of a GEM::Color, `nullptr` if there's no such color or player
@@ -1193,9 +1206,6 @@ namespace Jazz2::Scripting
 			// Whether the player draws itself in its sprite mode, other modes are drawn by DrawInSpriteMode()
 			bool IsSpriteModeDrawnByGame() const;
 
-			// Fires one bullet of the spread, -1 angled up, 0 straight, 1 angled down
-			template<typename T>
-			Actors::ActorBase* FireSpreadShot(WeaponType weaponType, std::int8_t slot, float aimAngle = -1.0f);
 			// Fires one shot of a weapon of the game at an angle (0 up, clockwise), see fireBulletAngle()
 			template<typename T>
 			Actors::ActorBase* FireAimedNativeShot(WeaponType weaponType, float aimAngle);
@@ -1208,6 +1218,14 @@ namespace Jazz2::Scripting
 		public:
 			// Sets the maximum health of the player (`/smhealth`), a player at full health stays at full health
 			void SetMaxHealth(std::int32_t value);
+			// Makes it stand for a player of another machine on a client, which scripts only read (see GetRemoteActor())
+			void SetRemotePlayer(std::int32_t playerID);
+			// Takes `isActive` from whether the player of another machine is still here
+			bool RefreshRemotePlayer();
+			// Stands for another actor of the same player (spectating, a new character), none once it left
+			void Rebind(Actors::Player* player);
+			// The player died, the fight with the boss is over for it
+			void LeaveBossFight();
 			// Whether the script ended the boss fight of a boss of the game for the player (activateBoss(false))
 			bool HidesNativeBossMeter() const {
 				return (_syncedOnce && _syncedBossActive && !bossActive);
@@ -1481,7 +1499,7 @@ namespace Jazz2::Scripting
 	/**
 	 * @brief Returns the number of local players
 	 *
-	 * The players of this machine, none on a server without a player of its own.
+	 * The players of this machine, at least 1 as in JJ2+, also on a server without a player of its own.
 	 */
 	std::int32_t get_jjLocalPlayerCount();
 

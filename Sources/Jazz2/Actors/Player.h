@@ -253,6 +253,12 @@ namespace Jazz2::Actors
 		bool IsInWater() const;
 		/** @brief Returns `true` if continuous jump is allowed */
 		virtual bool IsContinuousJumpAllowed() const;
+		/** @brief Returns how far from its position the player is drawn, a player of a client trails it on the server */
+		virtual Vector2f GetDrawnPosOffset() const {
+			return Vector2f::Zero;
+		}
+		/** @brief Returns `true` if the weapon fires the shots of the shield instead, the blaster with a shield */
+		bool IsFiringShield(WeaponType weaponType) const;
 		/** @brief Returns `true` if ledge climbing is allowed */
 		bool IsLedgeClimbAllowed() const;
 		/**

@@ -1657,10 +1657,13 @@ namespace Jazz2::Scripting
 		if (!IsScriptFileNameSafe(fileName)) {
 			return false;
 		}
-		String path;
+		// A client of an online game takes the level the server offered
+		String path = FindServerFile(fileName);
 #if defined(WITH_LEVEL_PACKS)
 		// A level of a pack takes the layers of the original levels of the same pack
-		path = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), fileName);
+		if (path.empty()) {
+			path = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), fileName);
+		}
 #endif
 		if (path.empty() || !fs::IsReadableFile(path)) {
 			path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), fileName));

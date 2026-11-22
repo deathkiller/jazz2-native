@@ -89,7 +89,8 @@ namespace Jazz2::Scripting
 		}
 
 		jjANIMATION::jjANIMATION(std::uint32_t index)
-			: _refCount(1), _index(index), _firstFrame(0), _watched(false), _seenFrameCount(0), _native(-1), _graphicsSignature(0)
+			: _refCount(1), _index(index), _firstFrame(0), _watched(false), _seenFrameCount(0), _native(-1), _graphicsSignature(0),
+				_madeInSet(UINT32_MAX), _madeByLoad(0), _placeInSet(0), _ownFirstFrame(0)
 		{
 		}
 
@@ -153,7 +154,7 @@ namespace Jazz2::Scripting
 		}
 
 		jjANIMSET::jjANIMSET(std::uint32_t index)
-			: _refCount(1), _index(index), _resolved(false), _watched(false), _seenFirstAnim(0)
+			: _refCount(1), _index(index), _resolved(false), _watched(false), _seenFirstAnim(0), _loadCount(0)
 		{
 		}
 

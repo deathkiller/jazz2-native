@@ -27,8 +27,9 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Creates a stream with the contents of a file
 			 *
-			 * The file is looked up next to the game's data. If it doesn't exist or its name points outside that
-			 * directory, the stream is empty, so `isEmpty()` tells whether anything was saved before.
+			 * The file is looked up among what the scripts saved (see @ref save()), what the server of an online game sent,
+			 * then next to the game's data. If it doesn't exist or its name points outside that directory, the stream is
+			 * empty, so `isEmpty()` tells whether anything was saved before.
 			 */
 			static jjSTREAM* CreateFromFile(const String& filename);
 
@@ -52,8 +53,9 @@ namespace Jazz2::Scripting
 			/**
 			 * @brief Saves the contents of the stream to a file and returns whether it succeeded
 			 *
-			 * The file is written next to the game's data; names that point outside that directory are rejected. The
-			 * stream itself is left unchanged. Always fails while the level runs inside the level editor.
+			 * Only the file name is used, as JJ2+ takes it, the file is written to `Cache/Staging/` where no file of the game
+			 * can be replaced (a script of a server on a client to a directory of the server, at most 16 files in a level).
+			 * The stream itself is left unchanged. Always fails while the level runs inside the level editor.
 			 */
 			bool save(const String& tilename) const;
 			/** @brief Removes all contents of the stream */

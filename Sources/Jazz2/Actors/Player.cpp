@@ -345,6 +345,11 @@ namespace Jazz2::Actors
 		return PreferencesCache::EnableContinuousJump;
 	}
 
+	bool Player::IsFiringShield(WeaponType weaponType) const
+	{
+		return (weaponType == WeaponType::Blaster && _activeShield != ShieldType::None);
+	}
+
 	bool Player::IsLedgeClimbAllowed() const
 	{
 		return _levelHandler->IsLedgeClimbEnabled(this);
@@ -6094,7 +6099,7 @@ namespace Jazz2::Actors
 		}
 
 		// The level may fire the shots itself (a script that controls the bullets), the blaster only without a shield
-		if (!(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None) && _levelHandler->HandlePlayerFire(this, weaponType)) {
+		if (!IsFiringShield(weaponType) && _levelHandler->HandlePlayerFire(this, weaponType)) {
 			std::int32_t fastFire = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 			_weaponCooldown = GetFireIntervalFrames(fastFire);
 			EmitWeaponFlare();
@@ -6117,8 +6122,7 @@ namespace Jazz2::Actors
 			} else if (definition.Kind == WeaponKind::Custom) {
 				ammoDecrease = definition.GetCustom().Fire.AmmoPerShot;
 			}
-		} else if (definition.Kind == WeaponKind::Custom && !(weaponType == WeaponType::Blaster && _activeShield != ShieldType::None &&
-			definition.Options.ReplacedByShield)) {
+		} else if (definition.Kind == WeaponKind::Custom && !(IsFiringShield(weaponType) && definition.Options.ReplacedByShield)) {
 			if (!FireCustomWeapon(weaponType, definition, ammoDecrease)) {
 				return false;
 			}

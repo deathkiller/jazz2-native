@@ -106,6 +106,11 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns the webhook client, or `nullptr` if no webhook is configured */
 		WebhookClient* GetWebhook() const;
 
+		/** @brief On a client, returns `true` if the server offered a script for the level, a client runs no other one */
+		bool IsLevelScriptOffered() const;
+		/** @brief On a client, sets whether the server offered a script for the level it loads next */
+		void SetLevelScriptOffered(bool value);
+
 		/**
 		 * @brief Creates a default server configuration from the default template file
 		 *
@@ -174,6 +179,7 @@ namespace Jazz2::Multiplayer
 		HashMap<String, std::shared_ptr<PeerDescriptor>> _disconnectedPeers; // Retained for reconnect, keyed by unique player ID
 		mutable Spinlock _lock;
 		std::uint32_t _lastClientID;
+		bool _levelScriptOffered;	// Client: see IsLevelScriptOffered()
 
 		String OnOverrideContentPath(StringView path);
 

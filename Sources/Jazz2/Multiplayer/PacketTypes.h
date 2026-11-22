@@ -47,6 +47,8 @@ namespace Jazz2::Multiplayer
 		PlayerAckWarped,			/**< Acknowledges that the player has been warped */
 		PlayerChangeCharacter,		/**< Requests to change the player character */
 		PlayerChangeTeamRequest,	/**< Requests to change the player team */
+		PlayerScriptedFire,			/**< The player fired the bullets of a weapon a level script controls, see @ref Scripting::ScriptedFire */
+		PlayerScriptedHit,			/**< A bullet of a weapon a level script controls hit an object as the client saw it */
 
 		ScriptPacket = 50			/**< Data a level script sends to the server (`jjSendPacket()`) */
 	};
@@ -101,6 +103,7 @@ namespace Jazz2::Multiplayer
 		SyncScoreboard,					/**< Sends per-player scoreboard rows (name, kills, deaths, points, ping) */
 		SyncRoundResults,				/**< Sends the final round standings shown while the round is ending */
 		SyncGameModeObjects,			/**< Sends the objects of the game mode (control points, jails, heads, ...) */
+		UpdateObjectDraws,				/**< What the level script drew for the remote actors relevant to the peer, see @ref Scripting::ObjectDraw */
 
 		PlayerSetProperty = 130,		/**< Sets a property of a player */
 		PlayerResetProperties,			/**< Resets all properties of a player */
@@ -113,7 +116,11 @@ namespace Jazz2::Multiplayer
 		PlayerTakeDamage,				/**< Applies damage to a player */
 		PlayerPush,						/**< Pushes a player */
 		PlayerActivateSpring,			/**< Activates a spring under a player */
-		PlayerWarpIn					/**< Warps a player into the level */
+		PlayerWarpIn,					/**< Warps a player into the level */
+		PlayerScriptedFire,				/**< A player fired the bullets of a weapon a level script controls, see @ref Scripting::ScriptedFire */
+		PlayerScriptChange,				/**< Changes a level script of the server made to the player of the client, see @ref Scripting::ScriptPlayerChange */
+
+		ScriptEffect = 160				/**< A sample a level script of the server played or a frame it burst, for an object only the server has */
 	};
 
 	/**

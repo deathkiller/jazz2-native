@@ -51,6 +51,11 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotablePlayer::FireCurrentWeapon(WeaponType weaponType)
 	{
+		// The bullets of a script are fired here as in JJ2+, see MpLevelHandler::HandleScriptedFire()
+		if (!IsFiringShield(weaponType) && static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->IsScriptedWeapon(weaponType)) {
+			return Player::FireCurrentWeapon(weaponType);
+		}
+
 		if (_weaponCooldown > 0.0f) {
 			return (weaponType != WeaponType::TNT);
 		}

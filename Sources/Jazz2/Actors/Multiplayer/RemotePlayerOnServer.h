@@ -86,6 +86,15 @@ namespace Jazz2::Actors::Multiplayer
 
 		void UpdateRendererPosition() override;
 
+		/** @brief Returns the interpolated position the player is drawn at, it trails @ref GetPos() by the network delay */
+		Vector2f GetDisplayPos() const {
+			return _displayPos;
+		}
+
+		Vector2f GetDrawnPosOffset() const override {
+			return _displayPos - _pos;
+		}
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		StateInterpolationBuffer _stateBuffer;

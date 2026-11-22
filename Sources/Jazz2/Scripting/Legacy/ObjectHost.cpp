@@ -73,6 +73,16 @@ namespace Jazz2::Scripting::Legacy
 		constexpr std::uint32_t cLEVEL = 0x4000;
 		constexpr std::uint32_t cPLAYER = 0x8000;
 
+		// What a bullet of a player of a client draws follows the player as drawn here (a sword)
+		Vector2f GetCreatorDrawShift(LevelScriptLoader* levelScripts, const jjOBJ& obj)
+		{
+			if (obj.get_creatorType() != cPLAYER) {
+				return Vector2f::Zero;
+			}
+			Actors::Player* player = levelScripts->GetPlayerByScriptID(obj.get_creatorID());
+			return (player != nullptr ? player->GetDrawnPosOffset() : Vector2f::Zero);
+		}
+
 		// BEHAVIOR::EXPLOSION2 of JJ2+, the end of a collected pickup
 		constexpr std::uint32_t BehaviorExplosion2 = aCOUNT + 21;
 		// BEHAVIOR::WALKINGENEMY of JJ2+
@@ -800,14 +810,19 @@ namespace Jazz2::Scripting::Legacy
 			_drawn = false;
 			return;
 		}
+		// What the scripts draw for it in its last tick goes to the clients of an online game too
+		LevelScriptLoader::ObjectDrawList* previousDraws = _levelScripts->BeginObjectDraws(actor);
 		while (_nextTick <= currentTick) {
 			_nextTick++;
+			_levelScripts->RestartObjectDraws();
 			if (!UpdateTick(actor)) {
+				_levelScripts->EndObjectDraws(actor, previousDraws);
 				return;
 			}
 		}
 		// Drawn as the last tick left it
 		FinishTicks();
+		_levelScripts->EndObjectDraws(actor, previousDraws);
 	}
 
 	void ScriptObjectHost::RunFirstTick()
@@ -817,9 +832,11 @@ namespace Jazz2::Scripting::Legacy
 		}
 		// The tick it's made in is done, its first update waits for the next one
 		_nextTick = _levelScripts->GetGameTick() + 1;
+		LevelScriptLoader::ObjectDrawList* previousDraws = _levelScripts->BeginObjectDraws(_actor);
 		if (UpdateTick(_actor, true)) {
 			FinishTicks();
 		}
+		_levelScripts->EndObjectDraws(_actor, previousDraws);
 	}
 
 	bool ScriptObjectHost::UpdateTick(Actors::ActorBase* actor, bool firstTick)
@@ -931,9 +948,16 @@ namespace Jazz2::Scripting::Legacy
 		_liftValid = (_solidTick != INT32_MIN);
 		_liftBox = actor->AABBInner;
 		_liftY = actor->_pos.Y;
-		CollideByFrame();
-		HitScenery(previousState);
-		HitPlayersAsEnemyBullet(_levelScripts, *_obj, *actor);
+		if (_obj->_replica) {
+			// The bullet of the player of this client tells the server what it hit
+			_levelScripts->ReportBulletHits(actor);
+		} else {
+			if (!_obj->_clientHits) {
+				CollideByFrame();
+			}
+			HitScenery(previousState);
+			HitPlayersAsEnemyBullet(_levelScripts, *_obj, *actor);
+		}
 		return true;
 	}
 
@@ -1137,10 +1161,7 @@ namespace Jazz2::Scripting::Legacy
 		if (frame == nullptr) {
 			return;
 		}
-		// As JJ2 has bullets hit objects, by any pixel of the two frames, the game decides what the hit does then - a bullet
-		// with `var[6] & 16` goes through what it hits (a sword)
-		bool goesThrough = ((_obj->get_var(6) & 16) != 0);
-		_collidingByFrame = true;
+		// As JJ2 has bullets hit objects, by any pixel of the two frames, the game decides what the hit does then
 		for (Actors::ActorBase* other : nearby) {
 			jjOBJ* target = _levelScripts->GetObjectView(other);
 			if (target == nullptr || target->curFrame == 0 || other->GetState(Actors::ActorState::IsDestroyed)) {
@@ -1165,17 +1186,29 @@ namespace Jazz2::Scripting::Legacy
 			if (!hit) {
 				continue;
 			}
-			if (!Actors::ActorBase::HandleCollisionByOverride(other, _actor)) {
-				if (!other->OnHandleCollision(_actor) && !goesThrough) {
-					_actor->OnHandleCollision(other);
-				}
-			}
+			HitByFrame(other);
 			if (_actor->GetState(Actors::ActorState::IsDestroyed)) {
 				break;
 			}
 		}
-		_collidingByFrame = false;
 		frame->Release();
+	}
+
+	bool ScriptObjectHost::HitByFrame(Actors::ActorBase* other)
+	{
+		if (!CollidesByFrame()) {
+			return false;
+		}
+		// A bullet with `var[6] & 16` goes through what it hits (a sword)
+		bool goesThrough = ((_obj->get_var(6) & 16) != 0);
+		_collidingByFrame = true;
+		if (!Actors::ActorBase::HandleCollisionByOverride(other, _actor)) {
+			if (!other->OnHandleCollision(_actor) && !goesThrough) {
+				_actor->OnHandleCollision(other);
+			}
+		}
+		_collidingByFrame = false;
+		return true;
 	}
 
 	void ScriptObjectHost::FinishTicks()
@@ -1445,6 +1478,7 @@ namespace Jazz2::Scripting::Legacy
 		if (_obj->state == sKILL) {
 			return false;
 		}
+		LevelScriptLoader::EffectScope effectScope(_levelScripts, _obj);
 		PullFromActor(_levelScripts, *_obj, *actor, false);
 		_obj->state = sKILL;
 		_obj->energy = 0;
@@ -1564,6 +1598,18 @@ namespace Jazz2::Scripting::Legacy
 
 	bool ScriptObjectHost::CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, const jjOBJ& obj, const AABBf& box, Vector2f delta)
 	{
+		if (levelScripts->IsRecordingObjectDraws()) {
+			// A client carries its player itself, by the box
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Platform, box.L, box.T, 0, 0, 0, 0);
+			recorded.ScaleX = box.R - box.L;
+			recorded.ScaleY = box.B - box.T;
+			levelScripts->RecordObjectDraw(Death::move(recorded));
+		}
+		return CarryPlayers(levelScripts, platform, obj.xPos, box, delta);
+	}
+
+	bool ScriptObjectHost::CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, float objX, const AABBf& box, Vector2f delta)
+	{
 		// A player standing on it goes along with it, one falling onto it from above stands on it then
 		bool carrying = false;
 		auto* levelHandler = levelScripts->GetLevelHandler();
@@ -1585,7 +1631,7 @@ namespace Jazz2::Scripting::Legacy
 			Vector2f target(pos.X + (standing ? delta.X : 0.0f), box.T - (feet - pos.Y));
 			if (standing && player->GetSpeed().X == 0.0f) {
 				// Whole pixels off the object while standing still, as on a platform of the game (see MovingPlatform::OnUpdate())
-				target.X = obj.xPos + std::round(target.X - obj.xPos);
+				target.X = objX + std::round(target.X - objX);
 			}
 			if (auto* tiles = levelHandler->TileMap()) {
 				Tiles::TileCollisionParams params = { Tiles::TileDestructType::None, false };
@@ -2130,19 +2176,24 @@ namespace Jazz2::Scripting::Legacy
 		return _obj->_scriptedBullet;
 	}
 
-	void ScriptObjectHost::InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY, bool upward, float aimAngle)
+	void ScriptObjectHost::InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY,
+		bool upward, float aimAngle, Vector2f ownerPos, float ownerSpeedX, bool facingLeft, bool replica, bool clientHits)
 	{
-		auto* shot = runtime_cast<Actors::Weapons::ShotBase>(&actor);
-		Actors::Player* owner = (shot != nullptr ? shot->GetOwner() : nullptr);
-		if (owner == nullptr) {
+		if (runtime_cast<Actors::Weapons::ShotBase>(&actor) == nullptr) {
 			return;
 		}
 		obj._scriptedBullet = true;
+		obj._replica = replica;
+		obj._clientHits = clientHits;
+		if (replica || clientHits) {
+			// A copy only shows, what the server's one of a client hits is what the client saw it hit (see LevelScriptLoader::ApplyClientHit())
+			actor.SetState(Actors::ActorState::CollideWithOtherActors, false);
+		}
 		// As JJ2+ fires it (measured): from where the player is, at the height of the gunspot, the speeds of the template the way the player
 		// faces, an angled one by 0.98 of them across and 0.2 of them up or down
 		constexpr float Across = 0.9795f;
 		constexpr float Side = 0.2f;
-		float facing = (owner->IsFacingLeft() ? -1.0f : 1.0f);
+		float facing = (facingLeft ? -1.0f : 1.0f);
 		float slot = float(spreadSlot);
 		float across = (spreadSlot != 0 ? Across : 1.0f);
 		obj.direction = std::int8_t(facing);
@@ -2150,9 +2201,9 @@ namespace Jazz2::Scripting::Legacy
 		obj.xAcc = facing * preset.xAcc * across;
 		obj.ySpeed = preset.ySpeed + slot * Side * preset.xSpeed;
 		obj.yAcc = preset.yAcc + slot * Side * preset.xAcc;
-		obj.xPos = owner->GetPos().X;
+		obj.xPos = ownerPos.X;
 		// The gunspot of the pose, 6 pixels higher standing as measured, lower crouching
-		obj.yPos = owner->GetPos().Y + 1.0f + gunspotOffsetY;	// jjPLAYER::yPos is 1 px lower
+		obj.yPos = ownerPos.Y + 1.0f + gunspotOffsetY;	// jjPLAYER::yPos is 1 px lower
 		if (upward) {
 			// As JJ2 fires up (MLLE turns its bullets the same): the speeds along the way it flies turned up, the vertical ones
 			// of the template dropped (a sword stabs up by ySpeed -1), from the gunspot, 2/3 as far straight up
@@ -2183,7 +2234,7 @@ namespace Jazz2::Scripting::Legacy
 		}
 		// The speed of the player it takes along, 8 at most, in 1/65536 of a pixel (measured in JJ2+, swords spin by it)
 		constexpr float PlayerSpeedToTicks = 60.0f / 70.0f;
-		obj.set_var(7, std::int32_t(std::clamp(owner->GetSpeed().X * PlayerSpeedToTicks, -8.0f, 8.0f) * 65536.0f));
+		obj.set_var(7, std::int32_t(std::clamp(ownerSpeedX * PlayerSpeedToTicks, -8.0f, 8.0f) * 65536.0f));
 		obj.counter = 0;
 		obj.state = sSTART;
 	}
@@ -2307,12 +2358,7 @@ namespace Jazz2::Scripting::Legacy
 
 	void ScriptObjectHost::DrawFrame(LevelScriptLoader* levelScripts, const jjOBJ& obj, float offsetY, bool translucent)
 	{
-		if (ContentResolver::Get().IsHeadless()) {
-			return;
-		}
-		std::int32_t cell = 0;
-		auto* graphics = levelScripts->GetAnimationTables().ResolveFrame(obj.curFrame, cell);
-		if (graphics == nullptr) {
+		if (ContentResolver::Get().IsHeadless() && !levelScripts->IsRecordingObjectDraws()) {
 			return;
 		}
 		// Frozen or just hit as the game draws the objects, in the sprite layer - `freeze` of a bullet is how long it freezes
@@ -2343,6 +2389,21 @@ namespace Jazz2::Scripting::Legacy
 			if (obj.direction < 0) {
 				angle = -angle;
 			}
+		}
+		if (levelScripts->IsRecordingObjectDraws()) {
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Frame, obj.xPos, obj.yPos + offsetY, obj.curFrame, mode, param, 4);
+			recorded.Direction = obj.direction;
+			recorded.Angle = angle;
+			recorded.ModePalette = (mode == spriteType_GEM);
+			levelScripts->RecordObjectDraw(Death::move(recorded));
+		}
+		if (ContentResolver::Get().IsHeadless()) {
+			return;
+		}
+		std::int32_t cell = 0;
+		auto* graphics = levelScripts->GetAnimationTables().ResolveFrame(obj.curFrame, cell);
+		if (graphics == nullptr) {
+			return;
 		}
 		ScriptWorldCanvas::SpriteDraw draw = { graphics, cell, obj.xPos, obj.yPos + offsetY, obj.direction, 1.0f, 1.0f, angle, mode, param,
 			levelScripts->GetLayerDrawZ(4), (mode == spriteType_GEM ? levelScripts->GetSpritePaletteOffset(mode, param) : 0) };
@@ -2942,6 +3003,15 @@ namespace Jazz2::Scripting::Legacy
 			}
 		}
 
+		LevelScriptLoader::EffectScope effectScope(levelScripts, &obj);
+		Vector2f drawShift = GetCreatorDrawShift(levelScripts, obj);
+		ScriptWorldCanvas* canvas = (drawShift != Vector2f::Zero ? &levelScripts->GetWorldCanvas() : levelScripts->_worldCanvas.get());
+		Vector2f previousDrawShift = Vector2f::Zero;
+		if (canvas != nullptr) {
+			previousDrawShift = canvas->DrawShift;
+			canvas->DrawShift = drawShift;
+		}
+
 		asIScriptEngine* engine = levelScripts->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 		bool watched = levelScripts->WatchLookContext(ctx);
@@ -2976,6 +3046,9 @@ namespace Jazz2::Scripting::Legacy
 		}
 		obj._runningBehavior = previousBehavior;
 		levelScripts->_objectBehaviorDepth--;
+		if (canvas != nullptr) {
+			canvas->DrawShift = previousDrawShift;
+		}
 		if (r == asEXECUTION_EXCEPTION) {
 			LogBehaviorException(ctx);
 		}
@@ -3018,6 +3091,22 @@ namespace Jazz2::Scripting::Legacy
 
 	bool ScriptObjectHost::CallObjectHit(LevelScriptLoader* levelScripts, jjOBJ& obj, jjOBJ* bullet, jjPLAYER* player, std::int32_t force)
 	{
+		// The server stands in for the machine of the player, which has the object in JJ2+ (a ring of fire throws only a local player)
+		struct StandInScope {
+			jjPLAYER* Player;
+			bool WasLocal;
+			~StandInScope() {
+				if (Player != nullptr) {
+					Player->isLocal = WasLocal;
+				}
+			}
+		};
+		StandInScope standIn = { player, (player != nullptr && player->isLocal) };
+		if (player != nullptr && !player->isLocal && levelScripts->IsServerOfOnlineGame()) {
+			player->isLocal = true;
+		}
+
+		LevelScriptLoader::EffectScope effectScope(levelScripts, &obj);
 		asIScriptEngine* engine = levelScripts->GetEngine();
 		asIScriptContext* ctx = engine->RequestContext();
 
@@ -3147,7 +3236,10 @@ namespace Jazz2::Scripting
 				return;
 			}
 			eventId = std::uint8_t(bullet + (shot->IsUpgraded() ? Legacy::aPLAYERBULLETP1 - Legacy::aPLAYERBULLET1 : 0));
-			if (Actors::Player* owner = shot->GetOwner()) {
+			if (actor.get() == _firingBullet.Shot) {
+				// Also a player of another machine, which is no player here (see FireScriptedBullets())
+				creatorId = _firingBullet.OwnerID;
+			} else if (Actors::Player* owner = shot->GetOwner()) {
 				creatorId = GetScriptPlayerID(owner);
 			}
 		} else if (runtime_cast<Actors::Weapons::TNT>(actor.get()) != nullptr) {
@@ -3596,6 +3688,11 @@ namespace Jazz2::Scripting
 		slot.GunspotOffsetY = (firing ? _firingBullet.GunspotOffsetY : 0.0f);
 		slot.Upward = (firing && _firingBullet.Upward);
 		slot.AimAngle = (firing ? _firingBullet.AimAngle : -1.0f);
+		slot.OwnerPos = (firing ? _firingBullet.OwnerPos : Vector2f::Zero);
+		slot.OwnerSpeedX = (firing ? _firingBullet.OwnerSpeedX : 0.0f);
+		slot.OwnerFacingLeft = (firing && _firingBullet.OwnerFacingLeft);
+		slot.Replica = (firing && _firingBullet.Replica);
+		slot.ClientHits = (firing && _firingBullet.ClientHits);
 		if (object != nullptr) {
 			object->objectID = std::int16_t(objectId);
 		}
@@ -3637,7 +3734,8 @@ namespace Jazz2::Scripting
 		}
 		// A bullet of a weapon whose bullets a script controls is made as JJ2+ fires it
 		if (slot.SpreadSlot != NotSpread) {
-			Legacy::ScriptObjectHost::InitializeScriptedBullet(*obj, *preset, *actor, slot.SpreadSlot, slot.GunspotOffsetY, slot.Upward, slot.AimAngle);
+			Legacy::ScriptObjectHost::InitializeScriptedBullet(*obj, *preset, *actor, slot.SpreadSlot, slot.GunspotOffsetY, slot.Upward, slot.AimAngle,
+				slot.OwnerPos, slot.OwnerSpeedX, slot.OwnerFacingLeft, slot.Replica, slot.ClientHits);
 		}
 		// A pickup of the game has no speeds, those of the template are the behavior's (puppets walk by them,
 		// they're food of the game)

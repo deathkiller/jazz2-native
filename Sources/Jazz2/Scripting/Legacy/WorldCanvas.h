@@ -100,22 +100,44 @@ namespace Jazz2::Scripting::Legacy
 			std::uint16_t Z;
 		};
 
+		ScriptWorldCanvas()
+			: DrawShift(Vector2f::Zero)
+		{
+		}
+
 		/** @brief Draws a sprite in the level until the next @ref Clear() */
-		void AddSprite(const SpriteDraw& draw) {
+		void AddSprite(SpriteDraw draw) {
+			// One that follows an object is drawn where the object is
+			if (draw.Anchor == nullptr) {
+				draw.X += DrawShift.X;
+				draw.Y += DrawShift.Y;
+			}
 			_sprites.push_back(draw);
 		}
 		/** @brief Draws a rectangle in the level until the next @ref Clear() */
-		void AddSolid(const SolidDraw& draw) {
+		void AddSolid(SolidDraw draw) {
+			draw.X += DrawShift.X;
+			draw.Y += DrawShift.Y;
 			_solids.push_back(draw);
 		}
 		/** @brief Draws a tile in the level until the next @ref Clear() */
-		void AddTile(const TileDraw& draw) {
+		void AddTile(TileDraw draw) {
+			draw.X += DrawShift.X;
+			draw.Y += DrawShift.Y;
 			_tiles.push_back(draw);
 		}
 		/** @brief Draws text in the level until the next @ref Clear() */
 		void AddText(TextDraw draw) {
+			draw.X += DrawShift.X;
+			draw.Y += DrawShift.Y;
 			_texts.push_back(Death::move(draw));
 		}
+		/**
+		 * @brief Moves what's drawn by it, while a behavior of a bullet of a player of a client runs on the server
+		 *
+		 * The player is drawn where it was a moment ago (see @ref Actors::Player::GetDrawnPosOffset()), a sword it holds goes along.
+		 */
+		Vector2f DrawShift;
 		/** @brief Level whose views give the copy of the scene the sprites of `SPRITE::CHROMAKEY` are keyed against, see @ref OnDraw() */
 		LevelHandler* EffectsOwner = nullptr;
 

@@ -1730,6 +1730,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 				case Reason::CheatingDetected: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nCheating detected."), true); break;
 				case Reason::AssetStreamingNotAllowed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client doesn't contain required assets.\nPlease download the required files and try it again."), true); break;
 				case Reason::Idle: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Connection has been closed!\f[/c]\n\n\nThe server has disconnected you due to inactivity."), true); break;
+				case Reason::ScriptsNotAllowed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe level requires scripting, which is not allowed.\nPlease enable it in the options and try it again."), true); break;
 			}
 		});
 	}
@@ -1782,6 +1783,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				MemoryStream packetOut(8 + assetCount * 64);
 				packetOut.WriteVariableUint32(assetCount);
+				String levelName;
+				bool levelScriptOffered = false;
 				for (std::uint32_t i = 0; i < assetCount; i++) {
 					MpLevelHandler::AssetType type = (MpLevelHandler::AssetType)packet.ReadValue<std::uint8_t>();
 					std::uint32_t pathLength = packet.ReadVariableUint32();
@@ -1792,7 +1795,17 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					packetOut.WriteVariableUint32((std::uint32_t)path.size());
 					packetOut.Write(path.data(), (std::int64_t)path.size());
 
-					auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID);
+					String fullPath;
+					if (type == MpLevelHandler::AssetType::Level) {
+						levelName = path;
+						fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID);
+					} else if (type == MpLevelHandler::AssetType::Script) {
+						// The level comes first, the files of its script are found as the script finds them
+						levelScriptOffered |= (!levelName.empty() && path == String(levelName + ".j2as"_s));
+						fullPath = MpLevelHandler::GetScriptAssetFullPath(levelName, path, _networkManager->GetServerConfiguration().UniqueServerID);
+					} else {
+						fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID);
+					}
 					if (!fullPath.empty()) {
 						auto s = fs::Open(fullPath, FileAccess::Read);
 
@@ -1803,6 +1816,15 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						packetOut.WriteValue<std::uint32_t>(0);
 					}
 				}
+
+				// The server lets a client that doesn't run level scripts only spectate a level with a script
+#if defined(WITH_ANGELSCRIPT)
+				bool canRunScripts = PreferencesCache::AllowUnsignedScripts;
+#else
+				bool canRunScripts = false;
+#endif
+				packetOut.WriteValue<std::uint8_t>(canRunScripts ? 0x00 : 0x01);
+				_networkManager->SetLevelScriptOffered(levelScriptOffered);
 
 				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ValidateAssetsResponse, packetOut);
 				return;
@@ -1842,11 +1864,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							}
 						}
 
+						_streamedAsset = nullptr;
 						LOGE("Failed to create asset \"{}\"", path);
 						break;
 					}
 					case 2: { // Chunk
-						if (_streamedAsset->IsValid()) {
+						if (_streamedAsset != nullptr && _streamedAsset->IsValid()) {
 							std::int64_t size = packet.ReadVariableInt64();
 							if (const std::uint8_t* ptr = packet.GetCurrentPointer(size)) {
 								_streamedAsset->Write(ptr, size);

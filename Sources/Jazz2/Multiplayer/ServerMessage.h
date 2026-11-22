@@ -21,7 +21,8 @@ namespace Jazz2::Multiplayer
 		@brief Message sent by the server, which the client formats in its own language
 
 		The server sends only the type and the arguments, so every player sees the text in the language of their
-		own client, not of the server. Never renumber the existing values, append new ones before @ref Count.
+		own client, not of the server. The values are grouped in blocks of 32, a new message goes to the end of its
+		block. Never renumber the existing values.
 	*/
 	enum class ServerMessageType : std::uint16_t
 	{
@@ -29,7 +30,8 @@ namespace Jazz2::Multiplayer
 
 		Text,							/**< Text shown as it is (e.g., from the server console or an admin command) */
 
-		GameWillBeginShortly,			/**< Pre-game phase of a round started */
+		// Round
+		GameWillBeginShortly = 32,		/**< Pre-game phase of a round started */
 		ChampionshipWon,				/**< Player name */
 		FirstToReachPointsWins,			/**< Score that wins the overtime */
 		TeamsRebalanced,				/**< Players were moved between teams */
@@ -44,7 +46,8 @@ namespace Jazz2::Multiplayer
 		Overtime,						/**< Overtime started */
 		RoundEndedInDraw,				/**< Round ended without a winner */
 
-		ControlPointCaptured,			/**< Team, name of the control point */
+		// Game modes
+		ControlPointCaptured = 64,		/**< Team, name of the control point */
 		ControlPointCapturedUnnamed,	/**< Team, number of the control point */
 		FlagRunTookFlag,				/**< Player name */
 		FlagRunOutOfTime,				/**< Player name */
@@ -62,7 +65,8 @@ namespace Jazz2::Multiplayer
 		RoastTagLostRingIdle,			/**< Player name */
 		RoastTagHasRing,				/**< Player name */
 
-		IdleSpectate,					/**< The player was moved to spectate mode for inactivity (alert) */
+		// Players and commands
+		IdleSpectate = 96,				/**< The player was moved to spectate mode for inactivity (alert) */
 		IdleSpectateHelp,				/**< The player was moved to spectate mode for inactivity (console) */
 		RaceAlreadyFinished,			/**< The player can't rejoin the race */
 		CannotJoinNow,					/**< The player can't join the game right now */
@@ -77,7 +81,8 @@ namespace Jazz2::Multiplayer
 		PlayerNotFound,					/**< No player with the specified number */
 		TeamCountOutOfRange,			/**< Maximum number of teams */
 
-		PollStartedRestart,				/**< Poll to restart the playlist started */
+		// Polls
+		PollStartedRestart = 128,		/**< Poll to restart the playlist started */
 		PollStartedResetPoints,			/**< Poll to reset the points started */
 		PollStartedSkip,				/**< Poll to skip the current level started */
 		PollAlreadyActive,				/**< Seconds left of the active poll */
@@ -89,7 +94,9 @@ namespace Jazz2::Multiplayer
 		PollAccepted,					/**< Poll passed */
 		PollNotEnoughVotes,				/**< Poll didn't pass */
 
-		Count							/**< Count of supported message types */
+		// Level scripts
+		ScriptsDisabledSpectate = 160,	/**< The player only spectates, the level has a script and the client doesn't run scripts (alert) */
+		ScriptsDisabledHelp				/**< The same, how to play (console) */
 	};
 
 	/** @brief Where a @ref ServerMessage is shown */

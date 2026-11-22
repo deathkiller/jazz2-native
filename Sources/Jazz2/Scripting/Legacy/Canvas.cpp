@@ -2,6 +2,7 @@
 
 #include "Canvas.h"
 #include "AnimationTables.h"
+#include "ObjectHost.h"
 #include "WorldCanvas.h"
 #include "Internal.h"
 
@@ -1112,9 +1113,48 @@ namespace Jazz2::Scripting
 #endif
 	}
 
+	ObjectDraw ObjectDraw::Make(KindType kind, float x, float y, std::uint32_t frame, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
+	{
+		ObjectDraw draw = {};
+		draw.Kind = kind;
+		draw.X = x;
+		draw.Y = y;
+		draw.Frame = frame;
+		draw.Mode = mode;
+		draw.Param = param;
+		draw.LayerZ = layerZ;
+		draw.ModePalette = true;
+		draw.ScaleX = 1.0f;
+		draw.ScaleY = 1.0f;
+		return draw;
+	}
+
+	// Recorded for the clients before anything is drawn, a dedicated server draws nothing (see LevelScriptLoader::BeginObjectDraws())
+	static void RecordSpriteDraw(LevelScriptLoader* owner, bool ofSet, float x, float y, std::uint32_t frame, std::uint8_t animation, std::uint8_t frameInAnimation,
+		std::int8_t direction, float scaleX, float scaleY, std::int32_t angle, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
+	{
+		if (!owner->IsRecordingObjectDraws()) {
+			return;
+		}
+		ObjectDraw draw = ObjectDraw::Make(ofSet ? ObjectDraw::KindType::Sprite : ObjectDraw::KindType::Frame, x, y, frame, mode, param, layerZ);
+		draw.Animation = animation;
+		draw.FrameInAnimation = frameInAnimation;
+		draw.Direction = direction;
+		draw.ScaleX = scaleX;
+		draw.ScaleY = scaleY;
+		draw.Angle = angle;
+		owner->RecordObjectDraw(Death::move(draw));
+	}
+
 	static void DrawWorldSolid(LevelScriptLoader* owner, float x, float y, float width, float height, std::uint8_t color,
 		std::uint32_t mode, std::uint8_t param, std::int8_t layerZ)
 	{
+		if (owner->IsRecordingObjectDraws()) {
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Solid, x, y, color, mode, param, layerZ);
+			recorded.ScaleX = width;
+			recorded.ScaleY = height;
+			owner->RecordObjectDraw(Death::move(recorded));
+		}
 		if (ContentResolver::Get().IsHeadless()) {
 			return;
 		}
@@ -1134,6 +1174,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, true, xPixel, yPixel, std::uint32_t(setID), animation, frame, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
@@ -1142,6 +1183,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int8_t direction, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, false, xPixel, yPixel, sprite, 0, 0, direction, 1.0f, 1.0f, 0, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
@@ -1151,6 +1193,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawResizedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, true, xPixel, yPixel, std::uint32_t(setID), animation, frame, 0, xScale, yScale, 0, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
@@ -1159,6 +1202,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawResizedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, false, xPixel, yPixel, sprite, 0, 0, 0, xScale, yScale, 0, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
@@ -1168,6 +1212,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawRotatedSprite(float xPixel, float yPixel, std::int32_t setID, std::uint8_t animation, std::uint8_t frame, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, true, xPixel, yPixel, std::uint32_t(setID), animation, frame, 0, xScale, yScale, angle, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		auto* graphics = owner->GetAnimationTables().ResolveSprite(setID, animation, frame, cell, &translucent);
@@ -1176,6 +1221,7 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawRotatedSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t angle, float xScale, float yScale, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		RecordSpriteDraw(owner, false, xPixel, yPixel, sprite, 0, 0, 0, xScale, yScale, angle, mode, param, layerZ);
 		std::int32_t cell = 0;
 		bool translucent;
 		owner->OnFrameDrawn(xPixel, yPixel, sprite, mode);
@@ -1193,6 +1239,421 @@ namespace Jazz2::Scripting
 			_worldCanvas->SetParent(_levelHandler->_rootNode.get());
 		}
 		return *_worldCanvas;
+	}
+
+	LevelScriptLoader::ObjectDrawList* LevelScriptLoader::BeginObjectDraws(Actors::ActorBase* actor)
+	{
+		ObjectDrawList* previous = _recordingDraws;
+		if (_recordsObjectDraws && actor != nullptr) {
+			auto& list = _objectDraws[actor];
+			if (list == nullptr) {
+				list = std::make_unique<ObjectDrawList>();
+			}
+			list->Draws.clear();
+			_recordingDraws = list.get();
+		}
+		return previous;
+	}
+
+	void LevelScriptLoader::EndObjectDraws(Actors::ActorBase* actor, ObjectDrawList* previous)
+	{
+		if (!_recordsObjectDraws || actor == nullptr) {
+			return;
+		}
+		if (_recordingDraws != nullptr) {
+			// Relative to where the object is, the clients draw them where their copy of it is
+			_recordingDraws->Origin = actor->GetPos();
+		}
+		_recordingDraws = previous;
+	}
+
+	void LevelScriptLoader::RestartObjectDraws()
+	{
+		if (_recordingDraws != nullptr) {
+			_recordingDraws->Draws.clear();
+		}
+	}
+
+	void LevelScriptLoader::RecordObjectDraw(ObjectDraw draw)
+	{
+		// More than a sensible object draws in a tick isn't sent
+		constexpr std::size_t MaxDrawsPerObject = 256;
+		if (_recordingDraws != nullptr && _recordingDraws->Draws.size() < MaxDrawsPerObject) {
+			_recordingDraws->Draws.push_back(Death::move(draw));
+		}
+	}
+
+	void LevelScriptLoader::ForgetObjectDraws(const Actors::ActorBase* actor)
+	{
+		auto it = _objectDraws.find(actor);
+		if (it != _objectDraws.end()) {
+			if (_recordingDraws == it->second.get()) {
+				_recordingDraws = nullptr;
+			}
+			_objectDraws.erase(it);
+		}
+	}
+
+	// Positions are in quarters of a pixel
+	static constexpr float ObjectDrawPositionScale = 4.0f;
+	static constexpr std::uint32_t MaxObjectDrawTextLength = 256;
+
+	// A frame goes by where it is in its set, the indices of the frame table differ between the machines
+	static void WriteDrawnFrame(const Legacy::AnimationTables* tables, std::uint32_t frame, Stream& dest)
+	{
+		std::uint32_t setID, load, animInSet, frameInAnim;
+		if (tables != nullptr && tables->GetFrameLocation(frame, setID, load, animInSet, frameInAnim)) {
+			dest.WriteVariableUint32(setID + 1);
+			dest.WriteVariableUint32(load);
+			dest.WriteVariableUint32(animInSet);
+			dest.WriteVariableUint32(frameInAnim);
+		} else {
+			dest.WriteVariableUint32(0);
+			dest.WriteVariableUint32(frame);
+		}
+	}
+
+	static std::uint32_t ReadDrawnFrame(Legacy::AnimationTables& tables, Stream& src)
+	{
+		std::uint32_t setPlusOne = src.ReadVariableUint32();
+		if (setPlusOne == 0) {
+			return src.ReadVariableUint32();
+		}
+		std::uint32_t load = src.ReadVariableUint32();
+		std::uint32_t animInSet = src.ReadVariableUint32();
+		std::uint32_t frameInAnim = src.ReadVariableUint32();
+		return tables.FindFrameByLocation(setPlusOne - 1, load, animInSet, frameInAnim);
+	}
+
+	bool LevelScriptLoader::WriteObjectDraws(const Actors::ActorBase* actor, Stream& dest) const
+	{
+		auto it = _objectDraws.find(actor);
+		if (it == _objectDraws.end()) {
+			return false;
+		}
+		const ObjectDrawList& list = *it->second;
+		dest.WriteVariableUint32(std::uint32_t(list.Draws.size()));
+		for (const ObjectDraw& draw : list.Draws) {
+			dest.WriteValue<std::uint8_t>(std::uint8_t(draw.Kind));
+			dest.WriteVariableInt32(std::int32_t(std::lround((draw.X - list.Origin.X) * ObjectDrawPositionScale)));
+			dest.WriteVariableInt32(std::int32_t(std::lround((draw.Y - list.Origin.Y) * ObjectDrawPositionScale)));
+			dest.WriteValue<std::int8_t>(draw.LayerZ);
+			switch (draw.Kind) {
+				case ObjectDraw::KindType::Frame:
+				case ObjectDraw::KindType::Sprite:
+					if (draw.Kind == ObjectDraw::KindType::Sprite) {
+						dest.WriteVariableUint32(draw.Frame);
+						dest.WriteVariableUint32(draw.Animation);
+						dest.WriteVariableUint32(draw.FrameInAnimation);
+					} else {
+						WriteDrawnFrame(_animTables.get(), draw.Frame, dest);
+					}
+					dest.WriteValue<std::int8_t>(draw.Direction);
+					dest.WriteValueAsLE<float>(draw.ScaleX);
+					dest.WriteValueAsLE<float>(draw.ScaleY);
+					dest.WriteVariableInt32(draw.Angle);
+					dest.WriteVariableUint32(draw.Mode);
+					dest.WriteValue<std::uint8_t>(draw.Param);
+					dest.WriteValue<std::uint8_t>(draw.ModePalette ? 1 : 0);
+					break;
+				case ObjectDraw::KindType::Vine:
+					WriteDrawnFrame(_animTables.get(), draw.Frame, dest);
+					dest.WriteVariableInt32(draw.Angle);
+					dest.WriteVariableInt32(draw.Curvature);
+					dest.WriteVariableUint32(draw.Mode);
+					dest.WriteValue<std::uint8_t>(draw.Param);
+					break;
+				case ObjectDraw::KindType::Solid:
+					dest.WriteValue<std::uint8_t>(std::uint8_t(draw.Frame));
+					dest.WriteValueAsLE<float>(draw.ScaleX);
+					dest.WriteValueAsLE<float>(draw.ScaleY);
+					dest.WriteVariableUint32(draw.Mode);
+					dest.WriteValue<std::uint8_t>(draw.Param);
+					break;
+				case ObjectDraw::KindType::Tile:
+					dest.WriteVariableUint32(draw.Frame);
+					dest.WriteValue<std::uint8_t>(std::uint8_t(draw.Animation));
+					break;
+				case ObjectDraw::KindType::Text: {
+					std::uint32_t length = std::min<std::uint32_t>(std::uint32_t(draw.Text.size()), MaxObjectDrawTextLength);
+					dest.WriteVariableUint32(draw.Frame);
+					dest.WriteValueAsLE<std::uint32_t>(draw.Mode);
+					dest.WriteVariableUint32(length);
+					dest.Write(draw.Text.data(), length);
+					break;
+				}
+				case ObjectDraw::KindType::Platform:
+					dest.WriteValueAsLE<float>(draw.ScaleX);
+					dest.WriteValueAsLE<float>(draw.ScaleY);
+					break;
+			}
+		}
+		return true;
+	}
+
+	bool LevelScriptLoader::SetRemoteObjectDraws(std::uint32_t actorId, const std::shared_ptr<Actors::ActorBase>& anchor, Stream& src)
+	{
+		constexpr std::uint32_t MaxDrawsPerObject = 256;
+
+		std::uint32_t count = src.ReadVariableUint32();
+		if (count > MaxDrawsPerObject) {
+			return false;
+		}
+		auto [entryIt, added] = _remoteObjectDraws.try_emplace(actorId);
+		RemoteObjectDraws& entry = entryIt->second;
+		if (added) {
+			entry.LastOrigin = Vector2f::Zero;
+			entry.WasPlatform = false;
+		}
+		entry.Anchor = anchor;
+		entry.Draws.clear();
+		for (std::uint32_t i = 0; i < count; i++) {
+			ObjectDraw draw = {};
+			draw.Kind = ObjectDraw::KindType(src.ReadValue<std::uint8_t>());
+			draw.X = float(src.ReadVariableInt32()) / ObjectDrawPositionScale;
+			draw.Y = float(src.ReadVariableInt32()) / ObjectDrawPositionScale;
+			draw.LayerZ = src.ReadValue<std::int8_t>();
+			draw.ScaleX = 1.0f;
+			draw.ScaleY = 1.0f;
+			switch (draw.Kind) {
+				case ObjectDraw::KindType::Frame:
+				case ObjectDraw::KindType::Sprite:
+					if (draw.Kind == ObjectDraw::KindType::Sprite) {
+						draw.Frame = src.ReadVariableUint32();
+						draw.Animation = std::uint16_t(src.ReadVariableUint32());
+						draw.FrameInAnimation = std::uint16_t(src.ReadVariableUint32());
+					} else {
+						draw.Frame = ReadDrawnFrame(GetAnimationTables(), src);
+					}
+					draw.Direction = src.ReadValue<std::int8_t>();
+					draw.ScaleX = src.ReadValueAsLE<float>();
+					draw.ScaleY = src.ReadValueAsLE<float>();
+					draw.Angle = src.ReadVariableInt32();
+					draw.Mode = src.ReadVariableUint32();
+					draw.Param = src.ReadValue<std::uint8_t>();
+					draw.ModePalette = (src.ReadValue<std::uint8_t>() != 0);
+					break;
+				case ObjectDraw::KindType::Vine:
+					draw.Frame = ReadDrawnFrame(GetAnimationTables(), src);
+					draw.Angle = src.ReadVariableInt32();
+					draw.Curvature = src.ReadVariableInt32();
+					draw.Mode = src.ReadVariableUint32();
+					draw.Param = src.ReadValue<std::uint8_t>();
+					break;
+				case ObjectDraw::KindType::Solid:
+					draw.Frame = src.ReadValue<std::uint8_t>();
+					draw.ScaleX = src.ReadValueAsLE<float>();
+					draw.ScaleY = src.ReadValueAsLE<float>();
+					draw.Mode = src.ReadVariableUint32();
+					draw.Param = src.ReadValue<std::uint8_t>();
+					break;
+				case ObjectDraw::KindType::Tile:
+					draw.Frame = src.ReadVariableUint32();
+					draw.Animation = src.ReadValue<std::uint8_t>();
+					break;
+				case ObjectDraw::KindType::Text: {
+					draw.Frame = src.ReadVariableUint32();
+					draw.Mode = src.ReadValueAsLE<std::uint32_t>();
+					std::uint32_t length = src.ReadVariableUint32();
+					if (length > MaxObjectDrawTextLength) {
+						entry.Draws.clear();
+						return added;
+					}
+					draw.Text = String(NoInit, length);
+					src.Read(draw.Text.data(), length);
+					break;
+				}
+				case ObjectDraw::KindType::Platform:
+					draw.ScaleX = src.ReadValueAsLE<float>();
+					draw.ScaleY = src.ReadValueAsLE<float>();
+					break;
+				default:
+					// Something this version doesn't know, what follows can't be read
+					entry.Draws.clear();
+					return added;
+			}
+			if (!std::isfinite(draw.ScaleX) || !std::isfinite(draw.ScaleY)) {
+				continue;
+			}
+			entry.Draws.push_back(Death::move(draw));
+		}
+		return added;
+	}
+
+	void LevelScriptLoader::RemoveRemoteObjectDraws(std::uint32_t actorId)
+	{
+		_remoteObjectDraws.erase(actorId);
+	}
+
+	void LevelScriptLoader::ReplicatePixelExplosion(float x, float y, std::uint32_t frame, std::int32_t direction)
+	{
+		MemoryStream data(24);
+		data.WriteValue<std::uint8_t>(std::uint8_t(RemoteEffect::PixelExplosion));
+		data.WriteValueAsLE<float>(x);
+		data.WriteValueAsLE<float>(y);
+		WriteDrawnFrame(_animTables.get(), frame, data);
+		data.WriteVariableInt32(direction);
+		SendEffectToClients(Vector2f(x, y), arrayView(data.GetBuffer(), std::size_t(data.GetSize())));
+	}
+
+	void LevelScriptLoader::PlayRemoteEffect(Stream& src)
+	{
+		RemoteEffect kind = RemoteEffect(src.ReadValue<std::uint8_t>());
+		float x = src.ReadValueAsLE<float>();
+		float y = src.ReadValueAsLE<float>();
+		if (!std::isfinite(x) || !std::isfinite(y)) {
+			return;
+		}
+		switch (kind) {
+			case RemoteEffect::Sample: {
+				std::int32_t sampleId = src.ReadVariableInt32();
+				std::int32_t volume = src.ReadVariableInt32();
+				std::int32_t frequency = src.ReadVariableInt32();
+				PlaySample(Vector2f(x, y), sampleId, volume, frequency, false);
+				break;
+			}
+			case RemoteEffect::PixelExplosion: {
+				std::uint32_t frame = ReadDrawnFrame(GetAnimationTables(), src);
+				std::int32_t direction = src.ReadVariableInt32();
+				Recti frameRect, bounds;
+				if (frame != 0 && GetAnimationTables().GetFrameBounds(frame, frameRect, bounds)) {
+					Legacy::jjOBJ::AddPixelExplosion(this, x, y, frame, direction);
+				}
+				break;
+			}
+		}
+	}
+
+	void LevelScriptLoader::AddRemoteObjectDraws()
+	{
+		if (_remoteCanvas == nullptr) {
+			_remoteCanvas = std::make_unique<Legacy::ScriptWorldCanvas>();
+			_remoteCanvas->OrderedDraws = true;
+			_remoteCanvas->EffectsOwner = _levelHandler;
+			_remoteCanvas->SetParent(_levelHandler->_rootNode.get());
+		}
+		_remoteCanvas->Clear();
+
+		auto& tables = GetAnimationTables();
+		SmallVector<std::uint32_t, 4> gone;
+		for (auto& [actorId, entry] : _remoteObjectDraws) {
+			std::shared_ptr<Actors::ActorBase> anchor = entry.Anchor.lock();
+			if (anchor == nullptr || anchor->GetState(Actors::ActorState::IsDestroyed)) {
+				if (anchor != nullptr && entry.WasPlatform) {
+					for (Actors::Player* player : GetPlayers()) {
+						player->CancelCarryingObject(anchor.get());
+					}
+				}
+				gone.push_back(actorId);
+				continue;
+			}
+			Vector2f origin = anchor->GetPos();
+			Vector2f delta = (entry.WasPlatform ? origin - entry.LastOrigin : Vector2f::Zero);
+			entry.LastOrigin = origin;
+			bool isPlatform = false;
+			for (const ObjectDraw& draw : entry.Draws) {
+				float x = origin.X + draw.X, y = origin.Y + draw.Y;
+				std::uint16_t z = GetLayerDrawZ(draw.LayerZ);
+				switch (draw.Kind) {
+					case ObjectDraw::KindType::Platform: {
+						// The player of this client stands on it as on the server, as JJ2+ has its machine run bePlatform()
+						Legacy::ScriptObjectHost::CarryPlayers(this, anchor.get(), origin.X, AABBf(x, y, x + draw.ScaleX, y + draw.ScaleY), delta);
+						isPlatform = true;
+						break;
+					}
+					case ObjectDraw::KindType::Frame:
+					case ObjectDraw::KindType::Sprite: {
+						std::int32_t cell = 0;
+						bool translucent = false;
+						auto* graphics = (draw.Kind == ObjectDraw::KindType::Frame
+							? tables.ResolveFrame(draw.Frame, cell, &translucent)
+							: tables.ResolveSprite(std::int32_t(draw.Frame), std::uint8_t(draw.Animation), std::uint8_t(draw.FrameInAnimation), cell, &translucent));
+						if (graphics == nullptr) {
+							break;
+						}
+						Legacy::ScriptWorldCanvas::SpriteDraw sprite = { graphics, cell, x, y, draw.Direction, draw.ScaleX, draw.ScaleY, draw.Angle,
+							draw.Mode, draw.Param, z, (draw.ModePalette ? GetSpritePaletteOffset(draw.Mode, draw.Param) : 0) };
+						sprite.TranslucentFrame = translucent;
+						_remoteCanvas->AddSprite(sprite);
+						break;
+					}
+					case ObjectDraw::KindType::Vine: {
+						std::int32_t cell = 0;
+						bool translucent = false;
+						auto* graphics = tables.ResolveFrame(draw.Frame, cell, &translucent);
+						if (graphics == nullptr) {
+							break;
+						}
+						Legacy::ScriptWorldCanvas::SpriteDraw sprite = { graphics, cell, x, y, 0, 1.0f, 1.0f, 0, draw.Mode, draw.Param, z,
+							GetVinePaletteOffset(draw.Mode, draw.Param) };
+						sprite.TranslucentFrame = translucent;
+						sprite.VineLength = draw.Angle;
+						sprite.VineCurvature = draw.Curvature;
+						_remoteCanvas->AddSprite(sprite);
+						break;
+					}
+					case ObjectDraw::KindType::Solid: {
+						Legacy::ScriptWorldCanvas::SolidDraw solid = { x, y, draw.ScaleX, draw.ScaleY, std::uint8_t(draw.Frame), draw.Mode, draw.Param, z };
+						_remoteCanvas->AddSolid(solid);
+						break;
+					}
+					case ObjectDraw::KindType::Tile: {
+						Legacy::ScriptWorldCanvas::TileDraw tile = { _levelHandler->TileMap(), x, y, std::uint16_t(draw.Frame), std::uint8_t(draw.Animation), z };
+						_remoteCanvas->AddTile(tile);
+						break;
+					}
+					case ObjectDraw::KindType::Text: {
+						Colorf color(float(draw.Mode & 0xFF) / 255.0f, float((draw.Mode >> 8) & 0xFF) / 255.0f,
+							float((draw.Mode >> 16) & 0xFF) / 255.0f, float((draw.Mode >> 24) & 0xFF) / 255.0f);
+						_remoteCanvas->AddText({ Compatibility::JJ2Strings::RecodeScriptString(draw.Text), x, y, draw.Frame, color, z });
+						break;
+					}
+				}
+			}
+			if (entry.WasPlatform && !isPlatform) {
+				for (Actors::Player* player : GetPlayers()) {
+					player->CancelCarryingObject(anchor.get());
+				}
+			}
+			entry.WasPlatform = isPlatform;
+		}
+		for (std::uint32_t actorId : gone) {
+			_remoteObjectDraws.erase(actorId);
+		}
+	}
+
+	bool LevelScriptLoader::GetRemoteObjectBounds(const RemoteObjectDraws& entry, Vector2f origin, AABBf& bounds)
+	{
+		// Only frames drawn at the object itself, not away from it (strings of puppets, gems of a series)
+		constexpr float MaxOffset = 16.0f;
+
+		auto& tables = GetAnimationTables();
+		bool found = false;
+		for (const ObjectDraw& draw : entry.Draws) {
+			if ((draw.Kind != ObjectDraw::KindType::Frame && draw.Kind != ObjectDraw::KindType::Sprite) ||
+				std::abs(draw.X) > MaxOffset || std::abs(draw.Y) > MaxOffset) {
+				continue;
+			}
+			std::uint32_t frame = draw.Frame;
+			if (draw.Kind == ObjectDraw::KindType::Sprite) {
+				std::uint32_t frameCount, firstFrame;
+				if (!tables.GetAnimationFrames(tables.GetFirstAnim(std::int32_t(draw.Frame)) + draw.Animation, frameCount, firstFrame) || frameCount == 0) {
+					continue;
+				}
+				frame = firstFrame + draw.FrameInAnimation % frameCount;
+			}
+			Recti frameRect, pixels;
+			if (frame == 0 || !tables.GetFrameBounds(frame, frameRect, pixels) || pixels.W <= 0 || pixels.H <= 0) {
+				continue;
+			}
+			float scaleX = std::abs(draw.ScaleX), scaleY = std::abs(draw.ScaleY);
+			float left = float(draw.Direction < 0 ? -pixels.X - pixels.W : pixels.X) * scaleX;
+			AABBf box(origin.X + draw.X + left, origin.Y + draw.Y + float(pixels.Y) * scaleY,
+				origin.X + draw.X + left + float(pixels.W) * scaleX, origin.Y + draw.Y + float(pixels.Y + pixels.H) * scaleY);
+			bounds = (found ? AABBf::Combine(bounds, box) : box);
+			found = true;
+		}
+		return found;
 	}
 
 	std::int32_t LevelScriptLoader::GetSpritePaletteOffset(std::uint32_t mode, std::uint8_t param)
@@ -1343,6 +1804,12 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawSwingingVineSpriteFromCurFrame(float xPixel, float yPixel, std::uint32_t sprite, std::int32_t length, std::int32_t curvature, spriteType mode, std::uint8_t param, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (length > 0 && owner->IsRecordingObjectDraws()) {
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Vine, xPixel, yPixel, sprite, mode, param, layerZ);
+			recorded.Angle = length;
+			recorded.Curvature = curvature;
+			owner->RecordObjectDraw(Death::move(recorded));
+		}
 		if (length <= 0 || ContentResolver::Get().IsHeadless()) {
 			return;
 		}
@@ -1362,6 +1829,11 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::jjDrawTile(float xPixel, float yPixel, std::uint16_t tile, std::uint32_t tileQuadrant, std::int8_t layerZ, std::uint8_t layerXY, std::int8_t playerID) {
 		auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+		if (owner->IsRecordingObjectDraws()) {
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Tile, xPixel, yPixel, tile, 0, 0, layerZ);
+			recorded.Animation = std::uint16_t(std::min<std::uint32_t>(tileQuadrant, 4));
+			owner->RecordObjectDraw(Death::move(recorded));
+		}
 		if (ContentResolver::Get().IsHeadless()) {
 			return;
 		}
@@ -1384,6 +1856,15 @@ namespace Jazz2::Scripting
 
 	void LevelScriptLoader::AddWorldText(float xPixel, float yPixel, StringView text, std::uint32_t size, const Colorf& color, std::int8_t layerZ)
 	{
+		if (!text.empty() && IsRecordingObjectDraws()) {
+			auto toByte = [](float value) {
+				return std::uint32_t(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
+			};
+			ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Text, xPixel, yPixel, size,
+				toByte(color.R) | (toByte(color.G) << 8) | (toByte(color.B) << 16) | (toByte(color.A) << 24), 0, layerZ);
+			recorded.Text = text;
+			RecordObjectDraw(Death::move(recorded));
+		}
 		if (ContentResolver::Get().IsHeadless() || text.empty()) {
 			return;
 		}

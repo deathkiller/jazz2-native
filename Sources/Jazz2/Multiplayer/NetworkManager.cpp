@@ -41,7 +41,7 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), PreferredPlayerType(PlayerType::None),
+		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), ScriptsDisabled(false), PreferredPlayerType(PlayerType::None),
 			FurColor(0), Points(0), ClientID(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), IdleElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
 			CarryOver{}, HasCarryOver(false)
@@ -50,8 +50,18 @@ namespace Jazz2::Multiplayer
 	}
 
 	NetworkManager::NetworkManager()
-		: _lastClientID(0)
+		: _lastClientID(0), _levelScriptOffered(false)
 	{
+	}
+
+	bool NetworkManager::IsLevelScriptOffered() const
+	{
+		return _levelScriptOffered;
+	}
+
+	void NetworkManager::SetLevelScriptOffered(bool value)
+	{
+		_levelScriptOffered = value;
 	}
 
 	NetworkManager::~NetworkManager()
@@ -575,6 +585,11 @@ namespace Jazz2::Multiplayer
 				bool allowAssetStreaming;
 				if (doc["AllowAssetStreaming"].get(allowAssetStreaming) == Json::SUCCESS) {
 					serverConfig.AllowAssetStreaming = allowAssetStreaming;
+				}
+
+				bool kickPlayersWithoutScripts;
+				if (doc["KickPlayersWithoutScripts"].get(kickPlayersWithoutScripts) == Json::SUCCESS) {
+					serverConfig.KickPlayersWithoutScripts = kickPlayersWithoutScripts;
 				}
 				
 				bool requiresDiscordAuth;

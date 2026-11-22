@@ -255,6 +255,11 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
+		// The client fires the bullets of a script and tells the server, which spends the ammo then (see MpLevelHandler::HandleScriptedFire())
+		if (!IsFiringShield(weaponType) && static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->IsScriptedWeapon(weaponType)) {
+			return true;
+		}
+
 		std::uint16_t prevAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
 		bool success = PlayerOnServer::FireCurrentWeapon(weaponType);
 

@@ -38,7 +38,10 @@ namespace Jazz2::Multiplayer
 		Banned,									/**< Banned by server */
 		CheatingDetected,						/**< Cheating detected */
 		AssetStreamingNotAllowed,				/**< Downloading of assets is not allowed, but some assets are missing */
-		Idle									/**< Inactivity */
+		Idle,									/**< Inactivity */
+		ScriptsNotAllowed,						/**< The level has a script, but the client doesn't run scripts */
+
+		Count									/**< Count of supported reasons */
 	};
 }
 

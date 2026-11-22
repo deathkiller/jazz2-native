@@ -716,6 +716,14 @@ namespace Jazz2::Scripting
 			bool _startPending = false;
 			// A bullet a player fired of a weapon whose bullets a script controls, see ScriptObjectHost::InitializeScriptedBullet()
 			bool _scriptedBullet = false;
+			// The bullet of a player of another machine or one fired on a client, it neither hurts nor breaks anything
+			bool _replica;
+			// On the server, the bullet of a player of a client, which hits only what the client reports
+			bool _clientHits;
+			// On a client, an object only this machine has (made for its player), see LevelScriptLoader::CanAddObjects()
+			bool _clientLocal;
+			// Every machine of an online game runs it itself, and what it makes (see LevelScriptLoader::MarkMirrored())
+			bool _mirrored;
 			// The template gave it a `curFrame` outside of its animation, which it keeps as JJ2+ does (see ScriptObjectHost::PullFromActor())
 			bool _ownFrame = false;
 			// How many frames ahead a behavior set `frameID` of an animation counted by the age (see ScriptObjectHost::PullFromActor())

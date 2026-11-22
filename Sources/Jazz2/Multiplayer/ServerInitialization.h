@@ -181,6 +181,7 @@ namespace Jazz2::Multiplayer
 			-   If specified, the WebSocket server will use secure connections (wss://) and require clients to support TLS
 		-   @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list (default is **false**)
 		-   @cpp "AllowAssetStreaming" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to download assets from the server (default is **true**)
+		-   @cpp "KickPlayersWithoutScripts" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients that don't run level scripts are kicked in a level with a script, otherwise they can only spectate it (default is **false**)
 		-   @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication (default is **false**)
 			-   Discord authentication requires a running Discord client
 			-   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
@@ -374,6 +375,8 @@ namespace Jazz2::Multiplayer
 		bool IsPrivate;
 		/** @brief Whether clients are allowed to automatically download missing assets from the server */
 		bool AllowAssetStreaming;
+		/** @brief Whether clients that don't run level scripts are kicked in a level with a script, they only spectate otherwise */
+		bool KickPlayersWithoutScripts;
 		/** @brief Whether Discord authentication is required to join the server */
 		bool RequiresDiscordAuth;
 		/** @brief Allowed player types as bitmask of @ref PlayerType */

@@ -90,6 +90,15 @@ namespace Jazz2::Scripting::Legacy
 		/** @brief Returns the frame count and the first frame of an animation, `false` if there's no such animation */
 		bool GetAnimationFrames(std::uint32_t animIndex, std::uint32_t& frameCount, std::uint32_t& firstFrame);
 		/**
+			@brief Returns where a frame of the frame table is, by the set its animation was made in, the place of the animation there and of the frame in it
+
+			The indices of the tables follow the order the sets are first used in, which differs between the machines of a
+			multiplayer game, this doesn't (see @ref FindFrameByLocation()). Returns `false` for a frame of no set.
+		*/
+		bool GetFrameLocation(std::uint32_t frameIndex, std::uint32_t& setID, std::uint32_t& load, std::uint32_t& animInSet, std::uint32_t& frameInAnim) const;
+		/** @brief Returns the frame at a location from @ref GetFrameLocation(), using the set first if needed, 0 if there's no such frame */
+		std::uint32_t FindFrameByLocation(std::uint32_t setID, std::uint32_t load, std::uint32_t animInSet, std::uint32_t frameInAnim);
+		/**
 			@brief Returns the rectangle of a frame and the one of its pixels, both from its hotspot
 
 			Returns `false` if there's no such frame or it has no pixels.
@@ -260,6 +269,8 @@ namespace Jazz2::Scripting::Legacy
 		// and the same by the path of the sprite sheet, made on first use (see FindAnimationOfGraphics())
 		HashMap<const Resources::GenericGraphicResource*, std::uint32_t> _graphicsAnimations;
 		HashMap<String, std::uint32_t> _pathAnimations;
+		// The animations by where they were made, see TagAnimation()
+		HashMap<std::uint64_t, std::uint32_t> _animationsByLocation;
 
 		// The entries given to scripts, whose properties Flush() compares to what they were (as long as a script holds them)
 		SmallVector<jjANIMSET*, 0> _watchedSets;
@@ -288,6 +299,11 @@ namespace Jazz2::Scripting::Legacy
 		jjANIMFRAME* EnsureFrame(std::uint32_t index);
 		jjANIMATION* AddAnimation();
 		jjANIMFRAME* AddFrame(std::uint32_t owner);
+		// Records where an animation was made, by the set, the load of the set and its place there (see GetFrameLocation())
+		void TagAnimation(jjANIMATION& anim, std::uint32_t setID, std::uint32_t load, std::uint32_t place, std::uint32_t ownFirstFrame);
+		static std::uint64_t GetLocationKey(std::uint32_t setID, std::uint32_t load, std::uint32_t place) {
+			return (std::uint64_t(setID & 0xFFFF) << 48) | (std::uint64_t(load & 0xFFFFFF) << 24) | std::uint64_t(place & 0xFFFFFF);
+		}
 		// Reads the image of a frame if it has none yet (see jjANIMFRAME::_source)
 		void EnsureFrameImage(jjANIMFRAME& frame);
 		void ReadNativeFrames(std::uint32_t nativeIndex);

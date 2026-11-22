@@ -61,6 +61,8 @@ namespace Jazz2::UI::Menu
 		};
 
 		// TRANSLATORS: Menu item in Select Game Mode section
+		add(MpGameMode::Cooperation, _("Cooperation"));
+		// TRANSLATORS: Menu item in Select Game Mode section
 		add(MpGameMode::Battle, _("Battle"));
 		// TRANSLATORS: Menu item in Select Game Mode section
 		add(MpGameMode::TeamBattle, _("Team Battle"));
@@ -74,8 +76,6 @@ namespace Jazz2::UI::Menu
 		add(MpGameMode::TeamTreasureHunt, _("Team Treasure Hunt"));
 		// TRANSLATORS: Menu item in Select Game Mode section
 		add(MpGameMode::CaptureTheFlag, _("Capture The Flag"));
-		// TRANSLATORS: Menu item in Select Game Mode section
-		add(MpGameMode::Cooperation, _("Cooperation"));
 		// TRANSLATORS: Menu item in Select Game Mode section (only the player who is "it" can be roasted and scores)
 		add(MpGameMode::RoastTag, _("Roast Tag"));
 		// TRANSLATORS: Menu item in Select Game Mode section (every player has limited lives, the last one alive wins)
@@ -146,6 +146,8 @@ namespace Jazz2::UI::Menu
 	StringView MultiplayerGameModeSelectSection::GetDescription(MpGameMode mode)
 	{
 		switch (mode) {
+			// TRANSLATORS: Description of Cooperation game mode in Select Game Mode section
+			case MpGameMode::Cooperation: return _("Play the story levels together. Reaching the exit takes everyone to the next level.");
 			// TRANSLATORS: Description of Battle game mode in Select Game Mode section
 			case MpGameMode::Battle: return _("Roast the other players. Each roast is a point.");
 			// TRANSLATORS: Description of Team Battle game mode in Select Game Mode section
@@ -160,8 +162,6 @@ namespace Jazz2::UI::Menu
 			case MpGameMode::TeamTreasureHunt: return _("Treasure Hunt in teams. The treasure of all team members adds up.");
 			// TRANSLATORS: Description of Capture The Flag game mode in Select Game Mode section
 			case MpGameMode::CaptureTheFlag: return _("Steal the enemy flag and bring it to your own base.");
-			// TRANSLATORS: Description of Cooperation game mode in Select Game Mode section
-			case MpGameMode::Cooperation: return _("Play the story levels together. Reaching the exit takes everyone to the next level.");
 			// TRANSLATORS: Description of Roast Tag game mode in Select Game Mode section
 			case MpGameMode::RoastTag: return _("The first roast wins the ring. Then only the ring holder and the player with the fewest points can roast or be roasted.");
 			// TRANSLATORS: Description of Last Rabbit Standing game mode in Select Game Mode section

@@ -130,7 +130,7 @@ namespace Jazz2::Scripting
 			: jumpStrength(-10.0f), _levelScriptLoader(levelScripts), _player(player), _timerCallback(nullptr), _override(nullptr),
 				_timerState(0), _timerLeft(0.0f), _syncedJumpStrength(-10.0f), _lightType(LightTypePlayer), _tickLightType(0),
 				_lapsSeen(0), _lapStartTick(-1), _lapTimes{}, _lapTimeBest(0), _light(0), _tickLight(0), _tickLightSet(false),
-				_timerPersists(false), _drawnInMode(false) {
+				_timerPersists(false), _bossLostByDeath(false), _drawnInMode(false), _remotePlayerID(-1) {
 			// Without a player, it stands for the players that aren't in the game, see LevelScriptLoader::GetPlayerBackingStore()
 			isLocal = (player != nullptr);
 			isActive = (player != nullptr);
@@ -184,7 +184,8 @@ namespace Jazz2::Scripting
 
 		float jjPLAYER::get_xPos() const {
 			if (_player == nullptr) {
-				return {};
+				Actors::ActorBase* remote = GetRemoteActor();
+				return (remote != nullptr ? remote->GetPos().X : 0.0f);
 			}
 			return _player->_pos.X;
 		}
@@ -200,6 +201,7 @@ namespace Jazz2::Scripting
 			// A scripted move is a teleport, not a path the player walked, so nothing between the two positions
 			// may be collided with or triggered (see Actors::ActorBase::ResetPathTracking())
 			_player->ResetPathTracking();
+			ForwardChange(ScriptPlayerChange::XPos, value);
 			return _player->_pos.X;
 		}
 		// A player standing on the ground is 0.6 to 1.9 px lower in JJ2+ (measured), scripts test the ground by `yPos + 21`
@@ -207,7 +209,8 @@ namespace Jazz2::Scripting
 
 		float jjPLAYER::get_yPos() const {
 			if (_player == nullptr) {
-				return {};
+				Actors::ActorBase* remote = GetRemoteActor();
+				return (remote != nullptr ? remote->GetPos().Y + PlayerOffsetY : 0.0f);
 			}
 			return _player->_pos.Y + PlayerOffsetY;
 		}
@@ -220,6 +223,7 @@ namespace Jazz2::Scripting
 			_player->AABBInner.T += delta;
 			_player->AABBInner.B += delta;
 			_player->ResetPathTracking();
+			ForwardChange(ScriptPlayerChange::YPos, value);
 			return value;
 		}
 		float jjPLAYER::get_xAcc() const {
@@ -290,6 +294,7 @@ namespace Jazz2::Scripting
 				return {};
 			}
 			_player->_speed.X = value / PlayerSpeedToTicks;
+			ForwardChange(ScriptPlayerChange::XSpeed, value);
 			return value;
 		}
 		float jjPLAYER::get_ySpeed() {
@@ -319,6 +324,7 @@ namespace Jazz2::Scripting
 			return value;
 		}
 		void jjPLAYER::ApplyYSpeed(float value) {
+			ForwardChange(ScriptPlayerChange::YSpeed, value);
 			if (_player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp) {
 				// A buttstomp sets the speed itself in every tick, as measured in JJ2+ (a pole holding the player, a jump off it)
 				return;
@@ -629,13 +635,15 @@ namespace Jazz2::Scripting
 		}
 		std::int8_t jjPLAYER::get_direction() const {
 			if (_player == nullptr) {
-				return {};
+				Actors::ActorBase* remote = GetRemoteActor();
+				return (remote != nullptr ? std::int8_t(remote->IsFacingLeft() ? -1 : 1) : 0);
 			}
 			return std::int8_t(_player->IsFacingLeft() ? -1 : 1);
 		}
 		std::int8_t jjPLAYER::set_direction(std::int8_t value) {
 			if (_player != nullptr && value != 0) {
 				_player->SetFacingLeft(value < 0);
+				ForwardChange(ScriptPlayerChange::Direction, std::int32_t(value));
 			}
 			return value;
 		}
@@ -657,6 +665,7 @@ namespace Jazz2::Scripting
 				_player->_doubleJumpCount = (value
 					? std::max<std::int32_t>(_player->_levelHandler->GetCharacterProfile(_player->_playerType).DoubleJumpCountMax, 1)
 					: 0);
+				ForwardChange(ScriptPlayerChange::DoubleJumped, std::int32_t(value ? 1 : 0));
 			}
 			return value;
 		}
@@ -669,6 +678,7 @@ namespace Jazz2::Scripting
 		std::int32_t jjPLAYER::set_helicopter(std::int32_t value) {
 			if (_player != nullptr) {
 				_player->_copterFramesLeft = std::max(value, 0) * FrameTimer::FramesPerSecond / 70.0f;
+				ForwardChange(ScriptPlayerChange::Helicopter, value);
 			}
 			return value;
 		}
@@ -723,7 +733,7 @@ namespace Jazz2::Scripting
 
 		std::int8_t jjPLAYER::get_playerID() const {
 			if (_player == nullptr) {
-				return {};
+				return std::int8_t(_remotePlayerID >= 0 ? _remotePlayerID : 0);
 			}
 			return (std::int8_t)_levelScriptLoader->GetScriptPlayerID(_player);
 		}
@@ -731,7 +741,10 @@ namespace Jazz2::Scripting
 			if (_player == nullptr) {
 				return {};
 			}
-			// The index of jjLocalPlayers, the players of this machine in their order
+			// The index of jjLocalPlayers, 0 for a player of another machine (scripts index arrays of jjLocalPlayerCount by it)
+			if (!_levelScriptLoader->IsLocalPlayer(_player)) {
+				return 0;
+			}
 			std::int32_t index = 0;
 			for (Actors::Player* player : _levelScriptLoader->GetPlayers()) {
 				if (player == _player) {
@@ -752,6 +765,10 @@ namespace Jazz2::Scripting
 					if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
 						return peerDesc->Team;
 					}
+				}
+				StringView name; std::uint8_t team; std::uint32_t fur;
+				if (_player == nullptr && _remotePlayerID >= 0 && mpHandler->GetRemotePlayerInfo(std::uint32_t(_remotePlayerID), name, team, fur)) {
+					return team;
 				}
 			}
 #endif
@@ -799,6 +816,7 @@ namespace Jazz2::Scripting
 				return;
 			}
 			noop(); // TODO: trigSample
+			ForwardSuckerTube(xSpeed, ySpeed, (center ? 1 : 0) | (noclip ? 2 : 0));
 
 			// As touching a tube event of these speeds (see Player::HandleAreaEventAt())
 			using Actors::Player;
@@ -894,13 +912,24 @@ namespace Jazz2::Scripting
 			return false;
 		}
 		bool jjPLAYER::get_isInGame() const {
-			return (_player != nullptr && !get_isConnecting() && !get_isIdle() && !get_isOut() && !get_isSpectating());
+			if (_player == nullptr) {
+				return (GetRemoteActor() != nullptr);
+			}
+			return (!get_isConnecting() && !get_isIdle() && !get_isOut() && !get_isSpectating());
 		}
 
 		String jjPLAYER::get_name() const {
 #if defined(WITH_MULTIPLAYER)
 			if (auto peer = GetPlayerPeer(_player)) {
 				return peer->PlayerName;
+			}
+			if (_player == nullptr && _remotePlayerID >= 0) {
+				if (auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler())) {
+					StringView name; std::uint8_t team; std::uint32_t fur;
+					if (mpHandler->GetRemotePlayerInfo(std::uint32_t(_remotePlayerID), name, team, fur)) {
+						return name;
+					}
+				}
 			}
 #endif
 			if (_player == nullptr) {
@@ -942,6 +971,16 @@ namespace Jazz2::Scripting
 		}
 		std::uint32_t jjPLAYER::get_fur() const {
 			if (_player == nullptr) {
+#if defined(WITH_MULTIPLAYER)
+				if (_remotePlayerID >= 0) {
+					if (auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler())) {
+						StringView name; std::uint8_t team; std::uint32_t fur;
+						if (mpHandler->GetRemotePlayerInfo(std::uint32_t(_remotePlayerID), name, team, fur)) {
+							return fur;
+						}
+					}
+				}
+#endif
 				return {};
 			}
 			// The engine packs one fur-section start index per byte, matching the JJ2+ 4-byte fur model
@@ -1018,6 +1057,7 @@ namespace Jazz2::Scripting
 			}
 			_invisible = value;
 			UpdateDrawOverride();
+			ForwardChange(ScriptPlayerChange::Invisibility, std::int32_t(value ? 1 : 0));
 			return value;
 		}
 		bool jjPLAYER::get_noclipMode() const {
@@ -1033,6 +1073,7 @@ namespace Jazz2::Scripting
 			// Toggles tileset collision so the player can pass through level geometry, and gravity, a player in noclip mode keeps
 			// the speed it has (a burger booth makes the player rise slowly by it)
 			_player->SetState(Actors::ActorState::CollideWithTileset | Actors::ActorState::ApplyGravitation, !value);
+			ForwardChange(ScriptPlayerChange::NoclipMode, std::int32_t(value ? 1 : 0));
 			return value;
 		}
 		std::uint8_t jjPLAYER::get_lighting() const {
@@ -1411,6 +1452,7 @@ namespace Jazz2::Scripting
 				return true;
 			}
 
+			_bossLostByDeath = false;
 			_levelScriptLoader->_levelHandler->BroadcastTriggeredEvent(_player, EventType::AreaActivateBoss, nullptr);
 			return true;
 		}
@@ -1548,7 +1590,29 @@ namespace Jazz2::Scripting
 				angle += TwoPi;
 			}
 			Actors::ActorBase* shot = nullptr;
-			if (!FireScriptedWeapon(weaponType, angle, &shot)) {
+			ScriptedFire::FlagsType fireFlags = ScriptedFire::FlagsType::FromScript;
+			if (depleteAmmo) {
+				fireFlags |= ScriptedFire::FlagsType::DepleteAmmo;
+			}
+			if (requireAmmo) {
+				fireFlags |= ScriptedFire::FlagsType::RequireAmmo;
+			}
+			bool firedByServer = false;
+#if defined(WITH_MULTIPLAYER)
+			// The server fires the shots of the game for a client, they come back as its objects
+			auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+			if (mpHandler != nullptr && !mpHandler->IsServer() && !_levelScriptLoader->IsScriptedWeapon(weaponType)) {
+				ScriptedFire fire = {};
+				fire.Weapon = weaponType;
+				fire.Flags = fireFlags | ScriptedFire::FlagsType::Native;
+				fire.AimAngle = angle;
+				fire.OwnerPos = _player->_pos;
+				mpHandler->HandleScriptedFire(_player, fire, _levelScriptLoader->_objectBehaviorDepth > 0);
+				firedByServer = true;
+			}
+#endif
+			// Fired by the server, the ammo and the wait still go as for a shot fired here
+			if (!firedByServer && !FireScriptedWeapon(weaponType, angle, &shot, std::uint8_t(fireFlags))) {
 				switch (weaponType) {
 					case WeaponType::Blaster: shot = FireAimedNativeShot<Actors::Weapons::BlasterShot>(weaponType, angle); break;
 					case WeaponType::Bouncer: shot = FireAimedNativeShot<Actors::Weapons::BouncerShot>(weaponType, angle); break;
@@ -1561,7 +1625,7 @@ namespace Jazz2::Scripting
 					default: noop(); break;
 				}
 			}
-			if (shot == nullptr) {
+			if (shot == nullptr && !firedByServer) {
 				return 0;
 			}
 			if (depleteAmmo && !infinite) {
@@ -1573,6 +1637,9 @@ namespace Jazz2::Scripting
 			// A script ends a buttstomp by `buttstomp = 121` before it fires down (a sword), as measured in JJ2+
 			if (buttstomp >= 41 && _player->_currentSpecialMove == Actors::Player::SpecialMoveType::Buttstomp) {
 				_player->EndDamagingMove();
+			}
+			if (shot == nullptr) {
+				return 0;
 			}
 			jjOBJ* obj = _levelScriptLoader->GetObjectView(shot);
 			return (obj != nullptr ? obj->objectID : 0);
@@ -1985,6 +2052,11 @@ namespace Jazz2::Scripting
 				bossNumber = nativeBoss;
 			}
 			bool nativeBossActive = (nativeBoss != 0 || _levelScriptLoader->IsBossAreaActivated());
+			if (!nativeBossActive) {
+				_bossLostByDeath = false;
+			}
+			// The death ends the fight for the player as in JJ2+, the boss stays active for the others
+			nativeBossActive = (nativeBossActive && !_bossLostByDeath);
 			if (!_syncedOnce || bossActive == _syncedBossActive) {
 				bossActive = nativeBossActive;
 			}
@@ -2046,66 +2118,46 @@ namespace Jazz2::Scripting
 				_player->_pushObjectHoldTime = std::max(_player->_pushObjectHoldTime, 1.0f);
 			}
 		}
-		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType, float aimAngle, Actors::ActorBase** lastShot) {
+		bool jjPLAYER::FireScriptedWeapon(WeaponType weaponType, float aimAngle, Actors::ActorBase** lastShot, std::uint8_t fireFlags) {
 			// The bullet of the weapon must have a behavior of the script, the behavior moves the bullets then
-			std::uint8_t bullet;
-			switch (weaponType) {
-				case WeaponType::Pepper: bullet = aPLAYERBULLET8; break;
-				case WeaponType::Electro: bullet = aPLAYERBULLET9; break;
-				default: bullet = (weaponType <= WeaponType::Toaster ? std::uint8_t(aPLAYERBULLET1 + std::int32_t(weaponType)) : std::uint8_t(0)); break;
-			}
-			const jjOBJ* preset = (bullet != 0 ? _levelScriptLoader->FindObjectPreset(bullet) : nullptr);
-			if (preset == nullptr || (preset->behavior.function == nullptr && preset->behavior.object == nullptr)) {
+			if (_player == nullptr || !_levelScriptLoader->IsScriptedWeapon(weaponType)) {
 				return false;
 			}
 
-			// As JJ2+ fires by `SPREAD::Spread` (measured): RFNORMAL two bullets angled up and down, RFPU those and a straight
-			// one, RF two or three when powered up, every other spread one
-			WeaponSpread spread = _levelScriptLoader->GetWeapon(std::int32_t(weaponType) + 1)->Spread;
-			bool upgraded = ((_player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] & 0x01) != 0);
-			bool angled = (spread == WeaponSpread::Double || spread == WeaponSpread::Triple || spread == WeaponSpread::DoubleOrTriple) && aimAngle < 0.0f;
-			bool straight = (!angled || spread == WeaponSpread::Triple || (spread == WeaponSpread::DoubleOrTriple && upgraded));
-			for (std::int8_t slot = -1; slot <= 1; slot++) {
-				if (slot == 0 ? !straight : !angled) {
-					continue;
-				}
-				Actors::ActorBase* shot = nullptr;
-				switch (weaponType) {
-					case WeaponType::Blaster: shot = FireSpreadShot<Actors::Weapons::BlasterShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Bouncer: shot = FireSpreadShot<Actors::Weapons::BouncerShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Freezer: shot = FireSpreadShot<Actors::Weapons::FreezerShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Seeker: shot = FireSpreadShot<Actors::Weapons::SeekerShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::RF: shot = FireSpreadShot<Actors::Weapons::RFShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Toaster: shot = FireSpreadShot<Actors::Weapons::ToasterShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Pepper: shot = FireSpreadShot<Actors::Weapons::PepperShot>(weaponType, slot, aimAngle); break;
-					case WeaponType::Electro: shot = FireSpreadShot<Actors::Weapons::ElectroShot>(weaponType, slot, aimAngle); break;
-					default: break;
-				}
-				if (lastShot != nullptr && shot != nullptr) {
-					*lastShot = shot;
-				}
+			// The player as it fires, the other machines of a multiplayer game fire the same bullets from it
+			ScriptedFire fire = {};
+			fire.Weapon = weaponType;
+			fire.Upgrades = _player->_inventory.WeaponUpgrades[(std::int32_t)weaponType];
+			fire.Sequence = _levelScriptLoader->_nextFireSequence++;
+			fire.Flags = ScriptedFire::FlagsType(fireFlags);
+			fire.AimAngle = aimAngle;
+			fire.OwnerPos = _player->_pos;
+			fire.OwnerSpeed = _player->_speed;
+			_player->GetFirePointAndAngle(fire.InitialPos, fire.GunspotPos, fire.Angle);
+			if (_player->IsFacingLeft()) {
+				fire.Flags |= ScriptedFire::FlagsType::FacingLeft;
 			}
+			if (aimAngle < 0.0f && !_player->_inWater && std::abs(std::sin(fire.Angle)) > 0.5f) {
+				fire.Flags |= ScriptedFire::FlagsType::Upward;
+			}
+
+			bool replica = false;
+#if defined(WITH_MULTIPLAYER)
+			// A client's bullets only show, the server fires the ones that hurt
+			auto* mpHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelScriptLoader->GetLevelHandler());
+			replica = (mpHandler != nullptr && !mpHandler->IsServer());
+#endif
+			Actors::ActorBase* shot = _levelScriptLoader->FireScriptedBullets(_player->shared_from_this(),
+				_levelScriptLoader->GetScriptPlayerID(_player), fire, replica);
+			if (lastShot != nullptr && shot != nullptr) {
+				*lastShot = shot;
+			}
+#if defined(WITH_MULTIPLAYER)
+			if (mpHandler != nullptr) {
+				mpHandler->HandleScriptedFire(_player, fire, _levelScriptLoader->_objectBehaviorDepth > 0);
+			}
+#endif
 			return true;
-		}
-
-		template<typename T>
-		Actors::ActorBase* jjPLAYER::FireSpreadShot(WeaponType weaponType, std::int8_t slot, float aimAngle) {
-			Vector3i initialPos;
-			Vector2f gunspotPos;
-			float angle;
-			_player->GetFirePointAndAngle(initialPos, gunspotPos, angle);
-			float angleOffset = slot * (_player->IsFacingLeft() ? -0.2f : 0.2f);
-
-			std::uint8_t shotParams[1] = { _player->_inventory.WeaponUpgrades[(std::int32_t)weaponType] };
-			std::shared_ptr<T> shot = std::make_shared<T>();
-			shot->OnActivated(Actors::ActorActivationDetails(_player->_levelHandler, initialPos, shotParams));
-			shot->OnFire(_player->shared_from_this(), gunspotPos, _player->_speed, angle + angleOffset, _player->IsFacingLeft());
-			// Its view is made as JJ2+ fires it when the level adds it (see LevelScriptLoader::EnsureObjectView())
-			bool upward = (aimAngle < 0.0f && !_player->_inWater && std::abs(std::sin(angle)) > 0.5f);
-			_levelScriptLoader->_firingBullet = { shot.get(), slot, gunspotPos.Y - _player->_pos.Y, upward, aimAngle };
-			_player->_levelHandler->AddActor(shot);
-			_levelScriptLoader->_firingBullet = {};
-			return shot.get();
 		}
 
 		bool jjPLAYERDRAW::get_shield(std::int32_t shield) const {
@@ -2176,6 +2228,333 @@ namespace Jazz2::Scripting
 	{
 		jjPLAYER* p = GetPlayerBackingStore(player);
 		return (p != nullptr && p->FireScriptedWeapon(weaponType));
+	}
+
+	bool LevelScriptLoader::IsScriptedWeapon(WeaponType weaponType) const
+	{
+		// The bullet of the weapon must have a behavior of the script, the behavior moves the bullets then
+		std::uint8_t bullet;
+		switch (weaponType) {
+			case WeaponType::Pepper: bullet = Legacy::aPLAYERBULLET8; break;
+			case WeaponType::Electro: bullet = Legacy::aPLAYERBULLET9; break;
+			default: bullet = (weaponType <= WeaponType::Toaster ? std::uint8_t(Legacy::aPLAYERBULLET1 + std::int32_t(weaponType)) : std::uint8_t(0)); break;
+		}
+		const Legacy::jjOBJ* preset = (bullet != 0 ? FindObjectPreset(bullet) : nullptr);
+		return (preset != nullptr && (preset->behavior.function != nullptr || preset->behavior.object != nullptr));
+	}
+
+	template<typename T>
+	Actors::ActorBase* LevelScriptLoader::FireScriptedBullet(const std::shared_ptr<Actors::ActorBase>& owner, std::int32_t ownerID, const ScriptedFire& fire,
+		std::int8_t slot, bool replica, bool clientHits)
+	{
+		bool facingLeft = ((fire.Flags & ScriptedFire::FlagsType::FacingLeft) == ScriptedFire::FlagsType::FacingLeft);
+		bool upward = ((fire.Flags & ScriptedFire::FlagsType::Upward) == ScriptedFire::FlagsType::Upward);
+		float angleOffset = slot * (facingLeft ? -0.2f : 0.2f);
+
+		std::uint8_t shotParams[1] = { fire.Upgrades };
+		std::shared_ptr<T> shot = std::make_shared<T>();
+		shot->OnActivated(Actors::ActorActivationDetails(_levelHandler, fire.InitialPos, shotParams));
+		shot->OnFire(owner, fire.GunspotPos, fire.OwnerSpeed, fire.Angle + angleOffset, facingLeft);
+		// Its view is made as JJ2+ fires it when the level adds it (see EnsureObjectView())
+		_firingBullet = { shot.get(), slot, fire.GunspotPos.Y - fire.OwnerPos.Y, upward, fire.AimAngle, fire.OwnerPos, fire.OwnerSpeed.X,
+			facingLeft, replica, ownerID, clientHits };
+		_levelHandler->AddActor(shot);
+		_firingBullet = {};
+
+		if (replica) {
+			// The bullet of the player of this client reports what it hits (see ReportBulletHits())
+			auto* player = runtime_cast<Actors::Player>(owner.get());
+			if (player != nullptr && IsLocalPlayer(player)) {
+				_reportingBullets[shot.get()] = { fire.Sequence, slot, {} };
+			}
+		} else if (clientHits) {
+			// What the client of the player reports it hit is hit by it, the ones gone are dropped now and then
+			if (_clientBullets.size() >= 256) {
+				SmallVector<std::uint64_t, 0> gone;
+				for (const auto& [key, bullet] : _clientBullets) {
+					if (bullet.expired()) {
+						gone.push_back(key);
+					}
+				}
+				for (std::uint64_t key : gone) {
+					_clientBullets.erase(key);
+				}
+			}
+			_clientBullets[GetClientBulletKey(ownerID, fire.Sequence, slot)] = shot;
+		}
+		return shot.get();
+	}
+
+	Actors::ActorBase* LevelScriptLoader::FireScriptedBullets(const std::shared_ptr<Actors::ActorBase>& owner, std::int32_t ownerID, const ScriptedFire& fire, bool replica,
+		bool clientHits)
+	{
+		if (owner == nullptr || fire.Weapon >= WeaponType::Count) {
+			return nullptr;
+		}
+
+		// As JJ2+ fires by `SPREAD::Spread` (measured): RFNORMAL two bullets angled up and down, RFPU those and a straight
+		// one, RF two or three when powered up, every other spread one
+		WeaponSpread spread = GetWeapon(std::int32_t(fire.Weapon) + 1)->Spread;
+		bool upgraded = ((fire.Upgrades & 0x01) != 0);
+		bool angled = (spread == WeaponSpread::Double || spread == WeaponSpread::Triple || spread == WeaponSpread::DoubleOrTriple) && fire.AimAngle < 0.0f;
+		bool straight = (!angled || spread == WeaponSpread::Triple || (spread == WeaponSpread::DoubleOrTriple && upgraded));
+		Actors::ActorBase* lastShot = nullptr;
+		for (std::int8_t slot = -1; slot <= 1; slot++) {
+			if (slot == 0 ? !straight : !angled) {
+				continue;
+			}
+			Actors::ActorBase* shot = nullptr;
+			switch (fire.Weapon) {
+				case WeaponType::Blaster: shot = FireScriptedBullet<Actors::Weapons::BlasterShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Bouncer: shot = FireScriptedBullet<Actors::Weapons::BouncerShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Freezer: shot = FireScriptedBullet<Actors::Weapons::FreezerShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Seeker: shot = FireScriptedBullet<Actors::Weapons::SeekerShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::RF: shot = FireScriptedBullet<Actors::Weapons::RFShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Toaster: shot = FireScriptedBullet<Actors::Weapons::ToasterShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Pepper: shot = FireScriptedBullet<Actors::Weapons::PepperShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				case WeaponType::Electro: shot = FireScriptedBullet<Actors::Weapons::ElectroShot>(owner, ownerID, fire, slot, replica, clientHits); break;
+				default: break;
+			}
+			if (shot != nullptr) {
+				lastShot = shot;
+			}
+		}
+		return lastShot;
+	}
+
+	bool LevelScriptLoader::FireNativeBulletOfClient(Actors::Player* player, const ScriptedFire& fire)
+	{
+		jjPLAYER* p = GetPlayerBackingStore(player);
+		if (p == nullptr || fire.Weapon >= WeaponType::Count) {
+			return false;
+		}
+		bool depleteAmmo = ((fire.Flags & ScriptedFire::FlagsType::DepleteAmmo) == ScriptedFire::FlagsType::DepleteAmmo);
+		bool requireAmmo = ((fire.Flags & ScriptedFire::FlagsType::RequireAmmo) == ScriptedFire::FlagsType::RequireAmmo);
+		return (p->fireBulletAngle(std::uint8_t(std::int32_t(fire.Weapon) + 1), depleteAmmo, requireAmmo, fire.AimAngle) != 0);
+	}
+
+	Actors::ActorBase* LevelScriptLoader::GetRemotePlayerActor(std::int32_t playerID) const
+	{
+#if defined(WITH_MULTIPLAYER)
+		if (playerID >= 0) {
+			auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler);
+			if (mpHandler != nullptr && !mpHandler->IsServer()) {
+				return mpHandler->GetRemotePlayerActor(std::uint32_t(playerID));
+			}
+		}
+#endif
+		return nullptr;
+	}
+
+	void LevelScriptLoader::ReportBulletHits(Actors::ActorBase* bullet)
+	{
+#if defined(WITH_MULTIPLAYER)
+		auto it = _reportingBullets.find(bullet);
+		if (it == _reportingBullets.end()) {
+			return;
+		}
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler);
+		if (mpHandler == nullptr || mpHandler->IsServer()) {
+			return;
+		}
+		// Where its frame is, the shot of the game under it may be smaller (a sword)
+		AABBf box = bullet->AABBInner;
+		if (Legacy::jjOBJ* view = GetObjectView(bullet)) {
+			Recti frameRect, pixels;
+			if (view->curFrame != 0 && GetAnimationTables().GetFrameBounds(view->curFrame, frameRect, pixels) && pixels.W > 0 && pixels.H > 0) {
+				float left = view->xPos + float(view->direction < 0 ? -pixels.X - pixels.W : pixels.X);
+				float top = view->yPos + float(pixels.Y);
+				box = AABBf::Combine(box, AABBf(left, top, left + float(pixels.W), top + float(pixels.H)));
+			}
+		}
+
+		// The objects of the server it overlaps here, each once - the server's copy of the bullet hits them there
+		SmallVector<Actors::ActorBase*, 4> touched;
+		_levelHandler->FindCollisionActorsByAABB(bullet, box, [&touched](Actors::ActorBase* other) {
+			touched.push_back(other);
+			return true;
+		});
+		// An object a script draws is where its frames are drawn here, its sprite of the game may not be (zombie dogs)
+		for (auto& [actorId, entry] : _remoteObjectDraws) {
+			std::shared_ptr<Actors::ActorBase> anchor = entry.Anchor.lock();
+			if (anchor == nullptr || !anchor->GetState(Actors::ActorState::CollideWithOtherActors) ||
+				std::find(touched.begin(), touched.end(), anchor.get()) != touched.end()) {
+				continue;
+			}
+			AABBf bounds;
+			if (GetRemoteObjectBounds(entry, anchor->GetPos(), bounds) && bounds.Overlaps(box)) {
+				touched.push_back(anchor.get());
+			}
+		}
+
+		ReportingBullet& reporting = it->second;
+		for (Actors::ActorBase* other : touched) {
+			std::uint32_t actorId;
+			if (!mpHandler->GetRemoteObjectId(other, actorId) ||
+				std::find(reporting.Reported.begin(), reporting.Reported.end(), actorId) != reporting.Reported.end()) {
+				continue;
+			}
+			reporting.Reported.push_back(actorId);
+			mpHandler->SendScriptedHit(reporting.Sequence, reporting.Slot, actorId);
+		}
+#endif
+	}
+
+	bool LevelScriptLoader::ApplyClientHit(Actors::Player* player, std::uint16_t sequence, std::int8_t slot, Actors::ActorBase* target, float maxDistance)
+	{
+		auto it = _clientBullets.find(GetClientBulletKey(GetScriptPlayerID(player), sequence, slot));
+		if (it == _clientBullets.end()) {
+			return false;
+		}
+		std::shared_ptr<Actors::ActorBase> bullet = it->second.lock();
+		if (bullet == nullptr || bullet->GetState(Actors::ActorState::IsDestroyed) || target->GetState(Actors::ActorState::IsDestroyed)) {
+			return false;
+		}
+		float distance = (bullet->GetPos() - target->GetPos()).Length();
+		if (distance > maxDistance) {
+			return false;
+		}
+		// An object only the scripts have finds the shots itself, the others collide as in LevelHandler::UpdatePairs()
+		if (HitScriptOnlyObject(target, bullet.get())) {
+			return true;
+		}
+		// A bullet the script moves hits by its frame (a sword), the collision of the game is swallowed for it otherwise
+		Legacy::jjOBJ* view = GetObjectView(bullet.get());
+		if (view != nullptr && view->_host != nullptr && view->_host->HitByFrame(target)) {
+			return true;
+		}
+		if (!Actors::ActorBase::HandleCollisionByOverride(bullet.get(), target)) {
+			if (!bullet->OnHandleCollision(target)) {
+				target->OnHandleCollision(bullet.get());
+			}
+		}
+		return true;
+	}
+
+	void LevelScriptLoader::ForgetBullet(const Actors::ActorBase* bullet)
+	{
+		_reportingBullets.erase(bullet);
+	}
+
+	void LevelScriptLoader::SendEffectToClients(Vector2f pos, ArrayView<const std::uint8_t> data)
+	{
+#if defined(WITH_MULTIPLAYER)
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler)) {
+			mpHandler->SendScriptEffect(pos, data);
+		}
+#endif
+	}
+
+	void LevelScriptLoader::ReplicateSample(Vector2f pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency)
+	{
+		MemoryStream data(24);
+		data.WriteValue<std::uint8_t>(std::uint8_t(RemoteEffect::Sample));
+		data.WriteValueAsLE<float>(pos.X);
+		data.WriteValueAsLE<float>(pos.Y);
+		data.WriteVariableInt32(sampleId);
+		data.WriteVariableInt32(volume);
+		data.WriteVariableInt32(frequency);
+		SendEffectToClients(pos, arrayView(data.GetBuffer(), std::size_t(data.GetSize())));
+	}
+
+	bool LevelScriptLoader::ApplyRemotePlayerChanges(Stream& src)
+	{
+		jjPLAYER* p = GetLocalPlayerBackingStore(0);
+		bool moved = false;
+		std::uint32_t count = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < count; i++) {
+			ScriptPlayerChange change = ScriptPlayerChange(src.ReadValue<std::uint8_t>());
+			switch (change) {
+				case ScriptPlayerChange::XPos: p->set_xPos(src.ReadValueAsLE<float>()); moved = true; break;
+				case ScriptPlayerChange::YPos: p->set_yPos(src.ReadValueAsLE<float>()); moved = true; break;
+				case ScriptPlayerChange::XSpeed: p->set_xSpeed(src.ReadValueAsLE<float>()); break;
+				case ScriptPlayerChange::YSpeed: p->set_ySpeed(src.ReadValueAsLE<float>()); break;
+				case ScriptPlayerChange::Direction: p->set_direction(std::int8_t(src.ReadVariableInt32())); break;
+				case ScriptPlayerChange::DoubleJumped: p->set_alreadyDoubleJumped(src.ReadVariableInt32() != 0); break;
+				case ScriptPlayerChange::Helicopter: p->set_helicopter(src.ReadVariableInt32()); break;
+				case ScriptPlayerChange::Invisibility: p->set_invisibility(src.ReadVariableInt32() != 0); break;
+				case ScriptPlayerChange::NoclipMode: p->set_noclipMode(src.ReadVariableInt32() != 0); break;
+				case ScriptPlayerChange::SuckerTube: {
+					std::int32_t xSpeed = src.ReadVariableInt32();
+					std::int32_t ySpeed = src.ReadVariableInt32();
+					std::int32_t flags = src.ReadVariableInt32();
+					p->suckerTube(xSpeed, ySpeed, (flags & 1) != 0, (flags & 2) != 0, false);
+					break;
+				}
+				default:
+					// Something this version doesn't know, what follows can't be read
+					return moved;
+			}
+		}
+		return moved;
+	}
+
+#if defined(WITH_MULTIPLAYER)
+	// The server, when a change a script made to a player of a client goes to the client
+	static Multiplayer::MpLevelHandler* GetChangeReceiver(LevelScriptLoader* levelScripts, Actors::Player* player)
+	{
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(levelScripts->GetLevelHandler());
+		return (mpHandler != nullptr && mpHandler->IsServer() && player != nullptr && !levelScripts->IsLocalPlayer(player) ? mpHandler : nullptr);
+	}
+#endif
+
+	namespace Legacy
+	{
+		Actors::ActorBase* jjPLAYER::GetRemoteActor() const {
+			return (_remotePlayerID >= 0 ? _levelScriptLoader->GetRemotePlayerActor(_remotePlayerID) : nullptr);
+		}
+		void jjPLAYER::ForwardChange(ScriptPlayerChange change, float value) {
+#if defined(WITH_MULTIPLAYER)
+			if (auto* mpHandler = GetChangeReceiver(_levelScriptLoader, _player)) {
+				MemoryStream data(8);
+				data.WriteValue<std::uint8_t>(std::uint8_t(change));
+				data.WriteValueAsLE<float>(value);
+				mpHandler->QueueScriptPlayerChange(_player, arrayView(data.GetBuffer(), std::size_t(data.GetSize())));
+			}
+#endif
+		}
+		void jjPLAYER::ForwardChange(ScriptPlayerChange change, std::int32_t value) {
+#if defined(WITH_MULTIPLAYER)
+			if (auto* mpHandler = GetChangeReceiver(_levelScriptLoader, _player)) {
+				MemoryStream data(8);
+				data.WriteValue<std::uint8_t>(std::uint8_t(change));
+				data.WriteVariableInt32(value);
+				mpHandler->QueueScriptPlayerChange(_player, arrayView(data.GetBuffer(), std::size_t(data.GetSize())));
+			}
+#endif
+		}
+		void jjPLAYER::ForwardSuckerTube(std::int32_t xSpeed, std::int32_t ySpeed, std::int32_t flags) {
+#if defined(WITH_MULTIPLAYER)
+			if (auto* mpHandler = GetChangeReceiver(_levelScriptLoader, _player)) {
+				MemoryStream data(16);
+				data.WriteValue<std::uint8_t>(std::uint8_t(ScriptPlayerChange::SuckerTube));
+				data.WriteVariableInt32(xSpeed);
+				data.WriteVariableInt32(ySpeed);
+				data.WriteVariableInt32(flags);
+				mpHandler->QueueScriptPlayerChange(_player, arrayView(data.GetBuffer(), std::size_t(data.GetSize())));
+			}
+#endif
+		}
+		void jjPLAYER::SetRemotePlayer(std::int32_t playerID) {
+			_remotePlayerID = playerID;
+			isLocal = false;
+			RefreshRemotePlayer();
+		}
+		bool jjPLAYER::RefreshRemotePlayer() {
+			isActive = (GetRemoteActor() != nullptr);
+			return isActive;
+		}
+		void jjPLAYER::LeaveBossFight() {
+			_bossLostByDeath = true;
+			bossActive = false;
+			_syncedBossActive = false;
+		}
+		void jjPLAYER::Rebind(Actors::Player* player) {
+			// The override was owned by the previous actor
+			_player = player;
+			_override = nullptr;
+			isActive = (player != nullptr);
+		}
 	}
 
 	Legacy::jjWEAPON* LevelScriptLoader::GetWeapon(std::int32_t number)

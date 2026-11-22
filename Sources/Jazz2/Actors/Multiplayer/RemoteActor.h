@@ -63,6 +63,10 @@ namespace Jazz2::Actors::Multiplayer
 		void SetModifierDecor(std::shared_ptr<ActorBase> decor);
 		/** @brief Starts (or ends with zero) the sugar rush of this remote player, whose star trail is replayed locally */
 		void SetSugarRush(float timeLeft);
+		/** @brief Keeps the position interpolated also while the sprite is hidden, something else is drawn by it */
+		void SetAlwaysInterpolated(bool value) {
+			_alwaysInterpolate = value;
+		}
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

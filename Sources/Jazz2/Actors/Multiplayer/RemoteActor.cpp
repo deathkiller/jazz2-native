@@ -1,4 +1,4 @@
-#include "RemoteActor.h"
+﻿#include "RemoteActor.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -221,9 +221,14 @@ namespace Jazz2::Actors::Multiplayer
 			ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject |
 			ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjectsBelow | ActorState::ExcludeSimilar;
 
-		// Load indexed sprites when this remote player has a custom color, so they can be recolored at draw time
-		RequestMetadata(path, IsRecolored(GetPlayerTypeFromMetadataPath(path), _furColor));
-		SetAnimation(anim);
+		if (!path.empty()) {
+			// Load indexed sprites when this remote player has a custom color, so they can be recolored at draw time
+			RequestMetadata(path, IsRecolored(GetPlayerTypeFromMetadataPath(path), _furColor));
+			SetAnimation(anim);
+		} else {
+			// An object only a level script has, what the script drew is drawn by it instead
+			_alwaysInterpolate = true;
+		}
 		// Track the assigned animation so the first SyncAnimationWithServer() for the same state isn't skipped as
 		// "unchanged", which would otherwise leave the actor stuck in its spawn animation
 		_lastAnim = anim;
@@ -298,7 +303,9 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		if (_lastAnim != anim) {
 			_lastAnim = anim;
-			SetAnimation(anim);
+			if (_metadata != nullptr) {
+				SetAnimation(anim);
+			}
 		}
 
 		_renderer.SetRotation(rotation);

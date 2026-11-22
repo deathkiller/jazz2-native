@@ -71,6 +71,10 @@ namespace Jazz2::Scripting
 	AudioBuffer* LevelScriptLoader::ResolveSampleBuffer(std::int32_t sampleId)
 	{
 #if defined(WITH_AUDIO)
+		// A dedicated server has no audio device to load samples into
+		if (ContentResolver::Get().IsHeadless()) {
+			return nullptr;
+		}
 		auto it = _scriptSamples.find(sampleId);
 		if (it != _scriptSamples.end()) {
 			// A cached null entry means the sample previously failed to load - don't keep retrying
@@ -104,6 +108,9 @@ namespace Jazz2::Scripting
 
 	std::shared_ptr<AudioBufferPlayer> LevelScriptLoader::PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative)
 	{
+		if (!sourceRelative && IsReplicatingEffects()) {
+			ReplicateSample(pos, sampleId, volume, frequency);
+		}
 #if defined(WITH_AUDIO)
 		AudioBuffer* buffer = ResolveSampleBuffer(sampleId);
 		if (buffer == nullptr) {
@@ -173,6 +180,10 @@ namespace Jazz2::Scripting
 		auto stream = OpenScriptFile(path);
 		if (stream == nullptr || !stream->IsValid()) {
 			return false;
+		}
+		if (ContentResolver::Get().IsHeadless()) {
+			// Loaded as far as the script is concerned, a dedicated server plays nothing
+			return true;
 		}
 		auto buffer = std::make_unique<AudioBuffer>(Death::move(stream), path);
 

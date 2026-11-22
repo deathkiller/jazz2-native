@@ -195,6 +195,11 @@ namespace Jazz2::Scripting
 			// first use, and what it was made of
 			std::unique_ptr<Resources::GenericGraphicResource> _graphics;
 			std::uint64_t _graphicsSignature;
+			// Where it was made, the same on every machine (see AnimationTables::GetFrameLocation())
+			std::uint32_t _madeInSet;
+			std::uint32_t _madeByLoad;
+			std::uint32_t _placeInSet;
+			std::uint32_t _ownFirstFrame;
 		};
 
 		/**
@@ -267,6 +272,8 @@ namespace Jazz2::Scripting
 			// Whether the set is in the list of sets AnimationTables::Flush() looks at, and firstAnim as it saw it last
 			bool _watched;
 			std::uint32_t _seenFirstAnim;
+			// How many times a script loaded or allocated animations into the set, see AnimationTables::GetFrameLocation()
+			std::uint32_t _loadCount;
 		};
 	}
 }

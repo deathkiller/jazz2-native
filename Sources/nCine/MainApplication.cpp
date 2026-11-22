@@ -746,7 +746,7 @@ namespace nCine
 #	endif
 		while (!app._shouldQuit) {
 			app.ProcessStep();
-#	if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 			// The IME is modal to the firmware but not to the game, which keeps running and presenting behind
 			// it - so its result has to be collected from the frame loop rather than from whoever opened it.
 			// On the 3DS the keyboard is run from here in the first place: the applet blocks the thread, and
@@ -1092,11 +1092,76 @@ namespace nCine
 		_imeOnCompleted = {};
 		_swkbdInitialText = {};
 	}
+#elif defined(DEATH_TARGET_SWITCH)
+	void MainApplication::UpdateScreenKeyboard()
+	{
+		if (!_swkbdPending) {
+			return;
+		}
+		_swkbdPending = false;
+
+		// Run between frames like on the 3DS - swkbdShow() is a library applet that blocks until closed
+		SwkbdConfig swkbd;
+		Result rc = swkbdCreate(&swkbd, 0);
+		if (R_FAILED(rc)) {
+			LOGW("swkbdCreate() failed with 0x{:.8x}, the software keyboard is unavailable", std::uint32_t(rc));
+			_imeOnCompleted = {};
+			_swkbdInitialText = {};
+			return;
+		}
+
+		swkbdConfigMakePresetDefault(&swkbd);
+		swkbdConfigSetGuideText(&swkbd, "Enter text");
+		swkbdConfigSetStringLenMax(&swkbd, std::uint32_t(ImeMaxTextLength));
+		if (!_swkbdInitialText.empty()) {
+			swkbdConfigSetInitialText(&swkbd, String::nullTerminatedView(_swkbdInitialText).data());
+		}
+
+		char buffer[ImeMaxTextLength * 4 + 1] {};
+		rc = swkbdShow(&swkbd, buffer, sizeof(buffer));
+		swkbdClose(&swkbd);
+
+		// The press that closed the applet must not reach the game as a new one
+		PadState pad;
+		padInitializeAny(&pad);
+		for (std::int32_t i = 0; i < 50; i++) {
+			padUpdate(&pad);
+			HidTouchScreenState touch {};
+			hidGetTouchScreenStates(&touch, 1);
+			if (padGetButtons(&pad) == 0 && touch.count == 0) {
+				break;
+			}
+			svcSleepThread(10000000LL);
+		}
+
+		if (R_SUCCEEDED(rc)) {
+			const StringView text = buffer;
+			if (_imeOnCompleted) {
+				_imeOnCompleted(text);
+			} else if (IInputEventHandler* handler = IInputManager::GetHandler()) {
+				TextInputEvent textInputEvent;
+				for (std::size_t i = 0; i < text.size(); ) {
+					auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
+					i = nextI;
+					textInputEvent.Length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.Text);
+					if (textInputEvent.Length > 0) {
+						handler->OnTextInput(textInputEvent);
+					}
+				}
+			}
+		} else if (rc != MAKERESULT(Module_Libnx, LibnxError_LibAppletBadExit)) {
+			// LibAppletBadExit is a plain cancel
+			LOGW("swkbdShow() failed with 0x{:.8x}", std::uint32_t(rc));
+		}
+
+		_imeOnCompleted = {};
+		_swkbdInitialText = {};
+	}
 #endif
 
 	bool MainApplication::CanShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		return true;
 #else
 		return false;
@@ -1110,7 +1175,7 @@ namespace nCine
 		return (status == PSP_UTILITY_DIALOG_INIT || status == PSP_UTILITY_DIALOG_VISIBLE);
 #elif defined(DEATH_TARGET_VITA)
 		return (sceImeDialogGetStatus() == SCE_COMMON_DIALOG_STATUS_RUNNING);
-#elif defined(DEATH_TARGET_3DS)
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_SWITCH)
 		// While the applet is actually up nothing in the game runs to ask; what can be observed is the request
 		// waiting for the end of the frame
 		return _swkbdPending;
@@ -1156,7 +1221,7 @@ namespace nCine
 
 	bool MainApplication::ToggleScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (HideScreenKeyboard()) {
@@ -1238,8 +1303,8 @@ namespace nCine
 		}
 		_oskActive = true;
 		return true;
-#elif defined(DEATH_TARGET_3DS)
-		// libctru's software keyboard is a library applet: swkbdInputText() takes both screens over and blocks
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_SWITCH)
+		// libctru's (and libnx's) software keyboard is a library applet: swkbdInputText() takes both screens over and blocks
 		// the calling thread until the dialog is closed, and it must not be run while a citro3d frame is open.
 		// A request arrives from a menu widget in the middle of a frame, so it is only noted here and run by
 		// UpdateScreenKeyboard() once the frame has been presented - the same collect-later shape as the two
@@ -1372,7 +1437,7 @@ namespace nCine
 		}
 		SDL_StopTextInput();
 		return true;
-#elif defined(DEATH_TARGET_3DS)
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_SWITCH)
 		// Only a keyboard that has not been run yet can be taken back; the applet itself is closed by the user
 		if (!_swkbdPending) {
 			return false;

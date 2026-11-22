@@ -251,7 +251,8 @@ namespace nCine
 			the keyboard is an overlay that feeds keystrokes (Windows, Android) it types into whatever has
 			focus and the text arrives as @relativeref{nCine,IInputEventHandler::OnTextInput()} events, exactly
 			as a real keyboard would; @p initialText and @p onCompleted are unused there. Where it is a modal
-			editor that collects a whole string (the PS Vita's IME) there are no keystrokes to deliver:
+			editor that collects a whole string (the PS Vita's IME, the Nintendo Switch's keyboard applet) there
+			are no keystrokes to deliver:
 			@p initialText seeds the editor with what the field already holds, and @p onCompleted is invoked
 			once with the finished string, which REPLACES that field rather than appending to it. It is not
 			invoked at all if the user cancels.

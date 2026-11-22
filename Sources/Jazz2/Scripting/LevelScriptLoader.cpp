@@ -2,6 +2,7 @@
 
 #include "LevelScriptLoader.h"
 #include "Legacy/AnimationTables.h"
+#include "Legacy/Common.h"
 #include "Legacy/EventTranslator.h"
 #include "Legacy/ObjectHost.h"
 #include "Legacy/WorldCanvas.h"
@@ -27,6 +28,9 @@
 #if defined(WITH_LEVEL_PACKS)
 #	include "../LevelPacks/LevelPackLibrary.h"
 #endif
+#if defined(WITH_MULTIPLAYER)
+#	include "../Multiplayer/MpLevelHandler.h"
+#endif
 #include "../Rendering/PlayerViewport.h"
 #include "../UI/HUD.h"
 #include "../UI/InGameConsole.h"
@@ -37,6 +41,8 @@
 #include "../../nCine/Graphics/RenderResources.h"
 #include "../../nCine/Graphics/Texture.h"
 #include "../../nCine/Graphics/Viewport.h"
+
+#include <Containers/StringUtils.h>
 
 #if defined(DEATH_TRACE)
 #	define AS_LOG_EXCEPTION(ctx)																						\
@@ -215,7 +221,7 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 	LevelScriptLoader::LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath, StringView scriptText)
 		: _levelHandler(levelHandler), _onLevelUpdate(nullptr), _onLevelUpdateLastFrame(-1), _onDrawAmmo(nullptr),
 			_onDrawHealth(nullptr), _onDrawLives(nullptr), _onDrawPlayerTimer(nullptr), _onDrawScore(nullptr), _onDrawGameModeHUD(nullptr),
-			_enabledCallbacks(NoInit, 256), _particlesDrawPending(false)
+			_enabledCallbacks(NoInit, 256), _localPlayerHookDepth(0), _addingScriptObject(false), _scriptPath(scriptPath), _nextFireSequence(0), _recordingDraws(nullptr), _recordsObjectDraws(false), _effectObject(nullptr), _particlesDrawPending(false)
 	{
 		if (!scriptText.empty()) {
 			_scriptText = scriptText;
@@ -435,29 +441,38 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			if (includePath.hasSuffix("w.asc"_s) && !_mlleWeaponsAdded) {
 				_mlleWeaponsAdded = true;
 				AddScriptSection("MLLE-Weapons", MlleWeaponsSetup);
-				return fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "SEweapon.asc"_s));
+				String path = FindServerFile("SEweapon.asc"_s);
+				if (path.empty()) {
+					path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), "SEweapon.asc"_s));
+				}
+				AddRequiredFile("SEweapon.asc"_s, path, false);
+				return path;
 			}
 			return {};
 		}
 
+		String path = FindServerFile(includePath);
 		// Next to the script first, as a level with its own libraries has them, then in the files of the original game
-		if (!scriptPath.empty()) {
-			String nextToScript = fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(scriptPath), includePath));
-			if (!nextToScript.empty() && fs::IsReadableFile(nextToScript)) {
-				return nextToScript;
+		if (path.empty() && !scriptPath.empty()) {
+			path = fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(scriptPath), includePath));
+			if (!fs::IsReadableFile(path)) {
+				path = {};
 			}
 		}
 #if defined(WITH_LEVEL_PACKS)
 		// A level of a pack has its libraries among the original files of the pack
-		if (_levelHandler != nullptr) {
-			String packFile = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), includePath);
-			if (!packFile.empty() && fs::IsReadableFile(packFile)) {
-				return packFile;
+		if (path.empty() && _levelHandler != nullptr) {
+			path = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), includePath);
+			if (!fs::IsReadableFile(path)) {
+				path = {};
 			}
 		}
 #endif
-		auto sourcePath = ContentResolver::Get().GetSourcePath();
-		return fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, includePath));
+		if (path.empty()) {
+			path = fs::FindPathCaseInsensitive(fs::CombinePath(ContentResolver::Get().GetSourcePath(), includePath));
+		}
+		AddRequiredFile(includePath, path, false);
+		return path;
 	}
 
 	void LevelScriptLoader::OnProcessPragma(StringView content, ScriptContextType& contextType)
@@ -465,9 +480,112 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		// #pragma target Resurrection - Changes script context type to Standard
 		if (content == "target Resurrection"_s) {
 			contextType = ScriptContextType::Standard;
+			return;
+		}
+
+		// #pragma require "file" / #pragma offer "file" - the clients of an online game get the file too, as in JJ2+
+		bool optional = content.hasPrefix("offer"_s);
+		if (!optional && !content.hasPrefix("require"_s)) {
+			return;
+		}
+		StringView quoted = content.exceptPrefix(optional ? 5 : 7).trimmed();
+		if (quoted.size() > 2 && (quoted[0] == '"' || quoted[0] == '\'') && quoted[quoted.size() - 1] == quoted[0]) {
+			StringView fileName = quoted.slice(1, quoted.size() - 1);
+			AddRequiredFile(fileName, FindScriptFilePath(fileName), optional);
 		}
 	}
 
+	String LevelScriptLoader::FindServerFile(StringView fileName, bool downloadedOnly) const
+	{
+#if defined(WITH_MULTIPLAYER)
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler)) {
+			return mpHandler->FindScriptAsset(fileName, downloadedOnly);
+		}
+#endif
+		return {};
+	}
+
+	bool LevelScriptLoader::IsScriptOfServer() const
+	{
+#if defined(WITH_MULTIPLAYER)
+		auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler);
+		return (mpHandler != nullptr && !mpHandler->IsServer());
+#else
+		return false;
+#endif
+	}
+
+	String LevelScriptLoader::GetStagingPath(StringView fileName, bool forWrite)
+	{
+		// As in JJ2+, a script of a server saves at most this many files on a client
+		constexpr std::size_t MaxFilesOfServer = 16;
+
+		String directory;
+#if defined(WITH_MULTIPLAYER)
+		if (auto* mpHandler = runtime_cast<Multiplayer::MpLevelHandler>(_levelHandler)) {
+			directory = mpHandler->GetScriptStagingDirectory();
+		}
+#endif
+		if (directory.empty()) {
+			directory = fs::CombinePath(ContentResolver::Get().GetCachePath(), "Staging"_s);
+		} else if (forWrite) {
+			bool saved = false;
+			for (const String& stagedFile : _stagedFiles) {
+				saved |= StringUtils::equalsIgnoreCase(stagedFile, fileName);
+			}
+			if (!saved) {
+				if (_stagedFiles.size() >= MaxFilesOfServer) {
+					return {};
+				}
+				_stagedFiles.emplace_back(fileName);
+			}
+		}
+		return fs::CombinePath(directory, fileName);
+	}
+
+	void LevelScriptLoader::AddRequiredFile(StringView fileName, StringView fullPath, bool optional)
+	{
+		if (!IsScriptFileNameSafe(fileName)) {
+			return;
+		}
+		for (RequiredFile& file : _requiredFiles) {
+			if (StringUtils::equalsIgnoreCase(file.Name, fileName)) {
+				// Required by one and offered by another is required
+				file.Optional = (file.Optional && optional);
+				return;
+			}
+		}
+		_requiredFiles.push_back({ fileName, (fs::IsReadableFile(fullPath) ? String(fullPath) : String()), optional });
+	}
+
+	String LevelScriptLoader::FindScriptFilePath(StringView fileName) const
+	{
+		if (!IsScriptFileNameSafe(fileName)) {
+			return {};
+		}
+		String path = FindServerFile(fileName);
+		if (!path.empty()) {
+			return path;
+		}
+		// Next to the script, among the files of the pack of the level, in the content, then among the files of the original game
+		path = fs::FindPathCaseInsensitive(fs::CombinePath(fs::GetDirectoryName(_scriptPath), fileName));
+		if (fs::IsReadableFile(path)) {
+			return path;
+		}
+#if defined(WITH_LEVEL_PACKS)
+		path = LevelPacks::LevelPackLibrary::Get().FindOriginalFile(_levelHandler->GetLevelName(), fileName);
+		if (!path.empty() && fs::IsReadableFile(path)) {
+			return path;
+		}
+#endif
+		auto& resolver = ContentResolver::Get();
+		path = resolver.FindContentFile(fileName);
+		if (fs::IsReadableFile(path)) {
+			return path;
+		}
+		path = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), fileName));
+		return (fs::IsReadableFile(path) ? path : String());
+	}
 	void LevelScriptLoader::OnBeforeScriptCall()
 	{
 		// The script sees the objects as they are now
@@ -544,6 +662,8 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		}
 		UpdateViewSize();
 		UpdateGameMode();
+		// The behaviors of objects run only on the server of an online game, the clients draw what they drew
+		_recordsObjectDraws = (_levelHandler->IsServer() && !_levelHandler->IsLocalSession());
 
 		// The weather of the level, scripts start and stop it by these
 		PullWeather(true);
@@ -621,7 +741,24 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 		_bossAreaActivated = false;
 		// JJ2+ starts the objects again, those scripts made are gone (scripts make them again then)
 		DeleteObjectsOfScripts();
+		CallLevelReload();
+	}
 
+	void LevelScriptLoader::OnLocalLevelReload()
+	{
+		// The objects are the server's, only what this machine shows goes back (layers, music, the fight with the boss)
+		_bossAreaActivated = false;
+		CallLevelReload();
+	}
+
+	bool LevelScriptLoader::IsInBossFight(Actors::Player* player) const
+	{
+		auto it = _playerBackingStore.find(player->GetPlayerIndex());
+		return (it != _playerBackingStore.end() && it->second->bossActive);
+	}
+
+	void LevelScriptLoader::CallLevelReload()
+	{
 		asIScriptFunction* func = GetMainModule()->GetFunctionByDecl("void onLevelReload()");
 		if (func == nullptr) {
 			return;
@@ -781,6 +918,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			_worldCanvas->Clear();
 			_canvasClearTick = currentTick;
 		}
+		// What the scripts of the server drew for the objects, where they are in this frame
+		if (!_remoteObjectDraws.empty() || _remoteCanvas != nullptr) {
+			AddRemoteObjectDraws();
+		}
 		// The weather a level starts (an event of weather) also without a callback of the script in each tick
 		PullWeather();
 		if (_particles != nullptr || (snowing && OwnsWeather())) {
@@ -843,12 +984,18 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 					std::fill(std::begin(_inputOverrideMask), std::end(_inputOverrideMask), 0);
 					if (onPlayerInput != nullptr) {
 						for (auto* player : _levelHandler->_players) {
+							// Only the players of this machine, their localPlayerID indexes arrays of jjLocalPlayerCount
+							if (!IsLocalPlayer(player)) {
+								continue;
+							}
 							ctx->Prepare(onPlayerInput);
 
 							jjPLAYER* p = GetPlayerBackingStore(player);
 							ctx->SetArgObject(0, p);
 
+							_localPlayerHookDepth++;
 							std::int32_t r = ctx->Execute();
+							_localPlayerHookDepth--;
 							if (r == asEXECUTION_EXCEPTION) {
 								AS_LOG_EXCEPTION(ctx);
 							}
@@ -865,12 +1012,17 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 					}
 					if (onPlayer != nullptr) {
 						for (auto* player : _levelHandler->_players) {
+							if (!IsLocalPlayer(player)) {
+								continue;
+							}
 							ctx->Prepare(onPlayer);
 
 							jjPLAYER* p = GetPlayerBackingStore(player);
 							ctx->SetArgObject(0, p);
 
+							_localPlayerHookDepth++;
 							std::int32_t r = ctx->Execute();
+							_localPlayerHookDepth--;
 							if (r == asEXECUTION_EXCEPTION) {
 								AS_LOG_EXCEPTION(ctx);
 								// Don't call the method again if an exception occurs
@@ -1293,7 +1445,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			if (!it->second->_timerPersists) {
 				it->second->_timerState = 0; // STOPPED
 			}
+			it->second->LeaveBossFight();
 		}
+		// JJ2+ lets a freeze of the camera go on death, an online game doesn't go back to a checkpoint, which does it too
+		_levelHandler->OverrideCameraView(player, CameraOverride::Follow, 0.0f, CameraOverride::Follow, 0.0f, false, true);
 
 		asIScriptFunction* func = GetMainModule()->GetFunctionByName("onRoast");
 		if (func != nullptr) {
@@ -1602,20 +1757,46 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 	{
 		auto it = _playerBackingStore.find(player->GetPlayerIndex());
 		if (it != _playerBackingStore.end()) {
+			// Not to an actor that left, which its bullets keep alive for a while (see OnPlayerRemoved())
+			if (it->second->_player != player && !player->GetState(Actors::ActorState::IsDestroyed)) {
+				it->second->Rebind(player);
+			}
 			it->second->SyncPropertiesToBackingStore();
 			return it->second.get();
 		}
 
-		auto [result, success] = _playerBackingStore.emplace(player->GetPlayerIndex(), std::make_unique<jjPLAYER>(this, player));
+		Actors::Player* bound = (player->GetState(Actors::ActorState::IsDestroyed) ? nullptr : player);
+		auto [result, success] = _playerBackingStore.emplace(player->GetPlayerIndex(), std::make_unique<jjPLAYER>(this, bound));
 		DEATH_DEBUG_ASSERT(success);
 		result->second->SyncPropertiesToBackingStore();
 		return result->second.get();
+	}
+
+	void LevelScriptLoader::OnPlayerRemoved(Actors::Player* player)
+	{
+		// Scripts may keep the handle, it stays as an absent player
+		auto it = _playerBackingStore.find(player->GetPlayerIndex());
+		if (it != _playerBackingStore.end() && it->second->_player == player) {
+			it->second->Rebind(nullptr);
+		}
 	}
 
 	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(std::int32_t playerID)
 	{
 		if (Actors::Player* player = GetPlayerByScriptID(playerID)) {
 			return GetPlayerBackingStore(player);
+		}
+
+		// On a client, a player of another machine as scripts read it (the bullets of its sword follow it)
+		if (playerID >= 0 && playerID < UINT8_MAX && GetRemotePlayerActor(playerID) != nullptr) {
+			auto it = _remotePlayerBackingStore.find(std::uint8_t(playerID));
+			if (it == _remotePlayerBackingStore.end()) {
+				it = _remotePlayerBackingStore.emplace(std::uint8_t(playerID), std::make_unique<jjPLAYER>(this, nullptr)).first;
+				it->second->SetRemotePlayer(playerID);
+			} else {
+				it->second->RefreshRemotePlayer();
+			}
+			return it->second.get();
 		}
 
 		// Scripts go through all the players in `jjPlayers` and check `isActive`, so a missing one can't be null
@@ -1642,6 +1823,10 @@ shared interface MLLEWeaponApply { bool Apply(uint, se::WeaponHook@ = null, jjST
 			if (IsLocalPlayer(player)) {
 				count++;
 			}
+		}
+		// Never 0 as in JJ2+, scripts size arrays by it (a client's player comes later, a dedicated server has none)
+		if (count == 0) {
+			count = 1;
 		}
 		return count;
 	}

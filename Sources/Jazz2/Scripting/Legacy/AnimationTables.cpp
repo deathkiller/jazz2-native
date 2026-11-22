@@ -386,6 +386,57 @@ namespace Jazz2::Scripting::Legacy
 		return set->firstAnim;
 	}
 
+	void AnimationTables::TagAnimation(jjANIMATION& anim, std::uint32_t setID, std::uint32_t load, std::uint32_t place, std::uint32_t ownFirstFrame)
+	{
+		anim._madeInSet = setID;
+		anim._madeByLoad = load;
+		anim._placeInSet = place;
+		anim._ownFirstFrame = ownFirstFrame;
+		_animationsByLocation[GetLocationKey(setID, load, place)] = anim._index;
+	}
+
+	bool AnimationTables::GetFrameLocation(std::uint32_t frameIndex, std::uint32_t& setID, std::uint32_t& load, std::uint32_t& animInSet, std::uint32_t& frameInAnim) const
+	{
+		if (frameIndex == 0 || frameIndex >= _frames.size() || _frames[frameIndex] == nullptr) {
+			return false;
+		}
+		std::uint32_t owner = _frames[frameIndex]->_owner;
+		if (owner == 0 || owner >= _animations.size() || _animations[owner] == nullptr) {
+			return false;
+		}
+		const jjANIMATION& anim = *_animations[owner];
+		if (anim._madeInSet == UINT32_MAX || frameIndex < anim._ownFirstFrame) {
+			return false;
+		}
+		setID = anim._madeInSet;
+		load = anim._madeByLoad;
+		animInSet = anim._placeInSet;
+		frameInAnim = frameIndex - anim._ownFirstFrame;
+		return true;
+	}
+
+	std::uint32_t AnimationTables::FindFrameByLocation(std::uint32_t setID, std::uint32_t load, std::uint32_t animInSet, std::uint32_t frameInAnim)
+	{
+		if (load == 0) {
+			// The set of the original is made on first use
+			GetFirstAnim(std::int32_t(setID));
+		}
+		auto it = _animationsByLocation.find(GetLocationKey(setID, load, animInSet));
+		if (it == _animationsByLocation.end() || it->second >= _animations.size() || _animations[it->second] == nullptr) {
+			return 0;
+		}
+		std::uint32_t animIndex = it->second;
+		const jjANIMATION& anim = *_animations[animIndex];
+		if (anim._madeInSet != setID || anim._madeByLoad != load || anim._placeInSet != animInSet) {
+			return 0;
+		}
+		std::uint32_t frameIndex = anim._ownFirstFrame + frameInAnim;
+		if (frameIndex >= _frames.size() || _frames[frameIndex] == nullptr || _frames[frameIndex]->_owner != animIndex) {
+			return 0;
+		}
+		return frameIndex;
+	}
+
 	bool AnimationTables::GetAnimationFrames(std::uint32_t animIndex, std::uint32_t& frameCount, std::uint32_t& firstFrame)
 	{
 		if (animIndex >= _animations.size()) {
@@ -592,6 +643,7 @@ namespace Jazz2::Scripting::Legacy
 				return false;
 			}
 			std::uint32_t animCount = _sets[fileSetID]->_animCount;
+			std::uint32_t load = ++set._loadCount;
 
 			std::uint32_t animIndex = (firstAnimToOverwrite >= 0 ? std::uint32_t(firstAnimToOverwrite) : std::uint32_t(_animations.size()));
 			std::uint32_t frameIndex = (firstFrameToOverwrite >= 0 ? std::uint32_t(firstFrameToOverwrite) : std::uint32_t(_frames.size()));
@@ -605,6 +657,7 @@ namespace Jazz2::Scripting::Legacy
 				target->frameCount = source.frameCount;
 				target->fps = source.fps;
 				target->_firstFrame = (source.frameCount > 0 ? frameIndex : 0);
+				TagAnimation(*target, set._index, load, i, frameIndex);
 				std::uint32_t sourceFirstFrame = source._firstFrame;
 				std::uint32_t sourceFrameCount = source.frameCount;
 				for (std::uint32_t j = 0; j < sourceFrameCount; j++) {
@@ -641,6 +694,7 @@ namespace Jazz2::Scripting::Legacy
 
 		std::uint32_t animIndex = (firstAnimToOverwrite >= 0 ? std::uint32_t(firstAnimToOverwrite) : std::uint32_t(_animations.size()));
 		std::uint32_t frameIndex = (firstFrameToOverwrite >= 0 ? std::uint32_t(firstFrameToOverwrite) : std::uint32_t(_frames.size()));
+		std::uint32_t load = ++set._loadCount;
 		for (std::uint32_t i = 0; i < anims.size(); i++) {
 			Compatibility::JJ2Anims::AnimSection& section = anims[i];
 			jjANIMATION* anim = EnsureAnimation(animIndex + i);
@@ -651,6 +705,7 @@ namespace Jazz2::Scripting::Legacy
 			anim->frameCount = std::uint16_t(section.Frames.size());
 			anim->fps = std::int16_t(section.FrameRate);
 			anim->_firstFrame = (anim->frameCount > 0 ? frameIndex : 0);
+			TagAnimation(*anim, set._index, load, i, frameIndex);
 			for (Compatibility::JJ2Anims::AnimFrameSection& source : section.Frames) {
 				jjANIMFRAME* frame = EnsureFrame(frameIndex++);
 				if (frame == nullptr) {
@@ -692,10 +747,12 @@ namespace Jazz2::Scripting::Legacy
 		}
 
 		set.firstAnim = std::uint32_t(_animations.size());
+		std::uint32_t load = ++set._loadCount;
 		for (std::uint32_t frameCount : frameCounts) {
 			jjANIMATION* anim = AddAnimation();
 			anim->frameCount = std::uint16_t(std::min<std::uint32_t>(frameCount, UINT16_MAX));
 			anim->_firstFrame = (anim->frameCount > 0 ? std::uint32_t(_frames.size()) : 0);
+			TagAnimation(*anim, set._index, load, anim->_index - set.firstAnim, std::uint32_t(_frames.size()));
 			for (std::uint32_t j = 0; j < anim->frameCount; j++) {
 				AddFrame(anim->_index);
 			}
@@ -1194,6 +1251,7 @@ namespace Jazz2::Scripting::Legacy
 		std::uint32_t firstAnim = std::uint32_t(_animations.size());
 		for (std::uint32_t i = 0; i < animCount; i++) {
 			jjANIMATION* anim = AddAnimation();
+			TagAnimation(*anim, set._index, 0, i, std::uint32_t(_frames.size()));
 			std::uint32_t nativeIndex = std::uint32_t(_natives.size());
 			NativeAnimation& native = _natives.emplace_back();
 			native.Graphics = nullptr;

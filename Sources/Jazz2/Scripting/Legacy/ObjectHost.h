@@ -174,6 +174,12 @@ namespace Jazz2::Scripting::Legacy
 		 */
 		bool OnCollision(Actors::ActorBase* actor, Actors::ActorBase* other) override;
 		/**
+		 * @brief Has a bullet hit an object as its frame hit it, returns `false` if it doesn't collide by its frame
+		 *
+		 * The server's copy of a bullet of a client hits what the client saw it hit so (see @ref LevelScriptLoader::ApplyClientHit()).
+		 */
+		bool HitByFrame(Actors::ActorBase* other);
+		/**
 		 * @brief Makes a solid object as big as the pixels of the frame of an animation a script gave it
 		 *
 		 * The objects of JJ2+ are solid by their frames, so a crate drawn bigger stands on the ground by its frame.
@@ -219,6 +225,8 @@ namespace Jazz2::Scripting::Legacy
 		 * A player falling onto the box from above stands on it, one that jumps off or leaves it to the side doesn't.
 		 */
 		static bool CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, const jjOBJ& obj, const AABBf& box, Vector2f delta);
+		/** @overload @p objX is where the object is, the players standing still keep whole pixels off it */
+		static bool CarryPlayers(LevelScriptLoader* levelScripts, Actors::ActorBase* platform, float objX, const AABBf& box, Vector2f delta);
 		/** @brief Returns the top of a platform where the feet of its players are, @p height of 0 as the platforms of the game */
 		static float GetPlatformTop(const jjOBJ& obj, std::int32_t height);
 		/** @brief Lets go of the players standing on the object, as `jjOBJ::clearPlatform()` */
@@ -287,10 +295,12 @@ namespace Jazz2::Scripting::Legacy
 		 *
 		 * @p spreadSlot is -1 for the bullet angled up, 0 for the straight one and 1 for the one angled down, @p gunspotOffsetY
 		 * how far below the player the gunspot of the pose it was fired in was, @p upward if the player aimed up, @p aimAngle
-		 * the angle a script fired it at (0 up, clockwise, negative for none).
+		 * the angle a script fired it at (0 up, clockwise, negative for none). @p ownerPos, @p ownerSpeedX and @p facingLeft are
+		 * the player as it fired, also one of another machine. A @p replica neither hurts nor breaks anything, one of @p clientHits
+		 * hits only what the client of its player reports.
 		 */
 		static void InitializeScriptedBullet(jjOBJ& obj, const jjOBJ& preset, Actors::ActorBase& actor, std::int8_t spreadSlot, float gunspotOffsetY,
-			bool upward = false, float aimAngle = -1.0f);
+			bool upward, float aimAngle, Vector2f ownerPos, float ownerSpeedX, bool facingLeft, bool replica, bool clientHits);
 		/**
 			@brief Makes the object of the game follow a behavior that moves the object itself (`BEHAVIOR::WALKINGENEMY`)
 

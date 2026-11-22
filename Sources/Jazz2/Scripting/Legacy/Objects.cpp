@@ -215,8 +215,12 @@ namespace Jazz2::Scripting
 				if (_nextTick < 0 || currentTick - _nextTick >= MaxTicksPerFrame) {
 					_nextTick = currentTick;
 				}
+				// What the scripts draw for it in its last tick goes to the clients of an online game too
+				bool ticked = (_nextTick <= currentTick);
+				LevelScriptLoader::ObjectDrawList* previousDraws = (ticked ? _levelScripts->BeginObjectDraws(this) : nullptr);
 				while (_nextTick <= currentTick && !GetState(Actors::ActorState::IsDestroyed)) {
 					_nextTick++;
+					_levelScripts->RestartObjectDraws();
 					RunTick();
 				}
 
@@ -230,6 +234,16 @@ namespace Jazz2::Scripting
 				if (!_drawnByBehavior && _lastAnimation != UINT32_MAX &&
 					_levelScripts->GetAnimationTables().GetAnimationFrames(_lastAnimation, frameCount, firstFrame) && frameCount > 0) {
 					_obj->curFrame = firstFrame + std::uint32_t(_renderer.CurrentFrame) % frameCount;
+					if (ticked && _levelScripts->IsRecordingObjectDraws()) {
+						// The animation the object shows by itself, as a frame a client draws
+						ObjectDraw recorded = ObjectDraw::Make(ObjectDraw::KindType::Frame, _obj->xPos, _obj->yPos, _obj->curFrame, spriteType_NORMAL, 0, 4);
+						recorded.Direction = _obj->direction;
+						recorded.ModePalette = false;
+						_levelScripts->RecordObjectDraw(Death::move(recorded));
+					}
+				}
+				if (ticked) {
+					_levelScripts->EndObjectDraws(this, previousDraws);
 				}
 			}
 
@@ -1104,26 +1118,45 @@ namespace Jazz2::Scripting
 			// A shot of the game hits an object that exists only for the script by its frame, as one made by the game is hit
 			// (see ScriptObjectHost::OnCollision()): by `bulletHandling`, `onObjectHit()` with `scriptedCollisions`, or an
 			// enemy loses energy - an object of none of these lets the shots through
-			void HitByShots()
+			// Whether shots hit the object now, and whether its script handles the hits
+			bool CanBeHitByShots(bool& scripted) const
 			{
 				constexpr std::uint32_t HandlingEnemy = 0;
-				constexpr std::uint32_t HandlingDestroyBullet = 2;
-				constexpr std::uint32_t HandlingDetectBullet = 3;
 				constexpr std::uint32_t HandlingSpecial = 8;
 
-				jjOBJ& obj = *_obj;
+				const jjOBJ& obj = *_obj;
 				if (obj.state == sKILL || obj.state == sEXPLODE || obj.state == sDEACTIVATE || obj.curFrame == 0 ||
 					GetState(Actors::ActorState::IsDestroyed)) {
-					return;
+					return false;
 				}
 				if (obj._playerHandlingSet && obj._playerHandling == HandlingParticle) {
-					return;
+					return false;
 				}
 				bool isEnemy = (obj._playerHandlingSet && obj._playerHandling == HandlingEnemy);
-				bool scripted = (obj._scriptedCollisions && (!obj._playerHandlingSet || obj._playerHandling == HandlingSpecial || isEnemy));
-				if ((!obj._bulletHandlingSet && !scripted && !isEnemy) || (obj._bulletHandlingSet && obj._bulletHandling == HandlingIgnoreBullet)) {
+				scripted = (obj._scriptedCollisions && (!obj._playerHandlingSet || obj._playerHandling == HandlingSpecial || isEnemy));
+				return !((!obj._bulletHandlingSet && !scripted && !isEnemy) || (obj._bulletHandlingSet && obj._bulletHandling == HandlingIgnoreBullet));
+			}
+
+		public:
+			/** @brief Has a shot hit the object, which the client of its player saw hit it (see LevelScriptLoader::ApplyClientHit()) */
+			bool HitByReportedShot(Actors::Weapons::ShotBase* shot)
+			{
+				bool scripted;
+				if (shot == nullptr || shot->GetHealth() <= 0 || !CanBeHitByShots(scripted)) {
+					return false;
+				}
+				HitByShot(shot, scripted);
+				return true;
+			}
+
+		private:
+			void HitByShots()
+			{
+				bool scripted;
+				if (!CanBeHitByShots(scripted)) {
 					return;
 				}
+				jjOBJ& obj = *_obj;
 
 				constexpr float Reach = 64.0f;
 				AABBf box(obj.xPos - Reach, obj.yPos - Reach, obj.xPos + Reach, obj.yPos + Reach);
@@ -1132,67 +1165,78 @@ namespace Jazz2::Scripting
 					auto* shot = runtime_cast<Actors::Weapons::ShotBase>(other);
 					if (shot != nullptr && shot->GetHealth() > 0 && !shot->GetState(Actors::ActorState::IsDestroyed) &&
 						DoesObjectTouch(_levelScripts, obj, shot->AABBInner)) {
-						shots.push_back(shot);
+						// A bullet that only shows hits nothing, see ScriptObjectHost::InitializeScriptedBullet()
+						jjOBJ* view = _levelScripts->GetObjectView(shot);
+						if (view == nullptr || !view->_replica) {
+							shots.push_back(shot);
+						}
 					}
 					return true;
 				});
 
 				for (auto* shot : shots) {
-					Actors::Player* owner = shot->GetOwner();
-					jjPLAYER* p = (owner != nullptr ? _levelScripts->GetPlayerBackingStore(owner) : nullptr);
-					jjOBJ* bullet = _levelScripts->GetObjectView(shot);
-					std::int32_t strength = shot->GetStrength();
-					if (obj._bulletHandlingSet && obj._bulletHandling == HandlingDestroyBullet) {
-						shot->DecreaseHealth(INT32_MAX);
-						continue;
-					}
-					if (obj._bulletHandlingSet && obj._bulletHandling == HandlingDetectBullet) {
-						if (obj._scriptedCollisions) {
-							ScriptObjectHost::CallObjectHit(_levelScripts, obj, bullet, p, strength);
-						}
-						shot->DecreaseHealth(INT32_MAX);
-						continue;
-					}
-					if (scripted) {
-						// The force of a bullet is its damage, the script may stop the bullet by its state
-						std::int8_t bulletState = (bullet != nullptr ? bullet->state : 0);
-						ScriptObjectHost::CallObjectHit(_levelScripts, obj, bullet, p, strength);
-						if (bullet != nullptr && bullet->state == sEXPLODE && bulletState != sEXPLODE) {
-							shot->DecreaseHealth(INT32_MAX);
-						}
-						if (GetState(Actors::ActorState::IsDestroyed)) {
-							break;
-						}
-						continue;
-					}
-
-					// HANDLING::HURTBYBULLET, a bullet with `var[6] & 16` goes through and hurts it again once it stopped flashing
-					bool goesThrough = (bullet != nullptr && (bullet->get_var(6) & 16) != 0);
-					if (shot->GetFrozenDuration() > 0.0f && obj._freezable) {
-						if (obj.state != sFREEZE) {
-							obj.oldState = obj.state;
-							obj.state = sFREEZE;
-						}
-						obj.freeze = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::lround(shot->GetFrozenDuration() * 70.0f / 60.0f)), 1, UINT8_MAX));
-						shot->DecreaseHealth(INT32_MAX);
-						continue;
-					}
-					if (!goesThrough || obj.justHit == 0) {
-						obj.energy = std::int8_t(std::max(obj.energy - strength, 0));
-						obj.justHit = 5;
-						if (obj.energy <= 0) {
-							obj.state = sKILL;
-							if (owner != nullptr && obj.points != 0) {
-								owner->AddScore(obj.points);
-							}
-						}
-					}
-					if (!goesThrough) {
-						shot->DecreaseHealth(INT32_MAX);
-					}
-					if (obj.state == sKILL) {
+					HitByShot(shot, scripted);
+					if (scripted ? GetState(Actors::ActorState::IsDestroyed) : obj.state == sKILL) {
 						break;
 					}
+				}
+			}
+
+			// A shot hits the object, see HitByShots()
+			void HitByShot(Actors::Weapons::ShotBase* shot, bool scripted)
+			{
+				constexpr std::uint32_t HandlingDestroyBullet = 2;
+				constexpr std::uint32_t HandlingDetectBullet = 3;
+
+				jjOBJ& obj = *_obj;
+				Actors::Player* owner = shot->GetOwner();
+				jjPLAYER* p = (owner != nullptr ? _levelScripts->GetPlayerBackingStore(owner) : nullptr);
+				jjOBJ* bullet = _levelScripts->GetObjectView(shot);
+				std::int32_t strength = shot->GetStrength();
+				if (obj._bulletHandlingSet && obj._bulletHandling == HandlingDestroyBullet) {
+					shot->DecreaseHealth(INT32_MAX);
+					return;
+				}
+				if (obj._bulletHandlingSet && obj._bulletHandling == HandlingDetectBullet) {
+					if (obj._scriptedCollisions) {
+						ScriptObjectHost::CallObjectHit(_levelScripts, obj, bullet, p, strength);
+					}
+					shot->DecreaseHealth(INT32_MAX);
+					return;
+				}
+				if (scripted) {
+					// The force of a bullet is its damage, the script may stop the bullet by its state
+					std::int8_t bulletState = (bullet != nullptr ? bullet->state : 0);
+					ScriptObjectHost::CallObjectHit(_levelScripts, obj, bullet, p, strength);
+					if (bullet != nullptr && bullet->state == sEXPLODE && bulletState != sEXPLODE) {
+						shot->DecreaseHealth(INT32_MAX);
+					}
+					return;
+				}
+
+				// HANDLING::HURTBYBULLET, a bullet with `var[6] & 16` goes through and hurts it again once it stopped flashing
+				bool goesThrough = (bullet != nullptr && (bullet->get_var(6) & 16) != 0);
+				if (shot->GetFrozenDuration() > 0.0f && obj._freezable) {
+					if (obj.state != sFREEZE) {
+						obj.oldState = obj.state;
+						obj.state = sFREEZE;
+					}
+					obj.freeze = std::uint8_t(std::clamp<std::int32_t>(std::int32_t(std::lround(shot->GetFrozenDuration() * 70.0f / 60.0f)), 1, UINT8_MAX));
+					shot->DecreaseHealth(INT32_MAX);
+					return;
+				}
+				if (!goesThrough || obj.justHit == 0) {
+					obj.energy = std::int8_t(std::max(obj.energy - strength, 0));
+					obj.justHit = 5;
+					if (obj.energy <= 0) {
+						obj.state = sKILL;
+						if (owner != nullptr && obj.points != 0) {
+							owner->AddScore(obj.points);
+						}
+					}
+				}
+				if (!goesThrough) {
+					shot->DecreaseHealth(INT32_MAX);
 				}
 			}
 
@@ -1447,7 +1491,7 @@ namespace Jazz2::Scripting
 			return object;
 		}
 
-		jjOBJ::jjOBJ() : _refCount(1) {
+		jjOBJ::jjOBJ() : _refCount(1), _replica(false), _clientHits(false), _clientLocal(false), _mirrored(false) {
 		}
 		jjOBJ::~jjOBJ() {
 		}
@@ -1749,10 +1793,15 @@ namespace Jazz2::Scripting
 			// one of its own kind tells the copy by it, or the copies spawn more forever)
 			constexpr std::uint32_t BehaviorDefault = UINT32_MAX;
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
+			if (!owner->CanAddObjects()) {
+				return 0;
+			}
 			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);
 			if (id > 0) {
 				jjOBJ* obj = owner->GetObjectById(id);
 				obj->creator = PackCreator(creatorType, creatorID);
+				obj->_clientLocal = !owner->GetLevelHandler()->IsServer();
+				obj->_mirrored = owner->IsRunningMirroredObject();
 				if (behavior != BehaviorDefault) {
 					obj->behavior = behavior;
 				}
@@ -1767,6 +1816,8 @@ namespace Jazz2::Scripting
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
 				jjOBJ* obj = wrapper->GetObject();
 				obj->creator = PackCreator(creatorType, creatorID);
+				obj->_clientLocal = !owner->GetLevelHandler()->IsServer();
+				obj->_mirrored = owner->IsRunningMirroredObject();
 				if (behavior != BehaviorDefault) {
 					obj->behavior = behavior;
 				}
@@ -1784,6 +1835,9 @@ namespace Jazz2::Scripting
 			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 			jjBEHAVIOR function;
 			function.function = behavior;
+			if (!owner->CanAddObjects()) {
+				return 0;
+			}
 
 			// The object of the game the event has, driven by the behavior, so the behavior can run the object's own one
 			std::int32_t id = owner->AddObjectFromEvent(eventID, xPixel, yPixel);
@@ -1791,6 +1845,8 @@ namespace Jazz2::Scripting
 				jjOBJ* obj = owner->GetObjectById(id);
 				obj->behavior = function;
 				obj->creator = PackCreator(creatorType, creatorID);
+				obj->_clientLocal = !owner->GetLevelHandler()->IsServer();
+				obj->_mirrored = owner->IsRunningMirroredObject();
 				obj->Release();
 				owner->RunNewObjectBehavior(id);
 				return id;
@@ -1802,6 +1858,8 @@ namespace Jazz2::Scripting
 			if (auto* wrapper = runtime_cast<ScriptLegacyObject>(owner->GetScriptObject(id))) {
 				jjOBJ* obj = wrapper->GetObject();
 				obj->creator = PackCreator(creatorType, creatorID);
+				obj->_clientLocal = !owner->GetLevelHandler()->IsServer();
+				obj->_mirrored = owner->IsRunningMirroredObject();
 				// The behavior runs once right away, as JJ2+ runs it for a new object - a new bullet starts to fly in it
 				wrapper->RunTick(true);
 			}
@@ -2190,6 +2248,9 @@ namespace Jazz2::Scripting
 			// As measured in JJ2+: a pixel particle for every 16 pixels of the frame, at a random pixel of it (none where that one
 			// is transparent), 1 to 3 px big (3 px half of the time) with the colors of the frame there, flying up - the styles of
 			// JJ2+ (colored or burning ones) aren't told apart
+			if (frame != 0 && owner->IsReplicatingEffects()) {
+				owner->ReplicatePixelExplosion(xPixel, yPixel, frame, direction);
+			}
 			jjANIMFRAME* animFrame = (frame != 0 ? owner->GetAnimationTables().GetFrame(frame) : nullptr);
 			if (animFrame == nullptr) {
 				return;
@@ -3034,7 +3095,9 @@ namespace Jazz2::Scripting
 		}
 
 		// The object gets its object ID as every object of an event, see OnActorAdded()
+		_addingScriptObject = true;
 		_levelHandler->AddActor(actor);
+		_addingScriptObject = false;
 		return _lastObjectId;
 	}
 
@@ -3050,6 +3113,36 @@ namespace Jazz2::Scripting
 	std::int32_t LevelScriptLoader::GetObjectSpawnTick(std::int32_t objectId) const
 	{
 		return (objectId > 0 && objectId < std::int32_t(_objectSlots.size()) ? _objectSlots[objectId].SpawnTick : 0);
+	}
+
+	bool LevelScriptLoader::CanAddObjects() const
+	{
+		// In a behavior only of an object of this client - the server has the others and makes what they make
+		return (_levelHandler->IsServer() || _localPlayerHookDepth > 0 ||
+			(_effectObject != nullptr && (_effectObject->_replica || _effectObject->_clientLocal || _effectObject->_mirrored)));
+	}
+
+	void LevelScriptLoader::MarkMirrored(Actors::ActorBase* actor)
+	{
+		if (Legacy::jjOBJ* obj = GetObjectView(actor)) {
+			obj->_mirrored = true;
+		}
+	}
+
+	bool LevelScriptLoader::IsRunningMirroredObject() const
+	{
+		return (_effectObject != nullptr && _effectObject->_mirrored);
+	}
+
+	bool LevelScriptLoader::HitScriptOnlyObject(Actors::ActorBase* target, Actors::ActorBase* shot)
+	{
+		auto* wrapper = runtime_cast<Legacy::ScriptLegacyObject>(target);
+		return (wrapper != nullptr && wrapper->HitByReportedShot(runtime_cast<Actors::Weapons::ShotBase>(shot)));
+	}
+
+	bool LevelScriptLoader::IsScriptOnlyObject(const Actors::ActorBase* actor) const
+	{
+		return (runtime_cast<Legacy::ScriptLegacyObject>(const_cast<Actors::ActorBase*>(actor)) != nullptr);
 	}
 
 	std::int32_t LevelScriptLoader::AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc)
@@ -3209,14 +3302,21 @@ namespace Jazz2::Scripting
 			if (obj == nullptr || previous == nullptr || previous->GetState(Actors::ActorState::IsDestroyed)) {
 				continue;
 			}
+			// A client swaps only objects only it has, the server swaps the others and the client gets the new one
+			if (!_levelHandler->IsServer() && !obj->_clientLocal && !obj->_replica && !obj->_mirrored) {
+				continue;
+			}
 			std::shared_ptr<Actors::ActorBase> actor = Legacy::ScriptObjectHost::SpawnInPlace(this, *previous, swap.EventID);
 			if (actor == nullptr) {
 				continue;
 			}
 
 			// The new object keeps the object ID and the view, the behavior drives it from now on
+			// Not the object of the event of its tile any more (ghost bumpers), a client can't make it of the event map
 			_swappingActor = actor.get();
+			_addingScriptObject = true;
 			_levelHandler->AddActor(actor);
+			_addingScriptObject = false;
 			_swappingActor = nullptr;
 			SetSlotActor(swap.ObjectID, actor);
 			obj->_actor = actor;

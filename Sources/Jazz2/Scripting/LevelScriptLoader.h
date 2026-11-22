@@ -68,6 +68,121 @@ namespace Jazz2::Scripting
 	};
 
 	/**
+		@brief Firing of a weapon whose bullets a script controls, as the machine of the player saw it
+
+		In multiplayer, the machine of the player fires the bullets and the others fire the same ones from this, as JJ2+ does,
+		so the behaviors of the bullets run on every machine (see @ref LevelScriptLoader::FireScriptedBullets()).
+	*/
+	struct ScriptedFire
+	{
+		/** @brief Flags of @ref ScriptedFire */
+		enum class FlagsType : std::uint8_t {
+			None = 0,
+			FacingLeft = 0x01,		/**< The player faced left */
+			Upward = 0x02,			/**< Fired up by the key while the player looked up */
+			FromScript = 0x04,		/**< Fired by `jjPLAYER::fireBullet()`, not by the key */
+			DepleteAmmo = 0x08,		/**< `fireBullet()` spent the ammo */
+			RequireAmmo = 0x10,		/**< `fireBullet()` needed the ammo */
+			Native = 0x20			/**< `fireBullet()` of a weapon of the game, only the server fires it */
+		};
+
+		DEATH_PRIVATE_ENUM_FLAGS(FlagsType);
+
+		/** @brief Weapon */
+		WeaponType Weapon;
+		/** @brief Upgrades of the weapon */
+		std::uint8_t Upgrades;
+		/** @brief Number of the firing on the machine of the player, the hits its bullets report go to the same ones on the server */
+		std::uint16_t Sequence;
+		/** @brief Flags */
+		FlagsType Flags;
+		/** @brief Angle `fireBullet()` fired at (0 up, clockwise), negative for none */
+		float AimAngle;
+		/** @brief Position of the player */
+		Vector2f OwnerPos;
+		/** @brief Speed of the player */
+		Vector2f OwnerSpeed;
+		/** @brief Where the shots start, see @ref Actors::Player::GetFirePointAndAngle() */
+		Vector3i InitialPos;
+		/** @brief Gunspot of the pose */
+		Vector2f GunspotPos;
+		/** @brief Angle of the shots */
+		float Angle;
+	};
+
+	/**
+		@brief Change a script of the server made to the player of a client, which its client makes too
+
+		The client moves its player itself, so what the server's objects do to it (a ring of fire throwing it) has to be done
+		there too (see @ref LevelScriptLoader::ApplyRemotePlayerChanges()).
+	*/
+	enum class ScriptPlayerChange : std::uint8_t
+	{
+		XPos,			/**< `xPos` */
+		YPos,			/**< `yPos` */
+		XSpeed,			/**< `xSpeed` */
+		YSpeed,			/**< `ySpeed` */
+		Direction,		/**< `direction` */
+		DoubleJumped,	/**< `alreadyDoubleJumped` */
+		Helicopter,		/**< `helicopter` */
+		SuckerTube,		/**< `suckerTube()` */
+		Invisibility,	/**< `invisibility` */
+		NoclipMode		/**< `noclipMode` */
+	};
+
+	/**
+		@brief Something a script drew for an object in a tick, which the clients of a multiplayer game draw too
+
+		The behaviors of objects run only on the server, so a client draws what they drew there by the frames of its own copy
+		of the script, relative to the object (see @ref LevelScriptLoader::WriteObjectDraws()).
+	*/
+	struct ObjectDraw
+	{
+		/** @brief Kind of a draw */
+		enum class KindType : std::uint8_t {
+			Frame,		/**< Frame of `jjAnimFrames` */
+			Sprite,		/**< Frame of an animation of a set */
+			Vine,		/**< Swinging vine of a frame */
+			Solid,		/**< Rectangle of a color */
+			Tile,		/**< Tile */
+			Text,		/**< Text */
+			Platform	/**< Not drawn, the box players stand on (`jjOBJ::bePlatform()`), a client carries its player by it */
+		};
+
+		/** @brief Makes a draw of the kind, unscaled, with the palette of the sprite mode */
+		static ObjectDraw Make(KindType kind, float x, float y, std::uint32_t frame, std::uint32_t mode, std::uint8_t param, std::int8_t layerZ);
+
+		/** @brief Kind */
+		KindType Kind;
+		/** @brief Direction, `SPRITE::Direction` */
+		std::int8_t Direction;
+		/** @brief Layer, as the script gave it */
+		std::int8_t LayerZ;
+		/** @brief Parameter of the sprite mode */
+		std::uint8_t Param;
+		/** @brief Whether the sprite mode has a palette of its own, see @ref LevelScriptLoader::GetSpritePaletteOffset() */
+		bool ModePalette;
+		/** @brief Sprite mode, the color of a text as RGBA8 */
+		std::uint32_t Mode;
+		/** @brief Frame of `jjAnimFrames`, set of a sprite, tile, color of a rectangle or size of a text */
+		std::uint32_t Frame;
+		/** @brief Animation of a sprite in its set, quadrant of a tile */
+		std::uint16_t Animation;
+		/** @brief Frame of a sprite in its animation */
+		std::uint16_t FrameInAnimation;
+		/** @brief Position, relative to the object once recorded */
+		float X, Y;
+		/** @brief Scale of a sprite, size of a rectangle */
+		float ScaleX, ScaleY;
+		/** @brief Angle of a sprite (1024 is a full turn), length of a vine */
+		std::int32_t Angle;
+		/** @brief Curvature of a vine */
+		std::int32_t Curvature;
+		/** @brief Text */
+		String Text;
+	};
+
+	/**
 		@brief Binds an **AngelScript** script file to @ref LevelHandler and executes the script
 		
 		@experimental
@@ -173,6 +288,149 @@ namespace Jazz2::Scripting
 		 * @ref Legacy::ScriptObjectHost::RunBullet()).
 		 */
 		bool FirePlayerWeapon(Actors::Player* player, WeaponType weaponType);
+		/** @brief Returns `true` if a script controls the bullets of the weapon, see @ref FirePlayerWeapon() */
+		bool IsScriptedWeapon(WeaponType weaponType) const;
+		/**
+		 * @brief Fires the bullets of a weapon whose bullets a script controls as the machine of the player fired them
+		 *
+		 * @p owner is the player, or on a client the actor of a player of another machine, @p ownerID the number scripts know it
+		 * by. The bullets of a @p replica neither hurt nor break anything, the server's ones do. Returns the last bullet.
+		 */
+		Actors::ActorBase* FireScriptedBullets(const std::shared_ptr<Actors::ActorBase>& owner, std::int32_t ownerID, const ScriptedFire& fire, bool replica,
+			bool clientHits = false);
+		/**
+		 * @brief On a client, reports what a bullet of its player only shows hits to the server, as the machine of the player decides it in JJ2+
+		 *
+		 * The client sees the objects a moment behind where they are on the server, which has the bullet hit what the client saw it
+		 * hit (see @ref ApplyClientHit()).
+		 */
+		void ReportBulletHits(Actors::ActorBase* bullet);
+		/** @brief On the server, has the bullet of the firing @p sequence of a client hit @p target, as the client saw it, `false` if there's no such bullet */
+		bool ApplyClientHit(Actors::Player* player, std::uint16_t sequence, std::int8_t slot, Actors::ActorBase* target, float maxDistance);
+		/** @brief Forgets a bullet that is gone, see @ref ReportBulletHits() */
+		void ForgetBullet(const Actors::ActorBase* bullet);
+		/** @brief Has a shot hit an object only the scripts have, which finds the shots itself otherwise, `false` if @p target isn't one */
+		bool HitScriptOnlyObject(Actors::ActorBase* target, Actors::ActorBase* shot);
+		/** @brief Fires a weapon of the game for a player of a client as its `jjPLAYER::fireBullet()` did there, `true` if a shot left */
+		bool FireNativeBulletOfClient(Actors::Player* player, const ScriptedFire& fire);
+		/** @brief Returns `true` while @p actor is a bullet being fired by @ref FireScriptedBullets(), it isn't remoted then */
+		bool IsFiringScriptedBullet(const Actors::ActorBase* actor) const {
+			return (actor != nullptr && actor == _firingBullet.Shot);
+		}
+
+		/** @brief What the scripts drew for an object in its last tick, see @ref BeginObjectDraws() */
+		struct ObjectDrawList {
+			SmallVector<ObjectDraw, 0> Draws;
+			Vector2f Origin;
+		};
+		/**
+		 * @brief On the server of an online game, records what the scripts draw for the object from now on, until @ref EndObjectDraws()
+		 *
+		 * Returns the recording it interrupts, which @ref EndObjectDraws() goes back to. What was recorded for the object
+		 * before is dropped.
+		 */
+		ObjectDrawList* BeginObjectDraws(Actors::ActorBase* actor);
+		/** @brief Ends recording what the scripts draw for the object, the draws are relative to where it is now */
+		void EndObjectDraws(Actors::ActorBase* actor, ObjectDrawList* previous);
+		/** @brief Drops what was recorded since @ref BeginObjectDraws(), another tick of the object runs */
+		void RestartObjectDraws();
+		/** @brief Returns `true` while the scripts draw for an object whose draws are recorded */
+		bool IsRecordingObjectDraws() const {
+			return (_recordingDraws != nullptr);
+		}
+		/** @brief Returns `true` on the server of an online game, whose objects the clients only see */
+		bool IsServerOfOnlineGame() const {
+			return _recordsObjectDraws;
+		}
+		/** @brief Records something the scripts drew, if an object is recorded, see @ref BeginObjectDraws() */
+		void RecordObjectDraw(ObjectDraw draw);
+		/** @brief Forgets what was recorded for the object, which is gone */
+		void ForgetObjectDraws(const Actors::ActorBase* actor);
+		/** @brief Returns `true` if something was ever recorded for the object, see @ref WriteObjectDraws() */
+		bool HasObjectDraws(const Actors::ActorBase* actor) const {
+			return _objectDraws.contains(actor);
+		}
+		/** @brief Writes what was recorded for the object, `false` if nothing was ever recorded for it */
+		bool WriteObjectDraws(const Actors::ActorBase* actor, Stream& dest) const;
+		/** @brief Returns `true` if the object is one only the scripts have, without an object of the game */
+		bool IsScriptOnlyObject(const Actors::ActorBase* actor) const;
+		/** @brief Returns `true` if the object has an object ID (`jjObjects`) */
+		bool HasObjectId(const Actors::ActorBase* actor) const {
+			return _objectIdsByActor.contains(const_cast<Actors::ActorBase*>(actor));
+		}
+		/** @brief Returns `true` while `jjAddObject()` adds an object of the game to the level, a client can't make it of the event map */
+		bool IsAddingScriptObject() const {
+			return _addingScriptObject;
+		}
+		/**
+		 * @brief Returns `true` if `jjAddObject()` makes an object now
+		 *
+		 * A client of an online game makes them only for its own player (`onPlayer()`) and its own objects, the objects of the
+		 * level come from the server, which runs the same code of the script (an object `onLevelLoad()` makes would be there
+		 * twice, going their own ways).
+		 */
+		bool CanAddObjects() const;
+		/**
+		 * @brief Marks an object every machine of an online game runs itself, the clients make it of the event map
+		 *
+		 * What its behavior makes is made on every machine too, the server doesn't send it to the clients (the other half
+		 * of a double platform, which hangs from the one of the machine it's on).
+		 */
+		void MarkMirrored(Actors::ActorBase* actor);
+		/** @brief Returns `true` while the behavior of an object every machine runs itself runs, see @ref MarkMirrored() */
+		bool IsRunningMirroredObject() const;
+		/**
+		 * @brief On a client, draws what the scripts of the server drew for the object of @p actorId until it's changed again
+		 *
+		 * Returns `true` if the object had no draws before.
+		 */
+		bool SetRemoteObjectDraws(std::uint32_t actorId, const std::shared_ptr<Actors::ActorBase>& anchor, Stream& src);
+		/** @brief On a client, stops drawing what the scripts of the server drew for the object, which is gone */
+		void RemoveRemoteObjectDraws(std::uint32_t actorId);
+
+		/** @brief Marks the object whose script runs while it exists, see @ref IsReplicatingEffects() */
+		class EffectScope
+		{
+		public:
+			EffectScope(LevelScriptLoader* owner, Legacy::jjOBJ* obj)
+				: _owner(owner), _previous(owner->_effectObject)
+			{
+				owner->_effectObject = obj;
+			}
+			~EffectScope()
+			{
+				_owner->_effectObject = _previous;
+			}
+
+			EffectScope(const EffectScope&) = delete;
+			EffectScope& operator=(const EffectScope&) = delete;
+
+		private:
+			LevelScriptLoader* _owner;
+			Legacy::jjOBJ* _previous;
+		};
+		/**
+		 * @brief Returns `true` if what the scripts play or burst into now goes to the clients of an online game too
+		 *
+		 * Only on the server, while a script of an object only the server runs is running - the bullets of the weapons of
+		 * a script and the code of the level (`onMain()`) run on every machine.
+		 */
+		bool IsReplicatingEffects() const {
+			return (_recordsObjectDraws && _effectObject != nullptr && !_effectObject->_scriptedBullet && !_effectObject->_replica &&
+				!_effectObject->_mirrored);
+		}
+		/** @brief Tells the clients of a sample a script of an object played, see @ref IsReplicatingEffects() */
+		void ReplicateSample(Vector2f pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency);
+		/** @brief Tells the clients of a frame a script of an object burst into particles, see @ref IsReplicatingEffects() */
+		void ReplicatePixelExplosion(float x, float y, std::uint32_t frame, std::int32_t direction);
+		/** @brief On a client, plays a sample or bursts a frame the scripts of the server did */
+		void PlayRemoteEffect(Stream& src);
+		/**
+		 * @brief On a client, makes the changes a script of the server made to the player of this client, see @ref ScriptPlayerChange
+		 *
+		 * Returns `true` if the player was moved, which the server waits for as for a warp.
+		 */
+		bool ApplyRemotePlayerChanges(Stream& src);
 		/**
 		 * @brief Returns `true` if the scripts make the weather of the level, the level doesn't draw it then
 		 *
@@ -486,8 +744,48 @@ namespace Jazz2::Scripting
 		/** @brief Applies what the scripts set the controls of a local player to in the last tick to the input of this frame */
 		void ApplyInputOverrides(std::int32_t playerIndex);
 
+		/** @brief File the script needs, the clients of an online game get it too, see @ref GetRequiredFiles() */
+		struct RequiredFile {
+			/** @brief Name as the script gives it */
+			String Name;
+			/** @brief Full path, empty if it wasn't found */
+			String FullPath;
+			/** @brief Only offered (`#pragma offer`), the level is played without it too */
+			bool Optional;
+		};
+
+		/** @brief Returns the path of the script file of the level */
+		StringView GetScriptPath() const {
+			return _scriptPath;
+		}
+		/** @brief Returns `true` if the script is read from a text given in place of its file (an unsaved script of the editor) */
+		bool IsScriptTextOverridden() const {
+			return !_scriptText.empty();
+		}
+		/** @brief Returns the files the script includes, requires and offers (`#include`, `#pragma require`, `#pragma offer`) */
+		ArrayView<const RequiredFile> GetRequiredFiles() const {
+			return arrayView(_requiredFiles.data(), _requiredFiles.size());
+		}
+		/**
+		 * @brief On a client of an online game, returns full path of a file the script names as the server offered it, empty otherwise
+		 *
+		 * With @p downloadedOnly, only a file downloaded from the server, not the same one found on this machine.
+		 */
+		String FindServerFile(StringView fileName, bool downloadedOnly = false) const;
+		/** @brief Returns `true` on a client of an online game, whose script came from the server */
+		bool IsScriptOfServer() const;
+		/**
+		 * @brief Returns full path of a file the scripts save (`jjSTREAM::save()`), in a directory of its own
+		 *
+		 * The scripts of a server save into one apart on a client. With @p forWrite, returns empty if a script of a server
+		 * saved too many files in the level already, as JJ2+ limits it.
+		 */
+		String GetStagingPath(StringView fileName, bool forWrite = false);
+
 		/** @brief Returns script backing store for specified player */
 		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
+		/** @brief Detaches the backing store of a player whose actor is gone, before it's destroyed */
+		void OnPlayerRemoved(Actors::Player* player);
 		/** @brief Returns script backing store for the player scripts know by the number (see @ref GetScriptPlayerID()) */
 		jjPLAYER* GetPlayerBackingStore(std::int32_t playerID);
 		/** @brief Returns script backing store for the local player of the index, the one for absent players if there is none */
@@ -496,6 +794,8 @@ namespace Jazz2::Scripting
 		std::int32_t GetScriptPlayerID(const Actors::Player* player) const;
 		/** @brief Returns the player scripts know by the number, `nullptr` if it isn't in the level on this machine */
 		Actors::Player* GetPlayerByScriptID(std::int32_t playerID) const;
+		/** @brief On a client, returns the actor of a player of another machine scripts know by the number, `nullptr` otherwise */
+		Actors::ActorBase* GetRemotePlayerActor(std::int32_t playerID) const;
 		/** @brief Returns whether the player is played on this machine */
 		bool IsLocalPlayer(const Actors::Player* player) const;
 		/** @brief Returns count of players played on this machine */
@@ -507,6 +807,14 @@ namespace Jazz2::Scripting
 		void OnLevelBegin();
 		/** @brief Called when a level reloads */
 		void OnLevelReload();
+		/**
+		 * @brief On a client of an online game, called when its player respawns
+		 *
+		 * The level of the server goes on, only what this machine shows goes back as on a reload (`onLevelReload()`).
+		 */
+		void OnLocalLevelReload();
+		/** @brief Returns `true` if the player is in a fight with a boss (`bossActivated`) */
+		bool IsInBossFight(Actors::Player* player) const;
 		/** @brief Called when a player enters a cheat code (`onCheat()`), returns `true` if the script handled it, the game doesn't apply it then */
 		bool OnCheat(StringView cheat);
 		/** @brief Called when the local player says something in the chat (`onLocalChat()`), returns `true` if the script took it, it isn't said then */
@@ -603,8 +911,14 @@ namespace Jazz2::Scripting
 		HashMap<std::int32_t, asITypeInfo*> _eventTypeToTypeInfo;
 		BitArray _enabledCallbacks;
 		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _playerBackingStore;
+		// On a client, `jjPlayers` of the players of other machines, read from their actors (see jjPLAYER::GetRemoteActor())
+		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _remotePlayerBackingStore;
 		// How many behaviors of objects are running, a player's speed they set moves the player from the next tick
 		std::int32_t _objectBehaviorDepth = 0;
+		// How many callbacks of a local player are running (`onPlayer()`, `onPlayerInput()`), see CanAddObjects()
+		std::int32_t _localPlayerHookDepth;
+		// See IsAddingScriptObject()
+		bool _addingScriptObject;
 		// The controls of each local player the scripts set in the last tick and what to, see OverridePlayerInput()
 		std::uint64_t _inputOverrideMask[Input::ControlScheme::MaxSupportedPlayers] = {};
 		std::uint64_t _inputOverrideValue[Input::ControlScheme::MaxSupportedPlayers] = {};
@@ -621,6 +935,11 @@ namespace Jazz2::Scripting
 		// Text of the script in place of its file, see OnReadScript()
 		String _scriptText;
 		String _scriptTextPath;
+		// The script file of the level and the files it includes, requires and offers, see GetRequiredFiles()
+		String _scriptPath;
+		SmallVector<RequiredFile, 0> _requiredFiles;
+		// The files a script of a server saved in the level on a client, see GetStagingPath()
+		SmallVector<String, 0> _stagedFiles;
 
 		// Lazily-built mapping of original JJ2 sample indices to converted asset paths (only allocated once a script
 		// actually plays a sample, so non-scripting and silent sessions pay nothing)
@@ -688,16 +1007,63 @@ namespace Jazz2::Scripting
 			float GunspotOffsetY;
 			// The angle `jjPLAYER::fireBullet()` fired it at (0 up, clockwise), negative for none
 			float AimAngle;
+			// The player as it fired, see ScriptedFire
+			Vector2f OwnerPos;
+			float OwnerSpeedX;
+			bool OwnerFacingLeft;
+			// Fired by a player of another machine or on a client, it neither hurts nor breaks anything
+			bool Replica;
+			// On the server, fired by a player of a client, it hits only what the client reports (see ApplyClientHit())
+			bool ClientHits;
 		};
 		static constexpr std::int8_t NotSpread = INT8_MIN;
 		SmallVector<ObjectSlot, 0> _objectSlots;
-		// The bullet being fired by FirePlayerWeapon(), RegisterObject() gives its object ID the place in the spread
+		// The bullet being fired by FireScriptedBullets(), RegisterObject() gives its object ID the place in the spread
 		struct FiringBullet {
 			const Actors::ActorBase* Shot;
 			std::int8_t SpreadSlot;
 			float GunspotOffsetY;
 			bool Upward;
 			float AimAngle;
+			Vector2f OwnerPos;
+			float OwnerSpeedX;
+			bool OwnerFacingLeft;
+			bool Replica;
+			std::int32_t OwnerID;
+			bool ClientHits;
+		};
+		// The next number of a firing of a weapon of a script, see ScriptedFire::Sequence
+		std::uint16_t _nextFireSequence;
+		// Client: the bullets its player fired, by the firing and the place in the spread, and what each reported it hit
+		struct ReportingBullet {
+			std::uint16_t Sequence;
+			std::int8_t Slot;
+			SmallVector<std::uint32_t, 2> Reported;
+		};
+		HashMap<const Actors::ActorBase*, ReportingBullet> _reportingBullets;
+		// Server: the bullets of the players of clients, by the player, the firing and the place in the spread (see ApplyClientHit())
+		HashMap<std::uint64_t, std::weak_ptr<Actors::ActorBase>> _clientBullets;
+		// Server of an online game: what the scripts drew for each object in its last tick (see BeginObjectDraws())
+		HashMap<const Actors::ActorBase*, std::unique_ptr<ObjectDrawList>> _objectDraws;
+		ObjectDrawList* _recordingDraws;
+		bool _recordsObjectDraws;
+		// The object whose script runs, see EffectScope
+		Legacy::jjOBJ* _effectObject;
+		// Client: what the scripts of the server drew for the objects, drawn by them in every tick (see SetRemoteObjectDraws())
+		struct RemoteObjectDraws {
+			std::weak_ptr<Actors::ActorBase> Anchor;
+			SmallVector<ObjectDraw, 0> Draws;
+			// Where the object was in the last frame and whether it was a platform, see AddRemoteObjectDraws()
+			Vector2f LastOrigin;
+			bool WasPlatform;
+		};
+		HashMap<std::uint32_t, RemoteObjectDraws> _remoteObjectDraws;
+		// Where they're drawn, made again in every frame where the objects are then (no object is held between frames)
+		std::unique_ptr<Legacy::ScriptWorldCanvas> _remoteCanvas;
+		// Effects the server sends to the clients, see PlayRemoteEffect()
+		enum class RemoteEffect : std::uint8_t {
+			Sample,
+			PixelExplosion
 		};
 		FiringBullet _firingBullet = {};
 		// The object ID of each object of the level that has one, an entry of an object that's gone stays until its ID is
@@ -780,9 +1146,28 @@ namespace Jazz2::Scripting
 		void UpdateWaterLevel(std::int32_t currentTick);
 		// Releases the script views of the objects and the templates, the objects of the game stop running behaviors of the script
 		void ReleaseObjects();
+		// Calls `onLevelReload()` of the script
+		void CallLevelReload();
 		// Deletes the objects scripts made (`jjAddObject()`), those of the event map a behavior of a script drives start again
 		// (see OnLevelReload())
 		void DeleteObjectsOfScripts();
+		// Fires one bullet of the spread, see FireScriptedBullets()
+		template<typename T>
+		Actors::ActorBase* FireScriptedBullet(const std::shared_ptr<Actors::ActorBase>& owner, std::int32_t ownerID, const ScriptedFire& fire,
+			std::int8_t slot, bool replica, bool clientHits);
+		static std::uint64_t GetClientBulletKey(std::int32_t playerIndex, std::uint16_t sequence, std::int8_t slot) {
+			return (std::uint64_t(std::uint32_t(playerIndex)) << 24) | (std::uint64_t(sequence) << 8) | std::uint8_t(slot);
+		}
+		// Draws what the scripts of the server drew for the objects in this frame
+		void AddRemoteObjectDraws();
+		// Returns the bounds of the frames drawn where the object itself is, `false` if none is
+		bool GetRemoteObjectBounds(const RemoteObjectDraws& entry, Vector2f origin, AABBf& bounds);
+		// Sends an effect to the clients near it, see ReplicateSample()
+		void SendEffectToClients(Vector2f pos, ArrayView<const std::uint8_t> data);
+		// Adds a file the script needs, see GetRequiredFiles()
+		void AddRequiredFile(StringView fileName, StringView fullPath, bool optional);
+		// Returns full path of a file the script names, as the script finds it, empty if it isn't found
+		String FindScriptFilePath(StringView fileName) const;
 
 		// Persistent jjLAYER proxies keyed by engine layer index, created lazily when a script first accesses jjLayers[i].
 		// Each holds one AddRef'd reference (released in the destructor); SyncLayerProperties pushes their writable fields

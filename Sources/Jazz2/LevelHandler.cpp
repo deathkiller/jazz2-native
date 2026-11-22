@@ -1885,7 +1885,12 @@ namespace Jazz2
 					if (_activeBoss == nullptr) {
 #if defined(WITH_ANGELSCRIPT)
 						// A boss of a script is an object the script drives, it only learns the boss is activated
+						bool wasActivated = (_scripts != nullptr && _scripts->IsBossAreaActivated());
 						if (_scripts != nullptr && _scripts->OnBossAreaActivated()) {
+							if (!wasActivated) {
+								// The other players join the fight, as with a boss of the game
+								HandleBossActivated(nullptr, initiator);
+							}
 							if (eventParams != nullptr) {
 								BeginPlayMusic(StringView((const char*)eventParams, strnlen((const char*)eventParams, 16)));
 							}

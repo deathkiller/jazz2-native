@@ -171,7 +171,7 @@ namespace Jazz2::Multiplayer
 			case 1013:	// Try Again Later
 				return Reason::ServerNotReady;
 			default:
-				if (code >= 4000 && code < std::uint16_t(4000 + std::uint32_t(Reason::Idle) + 1)) {
+				if (code >= 4000 && code < std::uint16_t(4000 + std::uint32_t(Reason::Count))) {
 					return Reason(code - 4000);
 				}
 				return (wasConnected ? Reason::ConnectionLost : Reason::ConnectionTimedOut);
@@ -1444,6 +1444,7 @@ namespace Jazz2::Multiplayer
 			case Reason::CheatingDetected: return "Cheating detected"; break;
 			case Reason::AssetStreamingNotAllowed: return "Downloading of assets is not allowed"; break;
 			case Reason::Idle: return "Inactivity"; break;
+			case Reason::ScriptsNotAllowed: return "Level scripts are not allowed"; break;
 			default: return "Unknown reason"; break;
 		}
 	}
