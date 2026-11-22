@@ -14032,7 +14032,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, Actors::ActorBase* actor)
 	{
 		// An object only a script has has no sprite of the game, the clients draw what the script drew for it
-		String metadataPath = (actor->_metadata != nullptr ? fs::FromNativeSeparators(actor->_metadata->Path) : String());
+		String metadataPath = (actor->_metadata != nullptr ? String(fs::FromNativeSeparators(actor->_metadata->Path)) : String());
 
 		std::uint8_t flags = 0;
 		if (runtime_cast<Actors::Player>(actor) != nullptr ? actor->_renderer.IsDrawEnabled() : IsActorShownToClients(actor)) {
