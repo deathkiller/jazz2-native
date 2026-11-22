@@ -357,6 +357,7 @@ namespace Jazz2::Scripting
 				return false;
 			}
 			std::memcpy(&length, front, sizeof(length));
+			length = Death::Memory::AsLE(length);
 
 			// `PeekFront()` above proved there are at least `sizeof(length)` bytes left, so this cannot underflow
 			if (length > getSize() - sizeof(length)) {

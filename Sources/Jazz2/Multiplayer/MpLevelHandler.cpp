@@ -3791,7 +3791,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		// From the server, client 0
-		packet.WriteValue<std::int32_t>(0);
+		packet.WriteValueAsLE<std::int32_t>(0);
 		packet.WriteVariableUint32((std::uint32_t)data.size());
 		packet.Write(data.data(), (std::uint32_t)data.size());
 		bool targetFound = false;
@@ -6324,7 +6324,7 @@ namespace Jazz2::Multiplayer
 	{
 #if defined(WITH_ANGELSCRIPT)
 		MemoryStream packet(data);
-		std::int32_t fromClientID = packet.ReadValue<std::int32_t>();
+		std::int32_t fromClientID = packet.ReadValueAsLE<std::int32_t>();
 		std::uint32_t size = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(size > MaxScriptPacketSize || std::int64_t(size) > packet.GetSize() - packet.GetPosition()) {
 			LOGD("[MP] ServerPacketType::ScriptPacket - Length out of bounds ({})", size);
@@ -6381,7 +6381,7 @@ namespace Jazz2::Multiplayer
 	{
 		packet.WriteValue<std::uint8_t>((std::uint8_t)fire.Weapon);
 		packet.WriteValue<std::uint8_t>(fire.Upgrades);
-		packet.WriteValue<std::uint16_t>(fire.Sequence);
+		packet.WriteValueAsLE<std::uint16_t>(fire.Sequence);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)fire.Flags);
 		packet.WriteValueAsLE<float>(fire.AimAngle);
 		packet.WriteValueAsLE<float>(fire.OwnerPos.X);
@@ -6400,7 +6400,7 @@ namespace Jazz2::Multiplayer
 	{
 		fire.Weapon = (WeaponType)packet.ReadValue<std::uint8_t>();
 		fire.Upgrades = packet.ReadValue<std::uint8_t>();
-		fire.Sequence = packet.ReadValue<std::uint16_t>();
+		fire.Sequence = packet.ReadValueAsLE<std::uint16_t>();
 		fire.Flags = (Scripting::ScriptedFire::FlagsType)packet.ReadValue<std::uint8_t>();
 		fire.AimAngle = packet.ReadValueAsLE<float>();
 		fire.OwnerPos.X = packet.ReadValueAsLE<float>();
@@ -6789,7 +6789,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 		MemoryStream packet(12);
-		packet.WriteValue<std::uint16_t>(sequence);
+		packet.WriteValueAsLE<std::uint16_t>(sequence);
 		packet.WriteValue<std::int8_t>(slot);
 		packet.WriteVariableUint32(actorId);
 		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerScriptedHit, packet);
@@ -6799,7 +6799,7 @@ namespace Jazz2::Multiplayer
 	{
 #if defined(WITH_ANGELSCRIPT)
 		MemoryStream packet(data);
-		std::uint16_t sequence = packet.ReadValue<std::uint16_t>();
+		std::uint16_t sequence = packet.ReadValueAsLE<std::uint16_t>();
 		std::int8_t slot = packet.ReadValue<std::int8_t>();
 		std::uint32_t actorId = packet.ReadVariableUint32();
 
