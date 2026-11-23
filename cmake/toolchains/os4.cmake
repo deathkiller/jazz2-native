@@ -65,6 +65,15 @@ set(CMAKE_C_FLAGS_INIT "${_os4MachDep}")
 set(CMAKE_CXX_FLAGS_INIT "${_os4MachDep}")
 # The SDK's own libraries (SDL2, libpthread, zlib, ...) live outside the compiler's default search path
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${_os4MachDep} -L${_os4Sdk}/local/newlib/lib")
+# MiniGL, the OpenGL the LegacyGL backend draws with. Images built since 2026-11-21 keep it in folders of
+# its own, next to GL4ES and Mesa (which have a <GL/gl.h> and a libGL.a of their own there), instead of
+# the SDK's common ones - so its headers are added here, and its folder is searched before the generic
+# one for libGL.a. Older images still have it in the common folders, where nothing has to be added.
+if(EXISTS "${_os4Sdk}/local/common/include/MiniGL/GL/gl.h")
+	string(APPEND CMAKE_C_FLAGS_INIT " -isystem ${_os4Sdk}/local/common/include/MiniGL")
+	string(APPEND CMAKE_CXX_FLAGS_INIT " -isystem ${_os4Sdk}/local/common/include/MiniGL")
+	set(CMAKE_EXE_LINKER_FLAGS_INIT "${_os4MachDep} -L${_os4Sdk}/local/newlib/lib/MiniGL -L${_os4Sdk}/local/newlib/lib")
+endif()
 
 set(CMAKE_FIND_ROOT_PATH "${_os4Sdk}/local/newlib" "${_os4Sdk}/local/common" "${_os4Sdk}/newlib" "${OS4_INST}/ppc-amigaos")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

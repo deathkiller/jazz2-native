@@ -7156,8 +7156,8 @@ float4 main(PsInput _input) : COLOR
 	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
 	float halfSize = step(0.5, uCylinder.w);
 	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
-	float rows = row_ / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row_ / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
 	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
@@ -7237,8 +7237,8 @@ float4 main(PsInput _input) : COLOR
 	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
 	float halfSize = step(0.5, uCylinder.w);
 	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
-	float rows = row_ / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row_ / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
 	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
@@ -7472,8 +7472,8 @@ float4 main(PsInput _input) : COLOR
 	float rowCos = cos(3.14159265359 * row_ / uViewSize.y);
 	float halfSize = step(0.5, uCylinder.w);
 	float2 texel = float2(uShift.x * 0.25 + (pixel_.x - uCylinder.x * uViewSize.x) * lerp(128.0 * (2.0 + rowCos), 256.0 * (1.0 + 2.0 * rowCos), halfSize) / uViewSize.x, uShift.y + 128.0 + 128.0 * halfSize + (pixel_.y - 0.5 * uViewSize.y) * (256.0 + 256.0 * halfSize) / uViewSize.y);
-	float rows = row_ / 141.0;
-	float fade = clamp(1.0 - rows * rows, 0.0, 1.0) * 0.65;
+	float angle = 3.14159265359 * row_ / uViewSize.y;
+	float fade = clamp(1.0 - angle * angle, 0.0, 1.0) * 0.65;
 	float2 texturePos = float2(texel.x / 256.0, 1.0 - texel.y / 256.0);
 	float4 texColor = tex2D(uTexture, texturePos);
 	COLOR = lerp(texColor, float4(uHorizonColor.xyz, 1.0), ((float4)(fade * uCylinder.z)));
