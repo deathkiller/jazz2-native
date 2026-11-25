@@ -158,6 +158,9 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 
+				// On the Wii U, wiiu-sdl2 gives the GamePad and Wii Remote buttons only to the system keyboard while
+				// it is shown (WIIU_JoystickUpdate() returns early when SDL_WiiUSetSWKBDVPAD/KPAD() take them), so
+				// pressing A or B on the keyboard does not also trigger the actions below
 				if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					if (_keyboardVisible) {

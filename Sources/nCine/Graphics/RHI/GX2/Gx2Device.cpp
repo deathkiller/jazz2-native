@@ -883,6 +883,9 @@ namespace nCine::RHI::GX2
 		// The keyboard sets up its own pipeline, so it must not write into our context state, and it draws into
 		// whatever colour buffer is bound. wiiu-sdl2's own present switches the UNORM
 		// buffer to sRGB for it (`WIIU_FIX_SWKBD_GAMMA`), otherwise the keyboard's gamma is wrong.
+		// DrawDRC() lays the keyboard out for the 854x480 GamePad, but it is drawn here into the TV-sized buffer
+		// that is then scaled to both screens. Tested on a console: it still fills the GamePad and its touch areas
+		// line up, so it needs no GamePad-sized viewport of its own.
 		GX2SetContextState(nullptr);
 		const GX2SurfaceFormat format = _screenBuffer.surface.format;
 		_screenBuffer.surface.format = GX2_SURFACE_FORMAT_SRGB_R8_G8_B8_A8;
