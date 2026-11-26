@@ -809,7 +809,7 @@ namespace Jazz2::Multiplayer
 			packet.Write(id.data(), id.size());
 
 			StringView serverVersion = NCINE_PROTOCOL_VERSION_s;
-			serverVersion = serverVersion.prefix(serverVersion.findOr('-', serverVersion.end()).begin());
+			serverVersion = serverVersion.prefix(serverVersion.find('-').begin());
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverVersion.size());
 			packet.Write(serverVersion.data(), (std::uint8_t)serverVersion.size());
 

@@ -943,8 +943,8 @@ namespace Jazz2
 #if defined(WITH_ANGELSCRIPT) || defined(DEATH_TRACE)
 		// TODO: Allow script signing
 		if (PreferencesCache::AllowUnsignedScripts) {
-			const StringView foundDot = fullPath.findLastOr('.', fullPath.end());
-			String scriptPath = (foundDot == fullPath.end() ? fullPath : fullPath.prefix(foundDot.begin())) + ".j2as"_s;
+			const StringView foundDot = fullPath.findLast('.');
+			String scriptPath = fullPath.prefix(foundDot ? foundDot.begin() : fullPath.end()) + ".j2as"_s;
 			String scriptPathCaseInsensitive = fs::FindPathCaseInsensitive(scriptPath);
 			if (scriptPathCaseInsensitive.empty() && !scriptText.empty()) {
 				scriptPathCaseInsensitive = scriptPath;

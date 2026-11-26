@@ -83,7 +83,12 @@ namespace Death { namespace Containers {
 		literals, but the designated way to instantiate a string is using the
 		@link operator""_s() @endlink literal. While both expressions are *mostly*
 		equivalent, the implicit conversion has some runtime impact due to
-		@ref std::strlen(), and it won't preserve zero bytes inside the string.
+		@ref std::strlen(), and it won't preserve zero bytes inside the string:
+
+		@code{.cpp}
+		String a = "hello\0world!";		// a.size() == 5
+		String b = "hello\0world!"_s;	// b.size() == 12
+		@endcode
 
 		The @ref String class provides access, slicing and lookup APIs similar to
 		@ref BasicStringView "StringView", see @ref Containers-BasicStringView-usage "its usage docs"
@@ -130,7 +135,15 @@ namespace Death { namespace Containers {
 		copies regardless of the actual string size, i.e., small strings don't suddenly
 		become SSO instances if the growable array gets reallocated. An
 		@ref AllocatedInit small string can be turned into an SSO instance again by
-		explicitly using the @ref String(StringView) constructor.
+		explicitly using the @ref String(StringView) constructor:
+
+		@code{.cpp}
+		String a{AllocatedInit, "hi!"};	// a.isSmall() == false
+		String b = Death::move(a);		// b.isSmall() == false
+		String c = b;					// c.isSmall() == false
+
+		String d = StringView{c};		// d.isSmall() == true
+		@endcode
 
 		@subsection Containers-String-usage-initialization String initialization
 
@@ -158,6 +171,19 @@ namespace Death { namespace Containers {
 		@ref String(char*, std::size_t, Deleter) together with specifying which
 		function to use for deallocation.
 
+		For example, properly deallocating a string allocated using @ref std::malloc():
+
+		@code{.cpp}
+		{
+			// Extra space for a null terminator
+			char* data = reinterpret_cast<char*>(std::malloc(size + 1));
+
+			// Will call std::free() on destruction
+			String string{data, size,
+				[](char* data, std::size_t) { std::free(data); }};
+		}
+		@endcode
+
 		@subsection Containers-String-usage-c-string-conversion Converting String instances to null-terminated C strings
 
 		If possible when interacting with 3rd party APIs, passing a string together
@@ -180,7 +206,24 @@ namespace Death { namespace Containers {
 		will, leading to nasty crashes when accessing the original pointer. Apart from
 		ensuring the instances won't get moved, another solution is to force the
 		strings to be always allocated with @ref String(AllocatedInitT, String&&) and
-		other variants using the @ref AllocatedInit tag.
+		other variants using the @ref AllocatedInit tag. For example:
+
+		@code{.cpp}
+		void exec(int argc, const char** argv);
+
+		Array<String> data;
+		Array<const char*> argv;
+		while (hasNextArg()) {
+			// If arrayAppend(data, nextArg()) was used, the data() passed to
+			// argv could be invalidated next time the storage gets reallocated
+			arrayAppend(data, String{AllocatedInit, nextArg()});
+			arrayAppend(argv, data.back().data());
+		}
+
+		exec(argv.size(), argv.data());
+		@endcode
+
+		See also @ref Containers-BasicStringView-usage-c-string-conversion.
 
 		@section Containers-String-stl STL compatibility
 
@@ -827,6 +870,28 @@ namespace Death { namespace Containers {
 		StaticArray<3, StringView> partition(StringView separator) const;
 
 		/**
+		 * @brief Partition on a last occurence
+		 *
+		 * Equivalent to @ref BasicStringView::partitionLast(char) const. The
+		 * last returned value has always @ref StringViewFlags::NullTerminated
+		 * set.
+		 */
+		StaticArray<3, MutableStringView> partitionLast(char separator);
+		/** @overload */
+		StaticArray<3, StringView> partitionLast(char separator) const;
+
+		/**
+		 * @brief Partition on a last occurence
+		 *
+		 * Equivalent to @ref BasicStringView::partitionLast(StringView) const.
+		 * The last returned value has always @ref StringViewFlags::NullTerminated
+		 * set.
+		 */
+		StaticArray<3, MutableStringView> partitionLast(StringView separator);
+		/** @overload */
+		StaticArray<3, StringView> partitionLast(StringView separator) const;
+
+		/**
 		 * @brief Join strings with this view as the delimiter
 		 *
 		 * Equivalent to @ref BasicStringView::join().
@@ -988,25 +1053,6 @@ namespace Death { namespace Containers {
 		StringView find(char character) const;
 
 		/**
-		 * @brief Find a substring with a custom failure pointer
-		 *
-		 * Equivalent to @ref BasicStringView::findOr(StringView, T*) const.
-		 */
-		MutableStringView findOr(StringView substring, char* fail);
-		/** @overload */
-		StringView findOr(StringView substring, const char* fail) const;
-
-		/**
-		 * @brief Find a substring with a custom failure pointer
-		 *
-		 * Equivalent to @ref BasicStringView::findOr(char, T*) const, which in
-		 * turn is a specialization of @ref BasicStringView::findOr(StringView, T*) const.
-		 */
-		MutableStringView findOr(char character, char* fail);
-		/** @overload */
-		StringView findOr(char character, const char* fail) const;
-
-		/**
 		 * @brief Find the last occurence of a substring
 		 *
 		 * Equivalent to @ref BasicStringView::findLast(StringView) const.
@@ -1024,25 +1070,6 @@ namespace Death { namespace Containers {
 		MutableStringView findLast(char character);
 		/** @overload */
 		StringView findLast(char character) const;
-
-		/**
-		 * @brief Find the last occurence of a substring with a custom failure pointer
-		 *
-		 * Equivalent to @ref BasicStringView::findLastOr(StringView, T*) const.
-		 */
-		MutableStringView findLastOr(StringView substring, char* fail);
-		/** @overload */
-		StringView findLastOr(StringView substring, const char* fail) const;
-
-		/**
-		 * @brief Find the last occurence of a substring with a custom failure pointer
-		 *
-		 * Equivalent to @ref BasicStringView::findLastOr(char, T*) const,
-		 * which in turn is a specialization of @ref BasicStringView::findLastOr(StringView, T*) const.
-		 */
-		MutableStringView findLastOr(char character, char* fail);
-		/** @overload */
-		StringView findLastOr(char character, const char* fail) const;
 
 		/**
 		 * @brief Whether the string contains a substring
@@ -1063,43 +1090,50 @@ namespace Death { namespace Containers {
 		 *
 		 * Equivalent to @ref BasicStringView::findAny().
 		 */
-		MutableStringView findAny(StringView characters);
+		MutableStringView findAny(StringView characters, std::size_t maxCount = 0);
 		/** @overload */
-		StringView findAny(StringView characters) const;
+		StringView findAny(StringView characters, std::size_t maxCount = 0) const;
 
 		/**
-		 * @brief Find any character from given set with a custom failure pointer
+		 * @brief Find any character not from given set
 		 *
-		 * Equivalent to @ref BasicStringView::findAnyOr().
+		 * Equivalent to @ref BasicStringView::findNotAny().
 		 */
-		MutableStringView findAnyOr(StringView characters, char* fail);
+		MutableStringView findNotAny(StringView characters);
 		/** @overload */
-		StringView findAnyOr(StringView characters, const char* fail) const;
+		StringView findNotAny(StringView characters) const;
 
 		/**
 		 * @brief Find the last occurence of any character from given set
 		 *
 		 * Equivalent to @ref BasicStringView::findLastAny().
 		 */
-		MutableStringView findLastAny(StringView characters);
+		MutableStringView findLastAny(StringView characters, std::size_t maxCount = 0);
 		/** @overload */
-		StringView findLastAny(StringView characters) const;
+		StringView findLastAny(StringView characters, std::size_t maxCount = 0) const;
 
 		/**
-		 * @brief Find the last occurence of any character from given set with a custom failure pointer
+		 * @brief Find the last occurence of any character not from given set
 		 *
-		 * Equivalent to @ref BasicStringView::findLastAnyOr().
+		 * Equivalent to @ref BasicStringView::findLastNotAny().
 		 */
-		MutableStringView findLastAnyOr(StringView characters, char* fail);
+		MutableStringView findLastNotAny(StringView characters);
 		/** @overload */
-		StringView findLastAnyOr(StringView characters, const char* fail) const;
+		StringView findLastNotAny(StringView characters) const;
 
 		/**
 		 * @brief Whether the string contains any character from given set
 		 *
 		 * Equivalent to @ref BasicStringView::containsAny().
 		 */
-		bool containsAny(StringView substring) const;
+		bool containsAny(StringView characters) const;
+
+		/**
+		 * @brief Whether the string contains any character not from given set
+		 *
+		 * Equivalent to @ref BasicStringView::containsNotAny().
+		 */
+		bool containsNotAny(StringView characters) const;
 
 		/**
 		 * @brief Count of occurences of given character

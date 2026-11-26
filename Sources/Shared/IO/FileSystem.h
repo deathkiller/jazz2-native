@@ -106,7 +106,9 @@ namespace Death { namespace IO {
 			System = 0x08,			/**< System file */
 			SymbolicLink = 0x10,	/**< Symbolic link, junction or mount point */
 			Placeholder = 0x20,		/**< Cloud file placeholder whose content is not stored locally */
-			Special = 0x40			/**< Device, pipe, socket or other entry that is neither a file nor a directory */
+			Special = 0x40,			/**< Device, pipe, socket or other entry that is neither a file nor a directory */
+			Archive = 0x80,			/**< Marked for backup (Windows only) */
+			Compressed = 0x100		/**< Compressed by the file system (Windows only) */
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(EntryAttributes);

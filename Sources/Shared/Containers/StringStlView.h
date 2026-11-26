@@ -67,4 +67,13 @@ namespace Death { namespace Containers { namespace Implementation {
 		}
 	};
 
+	template<class> struct StringIterableConverter;
+
+	/** @brief Allows @ref Death::Containers::StringIterable to iterate sequences of STL @ref std::string_view */
+	template<> struct StringIterableConverter<std::string_view> {
+		static StringView accessor(const void* data, const void*, std::ptrdiff_t, std::size_t) {
+			return *static_cast<const std::string_view*>(data);
+		}
+	};
+
 }}}

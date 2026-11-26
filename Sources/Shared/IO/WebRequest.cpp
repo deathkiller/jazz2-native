@@ -839,7 +839,7 @@ namespace Death { namespace IO {
 	String WebResponseImpl::GetMimeType() const
 	{
 		StringView contentType = GetContentType();
-		return contentType.prefix(contentType.findOr(';', contentType.end()).begin());
+		return contentType.prefix(contentType.find(';').begin());
 	}
 
 	String WebResponseImpl::GetContentType() const
@@ -884,8 +884,8 @@ namespace Death { namespace IO {
 		if (suggestedFilename.empty()) {
 			String uri = GetURL();
 			StringView fileName = uri.trimmedSuffix("/"_s);
-			suggestedFilename = fileName.suffix(fileName.findLastOr('/', fileName.begin()).end());
-			suggestedFilename = suggestedFilename.prefix(suggestedFilename.findOr('?', suggestedFilename.end()).begin());
+			suggestedFilename = fileName.suffix(fileName.findLast('/').end());
+			suggestedFilename = suggestedFilename.prefix(suggestedFilename.find('?').begin());
 		}
 
 		return suggestedFilename;
@@ -2709,8 +2709,8 @@ namespace Death { namespace IO {
 
 		if (hdr.hasPrefix("HTTP/"_s)) {
 			// First line of the headers contains status text after version and status
-			hdr = hdr.suffix(hdr.findOr(' ', hdr.end()).begin());
-			_statusText = hdr.suffix(hdr.findOr(' ', hdr.end()).begin());
+			hdr = hdr.suffix(hdr.find(' ').begin());
+			_statusText = hdr.suffix(hdr.find(' ').begin());
 			_headers.clear();
 		} else if (!hdr.empty()) {
 			if (StringView sep = hdr.find(':')) {

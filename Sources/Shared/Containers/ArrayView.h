@@ -54,7 +54,21 @@ namespace Death { namespace Containers {
 		The class is implicitly convertible from compile-time-sized C arrays and
 		@ref Array / @ref StaticArray instances of the same underlying type; it's also
 		possible to implicitly create a @cpp const @ce view on a mutable array. Besides
-		that, a view can be created manually from a pointer and size.
+		that, a view can be created manually from a pointer and size:
+
+		@code{.cpp}
+		// Convert from a compile-time-sized C array
+		int data1[]{5, 17, -36, 185};
+		ArrayView<int> a = data1;         // a.size() == 4
+
+		// Create a const view on a mutable Array
+		Array<int> data2{ValueInit, 15};
+		ArrayView<const int> b = data2;   // b.size() == 15
+
+		// Construct from a pointer and explicit size
+		float* data3 = …;
+		ArrayView<float> c{data3, 1337};  // c.size() == 1337
+		@endcode
 
 		@attention Note that when using @cpp Containers::ArrayView<const char> @ce, C
 			string literals (such as @cpp "hello" @ce) are implicitly convertible to it
@@ -67,7 +81,12 @@ namespace Death { namespace Containers {
 		specializations, which are meant to be used in cases where APIs accept opaque
 		blobs of data, such as writing data to a file. These provide no element access,
 		only data pointer and size in bytes, and an @ref ArrayView of any type is
-		convertible to them.
+		convertible to them:
+
+		@code{.cpp}
+		ArrayView<const int> d = data1;  // d.size() == 4
+		ArrayView<const void> e = d;     // e.size() == 16
+		@endcode
 
 		@subsection Containers-ArrayView-usage-access Data access
 
@@ -79,20 +98,68 @@ namespace Death { namespace Containers {
 		underlying type is mutable the references and pointers returned from these are
 		mutable as well.
 
+		@code{.cpp}
+		ArrayView<int> view = …;
+
+		if (!view.empty()) {
+			int min = view.front();
+			for (int i : view) if (i < min)
+				min = i;
+
+			// …
+		}
+
+		if (view.size() > 2 && view[2] < 3)
+			view[2] += 5;
+		@endcode
+
 		@subsection Containers-ArrayView-usage-slicing View slicing
 
 		Except for the usual element access via @ref begin(), @ref end() and
 		@ref operator[](), there's a collection of slicing functions --- @ref slice(),
 		@ref sliceSize(), @ref prefix(), @ref suffix(), @ref exceptPrefix() and
-		@ref exceptSuffix().
+		@ref exceptSuffix():
+
+		@code{.cpp}
+		int data[]{0, 10, 20, 30, 40, 50, 60};
+		ArrayView<int> view = data;
+
+		ArrayView<int> a1 = view.slice(3, 5);      // {30, 40}
+		ArrayView<int> a2 = view.sliceSize(3, 2);  // {30, 40}
+		ArrayView<int> b = view.prefix(4);         // {0, 10, 20, 30}
+		ArrayView<int> c = view.exceptPrefix(4);   // {40, 50, 60}
+		ArrayView<int> d = view.exceptSuffix(2);   // {0, 10, 20, 30, 40}
+		@endcode
+
 		The @ref slice(), @ref sliceSize(), @ref prefix(), @ref suffix() APIs accept
 		also a pointer as the begin/end arguments. As a special case, if @ref prefix()
 		and @ref suffix() are called with @cpp nullptr @ce, they return a zero-sized
-		@cpp nullptr @ce view.
+		@cpp nullptr @ce view. Both are useful when doing various kinds of searches and
+		propagating failure states, for example as shown below:
+
+		@code{.cpp}
+		int* end = view.begin();
+		while (*end < 25)
+			++end;
+		ArrayView<int> numbersLessThan25 = view.prefix(end);         // {0, 10, 20}
+
+		int* fortyfive = nullptr;
+		for (int& i : view) if (i == 45) {
+			fortyfive = &i;
+			break;
+		}
+		ArrayView<int> fortyfiveAndBeyond = view.suffix(fortyfive);  // {}
+		@endcode
 
 		Finally, the slicing operations provide a conversion to @ref StaticArrayView.
 		Compile-time-sized arrays are useful for APIs that want to enforce
-		a particular number of elements at compile time.
+		a particular number of elements at compile time:
+
+		@code{.cpp}
+		int min3(StaticArrayView<3, const int>);
+
+		int minOfFirstThree = min3(view.prefix<3>());
+		@endcode
 
 		All slice operations fire an assert if the arguments are out of range, for
 		@ref StaticArrayView conversions the checks are done at compile time when
@@ -107,9 +174,22 @@ namespace Death { namespace Containers {
 		@ref Containers-ArrayView-initializer-list "pitfalls described below"  As a
 		safer alternative to a @cpp reinterpret_cast @ce, @ref arrayCast() performs a
 		cast, recalculates the view size accordingly and additionally checks that the
-		type change makes sense for given type combination and array size.
+		type change makes sense for given type combination and array size:
+
+		@code{.cpp}
+		int data[15];
+		auto a = arrayView(data);     // a.size() == 15
+		auto b = arrayCast<char>(a);  // b.size() == 60
+		@endcode
+
 		Finally, @ref arraySize() can be used to query size of compile-time C arrays in
-		a failproof way.
+		a failproof way:
+
+		@code{.cpp}
+		int data[15];
+
+		std::size_t size = arraySize(data);  // size == 15
+		@endcode
 
 		@anchor Containers-ArrayView-initializer-list
 
@@ -130,7 +210,7 @@ namespace Death { namespace Containers {
 			std::initializer_list<int> a{1, 2, 3, 4};
 			foo(a[2]);  // Okay
 
-			Containers::ArrayView<const int> b{1, 2, 3, 4}; // Hypothetical, doesn't compile
+			ArrayView<const int> b{1, 2, 3, 4}; // Hypothetical, doesn't compile
 			foo(b[2]);  // Crash, initializer_list already destructed here
 			@endcode
 	*/
@@ -592,7 +672,15 @@ namespace Death { namespace Containers {
 	/** @relatesalso ArrayView
 		@brief Make a view on an array of specific length
 
-		Convenience alternative to @ref ArrayView::ArrayView(T*, std::size_t).
+		Convenience alternative to @ref ArrayView::ArrayView(T*, std::size_t). The
+		following two lines are equivalent:
+
+		@code{.cpp}
+		std::uint32_t* data = …;
+
+		ArrayView<std::uint32_t> a{data, 5};
+		auto b = arrayView(data, 5);
+		@endcode
 	*/
 	template<class T> constexpr ArrayView<T> arrayView(T* data, std::size_t size) {
 		return ArrayView<T>{data, size};
@@ -601,7 +689,15 @@ namespace Death { namespace Containers {
 	/** @relatesalso ArrayView
 		@brief Make a view on fixed-size array
 
-		Convenience alternative to @ref ArrayView::ArrayView(U(&)[size]).
+		Convenience alternative to @ref ArrayView::ArrayView(U(&)[size]). The following
+		two lines are equivalent:
+
+		@code{.cpp}
+		std::uint32_t data[15];
+
+		ArrayView<std::uint32_t> a{data};
+		auto b = arrayView(data);
+		@endcode
 	*/
 	template<std::size_t size, class T> constexpr ArrayView<T> arrayView(T(&data)[size]) {
 		return ArrayView<T>{data};
@@ -621,6 +717,14 @@ namespace Death { namespace Containers {
 		@brief Make a view on @ref StaticArrayView
 
 		Convenience alternative to @ref ArrayView::ArrayView(StaticArrayView<size, U>).
+		The following two lines are equivalent:
+
+		@code{.cpp}
+		StaticArrayView<15, std::uint32_t> data;
+
+		ArrayView<std::uint32_t> a{data};
+		auto b = arrayView(data);
+		@endcode
 	*/
 	template<std::size_t size, class T> constexpr ArrayView<T> arrayView(StaticArrayView<size, T> view) {
 		return ArrayView<T>{view};
@@ -648,7 +752,13 @@ namespace Death { namespace Containers {
 
 		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
 		Expects that both types are [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
-		and the total byte size doesn't change.
+		and the total byte size doesn't change. Example usage:
+
+		@code{.cpp}
+		int data[15];
+		auto a = arrayView(data);     // a.size() == 15
+		auto b = arrayCast<char>(a);  // b.size() == 60
+		@endcode
 	*/
 	template<class U, class T> ArrayView<U> arrayCast(ArrayView<T> view) {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
@@ -703,6 +813,12 @@ namespace Death { namespace Containers {
 
 		Equivalent to @ref std::size() from C++17. See also @ref arraySize(U(T::*)[size_])
 		for querying size of an array member.
+
+		@code{.cpp}
+		int data[15];
+
+		std::size_t size = arraySize(data);  // size == 15
+		@endcode
 	*/
 	template<std::size_t size_, class T> constexpr std::size_t arraySize(T(&)[size_]) {
 		return size_;
@@ -712,7 +828,16 @@ namespace Death { namespace Containers {
 		@brief C array member size
 
 		Variant of @ref arraySize(T(&)[size_]) that works on array members. Note that
-		you have to form a pointer to a member with @cpp & @ce for this to work.
+		you have to form a pointer to a member with @cpp & @ce for this to work:
+
+		@code{.cpp}
+		struct A {
+			int data[13];
+		} a;
+
+		std::size_t size1 = arraySize(a.data);    // size1 == 13
+		std::size_t size2 = arraySize(&A::data);  // size2 == 13
+		@endcode
 	*/
 	template<std::size_t size_, class T, class U> constexpr std::size_t arraySize(U(T::*)[size_]) {
 		return size_;
@@ -732,6 +857,17 @@ namespace Death { namespace Containers {
 		@ref Containers-ArrayView-usage "ArrayView usage docs", except that here are
 		additional compile-time overloads of @ref slice(), @ref sliceSize(),
 		@ref prefix(), @ref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
+
+		@code{.cpp}
+		ArrayView<int> data;
+
+		// Take elements 7 to 11
+		StaticArrayView<5, int> fiveInts = data.slice<5>(7);
+
+		// Convert back to ArrayView
+		ArrayView<int> fiveInts2 = fiveInts;  // fiveInts2.size() == 5
+		ArrayView<int> threeInts = fiveInts.slice(2, 5);
+		@endcode
 	*/
 	template<std::size_t size_, class T> class StaticArrayView
 	{
@@ -990,7 +1126,15 @@ namespace Death { namespace Containers {
 	/** @relatesalso StaticArrayView
 		@brief Make a static view on an array
 
-		Convenience alternative to @ref StaticArrayView::StaticArrayView(T*).
+		Convenience alternative to @ref StaticArrayView::StaticArrayView(T*). The
+		following two lines are equivalent:
+
+		@code{.cpp}
+		int* data = …;
+
+		StaticArrayView<5, int> a{data};
+		auto b = staticArrayView<5>(data);
+		@endcode
 	*/
 	template<std::size_t size, class T> constexpr StaticArrayView<size, T> staticArrayView(T* data) {
 		return StaticArrayView<size, T>{data};
@@ -1000,6 +1144,14 @@ namespace Death { namespace Containers {
 		@brief Make a static view on a fixed-size array
 
 		Convenience alternative to @ref StaticArrayView::StaticArrayView(U(&)[size_]).
+		The following two lines are equivalent:
+
+		@code{.cpp}
+		int data[15];
+
+		StaticArrayView<15, int> a{data};
+		auto b = staticArrayView(data);
+		@endcode
 	*/
 	template<std::size_t size, class T> constexpr StaticArrayView<size, T> staticArrayView(T(&data)[size]) {
 		return StaticArrayView<size, T>{data};
@@ -1027,7 +1179,13 @@ namespace Death { namespace Containers {
 
 		Size of the new array is calculated as @cpp view.size()*sizeof(T)/sizeof(U) @ce.
 		Expects that both types are [standard layout](http://en.cppreference.com/w/cpp/concept/StandardLayoutType)
-		and the total byte size doesn't change.
+		and the total byte size doesn't change. Example usage:
+
+		@code{.cpp}
+		int data[15];
+		auto a = staticArrayView(data);  // a.size() == 15
+		StaticArrayView<60, char> b = arrayCast<char>(a);
+		@endcode
 	*/
 	template<class U, std::size_t size, class T> StaticArrayView<size * sizeof(T) / sizeof(U), U> arrayCast(StaticArrayView<size, T> view) {
 		static_assert(std::is_standard_layout<T>::value, "The source type is not standard layout");
@@ -1041,7 +1199,12 @@ namespace Death { namespace Containers {
 		@brief Reinterpret-cast a statically sized array
 
 		Calls @ref arrayCast(StaticArrayView<size, T>) with the argument converted to
-		@ref StaticArrayView of the same type and size.
+		@ref StaticArrayView of the same type and size. Example usage:
+
+		@code{.cpp}
+		int data[15];
+		auto a = arrayCast<char>(data);  // a.size() == 60
+		@endcode
 	*/
 	template<class U, std::size_t size, class T> StaticArrayView<size * sizeof(T) / sizeof(U), U> arrayCast(T(&data)[size]) {
 		return arrayCast<U>(StaticArrayView<size, T>{data});
@@ -1098,7 +1261,6 @@ namespace Death { namespace Containers {
 #endif
 
 	template<class T> template<std::size_t size_> constexpr StaticArrayView<size_, T> ArrayView<T>::slice(std::size_t begin) const {
-		static_assert(begin + size_ <= _size, "Slice needs to have a positive size");
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(begin + size_ <= _size,
 					("Slice [{}:{}] out of range for {} elements", begin, begin + size_, _size)),
 				StaticArrayView<size_, T>{_data + begin};

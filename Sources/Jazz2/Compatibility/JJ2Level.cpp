@@ -125,8 +125,8 @@ namespace Jazz2::Compatibility
 			_hasMlleData = true;
 		}
 		// JJ2+ runs the script of the same name next to the level
-		StringView foundDot = path.findLastOr('.', path.end());
-		String scriptPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + ".j2as"_s);
+		StringView foundDot = path.findLast('.');
+		String scriptPath = fs::FindPathCaseInsensitive(path.prefix(foundDot ? foundDot.begin() : path.end()) + ".j2as"_s);
 		_hasScript = fs::IsReadableFile(scriptPath);
 		if (_hasScript) {
 			LoadScriptWeapons(scriptPath);
@@ -604,8 +604,8 @@ namespace Jazz2::Compatibility
 				char numberBuffer[16];
 				i32tos(i / 8, numberBuffer);
 
-				StringView foundDot = path.findLastOr('.', path.end());
-				String extraLayersPath = fs::FindPathCaseInsensitive(path.prefix(foundDot.begin()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s);
+				StringView foundDot = path.findLast('.');
+				String extraLayersPath = fs::FindPathCaseInsensitive(path.prefix(foundDot ? foundDot.begin() : path.end()) + "-MLLE-Data-"_s + numberBuffer + ".j2l"_s);
 
 				JJ2Level extraLayersFile;
 				if (extraLayersFile.Open(extraLayersPath, strictParser)) {
@@ -842,18 +842,17 @@ namespace Jazz2::Compatibility
 		SmallVector<String, 4> libraries;
 		StringView rest = text;
 		while (!rest.empty()) {
-			StringView lineEnd = rest.findOr('\n', rest.end());
+			StringView lineEnd = rest.find('\n');
 			StringView line = rest.prefix(lineEnd.begin()).trimmed();
-			rest = rest.suffix(lineEnd.begin() == rest.end() ? rest.end() : lineEnd.begin() + 1);
+			rest = rest.suffix(lineEnd.end());
 			if (!line.contains("///@MLLE-Generated"_s)) {
 				continue;
 			}
 
 			if (line.hasPrefix("#include"_s)) {
-				StringView quoteStart = line.findOr('"', line.end());
-				if (quoteStart.begin() != line.end()) {
-					StringView name = line.suffix(quoteStart.begin() + 1);
-					name = name.prefix(name.findOr('"', name.end()).begin());
+				if (StringView quoteStart = line.find('"')) {
+					StringView name = line.suffix(quoteStart.end());
+					name = name.prefix(name.find('"').begin());
 					if (!StringUtils::lowercase(name).hasPrefix("mlle-"_s)) {
 						libraries.emplace_back(name);
 					}
@@ -866,7 +865,7 @@ namespace Jazz2::Compatibility
 				continue;
 			}
 			StringView entries = line.suffix(arrayStart.end());
-			entries = entries.suffix(entries.findOr('{', entries.end()).begin());
+			entries = entries.suffix(entries.find('{').begin());
 			if (entries.empty()) {
 				continue;
 			}
@@ -903,9 +902,9 @@ namespace Jazz2::Compatibility
 			// the pack, or at least with the first namespace
 			SmallVector<StringView, 4> names;
 			StringView scope = constructors[i];
-			scope = scope.prefix(scope.findOr('(', scope.end()).begin()).trimmed();
+			scope = scope.prefix(scope.find('(').begin()).trimmed();
 			while (!scope.empty()) {
-				StringView separator = scope.findOr("::"_s, scope.end());
+				StringView separator = scope.find("::"_s);
 				names.push_back(scope.prefix(separator.begin()).trimmed());
 				scope = scope.suffix(separator.end());
 			}

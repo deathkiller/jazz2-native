@@ -134,6 +134,11 @@ namespace Jazz2
 	EpisodeEndOverwriteMode PreferencesCache::OverwriteEpisodeEnd = EpisodeEndOverwriteMode::Always;
 	char PreferencesCache::Language[6]{};
 	bool PreferencesCache::BypassCache = false;
+#if defined(NCINE_HAS_LOG_FILE)
+	bool PreferencesCache::EnableLogFile = true;
+	bool PreferencesCache::_enableLogFileInitial = false;
+	bool PreferencesCache::_logFileOverridden = false;
+#endif
 	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
@@ -1039,76 +1044,51 @@ namespace
 		}
 
 		auto configDir = fs::GetDirectoryName(_configPath);
+#endif
 
-		// DEATH_TRACE_LOG_PATH overrides the log path, on Apple/Unix/Windows it also enables file logging
-#	if defined(DEATH_TRACE)
-#		if defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
-		// Only on an SD card, a memory card is too small for logs
-		if (!ContentResolver::Get().GetWritablePath().empty()) {
-			fs::CreateDirectories(configDir);
-#			if defined(DEATH_TRACE_LOG_PATH)
-			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
-#			else
-			theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
-#			endif
-		}
-#		elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || \
-			defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
-		fs::CreateDirectories(configDir);
-#			if defined(DEATH_TRACE_LOG_PATH)
-		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
-#			else
-		theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
-#			endif
-#		elif defined(DEATH_TARGET_PS2)
-		// Only on removable storage, a memory card is too small for logs
-		if (!ContentResolver::Get().GetWritablePath().empty()) {
-#			if defined(DEATH_TRACE_LOG_PATH)
-			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
-#			else
-			theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
-#			endif
-		}
-#		elif defined(DEATH_TARGET_IOS)
-		// Always log to "Documents", accessible through the Files app
-		{
-			auto& resolver = ContentResolver::Get();
-			String logDir = fs::GetDirectoryName(resolver.GetSourcePath());
-			fs::CreateDirectories(logDir);
-			theApplication().AttachTraceTarget(fs::CombinePath(logDir, "Jazz2.log"_s));
-		}
-#		elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#if defined(NCINE_HAS_LOG_FILE)
+		// The command line takes precedence over EnableLogFile, which is applied once the config is read
+#	if defined(DEATH_TRACE_LOG_PATH)
+		StringView logFileName = DEATH_TRACE_LOG_PATH;
+#	else
+		StringView logFileName = "Jazz2.log"_s;
+#	endif
+#	if defined(DEATH_TARGET_IOS)
+		// "Documents" is accessible through the Files app
+		String logDir = fs::GetDirectoryName(ContentResolver::Get().GetSourcePath());
+#	else
+		String logDir = configDir;
+#	endif
+#	if (defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)) || defined(DEATH_TARGET_PS2)
+		// Only on an SD card or removable storage, a memory card is too small for logs
+		const bool canWriteLogFile = !ContentResolver::Get().GetWritablePath().empty();
+#	else
+		constexpr bool canWriteLogFile = true;
+#	endif
+
 		DEATH_UNUSED bool logFileSpecified = false;
 		for (std::int32_t i = 0; i < config.GetArgc(); i++) {
 			auto arg = config.GetArgv(i);
 			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
-				fs::CreateDirectories(configDir);
-				if (arg.size() > "/log:file:"_s.size()) {
-					// Custom log path, don't archive the previous one
-					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)), false);
-					logFileSpecified = true;
+				_logFileOverridden = true;
+				logFileSpecified = true;
+				if (canWriteLogFile) {
+					fs::CreateDirectories(logDir);
+					if (arg.size() > "/log:file:"_s.size()) {
+						// Custom log path, don't archive the previous one
+						theApplication().AttachTraceTarget(fs::CombinePath(logDir, arg.exceptPrefix("/log:file:"_s)), false);
+					} else {
+						theApplication().AttachTraceTarget(fs::CombinePath(logDir, logFileName));
+					}
 				}
-#			if !defined(DEATH_TRACE_LOG_PATH)
-				else {
-					theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
-					logFileSpecified = true;
-				}
-#			endif
 			}
-#			if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 			else if (arg == "/log"_s) {
+				_logFileOverridden = true;
 				theApplication().AttachTraceTarget(Application::ConsoleTarget);
 			}
-#			endif
-		}
-#			if defined(DEATH_TRACE_LOG_PATH)
-		if (!logFileSpecified) {
-			fs::CreateDirectories(configDir);
-			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
-		}
-#			endif
-#		endif
 #	endif
+		}
 #endif
 
 		ControlScheme::Reset();
@@ -1394,6 +1374,10 @@ namespace
 							SafeArea[i] = std::min<std::uint16_t>(uc.ReadValueAsLE<std::uint16_t>(), MaxSafeArea);
 						}
 					}
+
+#if defined(NCINE_HAS_LOG_FILE)
+					EnableLogFile = ((boolOptions & BoolOptions::EnableLogFile) == BoolOptions::EnableLogFile);
+#endif
 				} else {
 					// The file is too new or corrupted
 					resetConfig = true;
@@ -1403,6 +1387,21 @@ namespace
 				resetConfig = true;
 			}
 		}
+
+#if defined(NCINE_HAS_LOG_FILE)
+		// Attached only now that the preference is known, entries logged until then are kept in the startup history
+		_enableLogFileInitial = EnableLogFile;
+#	if defined(DEATH_TRACE_LOG_PATH)
+		// Such a build writes nothing to the standard output or the console, so the file can't be turned off
+		const bool writeLogFile = !logFileSpecified;
+#	else
+		const bool writeLogFile = (EnableLogFile && !_logFileOverridden);
+#	endif
+		if (writeLogFile && canWriteLogFile) {
+			fs::CreateDirectories(logDir);
+			theApplication().AttachTraceTarget(fs::CombinePath(logDir, logFileName));
+		}
+#endif
 
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
 		// Back up the old config (never overwritten), except on memory cards
@@ -1676,6 +1675,9 @@ namespace
 		if (EnableTouchJoystick) boolOptions |= BoolOptions::EnableTouchJoystick;
 		if (EnableTouchVibration) boolOptions |= BoolOptions::EnableTouchVibration;
 		if (ShowMinimap) boolOptions |= BoolOptions::ShowMinimap;
+#if defined(NCINE_HAS_LOG_FILE)
+		if (EnableLogFile) boolOptions |= BoolOptions::EnableLogFile;
+#endif
 		co.WriteValueAsLE<std::uint64_t>(std::uint64_t(boolOptions));
 
 		if (Language[0] != '\0') {
@@ -1792,6 +1794,18 @@ namespace
 		// Only the detailed level needs per-phase timings
 		FrameStatistics::SetEnabled(PerformanceMetrics == PerformanceMetricsLevel::Detailed);
 	}
+
+#if defined(NCINE_HAS_LOG_FILE)
+	bool PreferencesCache::IsLogFileOverridden()
+	{
+		return _logFileOverridden;
+	}
+
+	bool PreferencesCache::IsLogFileRestartPending()
+	{
+		return (EnableLogFile != _enableLogFileInitial);
+	}
+#endif
 
 	StringView PreferencesCache::GetDirectory()
 	{

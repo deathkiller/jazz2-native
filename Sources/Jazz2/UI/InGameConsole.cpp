@@ -265,7 +265,7 @@ namespace Jazz2::UI
 					std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
 					std::size_t startPos;
 					if ((event.Mod & KeyMod::Ctrl) != KeyMod::None) {
-						auto found = StringView{_currentLine, _textCursor}.findLastOr(' ', _currentLine);
+						auto found = StringView{_currentLine, _textCursor}.findLast(' ');
 						startPos = found.begin() - _currentLine;
 					} else {
 						auto [_, prevPos] = Utf8::PrevChar(_currentLine, _textCursor);
@@ -282,7 +282,7 @@ namespace Jazz2::UI
 					std::size_t lengthAfter = std::strlen(&_currentLine[_textCursor]);
 					std::size_t endPos;
 					if ((event.Mod & KeyMod::Ctrl) != KeyMod::None) {
-						auto found = StringView{&_currentLine[_textCursor]}.findOr(' ', &_currentLine[_textCursor + lengthAfter]);
+						auto found = StringView{&_currentLine[_textCursor], lengthAfter}.find(' ');
 						endPos = found.end() - _currentLine;
 					} else {
 						auto [_, nextPos] = Utf8::NextChar(_currentLine, _textCursor);

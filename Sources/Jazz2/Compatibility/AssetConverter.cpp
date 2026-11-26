@@ -811,12 +811,12 @@ namespace Jazz2::Compatibility
 
 				// Also copy level script file if exists
 				if (pack == nullptr || pack->CopyScripts) {
-					StringView foundDot = item.findLastOr('.', item.end());
-					String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
+					StringView foundDot = item.findLast('.');
+					String scriptPath = item.prefix(foundDot ? foundDot.begin() : item.end()) + ".j2as"_s;
 					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
 					if (fs::IsReadableFile(adjustedPath)) {
-						foundDot = fullPath.findLastOr('.', fullPath.end());
-						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
+						foundDot = fullPath.findLast('.');
+						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot ? foundDot.begin() : fullPath.end()) + ".j2as"_s));
 					}
 				}
 

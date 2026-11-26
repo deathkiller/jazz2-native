@@ -430,7 +430,13 @@ namespace Death { namespace Containers {
 		@ref ArrayAllocator for all trivially-copyable types), the deleter is a simple
 		call to a typeless @ref std::free(). This makes it possible to change the array
 		type without having to use a different deleter, losing the growable property in
-		the process.
+		the process. Example usage:
+
+		@code{.cpp}
+		Array<char> data = …;
+		Array<float> floats = arrayAllocatorCast<float>(Death::move(data));
+		arrayAppend(floats, 37.0f);
+		@endcode
 
 		Equivalently to @ref arrayCast(), the size of the new array is calculated as
 		@cpp view.size()*sizeof(T)/sizeof(U) @ce. Expects that both types are
@@ -448,7 +454,7 @@ namespace Death { namespace Containers {
 		// If the array is default-constructed or just generally empty with the default deleter, just pass it through without changing anything.
 		// This behavior is consistent with calling `arrayResize(array, 0)`, `arrayReserve(array, 0)` and such, which also just pass empty arrays
 		// through without affecting their deleter.
-		if (array.isEmpty() && !array.data() && !array.deleter())
+		if (array.empty() && !array.data() && !array.deleter())
 			return {};
 
 		// Unlike arrayInsert() etc, this is not called that often and should be as checked as possible, so it's not a debug assert

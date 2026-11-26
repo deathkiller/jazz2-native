@@ -1329,8 +1329,8 @@ namespace Death { namespace Containers { namespace StringUtils {
 	}
 	
 	String replaceFirst(StringView string, StringView search, StringView replace) {
-		// An empty search string prepends, find() returns a null view for it
-		const StringView found = (search.empty() ? string.prefix(std::size_t{0}) : string.find(search));
+		// An empty search string prepends, find() returns an empty view at the beginning for it
+		const StringView found = string.find(search);
 		if (search.empty() || found) {
 			String output{NoInit, string.size() + replace.size() - found.size()};
 			const std::size_t begin = found.begin() - string.begin();

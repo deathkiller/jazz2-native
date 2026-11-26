@@ -48,7 +48,7 @@ namespace Death { namespace Containers {
 		T* const end = this->end();
 		T* oldpos = _data;
 		T* pos;
-		while (oldpos < end && (pos = static_cast<T*>(std::memchr(oldpos, delimiter, end - oldpos)))) {
+		while (oldpos < end && (pos = const_cast<T*>(Implementation::stringFindCharacter(oldpos, end - oldpos, delimiter)))) {
 			arrayAppend(parts, slice(oldpos, pos));
 			oldpos = pos + 1;
 		}
@@ -64,8 +64,7 @@ namespace Death { namespace Containers {
 		T* const end = this->end();
 		T* oldpos = _data;
 		while (oldpos < end) {
-			T* pos = static_cast<T*>(std::memchr(oldpos, delimiter, end - oldpos));
-			// Not sure why memchr can't just do this, it would make much more sense
+			T* pos = const_cast<T*>(Implementation::stringFindCharacter(oldpos, end - oldpos, delimiter));
 			if (!pos) pos = end;
 
 			if (pos != oldpos)
@@ -81,7 +80,10 @@ namespace Death { namespace Containers {
 	{
 		const char* stringFindString(const char* data, const std::size_t size, const char* const substring, const std::size_t substringSize) {
 			// If the substring is not larger than the string we search in
-			if (substringSize > 0 && substringSize <= size) {
+			if (substringSize <= size) {
+				// Empty substring matches at the beginning
+				if (!substringSize) return data;
+
 				const std::size_t substringSize_1 = substringSize - 1;
 				const char first = substring[0];
 				const char last = substring[substringSize_1];
@@ -1089,40 +1091,35 @@ namespace Death { namespace Containers {
 			return stringFindLastCharacterImplementation(Cpu::DefaultBase)(data, size, character);
 		})
 
-		/* I don't want to include <algorithm> just for std::find_first_of() and
-			unfortunately there's no equivalent in the C string library. Coming close
-			are strpbrk() or strcspn() but both of them work with null-terminated
-			strings, which is absolutely useless here, not to mention that both do
-			*exactly* the same thing, with one returning a pointer but the other an
-			offset, so what's the point of having both? What the hell. And there's no
-			memcspn() or whatever which would take explicit lengths. Which means I'm
-			left to my own devices. Looking at how strpbrk() / strcspn() is done, it
-			ranges from trivial code:
-
-			https://github.com/bminor/newlib/blob/6497fdfaf41d47e835fdefc78ecb0a934875d7cf/newlib/libc/string/strcspn.c
-			
-			to extremely optimized machine-specific code (don't look, it's GPL):
-			
-			https://github.com/bminor/glibc/blob/43b1048ab9418e902aac8c834a7a9a88c501620a/sysdeps/x86_64/multiarch/strcspn-c.c
-			
-			and the only trick I realized above the nested loop is using memchr() in an
-			inverse way. In all honesty, I think that'll still be *at least* as fast as
-			std::find_first_of() because I doubt STL implementations explicitly optimize
-			for that case. Yes, std::string::find_first_of() probably would have that,
-			but I'd first need to allocate to make use of that and FUCK NO. */
-		const char* stringFindAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
-			for (const char* i = data, *end = data + size; i != end; ++i)
-				if (std::memchr(characters, *i, characterCount)) return i;
+		const char* stringFindAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount, const std::size_t maxFoundCount, std::size_t& foundCount) {
+			for (const char* i = data, *end = data + size; i != end; ++i) {
+				if (std::memchr(characters, *i, characterCount)) {
+					const char* j = i + 1;
+					for (const char* jEnd = (maxFoundCount && maxFoundCount < std::size_t(end - i) ? i + maxFoundCount : end); j != jEnd; ++j) {
+						if (!std::memchr(characters, *j, characterCount)) break;
+					}
+					foundCount = j - i;
+					return i;
+				}
+			}
 			return {};
 		}
 
-		// Variants of the above. Not sure if those even have any vaguely corresponding C lib API. Probably not.
-
-		const char* stringFindLastAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
-			for (const char* i = data + size; i != data; --i)
-				if (std::memchr(characters, *(i - 1), characterCount)) return i - 1;
+		const char* stringFindLastAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount, const std::size_t maxFoundCount, std::size_t& foundCount) {
+			for (const char* i = data + size; i != data; --i) {
+				if (std::memchr(characters, *(i - 1), characterCount)) {
+					const char* j = i;
+					for (const char* jEnd = (maxFoundCount && maxFoundCount < std::size_t(i - data) ? i - maxFoundCount : data); j != jEnd; --j) {
+						if (!std::memchr(characters, *(j - 1), characterCount)) break;
+					}
+					foundCount = i - j;
+					return j;
+				}
+			}
 			return {};
 		}
+
+		// Inverse variants of the above, for those it makes no sense to try to find the longest matching substring
 
 		const char* stringFindNotAny(const char* const data, const std::size_t size, const char* const characters, const std::size_t characterCount) {
 			for (const char* i = data, *end = data + size; i != end; ++i)
@@ -1419,10 +1416,11 @@ namespace Death { namespace Containers {
 		T* const end = _data + size();
 
 		while (oldpos < end) {
-			if (T* const pos = const_cast<T*>(Implementation::stringFindAny(oldpos, end - oldpos, characters, characterCount))) {
+			std::size_t foundCount;
+			if (T* const pos = const_cast<T*>(Implementation::stringFindAny(oldpos, end - oldpos, characters, characterCount, 0, foundCount))) {
 				if (pos != oldpos)
 					arrayAppend(parts, slice(oldpos, pos));
-				oldpos = pos + 1;
+				oldpos = pos + foundCount;
 			} else {
 				arrayAppend(parts, slice(oldpos, end));
 				break;
@@ -1462,25 +1460,23 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T> StaticArray<3, BasicStringView<T>> BasicStringView<T>::partition(const char separator) const {
-		const std::size_t size = this->size();
-		T* const pos = static_cast<T*>(std::memchr(_data, separator, size));
-		return {
-			pos ? prefix(pos) : *this,
-			pos ? slice(pos, pos + 1) : exceptPrefix(size),
-			pos ? suffix(pos + 1) : exceptPrefix(size)
-		};
+		const BasicStringView<T> found = find(separator);
+		return {prefix(found.begin()), found, suffix(found.end())};
 	}
 
 	template<class T> StaticArray<3, BasicStringView<T>> BasicStringView<T>::partition(const StringView separator) const {
-		const char* const separatorData = separator.data();
-		const std::size_t separatorSize = separator.size();
-		const std::size_t size = this->size();
-		T* const pos = const_cast<T*>(Implementation::stringFindString(_data, size, separatorData, separatorSize));
-		return {
-			pos ? prefix(pos) : *this,
-			pos ? slice(pos, pos + separatorSize) : exceptPrefix(size),
-			pos ? suffix(pos + separatorSize) : exceptPrefix(size)
-		};
+		const BasicStringView<T> found = find(separator);
+		return {prefix(found.begin()), found, suffix(found.end())};
+	}
+
+	template<class T> StaticArray<3, BasicStringView<T>> BasicStringView<T>::partitionLast(const char separator) const {
+		const BasicStringView<T> found = findLast(separator);
+		return {prefix(found.begin()), found, suffix(found.end())};
+	}
+
+	template<class T> StaticArray<3, BasicStringView<T>> BasicStringView<T>::partitionLast(const StringView separator) const {
+		const BasicStringView<T> found = findLast(separator);
+		return {prefix(found.begin()), found, suffix(found.end())};
 	}
 
 	template<class T> String BasicStringView<T>::join(const ArrayView<const StringView> strings) const {

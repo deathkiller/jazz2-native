@@ -354,7 +354,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				StringView firstEndpoint = _items[i].Desc.EndpointString;
-				firstEndpoint = firstEndpoint.prefix(firstEndpoint.findOr('|', firstEndpoint.end()).begin());
+				firstEndpoint = firstEndpoint.prefix(firstEndpoint.find('|').begin());
 
 				String firstEndpointShort;
 				if (firstEndpoint.size() > 23) {
@@ -939,7 +939,7 @@ namespace Jazz2::UI::Menu
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		// On Emscripten, always connect via WebSocket
 		StringView firstEndpoint = _selectedServer.EndpointString;
-		firstEndpoint = firstEndpoint.prefix(firstEndpoint.findOr('|', firstEndpoint.end()).begin());
+		firstEndpoint = firstEndpoint.prefix(firstEndpoint.find('|').begin());
 
 		String wsUrl;
 		if (_selectedServer.WsPort != 0) {

@@ -118,6 +118,27 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
+#if defined(NCINE_HAS_LOG_FILE) && !defined(DEATH_TRACE_LOG_PATH)
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Logging to File"),
+			[]() -> StringView {
+				if (PreferencesCache::IsLogFileOverridden()) {
+					// TRANSLATORS: Option for Logging to File item in Options > Gameplay section, when "/log" or "/log:file" is passed to the game
+					return _("Overridden by command line");
+				}
+				if (PreferencesCache::IsLogFileRestartPending()) {
+					return (PreferencesCache::EnableLogFile
+						// TRANSLATORS: Option for Logging to File item in Options > Gameplay section, the change requires the game to be restarted
+						? _("Enabled after restart")
+						// TRANSLATORS: Option for Logging to File item in Options > Gameplay section, the change requires the game to be restarted
+						: _("Disabled after restart"));
+				}
+				// TRANSLATORS: Option for on/off items in Options > Gameplay section
+				return (PreferencesCache::EnableLogFile ? _("Enabled") : _("Disabled"));
+			},
+			[this](std::int32_t) { PreferencesCache::EnableLogFile = !PreferencesCache::EnableLogFile; _isDirty = true; },
+			PreferencesCache::IsLogFileOverridden());
+#endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ListItem>(_("Browse \"Source\" Directory"), []() {

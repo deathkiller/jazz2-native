@@ -1394,7 +1394,7 @@ namespace nCine
 				// These GPUs render black with dynamic batch size
 				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s || renderer == "PowerVR Rogue GE9215"_s)) ||
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
-					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
+					const StringView vendorPrefix = vendor.find(' ');
 					if DEATH_UNLIKELY(renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
 						LOGW("Detected {}: Using fixed batch size", renderer);
 					} else {

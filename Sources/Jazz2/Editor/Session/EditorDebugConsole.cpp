@@ -749,7 +749,7 @@ namespace Jazz2::Editor
 				for (StringView line : text.split('\n')) {
 					line = line.trimmed();
 					StringView found = line.find('=');
-					if (line.empty() || line.hasPrefix("//"_s) || found.data() == nullptr) {
+					if (line.empty() || line.hasPrefix("//"_s) || !found) {
 						continue;
 					}
 					std::size_t separator = std::size_t(found.data() - line.data());
@@ -775,7 +775,7 @@ namespace Jazz2::Editor
 				for (StringView line : text.split('\n')) {
 					line = line.trimmed();
 					StringView found = line.find('=');
-					if (line.empty() || line.hasPrefix("//"_s) || found.data() == nullptr) {
+					if (line.empty() || line.hasPrefix("//"_s) || !found) {
 						continue;
 					}
 					std::size_t separator = std::size_t(found.data() - line.data());

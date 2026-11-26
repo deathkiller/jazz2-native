@@ -610,7 +610,7 @@ namespace nCine
 		std::int32_t index = (*_pluralExpression)(n);
 
 		while (true) {
-			StringView sep = translation.findOr('\0', translation.end());
+			StringView sep = translation.find('\0');
 			if (index == 0) {
 				return translation.prefix(sep.begin());
 			}
@@ -628,7 +628,7 @@ namespace nCine
 		if (nullEntry != nullptr) {
 			if (StringView languageTeamBegin = nullEntry.find("Language-Team:"_s)) {
 				languageTeamBegin = nullEntry.suffix(languageTeamBegin.end());
-				StringView languageTeamEnd = languageTeamBegin.findOr('\n', nullEntry.end());
+				StringView languageTeamEnd = languageTeamBegin.find('\n');
 				return nullEntry.slice(languageTeamBegin.begin(), languageTeamEnd.begin()).trimmed();
 			}
 		}

@@ -209,6 +209,20 @@
 #if defined(DEATH_TARGET_N64)
 #	define NCINE_HAS_NATIVE_AUDIO
 #endif
+/**
+	@brief Whether the trace log can be written to a file
+
+	Whether it actually is depends on @relativeref{Jazz2,PreferencesCache::EnableLogFile} and on the command line,
+	see @relativeref{Jazz2,PreferencesCache::IsLogFileOverridden()}. The web build and Windows RT have nowhere to put
+	such a file the user could get to, so the log goes only to the browser console or the debugger output there.
+*/
+#if (defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT) && \
+		(defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS) || \
+		 defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_WIIU) || defined(DEATH_TARGET_GAMECUBE) || \
+		 defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS2))) || \
+		defined(DOXYGEN_GENERATING_OUTPUT)
+#	define NCINE_HAS_LOG_FILE
+#endif
 
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)

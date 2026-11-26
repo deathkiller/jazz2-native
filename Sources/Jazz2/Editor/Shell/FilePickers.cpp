@@ -553,8 +553,8 @@ namespace Jazz2::Editor
 			if (isDirectory || tilde == nullptr) {
 				return {};
 			}
-			StringView dot = name.findLastOr('.', name.end());
-			return String(name.prefix(tilde.begin()) + name.suffix(dot.begin()));
+			StringView dot = name.findLast('.');
+			return String(name.prefix(tilde.begin()) + name.suffix(dot ? dot.begin() : name.end()));
 		}
 #endif
 

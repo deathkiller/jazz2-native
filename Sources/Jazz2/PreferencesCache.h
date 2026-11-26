@@ -450,6 +450,19 @@ namespace Jazz2
 		static char Language[6];
 		/** @brief Whether the cache should be bypassed */
 		static bool BypassCache;
+#if defined(NCINE_HAS_LOG_FILE) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Whether the trace log is written to a file in the config directory
+		 *
+		 * Read only on startup, a change takes effect after a restart. `/log`, `/log:file` and `/log:file:<name>`
+		 * on the command line take precedence, see @ref IsLogFileOverridden(): with `/log` the log goes only to the
+		 * console and with `/log:file:<name>` only to that file. A build configured with `DEATH_TRACE_LOG_PATH`
+		 * always writes the file. On by default, but off in a config from versions before this option existed.
+		 *
+		 * @partialsupport Available only if @ref NCINE_HAS_LOG_FILE is defined.
+		 */
+		static bool EnableLogFile;
+#endif
 
 		// Sounds
 		/** @brief Master sound volume */
@@ -549,6 +562,20 @@ namespace Jazz2
 		static void ApplyRenderingResolution();
 		/** @brief Collects the frame statistics exactly while @ref PerformanceMetrics is at the level that shows them */
 		static void ApplyPerformanceMetrics();
+#if defined(NCINE_HAS_LOG_FILE) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Returns `true` if the command line decided where the log goes, so @ref EnableLogFile is ignored
+		 *
+		 * @partialsupport Available only if @ref NCINE_HAS_LOG_FILE is defined.
+		 */
+		static bool IsLogFileOverridden();
+		/**
+		 * @brief Returns `true` if @ref EnableLogFile was changed since startup and needs a restart to take effect
+		 *
+		 * @partialsupport Available only if @ref NCINE_HAS_LOG_FILE is defined.
+		 */
+		static bool IsLogFileRestartPending();
+#endif
 
 		/** @brief Returns device ID of the device currently running this application */
 		static String GetDeviceID();
@@ -635,7 +662,8 @@ namespace Jazz2
 			// The two bits of DitheringScope, see DitheringShift
 			Dithering0 = 0x1000000000,
 			Dithering1 = 0x2000000000,
-			SwapJumpAndChangeWeaponInMenu = 0x4000000000
+			SwapJumpAndChangeWeaponInMenu = 0x4000000000,
+			EnableLogFile = 0x8000000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
@@ -651,6 +679,10 @@ namespace Jazz2
 		static String _configPath;
 		static HashMap<String, EpisodeContinuationState> _episodeEnd;
 		static HashMap<String, EpisodeContinuationStateWithLevel> _episodeContinue;
+#if defined(NCINE_HAS_LOG_FILE)
+		static bool _enableLogFileInitial;
+		static bool _logFileOverridden;
+#endif
 
 		static void TryLoadPreferredLanguage();
 	};

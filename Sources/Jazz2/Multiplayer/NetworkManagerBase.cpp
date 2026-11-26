@@ -135,7 +135,7 @@ namespace Jazz2::Multiplayer
 		} else if (url.hasPrefix("ws://"_s)) {
 			url = url.exceptPrefix(5);
 		}
-		auto end = url.findAnyOr("/?"_s, url.end()).begin();
+		auto end = url.findAny("/?"_s).begin();
 		return url.prefix(end);
 	}
 
@@ -208,7 +208,7 @@ namespace Jazz2::Multiplayer
 
 #if defined(WITH_ONLINE_MULTIPLAYER)
 #	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
-		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+		StringView firstEndpoint = endpoints.prefix(endpoints.find('|').begin());
 		String proto = MakeClientSubProtocol(clientData);
 
 		EmscriptenWebSocketCreateAttributes attrs;
@@ -257,7 +257,7 @@ namespace Jazz2::Multiplayer
 #	else
 #		if defined(WITH_WEBSOCKET)
 		// If the first endpoint looks like a WebSocket URL, use IXWebSocket client
-		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+		StringView firstEndpoint = endpoints.prefix(endpoints.find('|').begin());
 		if (firstEndpoint.hasPrefix("ws://"_s) || firstEndpoint.hasPrefix("wss://"_s)) {
 			LOGI("Connecting to \"{}\" via WebSocket transport", firstEndpoint);
 
@@ -301,7 +301,7 @@ namespace Jazz2::Multiplayer
 			// An ad hoc endpoint is "GROUP/MAC": the group is joined by the client thread before it connects
 			// (see OnClientThread), the MAC address is the host's, which the ad hoc arm of the transport
 			// resolves into an ENetAddress of its own (see enet_psp_set_adhoc)
-			StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+			StringView firstEndpoint = endpoints.prefix(endpoints.find('|').begin());
 			auto parts = firstEndpoint.partition('/');
 			StringView group = (parts[1].empty() ? StringView{} : parts[0]);
 			StringView mac = (parts[1].empty() ? parts[0] : parts[2]);
@@ -1339,7 +1339,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		while (!domain.empty()) {
-			StringView end = domain.findOr('.', domain.end());
+			StringView end = domain.find('.');
 			StringView part = domain.prefix(end.begin());
 			if (part.size() < 1 || part.size() > 63) {
 				return false;

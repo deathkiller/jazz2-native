@@ -51,6 +51,21 @@ namespace Death { namespace Containers {
 		you to both rebind the reference and update the referenced value and the intent is clear.
 
 		Similarly to other containers and equivalently to @ref std::make_pair(), there's also @ref pair().
+		The following two lines are equivalent:
+
+		@code{.cpp}
+		auto a = Pair<float, int>{35.0f, 7};
+		auto b = pair(35.0f, 7);
+		@endcode
+
+		On C++17 the class can be used in structured bindings. Both the @cpp get<i>() @ce overloads and
+		the @m_class{m-doc-external} [std::tuple_size](https://en.cppreference.com/w/cpp/utility/tuple_size)
+		and @m_class{m-doc-external} [std::tuple_element](https://en.cppreference.com/w/cpp/utility/tuple_element)
+		template specializations are defined directly in this header. Example:
+
+		@code{.cpp}
+		auto [first, second] = pair(42, 3.14f);
+		@endcode
 	*/
 	template<class F, class S> class Pair
 	{
@@ -283,6 +298,12 @@ namespace Death { namespace Containers {
 		@brief Make a pair
 
 		Convernience alternative to @ref Pair::Pair(const F&, const S&) and overloads.
+		The following two lines are equivalent:
+
+		@code{.cpp}
+		auto a = Pair<float, int>{35.0f, 7};
+		auto b = pair(35.0f, 7);
+		@endcode
 	*/
 	template<class F, class S> constexpr Pair<typename std::decay<F>::type, typename std::decay<S>::type> pair(F&& first, S&& second) {
 		return Pair<typename std::decay<F>::type, typename std::decay<S>::type>{Death::forward<F>(first), Death::forward<S>(second)};

@@ -355,7 +355,7 @@ namespace ShaderCompiler
 			bool inBlock = false;
 			bool blockOpening = false;
 			while (!source.empty()) {
-				std::size_t end = source.findOr('\n', source.end()).begin() - source.begin();
+				std::size_t end = source.find('\n').begin() - source.begin();
 				StringView line = source.prefix(end < source.size() ? end + 1 : end);
 				source = source.exceptPrefix(line.size());
 
@@ -426,7 +426,7 @@ namespace ShaderCompiler
 			String result;
 			StringView source = vertexSource;
 			while (!source.empty()) {
-				std::size_t end = source.findOr('\n', source.end()).begin() - source.begin();
+				std::size_t end = source.find('\n').begin() - source.begin();
 				StringView line = source.prefix(end < source.size() ? end + 1 : end);
 				source = source.exceptPrefix(line.size());
 

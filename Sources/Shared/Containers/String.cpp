@@ -609,6 +609,22 @@ namespace Death { namespace Containers {
 		return StringView{*this}.partition(separator);
 	}
 
+	StaticArray<3, MutableStringView> String::partitionLast(const char separator) {
+		return MutableStringView{*this}.partitionLast(separator);
+	}
+
+	StaticArray<3, StringView> String::partitionLast(const char separator) const {
+		return StringView{*this}.partitionLast(separator);
+	}
+
+	StaticArray<3, MutableStringView> String::partitionLast(const StringView separator) {
+		return MutableStringView{*this}.partitionLast(separator);
+	}
+
+	StaticArray<3, StringView> String::partitionLast(const StringView separator) const {
+		return StringView{*this}.partitionLast(separator);
+	}
+
 	String String::join(const ArrayView<const StringView> strings) const {
 		return StringView{*this}.join(strings);
 	}
@@ -708,75 +724,35 @@ namespace Death { namespace Containers {
 	}
 
 	MutableStringView String::find(const StringView substring) {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView{*this}.findOr(substring, nullptr);
+		return MutableStringView{*this}.find(substring);
 	}
 
 	StringView String::find(const StringView substring) const {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView{*this}.findOr(substring, nullptr);
+		return StringView{*this}.find(substring);
 	}
 
 	MutableStringView String::find(const char character) {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView{*this}.findOr(character, nullptr);
+		return MutableStringView{*this}.find(character);
 	}
 
 	StringView String::find(const char character) const {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView{*this}.findOr(character, nullptr);
-	}
-
-	MutableStringView String::findOr(const StringView substring, char* const fail) {
-		return MutableStringView{*this}.findOr(substring, fail);
-	}
-
-	StringView String::findOr(const StringView substring, const char* const fail) const {
-		return StringView{*this}.findOr(substring, fail);
-	}
-
-	MutableStringView String::findOr(const char character, char* const fail) {
-		return MutableStringView{*this}.findOr(character, fail);
-	}
-
-	StringView String::findOr(const char character, const char* const fail) const {
-		return StringView{*this}.findOr(character, fail);
+		return StringView{*this}.find(character);
 	}
 
 	MutableStringView String::findLast(const StringView substring) {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView{*this}.findLastOr(substring, nullptr);
+		return MutableStringView{*this}.findLast(substring);
 	}
 
 	StringView String::findLast(const StringView substring) const {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return StringView{*this}.findLastOr(substring, nullptr);
+		return StringView{*this}.findLast(substring);
 	}
 
 	MutableStringView String::findLast(const char character) {
-		// Calling straight into the concrete implementation to reduce call stack depth
-		return MutableStringView{*this}.findLastOr(character, nullptr);
+		return MutableStringView{*this}.findLast(character);
 	}
 
 	StringView String::findLast(const char character) const {
-		/* Calling straight into the concrete implementation to reduce call stack depth */
-		return StringView{*this}.findLastOr(character, nullptr);
-	}
-
-	MutableStringView String::findLastOr(const StringView substring, char* const fail) {
-		return MutableStringView{*this}.findLastOr(substring, fail);
-	}
-
-	StringView String::findLastOr(const StringView substring, const char* const fail) const {
-		return StringView{*this}.findLastOr(substring, fail);
-	}
-
-	MutableStringView String::findLastOr(const char character, char* const fail) {
-		return MutableStringView{*this}.findLastOr(character, fail);
-	}
-
-	StringView String::findLastOr(const char character, const char* const fail) const {
-		return StringView{*this}.findLastOr(character, fail);
+		return StringView{*this}.findLast(character);
 	}
 
 	bool String::contains(const StringView substring) const {
@@ -787,40 +763,44 @@ namespace Death { namespace Containers {
 		return StringView{*this}.contains(character);
 	}
 
-	MutableStringView String::findAny(const StringView characters) {
-		return MutableStringView{*this}.findAny(characters);
+	MutableStringView String::findAny(const StringView characters, const std::size_t maxCount) {
+		return MutableStringView{*this}.findAny(characters, maxCount);
 	}
 
-	StringView String::findAny(const StringView characters) const {
-		return StringView{*this}.findAny(characters);
+	StringView String::findAny(const StringView characters, const std::size_t maxCount) const {
+		return StringView{*this}.findAny(characters, maxCount);
 	}
 
-	MutableStringView String::findAnyOr(const StringView characters, char* fail) {
-		return MutableStringView{*this}.findAnyOr(characters, fail);
+	MutableStringView String::findNotAny(const StringView characters) {
+		return MutableStringView{*this}.findNotAny(characters);
 	}
 
-	StringView String::findAnyOr(const StringView characters, const char* fail) const {
-		return StringView{*this}.findAnyOr(characters, fail);
+	StringView String::findNotAny(const StringView characters) const {
+		return StringView{*this}.findNotAny(characters);
 	}
 
-	MutableStringView String::findLastAny(const StringView characters) {
-		return MutableStringView{*this}.findLastAny(characters);
+	MutableStringView String::findLastAny(const StringView characters, const std::size_t maxCount) {
+		return MutableStringView{*this}.findLastAny(characters, maxCount);
 	}
 
-	StringView String::findLastAny(const StringView characters) const {
-		return StringView{*this}.findLastAny(characters);
+	StringView String::findLastAny(const StringView characters, const std::size_t maxCount) const {
+		return StringView{*this}.findLastAny(characters, maxCount);
 	}
 
-	MutableStringView String::findLastAnyOr(const StringView characters, char* fail) {
-		return MutableStringView{*this}.findLastAnyOr(characters, fail);
+	MutableStringView String::findLastNotAny(const StringView characters) {
+		return MutableStringView{*this}.findLastNotAny(characters);
 	}
 
-	StringView String::findLastAnyOr(const StringView characters, const char* fail) const {
-		return StringView{*this}.findLastAnyOr(characters, fail);
+	StringView String::findLastNotAny(const StringView characters) const {
+		return StringView{*this}.findLastNotAny(characters);
 	}
 
-	bool String::containsAny(const StringView substring) const {
-		return StringView{*this}.containsAny(substring);
+	bool String::containsAny(const StringView characters) const {
+		return StringView{*this}.containsAny(characters);
+	}
+
+	bool String::containsNotAny(const StringView characters) const {
+		return StringView{*this}.containsNotAny(characters);
 	}
 
 	std::size_t String::count(const char character) const {

@@ -372,7 +372,7 @@ namespace Jazz2::Scripting
 		if (start > str.size()) {
 			return -1;
 		}
-		auto found = str.exceptPrefix(start).findAny(sub);
+		auto found = str.exceptPrefix(start).findAny(sub, 1);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 
@@ -393,7 +393,7 @@ namespace Jazz2::Scripting
 	// int string::findLastOf(const string &in sub, int start = -1) const
 	static std::int32_t StringFindLastOf(const String& sub, std::int32_t start, const String& str)
 	{
-		auto found = PrefixForBackwardSearch(str, start, 1).findLastAny(sub);
+		auto found = PrefixForBackwardSearch(str, start, 1).findLastAny(sub, 1);
 		return (found != nullptr ? (std::int32_t)(found.begin() - str.begin()) : -1);
 	}
 

@@ -685,7 +685,7 @@ namespace Death { namespace IO {
 		Array<Item>* items = &_rootItems;
 		Item* foundItem = nullptr;
 		while (true) {
-			auto separator = path.findAnyOr("/\\", path.end());
+			auto separator = path.findAny("/\\"_s);
 			auto name = path.prefix(separator.begin());
 
 			if (name.empty()) {

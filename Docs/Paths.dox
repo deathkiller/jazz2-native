@@ -52,7 +52,7 @@ What | Location
 ---- | --------
 @cpp "Content" @ce, @cpp "Source" @ce, @cpp "Cache" @ce | Next to @cpp "Jazz2.exe" @ce
 Config directory | @cpp "C:\Users\<user>\Saved Games\Jazz² Resurrection" @ce @m_span{m-text m-dim} (or @cpp "AppData\Roaming\Jazz² Resurrection" @ce if there is no <em>Saved Games</em> folder) @m_endspan, or next to @cpp "Jazz2.exe" @ce if a @cpp "Jazz2.config" @ce already exists there @m_span{m-text m-dim} (portable mode) @m_endspan
-Log | Only with `/log:file`, `/log` opens a console window instead
+Log | @cpp "Jazz2.log" @ce in the config directory if <em>Options > Gameplay > Logging to File</em> is enabled or with `/log:file`, `/log` opens a console window instead
 
 @subsection paths-linux Linux
 
@@ -64,7 +64,7 @@ AppImage | @cpp "Content/" @ce inside the image, @cpp "Source/" @ce and @cpp "Ca
 Flatpak | @cpp "Content/" @ce in @cpp "/app/share/Jazz² Resurrection/" @ce, everything else under @cpp "~/.var/app/dev.de4th.jazz2/" @ce
 User @cpp "Content/" @ce | Next to @cpp "Cache/" @ce, if it isn't the same as @cpp "Content/" @ce
 Config directory | @cpp "~/.config/Jazz² Resurrection/" @ce @m_span{m-text m-dim} (`$XDG_CONFIG_HOME`, @cpp "~/.config/jazz2/" @ce for AppImage) @m_endspan, or the working directory if a @cpp "Jazz2.config" @ce already exists there
-Log | Only with `/log:file`
+Log | @cpp "Jazz2.log" @ce in the config directory if <em>Options > Gameplay > Logging to File</em> is enabled or with `/log:file`
 
 @subsection paths-macos macOS
 
@@ -73,7 +73,7 @@ What | Location
 @cpp "Content/" @ce | Inside the application bundle
 @cpp "Source/" @ce, @cpp "Cache/" @ce, user @cpp "Content/" @ce | @cpp "~/Library/Application Support/Jazz² Resurrection/" @ce
 Config directory | @cpp "~/Library/Application Support/Jazz² Resurrection/" @ce, or the working directory if a @cpp "Jazz2.config" @ce already exists there
-Log | Only with `/log:file`
+Log | @cpp "Jazz2.log" @ce in the config directory if <em>Options > Gameplay > Logging to File</em> is enabled or with `/log:file`
 
 @subsection paths-cmdline Command-line options
 
@@ -87,7 +87,11 @@ These work on Windows, Linux and macOS:
 
 @m_class{m-noindent}
 
-A build configured with `DEATH_TRACE_LOG_PATH` always writes the log under that name into the config directory.
+Any of the `/log` options takes precedence over <em>Options > Gameplay > Logging to File</em>, which then shows that it's overridden: with `/log` the log goes only to the console, with `/log:file:<name>` only to that file.
+
+@m_class{m-noindent}
+
+A build configured with `DEATH_TRACE_LOG_PATH` always writes the log under that name into the config directory and doesn't offer the option.
 
 @section paths-mobile Mobile
 
@@ -98,7 +102,7 @@ What | Location
 @cpp "Content/" @ce | Inside the APK
 @cpp "Source/" @ce, @cpp "Cache/" @ce, user @cpp "Content/" @ce | With <em>All files access</em> granted: the first existing of @cpp "Games/Jazz² Resurrection/" @ce, @cpp "Games/Jazz2 Resurrection/" @ce, @cpp "Download/Jazz² Resurrection/" @ce and @cpp "Download/Jazz2 Resurrection/" @ce on the internal storage, @cpp "Games/Jazz² Resurrection/" @ce if none exists. Otherwise @cpp "Android/data/jazz2.resurrection/files/" @ce
 Config directory | Next to @cpp "Source/" @ce @m_span{m-text m-dim} (a @cpp "Jazz2.config" @ce from older versions in the app's private storage is kept until one exists next to @cpp "Source/" @ce) @m_endspan
-Log | @cpp "Jazz2.log" @ce in the config directory, always
+Log | @cpp "Jazz2.log" @ce in the config directory, unless <em>Options > Gameplay > Logging to File</em> is disabled
 
 @subsection paths-ios iOS
 
@@ -108,7 +112,7 @@ What | Location
 @cpp "Source/" @ce, user @cpp "Content/" @ce | The app's @cpp "Documents/" @ce folder, visible in the <em>Files</em> app
 @cpp "Cache/" @ce | @cpp "Library/Caches/" @ce @m_span{m-text m-dim} (not visible, may be purged by the system) @m_endspan
 Config directory | @cpp "Library/Application Support/Jazz² Resurrection/" @ce
-Log | @cpp "Documents/Jazz2.log" @ce, always
+Log | @cpp "Documents/Jazz2.log" @ce, unless <em>Options > Gameplay > Logging to File</em> is disabled
 
 @section paths-other Other platforms
 

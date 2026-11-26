@@ -124,7 +124,8 @@ namespace Jazz2::LevelPacks
 
 		String MakeKey(StringView name, StringView sha256)
 		{
-			const char* dot = name.findLastOr('.', name.end()).begin();
+			StringView foundDot = name.findLast('.');
+			const char* dot = (foundDot ? foundDot.begin() : name.end());
 			return String(name.prefix(dot) + "~"_s + sha256.prefix(KeyHashLength) + name.suffix(dot));
 		}
 

@@ -127,6 +127,17 @@ namespace Death { namespace Containers {
 
 		@section Containers-Array-usage Usage
 
+		@code{.cpp}
+		// Create an array with 5 integers and set them to some value
+		Array<int> a{ValueInit, 5};
+		int b = 0;
+		for (auto& i : a) i = b++;	// a == {0, 1, 2, 3, 4}
+
+		// Create an array from given values
+		auto c = array<int>({3, 18, -157, 0});
+		c[3] = 25;	// c == {3, 18, -157, 25}
+		@endcode
+
 		The @ref Array class provides an access and slicing API similar to
 		@ref ArrayView, see @ref Containers-ArrayView-usage "its usage docs" for
 		details. All @ref Array slicing APIs return an @ref ArrayView, additionally
@@ -159,6 +170,22 @@ namespace Death { namespace Containers {
 			non-trivial types to circumvent default construction and @cpp new T[size] @ce
 			for trivial types.
 
+		@code{.cpp}
+		// Array of 100 integers, uninitialized
+		Array<int> b{NoInit, 100};
+
+		// Array of a type with no default constructor - all five elements will be
+		// initialized to {5.2f, 0.4f, 1.0f}
+		struct Vec3 {
+			explicit Vec3(float, float, float) {}
+		};
+		Array<Vec3> c{DirectInit, 5, 5.2f, 0.4f, 1.0f};
+
+		// Array from an initializer list - these two are equivalent
+		Array<int> d1{InPlaceInit, {1, 2, 3, 4, -5, 0, 42}};
+		auto d2 = array<int>({1, 2, 3, 4, -5, 0, 42});
+		@endcode
+
 		<b></b>
 
 		@m_class{m-note m-success}
@@ -179,11 +206,42 @@ namespace Death { namespace Containers {
 		for deallocation. By default the deleter is set to @cpp nullptr @ce, which is
 		equivalent to deleting the contents using @cpp operator delete[] @ce.
 
+		For example, properly deallocating array allocated using @ref std::malloc():
+
+		@code{.cpp}
+		{
+			int* data = reinterpret_cast<int*>(std::malloc(25 * sizeof(int)));
+
+			// Will call std::free() on destruction
+			Array<int> array{data, 25,
+				[](int* data, std::size_t) { std::free(data); }};
+		}
+		@endcode
+
 		By default, plain function pointers are used to avoid having the type affected
 		by the deleter function. If the deleter needs to manage some state, a custom
-		deleter type can be used. The deleter is called *unconditionally* on destruction,
-		which has some implications especially in case of stateful deleters. See
-		the documentation of @ref Array(T*, std::size_t, D) for details.
+		deleter type can be used:
+
+		@code{.cpp}
+		class UnmapBuffer {
+		public:
+			explicit UnmapBuffer(GLuint id) : _id{id} {}
+			void operator()(char*, std::size_t) { glUnmapNamedBuffer(_id); }
+
+		private:
+			GLuint _id;
+		};
+
+		GLuint buffer = …;
+		char* data = reinterpret_cast<char*>(glMapNamedBuffer(buffer, GL_READ_WRITE));
+
+		// Will unmap the buffer on destruction
+		Array<char, UnmapBuffer> array{data, bufferSize, UnmapBuffer{buffer}};
+		@endcode
+
+		The deleter is called *unconditionally* on destruction, which has some
+		implications especially in case of stateful deleters. See the documentation of
+		@ref Array(T*, std::size_t, D) for details.
 
 		@section Containers-Array-growable Growable arrays
 
@@ -199,7 +257,23 @@ namespace Death { namespace Containers {
 		@ref arrayResize(), @ref arrayRemove() ... functions. A growable array behaves
 		the same as a regular array to its consumers --- its @ref size() returns the
 		count of *real* elements, while available capacity can be queried through
-		@ref arrayCapacity().
+		@ref arrayCapacity(). Example of populating an array with an undetermined
+		amount of elements:
+
+		@code{.cpp}
+		// Optimistically reserve assuming the model consists of just triangles
+		Array<std::uint32_t> triangles;
+		arrayReserve(triangles, mesh.size() * 3);
+		for (const Face& face : mesh) {
+			// If it's a quad, convert to two triangles
+			if (face.vertexCount == 4) arrayAppend(triangles,
+				{face.vertices[0], face.vertices[1], face.vertices[2],
+				 face.vertices[0], face.vertices[2], face.vertices[3]});
+			// Otherwise add as-is
+			else arrayAppend(triangles,
+				{face.vertices[0], face.vertices[1], face.vertices[2]});
+		}
+		@endcode
 
 		A growable array can be turned back into a regular one using
 		@ref arrayShrink() if desired. That'll free all extra memory, moving the
@@ -208,7 +282,7 @@ namespace Death { namespace Containers {
 		@m_class{m-block m-success}
 
 		@par Tip
-			Thanks to [ADL](https://en.wikipedia.org/wiki/Argument-dependent_name_lookup)
+			As shown in the snippet above, thanks to [ADL](https://en.wikipedia.org/wiki/Argument-dependent_name_lookup)
 			the @ref arrayAppend() etc. functions can be called unqualified, without
 			having to explicitly prefix them with @cpp Containers:: @ce.
 
@@ -235,7 +309,15 @@ namespace Death { namespace Containers {
 		Because the alloacted growable arrays have an area between @ref size() and
 		@ref arrayCapacity() that shouldn't be accessed, when building with
 		[Address Sanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
-		enabled, this area is marked as "container overflow".
+		enabled, this area is marked as "container overflow". Given the following code,
+		ASan aborts and produces a failure report:
+
+		@code{.cpp}
+		Array<int> a;
+		arrayReserve(a, 100);
+		arrayResize(a, 80);
+		a[80] = 5;	// Even though the memory is there, this causes ASan to complain
+		@endcode
 
 		In some cases sanitizer annotations are undesirable, for example when only a
 		part of the application is built with AddressSanitizer enabled, causing false
@@ -265,10 +347,19 @@ namespace Death { namespace Containers {
 
 		@par Conversion from std::initializer_list
 			The class currently *doesn't* provide a @ref std::initializer_list
-			constructor to prevent the same usability issues as with @ref std::vector.
-			Instead you're expected to use either the
+			constructor to prevent the same usability issues as with @ref std::vector
+			--- see the snippet below. Instead you're expected to use either the
 			@ref Array(InPlaceInitT, std::initializer_list<T>) constructor or the
-			@ref array(std::initializer_list<T>) shorthand.
+			@ref array(std::initializer_list<T>) shorthand:
+		@par
+			@code{.cpp}
+			std::vector<int> a(5);	// a.size() == 5
+			std::vector<int> b{5};	// b.size() == 1, b[0] == 5
+
+			//Array<int> c{5};	// error, there's no constructor taking just a size
+			Array<int> c{ValueInit, 5};	// c.size() == 5
+			auto d = array<int>({5});	// d.size() == 1, d[0] == 5
+			@endcode
 	*/
 #ifdef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D = void(*)(T*, std::size_t)>
@@ -309,8 +400,7 @@ namespace Death { namespace Containers {
 		 *
 		 * Creates an array of given size, the contents are value-initialized
 		 * (i.e. trivial types are zero-initialized, default constructor called
-		 * otherwise). This is the same as @ref Array(std::size_t). If the size
-		 * is zero, no allocation is done.
+		 * otherwise). If the size is zero, no allocation is done.
 		 */
 		explicit Array(ValueInitT, std::size_t size) : _data{size ? new T[size]() : nullptr}, _size{size}, _deleter{nullptr} {}
 
@@ -331,7 +421,19 @@ namespace Death { namespace Containers {
 		 * deallocates the data as a @cpp char @ce array again --- which means
 		 * that for non-trivial types you're expected to construct all elements
 		 * using placement new (or for example @ref std::uninitialized_copy())
-		 * in order to avoid calling destructors on uninitialized memory.
+		 * in order to avoid calling destructors on uninitialized memory:
+		 *
+		 * @code{.cpp}
+		 * struct Foo {
+		 * 	explicit Foo(int) {}
+		 * };
+		 *
+		 * Array<Foo> e{NoInit, 5};
+		 *
+		 * int index = 0;
+		 * for (Foo& f : e)
+		 * 	new(&f) Foo{index++};
+		 * @endcode
 		 */
 		explicit Array(NoInitT, std::size_t size) : _data{size ? Implementation::noInitAllocate<T>(size) : nullptr}, _size{size}, _deleter{Implementation::noInitDeleter<T>()} {}
 
@@ -739,7 +841,15 @@ namespace Death { namespace Containers {
 	/** @relatesalso ArrayView
 		@brief Make a view on an @ref Array
 
-		Convenience alternative to converting to an @ref ArrayView explicitly.
+		Convenience alternative to converting to an @ref ArrayView explicitly. The
+		following two lines are equivalent:
+
+		@code{.cpp}
+		Array<std::uint32_t> data;
+
+		ArrayView<std::uint32_t> a{data};
+		auto b = arrayView(data);
+		@endcode
 	*/
 	template<class T, class D> inline ArrayView<T> arrayView(Array<T, D>& array) {
 		return ArrayView<T>{array};
@@ -748,7 +858,15 @@ namespace Death { namespace Containers {
 	/** @relatesalso ArrayView
 		@brief Make a view on a const @ref Array
 
-		Convenience alternative to converting to an @ref ArrayView explicitly.
+		Convenience alternative to converting to an @ref ArrayView explicitly. The
+		following two lines are equivalent:
+
+		@code{.cpp}
+		const Array<std::uint32_t> data;
+
+		ArrayView<const std::uint32_t> a{data};
+		auto b = arrayView(data);
+		@endcode
 	*/
 	template<class T, class D> inline ArrayView<const T> arrayView(const Array<T, D>& array) {
 		return ArrayView<const T>{array};

@@ -127,11 +127,24 @@ namespace Death { namespace Containers {
 	/** @relatesalso Reference
 		@brief Make a reference wrapper
 
-		Convenience alternative to @ref Reference::Reference(T&).
+		Convenience alternative to @ref Reference::Reference(T&). The following two
+		lines are equivalent:
+
+		@code{.cpp}
+		float target = …;
+
+		auto a = Reference<float>{target};
+		auto b = reference(target);
+		@endcode
 
 		Useful for example when iterating a list of variables that need to be modified
 		in-place, and where the code would otherwise have to be extra verbose or would
-		fall back to raw pointers and risk them getting @cpp nullptr @ce.
+		fall back to raw pointers and risk them getting @cpp nullptr @ce:
+
+		@code{.cpp}
+		for (int& i : {reference(a), reference(b), reference(c)})
+			i = i * i;
+		@endcode
 	*/
 	template<class T> constexpr Reference<T> reference(T& reference) {
 		return Reference<T>{reference};

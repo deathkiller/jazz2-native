@@ -78,12 +78,12 @@ namespace Jazz2::Editor
 
 		StringView GetQuoted(StringView line)
 		{
-			StringView start = line.findOr('"', line.end());
-			if (start.begin() == line.end()) {
+			StringView start = line.find('"');
+			if (!start) {
 				return {};
 			}
-			StringView rest = line.suffix(start.begin() + 1);
-			return rest.prefix(rest.findOr('"', rest.end()).begin());
+			StringView rest = line.suffix(start.end());
+			return rest.prefix(rest.find('"').begin());
 		}
 
 		bool IsMlleInclude(StringView name)
@@ -257,9 +257,9 @@ namespace Jazz2::Editor
 		bool inComment = false;
 		StringView rest = script;
 		while (!rest.empty()) {
-			StringView lineEnd = rest.findOr('\n', rest.end());
+			StringView lineEnd = rest.find('\n');
 			StringView line = rest.prefix(lineEnd.begin());
-			rest = rest.suffix(lineEnd.begin() == rest.end() ? rest.end() : lineEnd.begin() + 1);
+			rest = rest.suffix(lineEnd.end());
 			if (line.contains(GeneratedMark)) {
 				continue;
 			}
@@ -345,8 +345,7 @@ namespace Jazz2::Editor
 		std::size_t afterMlleInclude = 0;
 		StringView rest = script;
 		while (!rest.empty()) {
-			StringView lineEnd = rest.findOr('\n', rest.end());
-			StringView line = rest.prefix(lineEnd.begin() == rest.end() ? rest.end() : lineEnd.begin() + 1);
+			StringView line = rest.prefix(rest.find('\n').end());
 			rest = rest.suffix(line.end());
 			StringView content = line.trimmed();
 			if (!content.contains(GeneratedMark)) {
@@ -810,11 +809,11 @@ namespace Jazz2::Editor
 		Death::Containers::ArrayView<const StringView> includes)
 	{
 		// The namespaces and the class of the weapon
-		String qualified = WithoutSpaces(constructor.prefix(constructor.findOr('(', constructor.end()).begin()));
+		String qualified = WithoutSpaces(constructor.prefix(constructor.find('(').begin()));
 		SmallVector<StringView, 4> names;
 		StringView scope = qualified;
 		while (!scope.empty()) {
-			StringView separator = scope.findOr("::"_s, scope.end());
+			StringView separator = scope.find("::"_s);
 			names.push_back(scope.prefix(separator.begin()));
 			scope = scope.suffix(separator.end());
 		}

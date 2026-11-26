@@ -145,6 +145,12 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
 		# it here rather than as an interface dependency of the imported target does - the SDL2 target is
 		# already on the line by the time this is appended.
 		target_link_libraries(${NCINE_APP} PRIVATE GL)
+		# Its headers are in the SDK's local/common/include, which is not on the compiler's default search path
+		find_path(MINIGL_INCLUDE_DIR NAMES GL/gl.h)
+		if(NOT MINIGL_INCLUDE_DIR)
+			message(FATAL_ERROR "MiniGL headers (GL/gl.h) not found in the AmigaOS 4.1 SDK, which NCINE_PREFERRED_RHI=LegacyGL needs (use Software otherwise)")
+		endif()
+		target_include_directories(${NCINE_APP} PRIVATE ${MINIGL_INCLUDE_DIR})
 	elseif(PLATFORM_MORPHOS)
 		# Asks for the SDK's TinyGL initializer by name. It is what opens tinygl.library into the
 		# `TinyGLBase` the call macros read, but nothing references it: SDL2's static glue declares that

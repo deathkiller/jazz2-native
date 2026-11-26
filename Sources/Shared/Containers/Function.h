@@ -244,13 +244,45 @@ namespace Death { namespace Containers {
 		An alternative to @m_class{m-doc-external} [std::move_only_function](https://en.cppreference.com/w/cpp/utility/functional/move_only_function)
 		from C++23 or a move-only alternative to @ref std::function from C++11,
 		providing a common interface for free functions, member functions, (capturing)
-		lambdas and generic functors. The wrapped function is then called through @ref operator()().
+		lambdas and generic functors. Example usage:
+
+		@code{.cpp}
+		Function<int(int)> a = std::abs;
+
+		Function<int(int)> b = [](int value) { return value * 2; };
+
+		struct Accumulator {
+			int sum = 1337;
+			int add(int value) { return sum += value; }
+		} accumulator;
+
+		Function<int(int)> c{accumulator, &Accumulator::add};
+		@endcode
+
+		The wrapped function is then called through @ref operator()():
+
+		@code{.cpp}
+		a(-16);	// 16
+		b(376);	// 752
+		c(110);	// 1447
+		@endcode
 
 		To prevent accidental type conversions and potential extra overhead coming from
 		those, the wrapper only accepts functions that match the signature *exactly*.
-		If a function or a functor has a set of overloads, an overload matching
-		the signature is picked. If you have a function which has a different signature,
-		wrap it in a lambda of a matching singature first.
+		If a function or a functor has a set of overloads (such as is the case with
+		@ref std::abs() shown above), an overload matching the signature is picked. If
+		you have a function which has a different signature, wrap it in a lambda of a
+		matching signature first:
+
+		@code{.cpp}
+		double degreesToRadians(double);
+
+		//Function<float(float)> a = degreesToRadians;	// error
+
+		Function<float(float)> b = [](float radians) -> float {
+			return float(degreesToRadians(double(radians)));
+		};
+		@endcode
 
 		@section Containers-Function-usage-overhead Function call overhead
 
@@ -275,9 +307,38 @@ namespace Death { namespace Containers {
 		is allocated on heap instead. For implementation simplicity reasons the state
 		is also allocated if isn't trivially copyable. You can use @ref isAllocated()
 		to check whether the function state needed a heap allocation or not.
+
+		@code{.cpp}
+		// Small enough, stored inline
+		int seed = …;
+		Function<int(int)> hash = [seed](int value) {
+			return seed ^ value;
+		};
+
+		// Too large, allocated
+		int state[8]{…};
+		Function<int()> random = [state]() mutable {
+			// …
+		};
+
+		// Small enough but non-trivial, allocated
+		String salt = …;
+		Function<int(int)> checksum = [salt](int value) {
+			// …
+		};
+		@endcode
+
 		If heap allocation is undesirable, the @ref Function(NoAllocateInitT, F&&)
 		overload can be used to prevent wrapping any function with state that would
-		need to be allocated.
+		need to be allocated:
+
+		@code{.cpp}
+		Function<int(int)> hash{NoAllocateInit,
+			[seed](int value) { … }};
+
+		//Function<int()> random{NoAllocateInit,	// error
+		//	[state]() mutable { … }};
+		@endcode
 
 		@section Containers-Function-usage-type-erased Type-erased function storage
 
@@ -286,6 +347,14 @@ namespace Death { namespace Containers {
 		functors. This allows it to be used as a type-erased storage in various
 		containers for example. Cast the instance back to a concrete
 		@ref Function<R(Args...)> "Function" in order to use it.
+
+		@code{.cpp}
+		FunctionData a = Function<int(int)>{std::abs};
+		FunctionData b = Function<float(float)>{std::round};
+
+		static_cast<Function<int(int)>&>(a)(-15);	// 15
+		static_cast<Function<float(float)>&>(b)(3.56f);	// 4.0f
+		@endcode
 	*/
 	template<class R, class ...Args> class Function<R(Args...)> : public FunctionData
 	{

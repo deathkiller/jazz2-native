@@ -84,9 +84,14 @@ namespace Death { namespace Containers {
 		The class is meant to be used through either the @ref StringView or
 		@ref MutableStringView typedefs. It's implicitly convertible from C string
 		literals, but the recommended way is using the @link Literals::operator""_s() @endlink
-		literal.
+		literal:
 
-		While both expressions are *mostly* equivalent, the literal is
+		@code{.cpp}
+		StringView a = "hello world!";
+		StringView b = "hello world!"_s;
+		@endcode
+
+		While both expressions are *mostly* equivalent, the @cpp _s @ce literal is
 		@cpp constexpr @ce so you can use it in a compile-time context (and on the
 		other hand, the implicit conversion uses @ref std::strlen() which has some
 		runtime impact). The main difference is however that the literal will annotate
@@ -95,20 +100,45 @@ namespace Death { namespace Containers {
 		copies and allocations when lifetime of the data needs to be extended or when
 		dealing with APIs that expect null-terminated strings. Additionally, the
 		literal will also preserve zero bytes inside the string, while implicit
-		conversion from a C string won't.
+		conversion from a C string won't:
+
+		@code{.cpp}
+		StringView a = "hello\0world!";		// a.size() == 5
+		StringView b = "hello\0world!"_s;	// b.size() == 12
+		@endcode
 
 		C string literals are implicitly immutable, in order to create a mutable one
 		you need to assign the literal to a @cpp char[] @ce (instead of
 		@cpp const char* @ce) and then create a @ref MutableStringView in a second
-		step.
+		step. For example:
+
+		@code{.cpp}
+		char a[] = "hello world!";
+		MutableStringView view = a;
+		view[5] = '\0';
+		@endcode
 
 		This class is implicitly convertible from and to @ref ArrayView, however note
 		that the conversion will not preserve the global / null-terminated annotations.
 
 		@attention In order to allow the above-mentioned optimizations, on 32-bit
-			systems the size is limited to 1 GB. That should be more than enough for
-			real-world strings (as opposed to arbitrary binary data), if you need more
-			please use an @ref ArrayView instead.
+			systems the size is limited to 1 GB, with 2 bits out of the 32-bit size
+			used for @ref StringViewFlags. A gigabyte should still be more than enough
+			for real-world strings (as opposed to arbitrary binary data), if you need
+			more please use an @ref ArrayView instead.
+
+		@subsection Containers-BasicStringView-usage-boolean-conversion Boolean conversion
+
+		A string view is explicitly convertible to @cpp bool @ce, returning
+		@cpp false @ce if it's a @cpp nullptr @ce or empty view. That makes it
+		convenient for use in various conditions one doesn't need to explicitly query
+		@ref size() or @ref empty() to check if it's non-empty:
+
+		@code{.cpp}
+		StringView filename = …;
+		if (!filename)
+			return false;	// Filename cannot be empty
+		@endcode
 
 		@subsection Containers-BasicStringView-usage-slicing String view slicing
 
@@ -123,15 +153,110 @@ namespace Death { namespace Containers {
 		of delimiter characters</li>
 		<li>@ref join() and @ref joinWithoutEmptyParts() is an inverse of the
 		above</li>
-		<li>@ref partition() is similar to @ref split(), but always returning three
+		<li>@ref partition() and @ref partitionLast() are similar to @ref split(), but always returning three
 		elements with a clearly defined behavior, which can make certain code more
 		robust while reducing the amount of possible error states</li>
 		<li>@ref trimmed() (and its variants @ref trimmedPrefix() /
 		@ref trimmedSuffix()), commonly used to remove leading and trailing
 		whitespace</li>
 		<li>@ref exceptPrefix(StringView) const / @ref exceptSuffix(StringView) const
-		checks that a view starts (or ends) with given string and then removes it.</li>
+		checks that a view starts (or ends) with given string and then removes it:
+
+		@code{.cpp}
+		StringView file = "Master Of Puppets.mp3";
+		StringView name = file.exceptSuffix(".mp3"_s);	// "Master Of Puppets"
+		@endcode
+		</li>
 		</ul>
+
+		@subsection Containers-BasicStringView-usage-find Character and substring lookup
+
+		Compared to @ref std::string::find() that returns an index or a special value,
+		@ref find() APIs return a view pointing to the found substring, or an empty
+		view if nothing was found. Combined with @ref Containers-BasicStringView-usage-boolean-conversion "boolean conversion that was shown above",
+		this makes the usage rather straightforward:
+
+		@code{.cpp}
+		StringView line = …;
+
+		// Strip C-style comments from the end of the line
+		if (StringView found = line.find("//"_s))
+			line = line.prefix(found.begin());
+		@endcode
+
+		Depending on use case, both the @ref begin() and @ref end() of the found view
+		may be useful. The code above was interested only in everything until the
+		comment, here it takes just the comment contents alone instead:
+
+		@code{.cpp}
+		// If there is a comment, subject its contents to further investigation
+		if (StringView found = line.find("//"_s)) {
+			StringView commentContents = line.suffix(found.end());
+			// …
+		}
+		@endcode
+
+		When nothing is found, the returned view is empty but it points to @ref end()
+		of the original string, which is often helpful in simplifying various logic.
+		The comment stripping from above could be rewritten simply as this --- if no
+		comment is found, the code is equivalent to @cpp line.prefix(line.end()) @ce
+		which keeps the line unmodified:
+
+		@code{.cpp}
+		// Strip C-style comments from the end of the line, if there are any
+		line = line.prefix(line.find("//"_s).begin());
+		@endcode
+
+		For a lookup in the other direction, there's @ref findLast(). This one returns
+		an empty view pointing to @ref begin() in case of a failure instead, and a
+		common branch-less use case looks like below --- if no slash is found, the
+		`directory` expression is equivalent to @cpp path.prefix(path.begin()) @ce,
+		which is an empty string, and `filename` is @cpp path.suffix(path.begin()) @ce
+		which is the whole string:
+
+		@code{.cpp}
+		StringView path = …;
+		StringView foundSlash = path.findLast('/');
+
+		// Directory is everything before the last found slash, or nothing
+		StringView directory = path.prefix(foundSlash.begin());
+		// Filename is everything after the last found slash, or the whole path
+		StringView filename = path.suffix(foundSlash.end());
+		@endcode
+
+		In addition to a general substring lookup, there are @ref find(char) const and
+		@ref findLast(char) const overloads that perform much faster if you need to
+		look up just a single byte (as was the case with @cpp '/' @ce above).
+		Conversely, @ref findAny() and @ref findLastAny() look for any character out of
+		given set. As a common use case is finding a contiguous sequence of such
+		characters, such as whitespace delimiters, they by default return a view
+		spanning all of them:
+
+		@code{.cpp}
+		StringView row = "1.57\t\t  2.25";
+		StringView whitespace = row.findAny(" \t"_s);
+
+		StringView first = row.prefix(whitespace.begin());	// "1.57"
+		StringView second = row.suffix(whitespace.end());	// "2.25"
+		@endcode
+
+		If such behavior is undesirable, you can limit this using the second argument,
+		for example here when splitting up by a list that can be delimited by either
+		`,` or `;` and two delimiters next to each other mean an empty item:
+
+		@code{.cpp}
+		StringView entries = "alpha;gamma;,tau";
+		StringView delimiter = entries.findAny(",;"_s, 1);
+
+		StringView head = entries.prefix(delimiter.begin());	// "alpha"
+		StringView tail = entries.suffix(delimiter.end());		// "gamma;,tau"
+		@endcode
+
+		The @ref findNotAny() and @ref findLastNotAny() functions then look for any
+		character except from given set. Finally, @ref contains() / @ref containsAny()
+		/ @ref containsNotAny() is a more optimal API if only presence of a substring
+		or characters, not a position, is needed, and @ref count() returns number of
+		occurences.
 
 		@subsection Containers-BasicStringView-usage-c-string-conversion Converting StringView instances to null-terminated C strings
 
@@ -153,12 +278,37 @@ namespace Death { namespace Containers {
 		is unnecessary work if the view was null-terminated already. To avoid that,
 		there's @ref String::nullTerminatedView(), which will make a copy only if the
 		view is not already null-terminated, directly referencing the view with a no-op
-		deleter otherwise.
+		deleter otherwise. For example, when opening a file using @ref std::fopen():
+
+		@code{.cpp}
+		StringView file = …;
+
+		// Efficiently ensure fopen() gets a null-terminated C string
+		std::FILE* f = std::fopen(String::nullTerminatedView(file).data(), "rb");
+		// …
+		std::fclose(f);
+		@endcode
 
 		Similarly as described in @ref Containers-String-usage-c-string-conversion,
 		pointers to data in SSO instances will get invalidated when the instance is
 		moved. With @ref String::nullTerminatedGlobalView(AllocatedInitT, StringView)
-		the null-terminated copy will be always allocated.
+		the null-terminated copy will be always allocated, avoiding this problem:
+
+		@code{.cpp}
+		void exec(int argc, const char* const* argv);	// Takes a C string array
+
+		Array<StringView> args;
+		Array<String> data;
+		Array<const char*> argv;
+		for (StringView arg : args) {
+			// If just arrayAppend(data, String::nullTerminatedView(arg)) was used, the data()
+			// passed to argv could be invalidated next time the storage gets reallocated
+			arrayAppend(data, String::nullTerminatedView(AllocatedInit, arg));
+			arrayAppend(argv, data.back().data());
+		}
+
+		exec(argv.size(), argv.data());
+		@endcode
 
 		@section Containers-BasicStringView-array-views Conversion to array views
 
@@ -178,7 +328,18 @@ namespace Death { namespace Containers {
 		convertible from and to @ref std::string if you include
 		@ref Containers/StringStl.h. The conversion is provided in a separate
 		header to avoid unconditional @cpp #include <string> @ce, which significantly
-		affects compile times.
+		affects compile times. Example:
+
+		@code{.cpp}
+		#include <Containers/StringStl.h>
+
+		// …
+
+		std::string a = "Hello\0world!"_s;
+
+		MutableStringView b = a;
+		b[5] = ' ';
+		@endcode
 
 		Creating a @ref std::string instance always involves a data copy,
 		while going the other way always creates a non-owning reference without
@@ -192,7 +353,16 @@ namespace Death { namespace Containers {
 		similar reasons, it's a dedicated header to avoid unconditional
 		@cpp #include <string_view> @ce, but this one is even significantly heavier
 		than the @ref string "<string>" include on certain implementations, so it's
-		separate from a @ref std::string as well.
+		separate from a @ref std::string as well. Example:
+
+		@code{.cpp}
+		#include <Containers/StringStlView.h>
+
+		// …
+
+		std::string_view a = "Hello world!";
+		StringView b = a.substr(5);
+		@endcode
 
 		The @ref std::string_view type doesn't have any mutable counterpart, so there's
 		no possibility to create a @ref MutableStringView out of it. Because
@@ -592,9 +762,38 @@ namespace Death { namespace Containers {
 		StaticArray<3, BasicStringView<T>> partition(StringView separator) const;
 
 		/**
+		 * @brief Partition on a last occurence of a character
+		 *
+		 * Equivalent to Python's @m_class{m-doc-external} [str.rpartition()](https://docs.python.org/3/library/stdtypes.html#str.rpartition).
+		 * Splits @p string at the last occurrence of @p separator. First
+		 * returned value is the part before the separator, second the
+		 * separator, third a part after the separator. If the separator is not
+		 * found, returns two empty strings followed by the input string.
+		 *
+		 * The function uses @ref slice() internally, meaning it propagates the
+		 * @ref flags() as appropriate. Additionally, the resulting views are
+		 * @cpp nullptr @ce only if the input is @cpp nullptr @ce, otherwise
+		 * the view always points to existing memory.
+		 */
+		StaticArray<3, BasicStringView<T>> partitionLast(char separator) const;
+
+		/**
+		 * @brief Partition on a last occurence of a substring
+		 *
+		 * Like @ref partitionLast(char) const, but looks for a whole substring
+		 * instead of a single character.
+		 */
+		StaticArray<3, BasicStringView<T>> partitionLast(StringView separator) const;
+
+		/**
 		 * @brief Join strings with this view as the delimiter
 		 *
-		 * Similar in usage to Python's @m_class{m-doc-external} [str.join()](https://docs.python.org/3/library/stdtypes.html#str.join)
+		 * Similar in usage to Python's @m_class{m-doc-external} [str.join()](https://docs.python.org/3/library/stdtypes.html#str.join) --- the
+		 * following produces @cpp "hello, world" @ce:
+		 *
+		 * @code{.cpp}
+		 * String a = ", "_s.join({"hello", "world"});
+		 * @endcode
 		 */
 		String join(ArrayView<const StringView> strings) const;
 
@@ -742,10 +941,10 @@ namespace Death { namespace Containers {
 		 * @brief Find a substring
 		 *
 		 * Returns a view pointing to the first found substring. If not found,
-		 * an empty @cpp nullptr @ce view is returned. The function uses
+		 * an empty view pointing to @ref end() is returned. The function uses
 		 * @ref slice() internally, meaning it propagates the @ref flags() as
-		 * appropriate, except in case of a failure, where it always returns no
-		 * @ref StringViewFlags.
+		 * appropriate. See @ref Containers-BasicStringView-usage-find for an
+		 * introduction to the API.
 		 *
 		 * Note that the function operates with a @f$ \mathcal{O}(nm) @f$
 		 * complexity and as such is meant mainly for one-time searches in
@@ -758,61 +957,31 @@ namespace Death { namespace Containers {
 		 * using @ref find(char) const instead for single-byte substrings, see
 		 * also @ref count(char) const for counting the number of occurences.
 		 *
+		 * If @p substring is empty, the function returns a zero-sized view
+		 * pointing to @ref begin().
+		 *
 		 * This function is equivalent to calling @relativeref{std::string,find()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		/* Technically it would be enough to have just one overload with a default value
-		   for the fail parameter. But then `find(foo, pointer)` would imply "find foo
-		   after pointer", because that's what the second parameter does in most APIs.
-		   On the other hand, naming this findOr() and documenting the custom failure handling
-		   would add extra congitive load for people looking for find() and nothing else. */
-		BasicStringView<T> find(StringView substring) const {
-			return findOr(substring, nullptr);
-		}
+		BasicStringView<T> find(StringView substring) const;
 
 		/**
 		 * @brief Find a character
 		 *
-		 * Faster than @ref find(StringView) const if the string has just one
-		 * byte.
+		 * Faster than @ref find(StringView) const if the string to find has
+		 * just one byte.
 		 */
-		/* Technically it would be enough to have just one overload with a default
-		   value for the fail parameter, see above why it's not */
-		BasicStringView<T> find(char character) const {
-			return findOr(character, nullptr);
-		}
-
-		/**
-		 * @brief Find a substring with a custom failure pointer
-		 *
-		 * Like @ref find(StringView) const, but returns an empty view pointing
-		 * to the @p fail value instead of @cpp nullptr @ce, which is useful to
-		 * avoid explicit handling of cases where the substring wasn't found.
-		 *
-		 * The @p fail value can be @cpp nullptr @ce or any other pointer, but
-		 * commonly it's set to either @ref begin() or @ref end().
-		 * 
-		 * Consider using @ref findOr(char, T*) const for single-byte
-		 * substrings.
-		 */
-		BasicStringView<T> findOr(StringView substring, T* fail) const;
-
-		/**
-		 * @brief Find a character with a custom failure pointer
-		 *
-		 * Faster than @ref findOr(StringView, T*) const if the string has just
-		 * one byte.
-		 */
-		BasicStringView<T> findOr(char character, T* fail) const;
+		BasicStringView<T> find(char character) const;
 
 		/**
 		 * @brief Find the last occurence of a substring
 		 *
 		 * Returns a view pointing to the last found substring. If not found,
-		 * an empty @cpp nullptr @ce view is returned. The function uses
+		 * an empty view pointing to @ref begin() is returned (i.e., opposite
+		 * from what @ref find() returns on failure). The function uses
 		 * @ref slice() internally, meaning it propagates the @ref flags() as
-		 * appropriate, except in case of a failure, where it always returns no
-		 * @ref StringViewFlags.
+		 * appropriate. See @ref Containers-BasicStringView-usage-find for an
+		 * introduction to the API.
 		 *
 		 * Similarly as with @ref find(), note that the function operates with
 		 * a @f$ \mathcal{O}(nm) @f$ complexity and as such is meant mainly for
@@ -821,127 +990,140 @@ namespace Death { namespace Containers {
 		 * alternatives. Consider using @ref findLast(char) const instead for
 		 * single-byte substrings.
 		 *
+		 * If @p substring is empty, the function returns a zero-sized view
+		 * pointing to @ref end().
+		 *
 		 * This function is equivalent to calling @relativeref{std::string,rfind()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		/* Technically it would be enough to have just one overload with a default
-		   value for the fail parameter, see above why it's not */
-		BasicStringView<T> findLast(StringView substring) const {
-			return findLastOr(substring, nullptr);
-		}
+		BasicStringView<T> findLast(StringView substring) const;
 
 		/**
 		 * @brief Find the last occurence of a character
 		 *
-		 * Faster than @ref findLast(StringView) const if the string has just
-		 * one byte.
-		 */
-		/* Technically it would be enough to have just one overload with a default
-		   value for the fail parameter, see above why it's not */
-		BasicStringView<T> findLast(char character) const {
-			return findLastOr(character, nullptr);
-		}
-
-		/**
-		 * @brief Find the last occurence a substring with a custom failure pointer
-		 *
-		 * Like @ref findLast(StringView) const, but returns an empty view
-		 * pointing to the @p fail value instead of @cpp nullptr @ce, which is
-		 * useful to avoid explicit handling of cases where the substring
-		 * wasn't found. See @ref findOr() for an example use case.
-		 */
-		BasicStringView<T> findLastOr(StringView substring, T* fail) const;
-
-		/**
-		 * @brief Find the last occurence of a character with a custom failure pointer
-		 *
-		 * Faster than @ref findLastOr(StringView, T*) const if the string has
+		 * Faster than @ref findLast(StringView) const if the string to find has
 		 * just one byte.
 		 */
-		BasicStringView<T> findLastOr(char character, T* fail) const;
+		BasicStringView<T> findLast(char character) const;
 
 		/**
 		 * @brief Whether the view contains a substring
 		 *
 		 * A slightly lighter variant of @ref find() useful when you only want
-		 * to know if a substring was found or not. Consider using
-		 * @ref contains(char) const for single-byte substrings, see also
-		 * @ref count(char) const for counting the number of occurences.
+		 * to know if a substring was found or not, not its concrete position.
+		 * Consider using @ref contains(char) const for single-byte substrings,
+		 * see also @ref count(char) const for counting the number of
+		 * occurences. An empty @p substring is contained in any non-null
+		 * view.
 		 */
 		bool contains(StringView substring) const;
 
 		/**
 		 * @brief Whether the view contains a character
 		 *
-		 * Faster than @ref contains(StringView) const if the string has just
-		 * one byte.
+		 * Faster than @ref contains(StringView) const if the string to find has
+		 * just one byte.
 		 */
 		bool contains(char character) const;
 
 		/**
 		 * @brief Find any character from given set
 		 *
-		 * Returns a view pointing to the first found character from the set.
-		 * If no characters from @p characters are found, an empty
-		 * @cpp nullptr @ce view is returned. The function uses @ref slice()
-		 * internally, meaning it propagates the @ref flags() as appropriate,
-		 * except in case of a failure, where it always returns no
-		 * @ref StringViewFlags.
+		 * Returns a view pointing to the first found sequence of characters
+		 * from the set. If no characters from @p characters are found, an
+		 * empty view pointing to @ref end() is returned. By default, the
+		 * returned view extends until a character *not* from @p characters is
+		 * found, set the @p maxCount argument to a non-zero value to limit the
+		 * lookup. The function uses @ref slice() internally, meaning it
+		 * propagates the @ref flags() as appropriate. See
+		 * @ref Containers-BasicStringView-usage-find for an introduction to
+		 * the API.
+		 *
+		 * If @p characters are empty, the function returns a zero-sized view
+		 * pointing to @ref end().
 		 *
 		 * This function is equivalent to calling @relativeref{std::string,find_first_of()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		BasicStringView<T> findAny(StringView characters) const {
-			return findAnyOr(characters, nullptr);
-		}
+		BasicStringView<T> findAny(StringView characters, std::size_t maxCount = 0) const;
 
 		/**
-		 * @brief Find any character from given set with a custom failure pointer
+		 * @brief Find any character not from given set
 		 *
-		 * Like @ref findAny(StringView) const, but returns an empty view
-		 * pointing to the @p fail value instead of @cpp nullptr @ce, which is
-		 * useful to avoid explicit handling of cases where no character was
-		 * found.
+		 * Returns a view pointing to the first found character that isn't from
+		 * the set. If the string contains only characters from @p characters,
+		 * an empty view pointing to @ref end() is returned. The function uses
+		 * @ref slice() internally, meaning it propagates the @ref flags() as
+		 * appropriate. See @ref Containers-BasicStringView-usage-find for an
+		 * introduction to the API.
 		 *
-		 * The @p fail value can be @cpp nullptr @ce or any other pointer, but
-		 * commonly it's set to either @ref begin() or @ref end().
+		 * If @p characters are empty, the function returns a view onto the
+		 * first byte, if there's any.
+		 *
+		 * This function is equivalent to calling @relativeref{std::string,find_first_not_of()}
+		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		BasicStringView<T> findAnyOr(StringView characters, T* fail) const;
+		BasicStringView<T> findNotAny(StringView characters) const;
 
 		/**
 		 * @brief Find the last occurence of any character from given set
 		 *
-		 * Returns a view pointing to the last found character from the set.
-		 * If no characters from @p characters are found, an empty
-		 * @cpp nullptr @ce view is returned. The function uses
-		 * @ref slice() internally, meaning it propagates the @ref flags() as
-		 * appropriate, except in case of a failure, where it always returns no
-		 * @ref StringViewFlags.
+		 * Returns a view pointing to the last found sequence of characters
+		 * from the set. If no characters from @p characters are found, an
+		 * empty view pointing to @ref begin() is returned (i.e., opposite from
+		 * what @ref findAny() returns on failure). By default, the returned
+		 * view extends until a character *not* from @p characters is found,
+		 * set the @p maxCount argument to a non-zero value to limit the
+		 * lookup. The function uses @ref slice() internally, meaning it
+		 * propagates the @ref flags() as appropriate. See
+		 * @ref Containers-BasicStringView-usage-find for an introduction to
+		 * the API.
+		 *
+		 * If @p characters are empty, the function returns an empty view
+		 * pointing to @ref begin().
 		 *
 		 * This function is equivalent to calling @relativeref{std::string,find_last_of()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		BasicStringView<T> findLastAny(StringView characters) const {
-			return findLastAnyOr(characters, nullptr);
-		}
+		BasicStringView<T> findLastAny(StringView characters, std::size_t maxCount = 0) const;
 
 		/**
-		 * @brief Find the last occurence of any character from given set with a custom failure pointer
+		 * @brief Find the last occurence of any character not from given set
 		 *
-		 * Like @ref findLastAny(StringView) const, but returns an empty view
-		 * pointing to the @p fail value instead of @cpp nullptr @ce, which is
-		 * useful to avoid explicit handling of cases where the substring
-		 * wasn't found.
+		 * Returns a view pointing to the last found character that isn't from
+		 * the set. If the string contains only characters from @p characters,
+		 * an empty view pointing to @ref begin() is returned (i.e., opposite
+		 * from what @ref findNotAny() returns on failure). The function uses
+		 * @ref slice() internally, meaning it propagates the @ref flags() as
+		 * appropriate. See @ref Containers-BasicStringView-usage-find for an
+		 * introduction to the API.
+		 *
+		 * If @p characters are empty, the function returns a view onto the
+		 * last byte, if there's any.
+		 *
+		 * This function is equivalent to calling @relativeref{std::string,find_last_not_of()}
+		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		BasicStringView<T> findLastAnyOr(StringView characters, T* fail) const;
+		BasicStringView<T> findLastNotAny(StringView characters) const;
 
 		/**
 		 * @brief Whether the view contains any character from given set
 		 *
 		 * A slightly lighter variant of @ref findAny() useful when you only
-		 * want to know if a character was found or not.
+		 * want to know if the characters are present in a string, not their
+		 * concrete position.
 		 */
-		bool containsAny(StringView substring) const;
+		bool containsAny(StringView characters) const;
+
+		/**
+		 * @brief Whether the view contains any character not from given set
+		 *
+		 * A slightly lighter variant of @ref findNotAny() useful when you only
+		 * want to know if such a character is present in a string, not its
+		 * concrete position. Returns @cpp false @ce for an empty view or if
+		 * the view consists only of characters from @p characters.
+		 */
+		bool containsNotAny(StringView characters) const;
 
 		/**
 		 * @brief Count of occurences of given character
@@ -1096,8 +1278,8 @@ namespace Death { namespace Containers {
 		DEATH_CPU_DISPATCHER_DECLARATION(stringFindCharacter)
 		extern const char* DEATH_CPU_DISPATCHED_DECLARATION(stringFindLastCharacter)(const char* data, std::size_t size, char character);
 		DEATH_CPU_DISPATCHER_DECLARATION(stringFindLastCharacter)
-		const char* stringFindAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
-		const char* stringFindLastAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
+		const char* stringFindAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount, std::size_t maxFoundCount, std::size_t& foundCount);
+		const char* stringFindLastAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount, std::size_t maxFoundCount, std::size_t& foundCount);
 		const char* stringFindNotAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		const char* stringFindLastNotAny(const char* data, std::size_t size, const char* characters, std::size_t characterCount);
 		extern std::size_t DEATH_CPU_DISPATCHED_DECLARATION(stringCountCharacter)(const char* data, std::size_t size, char character);
@@ -1115,44 +1297,43 @@ namespace Death { namespace Containers {
 		return prefix(found ? found + 1 : _data);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findOr(const StringView substring, T* const fail) const {
+	template<class T> inline BasicStringView<T> BasicStringView<T>::find(const StringView substring) const {
 		// Cache the getters to speed up debug builds
+		const std::size_t size = this->size();
 		const std::size_t substringSize = substring.size();
-		if (const char* const found = Implementation::stringFindString(_data, size(), substring._data, substringSize))
+		if (const char* const found = Implementation::stringFindString(_data, size, substring._data, substringSize))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + substringSize));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data + size, _data + size);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findOr(const char character, T* const fail) const {
-		if (const char* const found = Implementation::stringFindCharacter(_data, size(), character))
+	template<class T> inline BasicStringView<T> BasicStringView<T>::find(const char character) const {
+		// Cache the getters to speed up debug builds
+		const std::size_t size = this->size();
+		if (const char* const found = Implementation::stringFindCharacter(_data, size, character))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data + size, _data + size);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findLastOr(const StringView substring, T* const fail) const {
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findLast(const StringView substring) const {
 		// Cache the getters to speed up debug builds
 		const std::size_t substringSize = substring.size();
 		if (const char* const found = Implementation::stringFindLastString(_data, size(), substring._data, substringSize))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + substringSize));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data, _data);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findLastOr(const char character, T* const fail) const {
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findLast(const char character) const {
 		if (const char* const found = Implementation::stringFindLastCharacter(_data, size(), character))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data, _data);
 	}
 
 	template<class T> inline bool BasicStringView<T>::contains(const StringView substring) const {
@@ -1163,26 +1344,51 @@ namespace Death { namespace Containers {
 		return Implementation::stringFindCharacter(_data, size(), character);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findAnyOr(const StringView characters, T* const fail) const {
-		if (const char* const found = Implementation::stringFindAny(_data, size(), characters._data, characters.size()))
-			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findAny(const StringView characters, const std::size_t maxCount) const {
+		// Cache the getters to speed up debug builds
+		const std::size_t size = this->size();
+		std::size_t foundCount;
+		if (const char* const found = Implementation::stringFindAny(_data, size, characters._data, characters.size(), maxCount, foundCount))
+			return slice(const_cast<T*>(found), const_cast<T*>(found + foundCount));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data + size, _data + size);
 	}
 
-	template<class T> inline BasicStringView<T> BasicStringView<T>::findLastAnyOr(const StringView characters, T* const fail) const {
-		if (const char* const found = Implementation::stringFindLastAny(_data, size(), characters._data, characters.size()))
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findNotAny(const StringView characters) const {
+		// Cache the getters to speed up debug builds
+		const std::size_t size = this->size();
+		if (const char* const found = Implementation::stringFindNotAny(_data, size, characters._data, characters.size()))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
-		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
-		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data + size, _data + size);
+	}
+
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findLastAny(const StringView characters, const std::size_t maxCount) const {
+		std::size_t foundCount;
+		if (const char* const found = Implementation::stringFindLastAny(_data, size(), characters._data, characters.size(), maxCount, foundCount))
+			return slice(const_cast<T*>(found), const_cast<T*>(found + foundCount));
+
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data, _data);
+	}
+
+	template<class T> inline BasicStringView<T> BasicStringView<T>::findLastNotAny(const StringView characters) const {
+		if (const char* const found = Implementation::stringFindLastNotAny(_data, size(), characters._data, characters.size()))
+			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
+
+		// Use slice() also in case of a failure to preserve flags
+		return slice(_data, _data);
 	}
 
 	template<class T> inline bool BasicStringView<T>::containsAny(const StringView characters) const {
-		return Implementation::stringFindAny(_data, size(), characters._data, characters.size());
+		std::size_t foundCount;		// Unused
+		return Implementation::stringFindAny(_data, size(), characters._data, characters.size(), 1, foundCount);
+	}
+
+	template<class T> inline bool BasicStringView<T>::containsNotAny(const StringView characters) const {
+		return Implementation::stringFindNotAny(_data, size(), characters._data, characters.size());
 	}
 
 	template<class T> inline std::size_t BasicStringView<T>::count(const char character) const {

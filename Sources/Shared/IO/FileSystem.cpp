@@ -1135,6 +1135,8 @@ namespace Death { namespace IO {
 			if (entry->FileAttributes & FILE_ATTRIBUTE_READONLY) attributes |= EntryAttributes::ReadOnly;
 			if (entry->FileAttributes & FILE_ATTRIBUTE_HIDDEN) attributes |= EntryAttributes::Hidden;
 			if (entry->FileAttributes & FILE_ATTRIBUTE_SYSTEM) attributes |= EntryAttributes::System;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_ARCHIVE) attributes |= EntryAttributes::Archive;
+			if (entry->FileAttributes & FILE_ATTRIBUTE_COMPRESSED) attributes |= EntryAttributes::Compressed;
 			if (entry->FileAttributes & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)) {
 				attributes |= EntryAttributes::Placeholder;
 			}
@@ -1405,7 +1407,7 @@ namespace Death { namespace IO {
 
 		while (true) {
 			partialResult = result.suffix(nextPartBegin);
-			MutableStringView nextSeparator = partialResult.findOr('/', result.end());
+			MutableStringView nextSeparator = partialResult.find('/');
 			if DEATH_UNLIKELY(nextSeparator.begin() == nextPartBegin) {
 				// Skip empty parts
 				nextPartBegin = nextSeparator.end();
@@ -1583,8 +1585,8 @@ namespace Death { namespace IO {
 		StringView fileName = GetFileName(path);
 		if (fileName.empty()) return {};
 
-		const StringView foundDot = fileName.findLastOr('.', fileName.end());
-		if (foundDot.begin() == fileName.end()) return fileName;
+		const StringView foundDot = fileName.findLast('.');
+		if (!foundDot) return fileName;
 
 		bool initialDots = true;
 		for (char c : fileName.prefix(foundDot.begin())) {
@@ -1602,8 +1604,8 @@ namespace Death { namespace IO {
 		StringView fileName = GetFileName(path);
 		if (fileName.empty()) return {};
 
-		const StringView foundDot = fileName.findLastOr('.', fileName.end());
-		if (foundDot.begin() == fileName.end()) return {};
+		const StringView foundDot = fileName.findLast('.');
+		if (!foundDot) return {};
 
 		bool initialDots = true;
 		for (char c : fileName.prefix(foundDot.begin())) {
