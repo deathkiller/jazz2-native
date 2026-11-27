@@ -935,7 +935,13 @@ namespace Jazz2
 		}
 		_userPakCount = _mountedPaks.size();
 		mountPaksIn(GetContentPath());
+		_cachePakStart = _mountedPaks.size();
 		mountPaksIn(GetCachePath());
+	}
+
+	void ContentResolver::UnmountCachePaks()
+	{
+		_mountedPaks.pop_back_n(_mountedPaks.size() - _cachePakStart);
 	}
 
 	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path, std::int32_t bufferSize)

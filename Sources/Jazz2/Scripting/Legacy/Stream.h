@@ -4,6 +4,8 @@
 
 #include "Common.h"
 
+#include <Base/Memory.h>
+
 namespace Jazz2::Scripting
 {
 	namespace Legacy
@@ -206,15 +208,25 @@ namespace Jazz2::Scripting
 			bool Take(void* target, std::uint32_t count);
 			void Append(const void* source, std::uint32_t count);
 
+			// Values are stored in little-endian, as JJ2+ does, so a stream reads the same on every platform
 			template<class T>
-			bool PushValue(const T& value) {
+			bool PushValue(T value) {
+				if constexpr (sizeof(T) > 1) {
+					value = Death::Memory::AsLE(value);
+				}
 				Append(&value, sizeof(T));
 				return true;
 			}
 
 			template<class T>
 			bool PopValue(T& value) {
-				return Take(&value, sizeof(T));
+				if (!Take(&value, sizeof(T))) {
+					return false;
+				}
+				if constexpr (sizeof(T) > 1) {
+					value = Death::Memory::AsLE(value);
+				}
+				return true;
 			}
 		};
 

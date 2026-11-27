@@ -212,10 +212,10 @@ namespace Jazz2::Actors::Solid
 					_sagWasActive = active;
 
 					MemoryStream packet(12);
-					packet.WriteValue<std::int32_t>((std::int32_t)(_leftX * 512.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(_leftHeight * 256.0f));
-					packet.WriteValue<std::int32_t>((std::int32_t)(_rightX * 512.0f));
-					packet.WriteValue<std::int16_t>((std::int16_t)(_rightHeight * 256.0f));
+					packet.WriteValueAsLE<std::int32_t>((std::int32_t)(_leftX * 512.0f));
+					packet.WriteValueAsLE<std::int16_t>((std::int16_t)(_leftHeight * 256.0f));
+					packet.WriteValueAsLE<std::int32_t>((std::int32_t)(_rightX * 512.0f));
+					packet.WriteValueAsLE<std::int16_t>((std::int16_t)(_rightHeight * 256.0f));
 					SendPacket(arrayView(packet.GetBuffer(), packet.GetSize()));
 				}
 			}
@@ -263,10 +263,10 @@ namespace Jazz2::Actors::Solid
 	void Bridge::OnPacketReceived(MemoryStream& packet)
 	{
 		// Authoritative sag from the server (clients only); used together with the locally-computed sag when rendering
-		_syncLeftX = packet.ReadValue<std::int32_t>() / 512.0f;
-		_syncLeftHeight = packet.ReadValue<std::int16_t>() / 256.0f;
-		_syncRightX = packet.ReadValue<std::int32_t>() / 512.0f;
-		_syncRightHeight = packet.ReadValue<std::int16_t>() / 256.0f;
+		_syncLeftX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		_syncLeftHeight = packet.ReadValueAsLE<std::int16_t>() / 256.0f;
+		_syncRightX = packet.ReadValueAsLE<std::int32_t>() / 512.0f;
+		_syncRightHeight = packet.ReadValueAsLE<std::int16_t>() / 256.0f;
 	}
 
 	void Bridge::OnUpdateHitbox()

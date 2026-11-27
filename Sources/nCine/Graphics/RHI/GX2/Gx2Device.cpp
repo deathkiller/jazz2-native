@@ -7,6 +7,7 @@
 #include "Gx2BufferObject.h"
 
 #include "../../../../Main.h"
+#include "../../../Application.h"
 
 #include <cstring>
 #include <malloc.h>
@@ -22,6 +23,7 @@
 #include <gx2/shaders.h>
 #include <gx2/state.h>
 #include <gx2/swap.h>
+#include <nn/swkbd.h>
 
 namespace nCine::RHI::GX2
 {
@@ -102,6 +104,7 @@ namespace nCine::RHI::GX2
 	bool Gx2Device::_inForeground = true;
 	bool Gx2Device::_vsync = true;
 	bool Gx2Device::_firstFrame = true;
+	bool Gx2Device::_screenKeyboardOverlay = false;
 	std::uint32_t Gx2Device::_swapToken = 0;
 	std::uint32_t Gx2Device::_frameCounter = 0;
 	bool Gx2Device::_targetDirty = true;
@@ -316,7 +319,9 @@ namespace nCine::RHI::GX2
 
 	void Gx2Device::Finish()
 	{
-		if (_initialized) {
+		// In the background the GPU runs no work of this session any more, and EnterBackground() already waited for
+		// everything submitted before, so there is nothing to wait for, and GX2DrawDone() may never return
+		if (CanSubmit()) {
 			GX2DrawDone();
 		}
 	}
@@ -760,7 +765,8 @@ namespace nCine::RHI::GX2
 
 	bool Gx2Device::IsUseRetired(std::uint32_t token)
 	{
-		if (token == 0 || !_initialized) {
+		// In the background everything submitted has retired (see Finish()), and nothing recorded is submitted any more
+		if (token == 0 || !CanSubmit()) {
 			return true;
 		}
 		if (std::int32_t(token - _openBatch) >= 0) {
@@ -772,7 +778,8 @@ namespace nCine::RHI::GX2
 
 	bool Gx2Device::WaitForUse(std::uint32_t token)
 	{
-		if (token == 0 || !_initialized) {
+		// Nothing to wait for in the background (see IsUseRetired()), and a wait there may never end
+		if (token == 0 || !CanSubmit()) {
 			return true;
 		}
 		if (std::int32_t(token - _openBatch) >= 0) {
@@ -830,6 +837,8 @@ namespace nCine::RHI::GX2
 			WaitForPreviousFlip();
 		}
 
+		DrawScreenKeyboard();
+
 		// The copy scales the screen buffer to each scan buffer's own resolution (the TV mode SDL picked, and
 		// 854x480 on the GamePad)
 		GX2CopyColorBufferToScanBuffer(&_screenBuffer, GX2_SCAN_TARGET_TV);
@@ -855,6 +864,41 @@ namespace nCine::RHI::GX2
 		_frameCounter++;
 		ReleaseRetiredBlocks();
 		InvalidateTarget();
+	}
+
+	void Gx2Device::ShowScreenKeyboardOverlay()
+	{
+		_screenKeyboardOverlay = true;
+	}
+
+	void Gx2Device::DrawScreenKeyboard()
+	{
+		// The flag stays set while the keyboard animates out, and is cleared once it is gone. It is also set when
+		// wiiu-sdl2 could not create the keyboard, and nn::swkbd must not be queried then, so the application is
+		// asked instead: it goes through SDL, which reports a keyboard that was never created as hidden.
+		if (!_screenKeyboardOverlay) {
+			return;
+		}
+		if (!theApplication().IsScreenKeyboardVisible()) {
+			_screenKeyboardOverlay = false;
+			return;
+		}
+
+		// The keyboard sets up its own pipeline, so it must not write into our context state, and it draws into
+		// whatever colour buffer is bound. wiiu-sdl2's own present switches the UNORM
+		// buffer to sRGB for it (`WIIU_FIX_SWKBD_GAMMA`), otherwise the keyboard's gamma is wrong.
+		// DrawDRC() lays the keyboard out for the 854x480 GamePad, but it is drawn here into the TV-sized buffer
+		// that is then scaled to both screens. Tested on a console: it still fills the GamePad and its touch areas
+		// line up, so it needs no GamePad-sized viewport of its own.
+		GX2SetContextState(nullptr);
+		const GX2SurfaceFormat format = _screenBuffer.surface.format;
+		_screenBuffer.surface.format = GX2_SURFACE_FORMAT_SRGB_R8_G8_B8_A8;
+		GX2InitColorBufferRegs(&_screenBuffer);
+		GX2SetColorBuffer(&_screenBuffer, GX2_RENDER_TARGET_0);
+		nn::swkbd::DrawDRC();
+		_screenBuffer.surface.format = format;
+		GX2InitColorBufferRegs(&_screenBuffer);
+		RestoreContextState();
 	}
 
 	void Gx2Device::WaitForPreviousFlip()

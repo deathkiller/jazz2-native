@@ -787,6 +787,16 @@ void GameEventHandler::OnShutdown()
 	ApplyActivityIcon();
 #endif
 
+#if defined(DEATH_TARGET_WIIU) && !defined(SHAREWARE_DEMO_ONLY)
+	// Closing the software from the HOME menu ends the game while it's suspended, and OnSuspend() already saved the
+	// level to resume on the next start. The user chose to close it, so the next start opens the main menu instead,
+	// which still offers the saved level as "Continue"
+	if (PreferencesCache::ResumeOnStart) {
+		PreferencesCache::ResumeOnStart = false;
+		PreferencesCache::Save();
+	}
+#endif
+
 #if defined(WITH_MULTIPLAYER)
 	// The network manager has to go down first, because `Dispose()` joins the network thread and the callbacks
 	// running on it reach the current handler through `_currentHandler` - resetting it any earlier both races
@@ -1810,10 +1820,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						auto s = fs::Open(fullPath, FileAccess::Read);
 
 						packetOut.WriteVariableInt64(s->GetSize());
-						packetOut.WriteValue<std::uint32_t>(nCine::crc32(*s));
+						packetOut.WriteValueAsLE<std::uint32_t>(nCine::crc32(*s));
 					} else {
 						packetOut.WriteVariableInt64(0);
-						packetOut.WriteValue<std::uint32_t>(0);
+						packetOut.WriteValueAsLE<std::uint32_t>(0);
 					}
 				}
 
@@ -2008,6 +2018,13 @@ void GameEventHandler::OnBeginInitialize()
 	// Like Android below: once the app leaves the foreground (SDL reports it as the window losing focus) nothing
 	// may touch the GPU any more - iOS terminates an app that renders in the background - so the whole loop
 	// suspends until it is back, which also saves the game state on the way out (see OnSuspend)
+	theApplication().SetAutoSuspension(true);
+#endif
+
+#if defined(DEATH_TARGET_WIIU)
+	// The HOME menu appears only once the game has released the foreground, which a game that keeps stepping in the
+	// background never does. Suspended, the loop only waits for SDL events, and wiiu-sdl2 waits for ProcUI's next
+	// message inside that, until the game is back in the foreground or asked to exit
 	theApplication().SetAutoSuspension(true);
 #endif
 
@@ -2310,6 +2327,9 @@ RecreateCache:
 	fs::RemoveDirectoryRecursive(animationsPath);
 	fs::RemoveDirectoryRecursive(fs::CombinePath(resolver.GetCachePath(), "Downloads"_s));
 
+	// The outdated "Source.pak" is still mounted, and its open file would make writing the new one fail
+	resolver.UnmountCachePaks();
+
 	// Create .pak file, retrying a few times in case it is still held by something
 	{
 		Compatibility::JJ2Version version;
@@ -2324,10 +2344,12 @@ RecreateCache:
 
 		if (result == Compatibility::AssetConverter::Result::CannotWriteTarget) {
 			LOGE("Cannot open \"…{}Cache{}Source.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
+			resolver.RemountPaks();
 			_flags |= Flags::IsVerified;
 			return;
 		} else if (result == Compatibility::AssetConverter::Result::UnsupportedVersion) {
 			LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"{}\" directory.", resolver.GetSourcePath());
+			resolver.RemountPaks();
 			_flags |= Flags::IsVerified;
 			return;
 		}

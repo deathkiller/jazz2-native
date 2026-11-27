@@ -357,7 +357,7 @@ namespace Jazz2
 		if (version >= 3) {
 			_elapsedMillisecondsBegin = src.ReadVariableUint64();
 		}
-		_checkpointFrames = src.ReadValue<float>();
+		_checkpointFrames = src.ReadValueAsLE<float>();
 
 		auto& resolver = ContentResolver::Get();
 		// Scoped, because both overloads return early when the level cannot be loaded - see LoadingScope

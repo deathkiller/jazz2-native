@@ -9,6 +9,9 @@
 #if (defined(WITH_SDL2) || defined(WITH_SDL3))
 #	include "Backends/SdlGfxDevice.h"
 #	include "Backends/SdlInputManager.h"
+#	if defined(DEATH_TARGET_WIIU)
+#		include <SDL2/SDL_syswm.h>
+#	endif
 #elif defined(WITH_GLFW)
 #	include "Backends/GlfwGfxDevice.h"
 #	include "Backends/GlfwInputManager.h"
@@ -1159,9 +1162,66 @@ namespace nCine
 	}
 #endif
 
+#if defined(DEATH_TARGET_WIIU)
+	bool MainApplication::HandleScreenKeyboardEvent(const SDL_Event& event)
+	{
+		if (event.type == SDL_SYSWMEVENT) {
+			if (event.syswm.msg == nullptr || event.syswm.msg->subsystem != SDL_SYSWM_WIIU) {
+				return false;
+			}
+			switch (event.syswm.msg->msg.wiiu.event) {
+				case SDL_WIIU_SYSWM_SWKBD_OK_START_EVENT:
+					_swkbdCollecting = true;
+					_swkbdText = {};
+					break;
+				case SDL_WIIU_SYSWM_SWKBD_OK_FINISH_EVENT: {
+					// The keyboard stays up after the OK button, closing it is left to the application
+					_swkbdCollecting = false;
+					SDL_StopTextInput();
+					auto onCompleted = Death::move(_imeOnCompleted);
+					const String text = Death::move(_swkbdText);
+					if (onCompleted) {
+						// The caller takes the whole string, so the field is replaced rather than appended to
+						onCompleted(text);
+					} else if (IInputEventHandler* handler = IInputManager::GetHandler()) {
+						// Nobody asked for the string, so it is delivered as the text input events a keystroke-feeding
+						// keyboard would have produced
+						TextInputEvent textInputEvent;
+						for (std::size_t i = 0; i < text.size(); ) {
+							auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
+							i = nextI;
+							textInputEvent.Length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.Text);
+							if (textInputEvent.Length > 0) {
+								handler->OnTextInput(textInputEvent);
+							}
+						}
+					}
+					break;
+				}
+				case SDL_WIIU_SYSWM_SWKBD_CANCEL_EVENT:
+					SDL_StopTextInput();
+					_swkbdCollecting = false;
+					_swkbdText = {};
+					_imeOnCompleted = {};
+					break;
+			}
+			return true;
+		}
+
+		if (event.type == SDL_TEXTINPUT && _swkbdCollecting) {
+			// The input manager keeps only the first character of a text input event, which is all a key press
+			// produces, while the keyboard sends its whole string in pieces
+			_swkbdText += StringView(event.text.text);
+			return true;
+		}
+
+		return false;
+	}
+#endif
+
 	bool MainApplication::CanShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
 		return true;
 #else
 		return false;
@@ -1181,6 +1241,9 @@ namespace nCine
 		return _swkbdPending;
 #elif defined(DEATH_TARGET_IOS)
 		// SDL tracks UIKit's keyboard through its view controller
+		SDL_Window* window = SdlGfxDevice::GetWindowHandle();
+		return (window != nullptr && SDL_IsScreenKeyboardShown(window) == SDL_TRUE);
+#elif defined(DEATH_TARGET_WIIU)
 		SDL_Window* window = SdlGfxDevice::GetWindowHandle();
 		return (window != nullptr && SDL_IsScreenKeyboardShown(window) == SDL_TRUE);
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -1221,7 +1284,7 @@ namespace nCine
 
 	bool MainApplication::ToggleScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
 		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (HideScreenKeyboard()) {
@@ -1417,6 +1480,25 @@ namespace nCine
 		static_cast<void>(onCompleted);
 		SDL_StartTextInput();
 		return true;
+#elif defined(DEATH_TARGET_WIIU)
+		// wiiu-sdl2 shows the system keyboard once text input starts and feeds it the pads itself. The keyboard
+		// collects a whole string, which comes back as text input events between two `SDL_SYSWMEVENT`s, and
+		// HandleScreenKeyboardEvent() hands it over in one piece, like on the 3DS
+		if (IsScreenKeyboardVisible()) {
+			return false;
+		}
+		_imeOnCompleted = Death::move(onCompleted);
+		_swkbdCollecting = false;
+		_swkbdText = {};
+		SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+		// Both options are reset by SDL every time the keyboard is shown
+		// Kept alive until the keyboard is shown, in case SDL keeps the pointer rather than a copy
+		const String initialTextZ = String::nullTerminatedView(initialText);
+		SDL_WiiUSetSWKBDInitialText(initialText.empty() ? nullptr : initialTextZ.data());
+		SDL_WiiUSetSWKBDShowWordSuggestions(SDL_FALSE);
+		SDL_StartTextInput();
+		RHI::Device::ShowScreenKeyboardOverlay();
+		return true;
 #else
 		return false;
 #endif
@@ -1436,6 +1518,16 @@ namespace nCine
 			return false;
 		}
 		SDL_StopTextInput();
+		return true;
+#elif defined(DEATH_TARGET_WIIU)
+		if (!IsScreenKeyboardVisible()) {
+			return false;
+		}
+		// Nothing is collected from a keyboard closed this way
+		SDL_StopTextInput();
+		_imeOnCompleted = {};
+		_swkbdCollecting = false;
+		_swkbdText = {};
 		return true;
 #elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_SWITCH)
 		// Only a keyboard that has not been run yet can be taken back; the applet itself is closed by the user
@@ -1793,6 +1885,11 @@ namespace nCine
 #	endif
 
 		while (SDL_PollEvent(&event)) {
+#	if defined(DEATH_TARGET_WIIU)
+			if (HandleScreenKeyboardEvent(event)) {
+				continue;
+			}
+#	endif
 			switch (event.type) {
 				case SDL_QUIT:
 					if (SdlInputManager::ShouldQuitOnRequest()) {

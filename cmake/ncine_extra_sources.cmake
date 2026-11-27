@@ -1085,8 +1085,54 @@ else()
 		# environment lists every .wuhb in "sd:/wiiu/apps/" on the Wii U Menu and mounts its content read-only
 		# at "/vol/content" when it is started (see ContentResolver::GetContentPath())
 		wut_create_rpx(${NCINE_APP})
+
+		set(_wiiuWuhbContent "${NCINE_CONTENT_DIR}")
+		if(CURL_FOUND)
+			# devkitPro's libcurl is an autotools build without a CMake config, so FindCURL knows the library but
+			# not what it is built on - mbedTLS and Brotli - as on the 3DS. Named here, after CURL::libcurl on the link line.
+			target_link_libraries(${NCINE_APP} PRIVATE mbedtls mbedx509 mbedcrypto brotlidec brotlicommon)
+
+			# devkitPPC has no libatomic, and the 32-bit Espresso has no 64-bit atomic instructions, so the
+			# `std::atomic<std::int64_t>` byte counters of `WebRequest` need the __atomic_*_8 functions from
+			# here. Compiled without LTO, because the calls only appear during link-time code generation, after
+			# the linker has decided which definitions in LTO objects are referenced and dropped the rest.
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/WiiU/Atomic64.c)
+			set_source_files_properties(${NCINE_SOURCE_DIR}/nCine/Backends/WiiU/Atomic64.c PROPERTIES COMPILE_OPTIONS "-fno-lto")
+
+			# The CA bundle every HTTPS request is verified against. This libcurl's default CA path is the console's
+			# own certificate title in the system storage, which holds only the roots Nintendo picked years ago and
+			# is not there at all in Cemu, so the bundle travels in the .wuhb instead, as on the 3DS, PSP and
+			# PS Vita. PlatformWebRequest.h points libcurl at it. wuhbtool takes a single content directory, so
+			# "Content" is staged into the build directory together with the bundle and packed from there.
+			set(_wiiuCaCert "${CMAKE_BINARY_DIR}/cacert.pem")
+			if(NOT EXISTS "${_wiiuCaCert}")
+				message(STATUS "Downloading the CA certificate bundle for HTTPS support")
+				file(DOWNLOAD "https://curl.se/ca/cacert.pem" "${_wiiuCaCert}"
+					INACTIVITY_TIMEOUT 30 TIMEOUT 120 TLS_VERIFY ON STATUS _wiiuCaCertStatus)
+				list(GET _wiiuCaCertStatus 0 _wiiuCaCertResult)
+				if(NOT _wiiuCaCertResult EQUAL 0)
+					list(GET _wiiuCaCertStatus 1 _wiiuCaCertError)
+					message(WARNING "Cannot download the CA certificate bundle (${_wiiuCaCertError}), so HTTPS "
+						"requests will fail to verify - put a PEM bundle at \"${_wiiuCaCert}\" and configure again")
+					file(REMOVE "${_wiiuCaCert}")
+				endif()
+			endif()
+			if(EXISTS "${_wiiuCaCert}")
+				set(_wiiuWuhbContent "${CMAKE_BINARY_DIR}/wuhb_content")
+				# wut_create_wuhb() checks that the directory exists when it is configured
+				file(MAKE_DIRECTORY "${_wiiuWuhbContent}")
+				# Runs after the .rpx conversion and before the bundle, which depends on this target
+				add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E remove_directory "${_wiiuWuhbContent}"
+					COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${_wiiuWuhbContent}"
+					COMMAND ${CMAKE_COMMAND} -E copy "${_wiiuCaCert}" "${_wiiuWuhbContent}/cacert.pem"
+					COMMENT "Staging the bundle content with the CA certificate bundle"
+					VERBATIM)
+			endif()
+		endif()
+
 		wut_create_wuhb(${NCINE_APP}
-			CONTENT "${NCINE_CONTENT_DIR}"
+			CONTENT "${_wiiuWuhbContent}"
 			NAME "${NCINE_APP_NAME}"
 			SHORTNAME "${NCINE_APP_NAME}"
 			AUTHOR "${NCINE_APP_VENDOR}"
@@ -2340,10 +2386,10 @@ if(WITH_MULTIPLAYER)
 			message(STATUS "Building the game with online multiplayer support")
 		endif()
 		
-		if(NINTENDO_SWITCH OR NINTENDO_3DS OR PLATFORM_PSP OR VITA)
-			# None of these four stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no address
-			# family for it at all, and libctru's <netinet/in.h> declares no in6_addr - so ENet is built on
-			# its IPv4 arm
+		if(NINTENDO_SWITCH OR NINTENDO_3DS OR NINTENDO_WIIU OR PLATFORM_PSP OR VITA)
+			# None of these five stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no address
+			# family for it at all, and neither libctru's nor wut's <netinet/in.h> declares in6_addr - so ENet
+			# is built on its IPv4 arm
 			target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
 		elseif(WIN32)
 			# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)

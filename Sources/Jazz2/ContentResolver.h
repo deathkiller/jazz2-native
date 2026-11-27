@@ -219,6 +219,13 @@ namespace Jazz2
 
 		/** @brief Scans the user `"Content"`, `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
 		void RemountPaks();
+		/**
+		 * @brief Unmounts the `.pak` files of the `"Cache"` directory, so they can be rewritten
+		 *
+		 * A mounted `.pak` keeps its file open between reads, and some filesystems (the Wii U's, Windows) refuse
+		 * to open a file for writing while it is open for reading. Call @ref RemountPaks() once they are written.
+		 */
+		void UnmountCachePaks();
 		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path, std::int32_t bufferSize = 8192);
 		/**
@@ -899,6 +906,8 @@ namespace Jazz2
 		SmallVector<std::unique_ptr<PakFile>> _mountedPaks;
 		// Number of leading entries in _mountedPaks that come from the user "Content" directory
 		std::size_t _userPakCount = 0;
+		// Index of the first entry in _mountedPaks that comes from the "Cache" directory
+		std::size_t _cachePakStart = 0;
 		Function<String(StringView)> _pathHandler;
 
 		/** @brief Drops the cached fonts whose atlas baked the palette, leaving the palette-indexed ones alone */

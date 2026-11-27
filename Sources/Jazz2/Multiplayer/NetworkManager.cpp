@@ -20,6 +20,7 @@
 #include <float.h>
 #include <cstring>
 
+#include <Base/Memory.h>
 #include <Containers/DateTime.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringStlView.h>
@@ -92,9 +93,11 @@ namespace Jazz2::Multiplayer
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>(Death::move(serverConfig));
 
-		std::uint16_t serverPort = _serverConfig->ServerPort; // Server port is part of Unique Server ID
+		// Server port is part of Unique Server ID, in the same byte order `ServerPacketType::AuthResponse` sends it
+		std::uint16_t serverPort = _serverConfig->ServerPort;
+		std::uint16_t serverPortLE = Memory::AsLE(serverPort);
 		std::memcpy(&_serverConfig->UniqueServerID[0], &PreferencesCache::UniqueServerID[0], arraySize(_serverConfig->UniqueServerID) - sizeof(std::uint16_t));
-		std::memcpy(&_serverConfig->UniqueServerID[_serverConfig->UniqueServerID.size() - sizeof(std::uint16_t)], &serverPort, sizeof(std::uint16_t));
+		std::memcpy(&_serverConfig->UniqueServerID[_serverConfig->UniqueServerID.size() - sizeof(std::uint16_t)], &serverPortLE, sizeof(std::uint16_t));
 
 		_serverConfig->StartUnixTimestamp = DateTime::UtcNow().ToUnixMilliseconds() / 1000;
 
@@ -1313,7 +1316,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream response(37);
 					response.WriteValue<std::uint8_t>(0x01);	// Flags (0x01 = accepted protocol version range follows)
 					response.Write(PreferencesCache::UniqueServerID, PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
-					response.WriteValue<std::uint16_t>(GetServerPort());	// Server port is part of Unique Server ID
+					response.WriteValueAsLE<std::uint16_t>(GetServerPort());	// Server port is part of Unique Server ID
 					// Appended, so older clients that read only the fields above are not affected
 					response.WriteVariableUint64(minVersion);
 					response.WriteVariableUint64(maxVersion);

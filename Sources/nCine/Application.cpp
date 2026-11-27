@@ -1795,7 +1795,7 @@ namespace nCine
 
 	void Application::SetFocus(bool hasFocus)
 	{
-#if defined(WITH_TRACY) && !defined(DEATH_TARGET_ANDROID)
+#if defined(WITH_TRACY) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_WIIU)
 		hasFocus = true;
 #endif
 

@@ -145,11 +145,12 @@ namespace Jazz2::UI::Menu
 			if (_waitForIpInput) {
 				_ipInput.Update(timeMult);
 
-#if defined(DEATH_TARGET_ANDROID)
-				// The on-screen keyboard can also be dismissed by the user, so follow the reported state
-				// instead of assuming it stays shown until the game hides it
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WIIU)
+				// The on-screen keyboard can also be dismissed by the user (or closes on OK on the Wii U), so follow
+				// the reported state instead of assuming it stays shown until the game hides it
 				_keyboardVisible = theApplication().IsScreenKeyboardVisible();
-
+#endif
+#if defined(DEATH_TARGET_ANDROID)
 				_recalcVisibleBoundsTimeLeft -= timeMult;
 				if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
 					_recalcVisibleBoundsTimeLeft = 60.0f;
@@ -157,6 +158,9 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 
+				// On the Wii U, wiiu-sdl2 gives the GamePad and Wii Remote buttons only to the system keyboard while
+				// it is shown (WIIU_JoystickUpdate() returns early when SDL_WiiUSetSWKBDVPAD/KPAD() take them), so
+				// pressing A or B on the keyboard does not also trigger the actions below
 				if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					if (_keyboardVisible) {
@@ -185,6 +189,9 @@ namespace Jazz2::UI::Menu
 						theApplication().HideScreenKeyboard();
 						_keyboardVisible = false;
 						RecalcLayoutForScreenKeyboard();
+						_waitForIpInput = false;
+						_ipInput.Deactivate();
+						_shouldStart = true;
 						_transitionTime = 1.0f;
 					}
 				}

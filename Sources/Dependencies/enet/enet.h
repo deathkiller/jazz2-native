@@ -5334,6 +5334,28 @@ extern "C" {
 		// Note that we don't want to return 0 from the first call, in case
 		// some part of enet uses 0 as a special value (meaning time not set
 		// for example).
+	#if defined(DEATH_TARGET_WIIU)
+		// devkitPPC ships no libatomic, and a 32-bit PowerPC has no inline 64-bit atomics, so the 64-bit
+		// offset below would not link. The result is 32-bit milliseconds anyway, so the offset is kept in
+		// milliseconds modulo 2^32 instead, which gives the same result through unsigned wrap-around.
+		static uint32_t start_time_ms = 0;
+
+		struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		uint32_t current_time_ms = (uint32_t)((uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / (1000 * 1000));
+
+		uint32_t offset_ms = ENET_ATOMIC_READ(&start_time_ms);
+		if (offset_ms == 0) {
+			uint32_t want_value = current_time_ms - 1;
+			if (want_value == 0) {
+				want_value = (uint32_t)-1;	// 0 means not set yet; the first timestamp is then 2 instead of 1
+			}
+			uint32_t old_value = ENET_ATOMIC_CAS(&start_time_ms, 0, want_value);
+			offset_ms = old_value == 0 ? want_value : old_value;
+		}
+
+		return (enet_uint32)(current_time_ms - offset_ms);
+	#else
 		static uint64_t start_time_ns = 0;
 
 		struct timespec ts;
@@ -5370,6 +5392,7 @@ extern "C" {
 
 		uint64_t result_in_ns = current_time_ns - offset_ns;
 		return (enet_uint32)(result_in_ns / ns_in_ms);
+	#endif
 	}
 
 #if ENET_IPV6
@@ -6479,10 +6502,10 @@ extern "C" {
 		}
 
 		return sentLength;
-#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
 		// libctru's socket layer spells neither sendmsg() nor recvmsg() (see enet_socket_receive), only
 		// sendto(): the buffers - ENet hands the protocol header and the commands over as separate ones - are
-		// gathered into one datagram first. The stack copy is bounded by the MTU, which is the most the protocol
+		// gathered into one datagram first. wut (nsysnet) on the Wii U has neither of the two either. The stack copy is bounded by the MTU, which is the most the protocol
 		// ever puts into a single send; anything past it is refused rather than sent truncated.
 		// The PSP has sendmsg(), but pspdev's libcglue wrapper of it returns 0 on success instead of the byte
 		// count (its sendto() wrapper returns the count), so every send looked like "nothing sent" - the
@@ -6632,8 +6655,9 @@ extern "C" {
 		}
 
 		return recvLength;
-#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
-		// libctru has no recvmsg() at all (nor sendmsg(), see enet_socket_send), so the 3DS takes this route too.
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WIIU)
+		// libctru has no recvmsg() at all (nor sendmsg(), see enet_socket_send), so the 3DS takes this route too,
+		// and so does the Wii U, whose wut (nsysnet) lacks both.
 		// Both Sony handhelds export recvmsg() in firmware, and neither emulator implements it - PPSSPP
 		// logs "UNIMPL sceNetInetRecvmsg", Vita3K "Unimplemented sceNetRecvmsg import called" - while both
 		// do implement sendmsg, so only the receive side needs another route. Nothing is given up by

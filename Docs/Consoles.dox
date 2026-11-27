@@ -213,7 +213,7 @@ Sound effects | Yes | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs D
 Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (libxmp, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, with libxmp packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (one controller) @m_endspan | Yes @m_span{m-text m-dim} (one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (not enabled yet, see @ref consoles-wiiu-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-wiiu-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
 Post-processing and rescale filters | **No** | **No** | **No** | **No** | Yes | **No** | **No** | **No** | Yes | Yes | Yes
 X-ray and blur-behind tile layers @m_span{m-text m-dim} (`TILEMAP_LAYER_EFFECTS`) @m_endspan | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes @m_span{m-text m-dim} (microcode generated, not yet run on a console) @m_endspan | Yes | Yes
 External `.shader` files | **No** | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (shaders are compiled offline) @m_endspan | **No** | **No** | **No** | **No** @m_span{m-text m-dim} (no runtime compiler) @m_endspan | Yes | Yes
@@ -963,8 +963,8 @@ Input and audio go through SDL2. The result is a native application for the
 @subsection consoles-wiiu-toolchain Toolchain
 
 @code{.sh}
-# Install devkitPro's pacman, then the Wii U group, SDL2 and zlib
-sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis
+# Install devkitPro's pacman, then the Wii U group, SDL2, zlib and libcurl
+sudo dkp-pacman -S --needed wiiu-dev wiiu-sdl2 ppc-zlib ppc-libvorbis wiiu-curl
 
 export DEVKITPRO=/opt/devkitpro
 @endcode
@@ -990,7 +990,9 @@ changing a shader does @m_span{m-text m-dim} (`--emit-gx2`, see @ref shader-comp
 
 The build makes @cpp "build/wiiu/jazz2.rpx" @ce and @cpp "build/wiiu/jazz2.wuhb" @ce, a bundle of
 the executable, @cpp "Content" @ce, the icon and the splash screens
-@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. A tree prepared with AssetPacker
+@m_span{m-text m-dim} (@cpp "Sources/Icons/WiiU" @ce) @m_endspan. With libcurl found, the configure
+step also downloads curl.se's `cacert.pem`, and the build stages @cpp "Content" @ce with it in
+@cpp "build/wiiu/wuhb_content" @ce and bundles that instead, because `wuhbtool` takes one content directory. A tree prepared with AssetPacker
 can be bundled instead with `-D NCINE_CONTENT_DIR=...`, but it is not needed: there is enough memory to
 convert the original files on the console.
 
@@ -1007,6 +1009,26 @@ convert the original files on the console.
     those for libstdc++'s checks (the `shared_ptr` reference count overflow test, for example). The
     game then hangs with a grey screen at the first one. Replacing the conditional traps in @cpp "jazz2.elf" @ce with `nop` and
     running `elf2rpl` and `wuhbtool` again gives a build Cemu can run. The console is not affected.
+-   Cemu 2.6's PowerPC recompiler sometimes copies too little in newlib's @cpp realloc() @ce: when the old
+    block holds 9 words, it picks the 7-word copy, because the result of a `cmplwi` on `cr0` made a few
+    blocks earlier is lost, and the last two words of the old contents are not copied. A string built with
+    @cpp StringUtils::replaceAll() @ce can come out truncated this way, for example a multiplayer server's
+    welcome message. Cemu 2.6 compiles only the part of a function that is contiguous with the address it
+    was first entered at, treats a branch out of that part as an exit, and assumes `cr0` is dead there, so
+    the compare stores only the bit its own branch tests. Whether a function is hit therefore depends on
+    the address it was first compiled from. Cemu's main branch has a reworked recompiler that compiles the
+    whole function and should not be affected (from reading the source, not tested).
+    With the CPU mode set to the single-core interpreter in the game profile
+    @m_span{m-text m-dim} (`cpuMode = 0` under `[CPU]` in @cpp "gameProfiles/<title ID>.ini" @ce) @m_endspan
+    the copies are correct. The console is not affected.
+-   Cemu on Linux reads `errno` for `connect()` after it has written its log line, and that line calls
+    @cpp localtime() @ce, which sets `errno` to `ENOENT` when there is no @cpp "/etc/localtime" @ce
+    (a bare Docker container, for example). Every non-blocking TCP connect then fails at once ("Immediate
+    connect fail ... Unknown error 109999" in curl's trace), so the update check and the server list
+    cannot connect. Setting `TZ` (`TZ=UTC0`) avoids it. UDP, and so ENet, is not affected.
+-   Cemu 2.6 keeps reporting the system keyboard's OK button as pressed after the keyboard has closed, so
+    wiiu-sdl2 sends its OK events again on every frame, with an empty string, and a typed server address is
+    cleared right after it was entered. The console reports OK only once and is not affected.
 
 @m_class{m-noindent}
 
@@ -1030,10 +1052,27 @@ Cemu shows with coreinit logging on.
     to one frame late.
 -   Batched sprites (drawn as instances from a uniform block) and tile layers while
     scrolling run on the console without problems. Cemu's frame rate says nothing about the console's.
--   No online multiplayer, update check or level pack downloads yet. wut provides sockets and devkitPro
-    packages libcurl and mbedTLS for the Wii U, but the port does not enable them (`WITH_ONLINE_MULTIPLAYER`
-    is off, libcurl is not linked); that needs testing on a console first. Local multiplayer works with
-    any mix of the GamePad, Pro Controllers and Wii Remotes.
+-   <b>Online multiplayer works, over ENet only.</b> wut's sockets @m_span{m-text m-dim} (nsysnet) @m_endspan
+    connect to the network on their own the first time a socket is used. They have no IPv6 and no
+    `sendmsg()`/`recvmsg()`, so ENet is built with `ENET_IPV6=0` and sends each datagram with `sendto()`,
+    as on the 3DS. `WITH_WEBSOCKET` is forced off, because wut has no `<netinet/ip.h>`. Tested on a
+    console: joining the Linux dedicated server by a typed address and through local discovery (connect,
+    asset download, joining a level), and hosting a game that the Linux client joined. In
+    Cemu, local discovery finds nothing: sending to the broadcast address fails with error 109999.
+-   <b>The update check and the online server list use devkitPro's libcurl</b> @m_span{m-text m-dim}
+    (`wiiu-curl`, on mbedTLS over wut's sockets) @m_endspan. It has no CMake config, so the mbedTLS and
+    Brotli archives it needs are linked by name. devkitPPC has no libatomic and the Espresso has no 64-bit
+    atomic instructions, so the `__atomic_*_8` calls the `std::atomic<std::int64_t>` byte counters of
+    `WebRequest` turn into are defined in @cpp "nCine/Backends/WiiU/Atomic64.c" @ce, under a coreinit
+    spin lock; the file is compiled without LTO, because the calls only appear during link-time code
+    generation. Level packs, which are built wherever there is an HTTP backend, are in as well. Tested on
+    a console: the server list over HTTPS. The update check is tested in Cemu only.
+-   <b>HTTPS needs the CA bundle in the bundle.</b> This libcurl's default CA path is the console's
+    certificate title @m_span{m-text m-dim} (@cpp "/vol/storage_mlc01/sys/title/0005001b/10054000/content/scerts" @ce)
+    @m_endspan, which holds only the roots Nintendo chose for its own services and is not there at all in
+    Cemu (the requests fail with mbedTLS `-0x2900` naming that path). `ApplyPlatformWebRequestOptions()`
+    points libcurl at @cpp "/vol/content/cacert.pem" @ce instead, as on the 3DS, PSP and Vita.
+-   Local multiplayer works with any mix of the GamePad, Pro Controllers and Wii Remotes.
 -   Asynchronous tracing is off, because the RPX format has no thread-local storage.
 
 @section consoles-gamecube Nintendo GameCube

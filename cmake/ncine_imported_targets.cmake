@@ -614,13 +614,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(SDL3 CONFIG QUIET)
 	endif()
 
-	if(NINTENDO_WIIU)
-		# devkitPro ships libcurl for the Wii U, but the console's network stack (nn::ac, nsysnet) is not brought
-		# up by this port, so the update check would only wait for a connection that never comes. Online
-		# multiplayer is off there as well.
-		unset(CURL_LIBRARY CACHE)
-		unset(CURL_INCLUDE_DIR CACHE)
-	elseif(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
+	if(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
 		# The Amiga PowerPC SDKs do ship libcurl, but its link-library autoinit opens bsdsocket.library
 		# and usergroup.library before main() runs, and puts a requester on screen when they are not
 		# there - which is every machine without a TCP/IP stack started. The update check and the online

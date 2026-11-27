@@ -594,7 +594,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		MemoryStream packet(9);
-		packet.WriteValue<std::uint64_t>(PacketSignature);
+		packet.WriteValueAsLE<std::uint64_t>(PacketSignature);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryRequest);
 
 		std::size_t length = packet.GetSize();
@@ -706,14 +706,14 @@ namespace Jazz2::Multiplayer
 		}
 
 		MemoryStream packet(buffer, bytesRead);
-		std::uint64_t signature = packet.ReadValue<std::uint64_t>();
+		std::uint64_t signature = packet.ReadValueAsLE<std::uint64_t>();
 		BroadcastPacketType packetType = (BroadcastPacketType)packet.ReadValue<std::uint8_t>();
 		if (signature != PacketSignature || packetType != BroadcastPacketType::DiscoveryResponse) {
 			return false;
 		}
 
 		// Override the port, because it points to the discovery service, not the actual server
-		endpoint.port = packet.ReadValue<std::uint16_t>();
+		endpoint.port = packet.ReadValueAsLE<std::uint16_t>();
 
 		discoveredServer.EndpointString = NetworkManagerBase::AddressToString(endpoint, true);
 		if (discoveredServer.EndpointString.empty()) {
@@ -742,7 +742,7 @@ namespace Jazz2::Multiplayer
 		// The WebSocket block is read (and skipped) even without the transport, as the version range comes after it.
 		// Both are optional, an older server may have sent neither.
 		if (packet.GetSize() - packet.GetPosition() >= 2) {
-			std::uint16_t wsPort = packet.ReadValue<std::uint16_t>();
+			std::uint16_t wsPort = packet.ReadValueAsLE<std::uint16_t>();
 			std::uint8_t wsFlags = 0;
 			if (wsPort != 0 && packet.GetSize() - packet.GetPosition() >= 1) {
 				wsFlags = packet.ReadValue<std::uint8_t>();
@@ -782,7 +782,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		MemoryStream packet(buffer, bytesRead);
-		std::uint64_t signature = packet.ReadValue<std::uint64_t>();
+		std::uint64_t signature = packet.ReadValueAsLE<std::uint64_t>();
 		BroadcastPacketType packetType = (BroadcastPacketType)packet.ReadValue<std::uint8_t>();
 		if (signature != PacketSignature || packetType != BroadcastPacketType::DiscoveryRequest) {
 			return false;
@@ -803,9 +803,9 @@ namespace Jazz2::Multiplayer
 			const auto& id = serverConfig.UniqueServerID;
 
 			MemoryStream packet(512);
-			packet.WriteValue<std::uint64_t>(PacketSignature);
+			packet.WriteValueAsLE<std::uint64_t>(PacketSignature);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryResponse);
-			packet.WriteValue<std::uint16_t>(server->GetServerPort());
+			packet.WriteValueAsLE<std::uint16_t>(server->GetServerPort());
 			packet.Write(id.data(), id.size());
 
 			StringView serverVersion = NCINE_PROTOCOL_VERSION_s;
@@ -841,7 +841,7 @@ namespace Jazz2::Multiplayer
 			}
 
 #	if defined(WITH_WEBSOCKET)
-			packet.WriteValue<std::uint16_t>(serverConfig.WsPort);
+			packet.WriteValueAsLE<std::uint16_t>(serverConfig.WsPort);
 			if (serverConfig.WsPort != 0) {
 				std::uint8_t wsFlags = 0;
 				if (!serverConfig.WsCertPath.empty()) {
@@ -851,7 +851,7 @@ namespace Jazz2::Multiplayer
 			}
 #	else
 			// No WebSocket port, written anyway so the version range below is always found at the same place
-			packet.WriteValue<std::uint16_t>(0);
+			packet.WriteValueAsLE<std::uint16_t>(0);
 #	endif
 
 			// Appended, so older clients that stop reading earlier are not affected

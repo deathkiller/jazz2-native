@@ -39,7 +39,7 @@
 #		include <cerrno>
 #		include <psp2/net/net.h>		// sceNetErrnoLoc()
 #		include <psp2/net/netctl.h>
-#	elif defined(DEATH_TARGET_3DS)
+#	elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_WIIU)
 #		include <unistd.h>		// gethostid()
 #		include <arpa/inet.h>
 #	elif !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -771,9 +771,10 @@ namespace Jazz2::Multiplayer
 			} else {
 				LOGW("Failed to get server endpoints");
 			}
-#	elif defined(DEATH_TARGET_3DS)
+#	elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_WIIU)
 			// The same single address as on the two Sony handhelds - libctru has no interface list either, and
-			// reports the one address the WLAN got as gethostid() (0.0.0.0 while the console is offline)
+			// reports the one address the WLAN got as gethostid() (0.0.0.0 while the console is offline); wut
+			// on the Wii U is the same, its gethostid() asks nn::ac for the assigned address
 			struct in_addr ctrAddr;
 			ctrAddr.s_addr = std::uint32_t(::gethostid());
 			if (ctrAddr.s_addr != 0) {

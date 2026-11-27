@@ -6,6 +6,8 @@
 #	include <psputility.h>
 #elif defined(DEATH_TARGET_VITA)
 #	include <psp2/ime_dialog.h>
+#elif defined(DEATH_TARGET_WIIU)
+union SDL_Event;
 #endif
 
 namespace nCine
@@ -97,6 +99,16 @@ namespace nCine
 		// rather than to the call that opened it
 		SceWChar16 _imeInputBuffer[ImeMaxTextLength + 1];
 		SceWChar16 _imeTitle[32];
+		/** Invoked with the finished string when the dialog is confirmed, see @ref ShowScreenKeyboard() */
+		Containers::Function<void(Containers::StringView)> _imeOnCompleted;
+#elif defined(DEATH_TARGET_WIIU)
+		/** @brief Handles the events of the system software keyboard, returns `true` if the event was consumed */
+		bool HandleScreenKeyboardEvent(const union SDL_Event& event);
+
+		/** Whether the confirmed string is arriving, between the `SDL_WIIU_SYSWM_SWKBD_OK_*` events */
+		bool _swkbdCollecting = false;
+		/** The confirmed string, which wiiu-sdl2 sends as several text input events */
+		String _swkbdText;
 		/** Invoked with the finished string when the dialog is confirmed, see @ref ShowScreenKeyboard() */
 		Containers::Function<void(Containers::StringView)> _imeOnCompleted;
 #endif
