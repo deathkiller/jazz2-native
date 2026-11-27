@@ -37,7 +37,8 @@ namespace nCine::RHI::GX2
 
 		<b>Background.</b> Between @ref EnterBackground() and @ref EnterForeground() (the
 		`SDL_APP_WILLENTERBACKGROUND` / `SDL_APP_DIDENTERFOREGROUND` events) nothing is submitted: clears,
-		draws and presents return immediately, because SDL is about to release the foreground and its scan
+		draws and presents return immediately, and every batch counts as retired (@ref Finish() and
+		@ref WaitForUse() return at once), because SDL is about to release the foreground and its scan
 		buffers and destroy its MEM1 heap. Before that, every block of this backend in MEM1 (the screen buffer and
 		the render targets that asked for it, see @ref Gx2Memory) is freed; when the application comes back the
 		screen buffer is allocated again, the render targets on their next use, and the context state is made

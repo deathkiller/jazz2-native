@@ -319,7 +319,9 @@ namespace nCine::RHI::GX2
 
 	void Gx2Device::Finish()
 	{
-		if (_initialized) {
+		// In the background the GPU runs no work of this session any more, and EnterBackground() already waited for
+		// everything submitted before, so there is nothing to wait for, and GX2DrawDone() may never return
+		if (CanSubmit()) {
 			GX2DrawDone();
 		}
 	}
@@ -763,7 +765,8 @@ namespace nCine::RHI::GX2
 
 	bool Gx2Device::IsUseRetired(std::uint32_t token)
 	{
-		if (token == 0 || !_initialized) {
+		// In the background everything submitted has retired (see Finish()), and nothing recorded is submitted any more
+		if (token == 0 || !CanSubmit()) {
 			return true;
 		}
 		if (std::int32_t(token - _openBatch) >= 0) {
@@ -775,7 +778,8 @@ namespace nCine::RHI::GX2
 
 	bool Gx2Device::WaitForUse(std::uint32_t token)
 	{
-		if (token == 0 || !_initialized) {
+		// Nothing to wait for in the background (see IsUseRetired()), and a wait there may never end
+		if (token == 0 || !CanSubmit()) {
 			return true;
 		}
 		if (std::int32_t(token - _openBatch) >= 0) {
