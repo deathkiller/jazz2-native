@@ -145,8 +145,9 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
 		# it here rather than as an interface dependency of the imported target does - the SDL2 target is
 		# already on the line by the time this is appended.
 		target_link_libraries(${NCINE_APP} PRIVATE GL)
-		# Its headers are in the SDK's local/common/include, which is not on the compiler's default search path
-		find_path(MINIGL_INCLUDE_DIR NAMES GL/gl.h)
+		# Its headers are in the SDK's local/common/include, which is not on the compiler's default search path.
+		# SDK images since 2026-11-21 moved them to a MiniGL subfolder there (GL4ES and Mesa got their own).
+		find_path(MINIGL_INCLUDE_DIR NAMES GL/gl.h PATH_SUFFIXES MiniGL)
 		if(NOT MINIGL_INCLUDE_DIR)
 			message(FATAL_ERROR "MiniGL headers (GL/gl.h) not found in the AmigaOS 4.1 SDK, which NCINE_PREFERRED_RHI=LegacyGL needs (use Software otherwise)")
 		endif()
